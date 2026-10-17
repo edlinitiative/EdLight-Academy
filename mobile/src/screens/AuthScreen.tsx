@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  KeyboardAvoidingView, Platform, Image, ActivityIndicator,
+  KeyboardAvoidingView, Platform, Image, 
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
@@ -10,7 +10,9 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import { Mail, Lock, User, Eye, EyeOff, Check, AlertCircle, Gift, ChevronDown, ChevronUp, PartyPopper, ThumbsUp } from 'lucide-react-native';
 import useStore from '../contexts/store';
-import { useColors, useColorScheme } from '../theme/theme';
+import { useTheme, useColorScheme, touch } from '../theme/theme';
+import Button from '../components/ui/Button';
+import Segmented from '../components/ui/Segmented';
 import {
   loginWithEmailPassword,
   registerWithEmailPassword,
@@ -28,7 +30,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 export default function AuthScreen() {
   const { setUser, setActiveTab, activeTab, language } = useStore();
-  const colors = useColors();
+  const { colors, fonts, radius, featureSurface, elevation } = useTheme();
   const centerColumn = useContentContainerStyle('form');
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -37,7 +39,6 @@ export default function AuthScreen() {
   const AZURE = colors.azure;
   const INK = colors.ink;
   const MUTED = colors.muted;
-  const BORDER = colors.border;
   const FIELD = colors.surfaceAlt;
 
   const [name, setName] = useState('');
@@ -232,16 +233,22 @@ export default function AuthScreen() {
 
   const isSignIn = activeTab === 'signin';
 
-  // Reusable field wrapper: lifts to the surface + azure ring while focused.
+  // Field: 56 tall, radius 12, opaque grey; while focused it lifts to the
+  // surface with an azure focus ring (a control state, not a card outline).
   const fieldStyle = (key: 'name' | 'email' | 'password' | 'referral') => ({
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    borderRadius: 14,
-    paddingHorizontal: 14,
+    minHeight: 56,
+    borderRadius: radius.control,
+    paddingHorizontal: 16,
     borderWidth: 1.5,
     backgroundColor: focused === key ? colors.surface : FIELD,
-    borderColor: focused === key ? AZURE : BORDER,
+    borderColor: focused === key ? AZURE : 'transparent',
   });
+  const inputStyle = { flex: 1, minHeight: 54, marginLeft: 12, color: INK, fontFamily: fonts.regular, fontSize: 17 } as const;
+  const FieldLabel = ({ children }: { children: string }) => (
+    <Text style={{ fontFamily: fonts.medium, fontSize: 15, lineHeight: 20, color: MUTED, marginBottom: 6 }}>{children}</Text>
+  );
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -251,162 +258,114 @@ export default function AuthScreen() {
       >
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={[{ flexGrow: 1, justifyContent: 'center', paddingVertical: 32 }, centerColumn]}
+          // paddingTop clears AuthModal's floating close button.
+          contentContainerStyle={[{ flexGrow: 1, justifyContent: 'center', paddingTop: 72, paddingBottom: 32 }, centerColumn]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Header — the brand mark, lit. Two soft glows behind the logo make
-              the "EdLight" bulb read as genuinely illuminated (the signature). */}
-          <View style={{ alignItems: 'center', paddingHorizontal: 24, marginBottom: 22 }}>
-            <View style={{ width: 132, height: 132, alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
-              {/* warm outer glow */}
-              <View style={{ position: 'absolute', width: 132, height: 132, borderRadius: 66, backgroundColor: '#FDB022', opacity: 0.14 }} />
-              {/* azure inner glow */}
-              <View style={{ position: 'absolute', width: 96, height: 96, borderRadius: 48, backgroundColor: AZURE, opacity: 0.10 }} />
-              {/* logo tile */}
-              <View
-                style={{
-                  width: 84,
-                  height: 84,
-                  borderRadius: 22,
-                  backgroundColor: colors.surface,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  shadowColor: AZURE,
-                  shadowOffset: { width: 0, height: 6 },
-                  shadowOpacity: 0.16,
-                  shadowRadius: 16,
-                  elevation: 6,
-                }}
-              >
-                <Image
-                  source={require('../../assets/logo.png')}
-                  style={{ width: 60, height: 60 }}
-                  resizeMode="contain"
-                />
-              </View>
+          {/* Header — the brand mark on the page ground. No glow, no eyebrow. */}
+          <View style={{ alignItems: 'center', paddingHorizontal: 24, marginBottom: 24 }}>
+            <View
+              style={{
+                width: 72, height: 72, borderRadius: 22, backgroundColor: colors.surface,
+                alignItems: 'center', justifyContent: 'center', marginBottom: 18, ...elevation.card,
+              }}
+            >
+              <Image source={require('../../assets/logo.png')} style={{ width: 52, height: 52 }} resizeMode="contain" />
             </View>
-
-            <Text style={{ fontSize: 12, fontWeight: '700', color: AZURE, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>
-              EdLight Academy
-            </Text>
-            <Text style={{ fontSize: 25, fontWeight: '800', color: INK, letterSpacing: -0.4, textAlign: 'center' }}>
+            <Text accessibilityRole="header" style={{ fontFamily: fonts.heading, fontSize: 28, lineHeight: 33, letterSpacing: -1, color: INK, textAlign: 'center' }}>
               {isSignIn ? t('Bon retour', 'Byenveni tounen') : t('Crée ton compte', 'Kreye kont ou')}
             </Text>
-            <Text style={{ fontSize: 14.5, color: MUTED, marginTop: 5, textAlign: 'center', lineHeight: 20 }}>
+            <Text style={{ fontFamily: fonts.regular, fontSize: 16, lineHeight: 23, color: MUTED, marginTop: 6, textAlign: 'center' }}>
               {isSignIn
-                ? t('Continue ta préparation au Bac.', 'Kontinye preparasyon Bak ou.')
+                ? t('Continue là où tu t’es arrêté.', 'Kontinye kote ou te rive a.')
                 : t('Gratuit, et ta progression reste sauvegardée.', 'Gratis, epi pwogrè ou ap konsève.')}
             </Text>
           </View>
 
           {/* Card */}
-          <View
-            style={{
-              marginHorizontal: 20,
-              backgroundColor: colors.surface,
-              borderRadius: 24,
-              borderWidth: 1,
-              borderColor: BORDER,
-              padding: 18,
-              gap: 12,
-              shadowColor: AZURE,
-              shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: 0.06,
-              shadowRadius: 20,
-              elevation: 3,
-            }}
-          >
-            {/* Segmented tabs */}
-            <View style={{ flexDirection: 'row', backgroundColor: colors.surfaceAlt, borderRadius: 14, padding: 4, marginBottom: 2 }}>
-              {(['signin', 'signup'] as const).map((tab) => {
-                const active = activeTab === tab;
-                return (
-                  <TouchableOpacity
-                    key={tab}
-                    onPress={() => switchTab(tab)}
-                    activeOpacity={0.9}
-                    style={{
-                      flex: 1,
-                      paddingVertical: 10,
-                      borderRadius: 10,
-                      alignItems: 'center',
-                      backgroundColor: active ? colors.surface : 'transparent',
-                      shadowColor: active ? AZURE : 'transparent',
-                      shadowOffset: { width: 0, height: 1 },
-                      shadowOpacity: active ? 0.1 : 0,
-                      shadowRadius: 3,
-                      elevation: active ? 2 : 0,
-                    }}
-                  >
-                    <Text style={{ fontWeight: '700', fontSize: 14, color: active ? AZURE : MUTED }}>
-                      {tab === 'signin' ? t('Connexion', 'Koneksyon') : t('Inscription', 'Enskripsyon')}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+          <View style={[featureSurface, { marginHorizontal: 20, padding: 20, gap: 14 }]}>
+            <Segmented
+              options={[
+                { key: 'signin', label: t('Connexion', 'Koneksyon') },
+                { key: 'signup', label: t('Inscription', 'Enskripsyon') },
+              ]}
+              value={isSignIn ? 'signin' : 'signup'}
+              onChange={(k) => switchTab(k as 'signin' | 'signup')}
+            />
 
             {!isSignIn && (
-              <View style={fieldStyle('name')}>
-                <User color={focused === 'name' ? AZURE : colors.faint} size={18} />
-                <TextInput
-                  style={{ flex: 1, paddingVertical: 14, marginLeft: 10, color: INK, fontSize: 16 }}
-                  placeholder={t('Nom complet', 'Non konplè')}
-                  value={name}
-                  onChangeText={(v) => { setName(v); setError(null); }}
-                  onFocus={() => setFocused('name')}
-                  onBlur={() => setFocused(null)}
-                  autoCapitalize="words"
-                  textContentType="name"
-                  placeholderTextColor={colors.faint}
-                />
+              <View>
+                <FieldLabel>{t('Nom complet', 'Non konplè')}</FieldLabel>
+                <View style={fieldStyle('name')}>
+                  <User color={focused === 'name' ? AZURE : colors.muted} size={20} />
+                  <TextInput
+                    style={inputStyle}
+                    placeholder={t('Prénom et nom', 'Non ak siyati')}
+                    accessibilityLabel={t('Nom complet', 'Non konplè')}
+                    value={name}
+                    onChangeText={(v) => { setName(v); setError(null); }}
+                    onFocus={() => setFocused('name')}
+                    onBlur={() => setFocused(null)}
+                    autoCapitalize="words"
+                    textContentType="name"
+                    placeholderTextColor={colors.faint}
+                  />
+                </View>
               </View>
             )}
 
-            <View style={fieldStyle('email')}>
-              <Mail color={focused === 'email' ? AZURE : colors.faint} size={18} />
-              <TextInput
-                style={{ flex: 1, paddingVertical: 14, marginLeft: 10, color: INK, fontSize: 16 }}
-                placeholder={t('Adresse email', 'Adrès imèl')}
-                value={email}
-                onChangeText={(v) => { setEmail(v); setError(null); }}
-                onFocus={() => setFocused('email')}
-                onBlur={() => setFocused(null)}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-                textContentType="emailAddress"
-                placeholderTextColor={colors.faint}
-              />
+            <View>
+              <FieldLabel>{t('Adresse email', 'Adrès imèl')}</FieldLabel>
+              <View style={fieldStyle('email')}>
+                <Mail color={focused === 'email' ? AZURE : colors.muted} size={20} />
+                <TextInput
+                  style={inputStyle}
+                  placeholder="nom@exemple.com"
+                  accessibilityLabel={t('Adresse email', 'Adrès imèl')}
+                  value={email}
+                  onChangeText={(v) => { setEmail(v); setError(null); }}
+                  onFocus={() => setFocused('email')}
+                  onBlur={() => setFocused(null)}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  textContentType="emailAddress"
+                  placeholderTextColor={colors.faint}
+                />
+              </View>
             </View>
 
-            <View style={fieldStyle('password')}>
-              <Lock color={focused === 'password' ? AZURE : colors.faint} size={18} />
-              <TextInput
-                style={{ flex: 1, paddingVertical: 14, marginLeft: 10, color: INK, fontSize: 16 }}
-                placeholder={t('Mot de passe', 'Modpas')}
-                value={password}
-                onChangeText={(v) => { setPassword(v); setError(null); }}
-                onFocus={() => setFocused('password')}
-                onBlur={() => setFocused(null)}
-                secureTextEntry={!showPw}
-                autoCapitalize="none"
-                textContentType={isSignIn ? 'password' : 'newPassword'}
-                returnKeyType="go"
-                onSubmitEditing={handleSubmit}
-                placeholderTextColor={colors.faint}
-              />
-              <TouchableOpacity
-                onPress={() => setShowPw((v) => !v)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                accessibilityRole="button"
-                accessibilityLabel={showPw
-                  ? t('Masquer le mot de passe', 'Kache modpas')
-                  : t('Afficher le mot de passe', 'Montre modpas')}
-              >
-                {showPw ? <EyeOff color={colors.faint} size={18} /> : <Eye color={colors.faint} size={18} />}
-              </TouchableOpacity>
+            <View>
+              <FieldLabel>{t('Mot de passe', 'Modpas')}</FieldLabel>
+              <View style={fieldStyle('password')}>
+                <Lock color={focused === 'password' ? AZURE : colors.muted} size={20} />
+                <TextInput
+                  style={inputStyle}
+                  placeholder={isSignIn ? t('Ton mot de passe', 'Modpas ou') : t('6 caractères minimum', '6 karaktè minimòm')}
+                  accessibilityLabel={t('Mot de passe', 'Modpas')}
+                  value={password}
+                  onChangeText={(v) => { setPassword(v); setError(null); }}
+                  onFocus={() => setFocused('password')}
+                  onBlur={() => setFocused(null)}
+                  secureTextEntry={!showPw}
+                  autoCapitalize="none"
+                  textContentType={isSignIn ? 'password' : 'newPassword'}
+                  returnKeyType="go"
+                  onSubmitEditing={handleSubmit}
+                  placeholderTextColor={colors.faint}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPw((v) => !v)}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={showPw
+                    ? t('Masquer le mot de passe', 'Kache modpas')
+                    : t('Afficher le mot de passe', 'Montre modpas')}
+                >
+                  {showPw ? <EyeOff color={colors.muted} size={20} /> : <Eye color={colors.muted} size={20} />}
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Optional referral code — secondary, collapsible, signup only. */}
@@ -415,21 +374,23 @@ export default function AuthScreen() {
                 <TouchableOpacity
                   onPress={() => setShowReferral((v) => !v)}
                   activeOpacity={0.7}
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 }}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: touch.min }}
                   accessibilityRole="button"
+                  accessibilityState={{ expanded: showReferral }}
                 >
-                  <Gift color={colors.azure} size={16} />
-                  <Text style={{ flex: 1, color: MUTED, fontSize: 13, fontWeight: '600' }}>
-                    {t('Un ami vous a invité ? Entrez son code', 'Yon zanmi envite w ? Antre kòd li')}
+                  <Gift color={colors.azureInk} size={18} />
+                  <Text style={{ flex: 1, color: MUTED, fontFamily: fonts.medium, fontSize: 15 }}>
+                    {t('Un ami t’a invité ? Entre son code', 'Yon zanmi envite w ? Antre kòd li')}
                   </Text>
-                  {showReferral ? <ChevronUp color={colors.faint} size={16} /> : <ChevronDown color={colors.faint} size={16} />}
+                  {showReferral ? <ChevronUp color={colors.faint} size={18} /> : <ChevronDown color={colors.faint} size={18} />}
                 </TouchableOpacity>
                 {showReferral && (
-                  <View style={[fieldStyle('referral'), { marginTop: 8 }]}>
-                    <Gift color={focused === 'referral' ? AZURE : colors.faint} size={18} />
+                  <View style={[fieldStyle('referral'), { marginTop: 6 }]}>
+                    <Gift color={focused === 'referral' ? AZURE : colors.muted} size={20} />
                     <TextInput
-                      style={{ flex: 1, paddingVertical: 14, marginLeft: 10, color: INK, fontSize: 16, letterSpacing: 2 }}
+                      style={[inputStyle, { letterSpacing: 2 }]}
                       placeholder={t('Code d’invitation', 'Kòd envitasyon')}
+                      accessibilityLabel={t('Code d’invitation', 'Kòd envitasyon')}
                       value={referralCode}
                       onChangeText={(v) => setReferralCode(v.toUpperCase())}
                       onFocus={() => setFocused('referral')}
@@ -445,89 +406,52 @@ export default function AuthScreen() {
             )}
 
             {isSignIn && (
-              <TouchableOpacity onPress={handleReset} style={{ alignSelf: 'flex-end' }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <TouchableOpacity
+                onPress={handleReset}
+                style={{ alignSelf: 'flex-end', minHeight: touch.min, justifyContent: 'center' }}
+                hitSlop={{ top: 4, bottom: 4, left: 8, right: 8 }}
+                accessibilityRole="button"
+              >
                 {resetSent ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <Check color={AZURE} size={14} />
-                    <Text style={{ color: AZURE, fontSize: 13, fontWeight: '600' }}>{t('Email envoyé', 'Imèl voye')}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Check color={colors.azureInk} size={16} />
+                    <Text style={{ color: colors.azureInk, fontFamily: fonts.bold, fontSize: 15 }}>{t('Email envoyé', 'Imèl voye')}</Text>
                   </View>
                 ) : (
-                  <Text style={{ color: AZURE, fontSize: 13, fontWeight: '600' }}>{t('Mot de passe oublié ?', 'Ou bliye modpas ou ?')}</Text>
+                  <Text style={{ color: colors.azureInk, fontFamily: fonts.bold, fontSize: 15 }}>{t('Mot de passe oublié ?', 'Ou bliye modpas ou ?')}</Text>
                 )}
               </TouchableOpacity>
             )}
 
-            {/* Inline error — non-blocking, tells you what to fix */}
+            {/* Inline error — an opaque wash, tells you what to fix */}
             {error && (
-              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: colors.dangerSoft, borderWidth: 1, borderColor: colors.danger, borderRadius: 12, padding: 11 }}>
-                <AlertCircle color={colors.danger} size={16} style={{ marginTop: 1 }} />
-                <Text style={{ flex: 1, color: colors.danger, fontSize: 13, lineHeight: 18 }}>{error}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: colors.dangerSoft, borderRadius: radius.control, padding: 14 }}>
+                <AlertCircle color={colors.danger} size={18} style={{ marginTop: 1 }} />
+                <Text accessibilityRole="alert" style={{ flex: 1, color: INK, fontFamily: fonts.medium, fontSize: 15, lineHeight: 21 }}>{error}</Text>
               </View>
             )}
 
-            {/* Primary CTA */}
-            <TouchableOpacity
+            {/* Primary CTA — the page's one solid azure. */}
+            <Button
+              size="lg"
+              fullWidth
+              loading={loading}
               onPress={handleSubmit}
-              disabled={loading}
-              activeOpacity={0.9}
-              style={{
-                backgroundColor: AZURE,
-                borderRadius: 16,
-                paddingVertical: 16,
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexDirection: 'row',
-                gap: 8,
-                marginTop: 2,
-                opacity: loading ? 0.7 : 1,
-                shadowColor: AZURE,
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.28,
-                shadowRadius: 10,
-                elevation: 4,
-              }}
-            >
-              {loading && <ActivityIndicator color="#ffffff" size="small" />}
-              <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 16 }}>
-                {loading
-                  ? t('Un instant…', 'Yon ti moman…')
-                  : isSignIn
-                  ? t('Se connecter', 'Konekte')
-                  : t('Créer mon compte', 'Kreye kont mwen')}
-              </Text>
-            </TouchableOpacity>
+              label={isSignIn ? t('Se connecter', 'Konekte') : t('Créer mon compte', 'Kreye kont mwen')}
+            />
 
-            {/* Divider */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 2 }}>
-              <View style={{ flex: 1, height: 1, backgroundColor: colors.hairline }} />
-              <Text style={{ color: colors.faint, fontSize: 12, marginHorizontal: 12 }}>{t('ou', 'oswa')}</Text>
-              <View style={{ flex: 1, height: 1, backgroundColor: colors.hairline }} />
-            </View>
+            <Text style={{ color: colors.muted, fontFamily: fonts.regular, fontSize: 15, textAlign: 'center' }}>{t('ou', 'oswa')}</Text>
 
             {/* Google */}
-            <TouchableOpacity
-              onPress={() => promptAsync()}
+            <Button
+              size="lg"
+              fullWidth
+              variant="outline"
               disabled={loading}
-              activeOpacity={0.85}
-              style={{
-                borderRadius: 16,
-                paddingVertical: 14,
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexDirection: 'row',
-                gap: 10,
-                borderWidth: 1.5,
-                borderColor: BORDER,
-                backgroundColor: colors.surface,
-              }}
-            >
-              <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: colors.surface, borderWidth: 1, borderColor: BORDER, alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ color: '#4285F4', fontWeight: '800', fontSize: 14 }}>G</Text>
-              </View>
-              <Text style={{ color: INK, fontWeight: '600', fontSize: 15 }}>
-                {t('Continuer avec Google', 'Kontinye ak Google')}
-              </Text>
-            </TouchableOpacity>
+              onPress={() => promptAsync()}
+              label={t('Continuer avec Google', 'Kontinye ak Google')}
+              icon={<Text style={{ color: '#4285F4', fontFamily: fonts.heading, fontSize: 18 }}>G</Text>}
+            />
 
             {/* Sign in with Apple — required by App Store guideline 4.8 alongside
                 Google. iOS only, using Apple's own button per their HIG. */}
@@ -539,15 +463,15 @@ export default function AuthScreen() {
                     ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
                     : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
                 }
-                cornerRadius={16}
-                style={{ height: 50, width: '100%' }}
+                cornerRadius={radius.control}
+                style={{ height: 52, width: '100%' }}
                 onPress={handleAppleSignIn}
               />
             )}
           </View>
 
           {/* Reassurance footer */}
-          <Text style={{ textAlign: 'center', color: colors.faint, fontSize: 12, marginTop: 18, paddingHorizontal: 32, lineHeight: 17 }}>
+          <Text style={{ textAlign: 'center', color: colors.muted, fontFamily: fonts.regular, fontSize: 14, marginTop: 20, paddingHorizontal: 32, lineHeight: 20 }}>
             {isSignIn
               ? t('Ravi de te revoir sur EdLight.', 'Kontan wè ou ankò sou EdLight.')
               : t('En continuant, tu rejoins des milliers d’élèves qui révisent sur EdLight.', 'Lè ou kontinye, ou jwenn dè milye elèv k’ap revize sou EdLight.')}
@@ -585,8 +509,8 @@ export default function AuthScreen() {
                   {reasonNote(celebration.result.reason)}
                 </Text>
               ) : null}
-              <Text style={{ color: '#fff', fontSize: 13, opacity: 0.7, marginTop: 6 }}>
-                {t('Appuyez pour continuer', 'Peze pou kontinye')}
+              <Text style={{ color: '#fff', fontSize: 14, opacity: 0.8, marginTop: 6 }}>
+                {t('Touche pour continuer', 'Touche pou kontinye')}
               </Text>
             </View>
           </PopIn>

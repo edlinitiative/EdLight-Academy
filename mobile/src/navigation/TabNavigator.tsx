@@ -1,10 +1,11 @@
-import React, { useRef, useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useRef, useEffect, useState } from 'react';
+import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Platform } from 'react-native';
 import { popToRootOnTabPress } from './tabPressBehaviour';
 import NativeTabNavigator from './NativeTabNavigator';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import TabIcon, { type TabIconName } from './TabIcon';
@@ -12,7 +13,6 @@ import useStore from '../contexts/store';
 import { gradeProfile } from '../config/trackConfig';
 import { tapLight } from '../utils/haptics';
 import { useReduceMotion } from '../utils/motion';
-import { lightColors, darkColors } from '../theme/theme';
 import { JS_TAB_BAR } from '../onboarding/tourGeometry';
 
 import DashboardScreen from '../screens/DashboardScreen';
@@ -38,8 +38,16 @@ const Tab = createBottomTabNavigator<TabParamList>();
 // capsule behind it. An earlier pass here lightened inactive to `muted` to keep
 // it off the active color — with two state signals instead of one, the darker
 // treatment reads better and matches the reference.
-const ACTIVE = lightColors.azure; // '#1B6FE0'
-const INACTIVE = lightColors.ink; // '#0f172a'
+// The bar's three looks (Oct 17 premium pass). The selected tab is an azure
+// WASH with an azure glyph (the accent now marks "you are here"); the others
+// step back to a muted ink. On the Jeux tab the bar joins the Arène night so a
+// white capsule never floats over the night world.
+type BarTone = 'light' | 'dark' | 'night';
+const BAR = {
+  light: { bg: '#FFFFFF', lens: '#EAF2FE', active: '#1558B8', inactive: '#5F6B7A', shadow: 0.12 },
+  dark:  { bg: '#162238', lens: '#1C304E', active: '#7DB4F8', inactive: '#94A3B8', shadow: 0.45 },
+  night: { bg: '#0B1730', lens: '#1F3456', active: '#9DC4FF', inactive: '#7F95B8', shadow: 0.5 },
+} as const;
 
 // Floating bar: a detached OPAQUE capsule. It was glass (blur + translucent
 // tint + light rim) until Oct 17, when Ted rejected hairline-on-translucent
@@ -69,12 +77,12 @@ function TabItem({
   icon,
   color,
   focused,
-  dark,
+  tone,
 }: {
   icon: TabIconName;
   color: string;
   focused: boolean;
-  dark: boolean;
+  tone: BarTone;
 }) {
   const reduceMotion = useReduceMotion();
   const progress = useSharedValue(focused ? 1 : 0);
@@ -88,10 +96,14 @@ function TabItem({
     opacity: progress.value,
     transform: [{ scale: 0.9 + progress.value * 0.1 }],
   }));
+  // The selected glyph rises 1.5pt with its capsule; reduce-motion snaps it.
+  const glyphStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: -1.5 * progress.value }],
+  }));
 
   // A neutral step off the bar's own surface — darker in light mode, lighter in
   // dark. No border and no shadow: the reference capsule is a flat tonal shift.
-  const lensBg = dark ? '#24314A' : '#EEF1F5';
+  const lensBg = BAR[tone].lens;
 
   return (
     <View style={styles.item}>
@@ -105,7 +117,9 @@ function TabItem({
           lensStyle,
         ]}
       />
-      <TabIcon name={icon} color={color} size={ICON_SIZE} focused={focused} />
+      <Animated.View style={glyphStyle}>
+        <TabIcon name={icon} color={color} size={ICON_SIZE} focused={focused} />
+      </Animated.View>
     </View>
   );
 }
@@ -123,6 +137,13 @@ function JsTabNavigator() {
   const insets = useSafeAreaInsets();
   const dark = theme === 'dark';
   const queryClient = useQueryClient();
+  const { width } = useWindowDimensions();
+  // Which tab is on screen decides the bar's tone (Jeux → night).
+  const [activeTab, setActiveTab] = useState('Dashboard');
+  const tone: BarTone = activeTab === 'Trivia' ? 'night' : dark ? 'dark' : 'light';
+  const bar = BAR[tone];
+  // On tablets the capsule stays phone-sized and centred instead of stretching.
+  const sideMargin = Math.max(BAR_MARGIN, (width - 420) / 2);
 
   // Tracks the last tab press so we can detect a quick double-tap on the same tab.
   const lastPress = useRef<{ name: string; time: number }>({ name: '', time: 0 });
@@ -137,6 +158,7 @@ function JsTabNavigator() {
       // React Navigation 7 removed the `sceneContainerStyle` prop in favour of the
       // `sceneStyle` screen option.
       screenListeners={({ route }) => ({
+        focus: () => setActiveTab(route.name),
         // Single tap keeps default behavior (navigate / pop-to-top of the stack).
         // A second tap on the same tab within DOUBLE_TAP_MS refreshes all data.
         tabPress: () => {
@@ -157,8 +179,8 @@ function JsTabNavigator() {
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor: dark ? '#0b1220' : '#f4f6fb' },
-        tabBarActiveTintColor: dark ? darkColors.azure : ACTIVE,
-        tabBarInactiveTintColor: dark ? darkColors.muted : INACTIVE,
+        tabBarActiveTintColor: bar.active,
+        tabBarInactiveTintColor: bar.inactive,
         // Icon+label are rendered together inside TabItem so the focused lens
         // capsule can wrap both — hide the navigator's own labels.
         tabBarShowLabel: false,
@@ -169,7 +191,7 @@ function JsTabNavigator() {
           <View
             style={[
               StyleSheet.absoluteFill,
-              { borderRadius: BAR_HEIGHT / 2, backgroundColor: dark ? '#162238' : '#FFFFFF' },
+              { borderRadius: BAR_HEIGHT / 2, backgroundColor: bar.bg },
             ]}
           />
         ),
@@ -179,8 +201,8 @@ function JsTabNavigator() {
           ? { display: 'none' }
           : {
               position: 'absolute',
-              left: BAR_MARGIN,
-              right: BAR_MARGIN,
+              left: sideMargin,
+              right: sideMargin,
               bottom: bottomOffset,
               height: BAR_HEIGHT,
               borderRadius: BAR_HEIGHT / 2,
@@ -192,7 +214,7 @@ function JsTabNavigator() {
               // diffuse lift, not a hard drop.
               shadowColor: '#0f172a',
               shadowOffset: { width: 0, height: 6 },
-              shadowOpacity: dark ? 0.45 : 0.12,
+              shadowOpacity: bar.shadow,
               shadowRadius: 14,
               elevation: 10,
             },
@@ -205,7 +227,7 @@ function JsTabNavigator() {
         options={{
           tabBarAccessibilityLabel: t('Accueil', 'Akèy'),
           tabBarIcon: ({ color, focused }) => (
-            <TabItem icon="dashboard" color={color} focused={focused} dark={dark} />
+            <TabItem icon="dashboard" color={color} focused={focused} tone={tone} />
           ),
         }}
       />
@@ -223,7 +245,7 @@ function JsTabNavigator() {
         options={{
           tabBarAccessibilityLabel: t('Cours', 'Kou'),
           tabBarIcon: ({ color, focused }) => (
-            <TabItem icon="courses" color={color} focused={focused} dark={dark} />
+            <TabItem icon="courses" color={color} focused={focused} tone={tone} />
           ),
         }}
       />
@@ -246,8 +268,7 @@ function JsTabNavigator() {
             <TabItem
               icon={quizPrimary ? 'quiz' : 'exams'}
               color={color}
-              focused={focused}
-              dark={dark}
+              focused={focused} tone={tone}
             />
           ),
         }}
@@ -258,7 +279,7 @@ function JsTabNavigator() {
         options={{
           tabBarAccessibilityLabel: t('Jeux', 'Jwèt'),
           tabBarIcon: ({ color, focused }) => (
-            <TabItem icon="games" color={color} focused={focused} dark={dark} />
+            <TabItem icon="games" color={color} focused={focused} tone={tone} />
           ),
         }}
       />
@@ -268,7 +289,7 @@ function JsTabNavigator() {
         options={{
           tabBarAccessibilityLabel: t('Profil', 'Pwofil'),
           tabBarIcon: ({ color, focused }) => (
-            <TabItem icon="profile" color={color} focused={focused} dark={dark} />
+            <TabItem icon="profile" color={color} focused={focused} tone={tone} />
           ),
         }}
       />
@@ -294,5 +315,10 @@ const styles = StyleSheet.create({
  * icon assets; SF Symbols have no Android equivalent.
  */
 export default function TabNavigator() {
-  return Platform.OS === 'ios' ? <NativeTabNavigator /> : <JsTabNavigator />;
+  return Platform.OS === 'ios' && !IN_EXPO_GO ? <NativeTabNavigator /> : <JsTabNavigator />;
 }
+
+/** Expo Go has no RNCTabView, so the native bar is a pink "Unimplemented
+ *  component" overlay there; dev runs in Expo Go use the JS bar instead.
+ *  Store/dev-client builds are unaffected. */
+const IN_EXPO_GO = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;

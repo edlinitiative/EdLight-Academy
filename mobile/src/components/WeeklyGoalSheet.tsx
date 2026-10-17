@@ -11,9 +11,10 @@ import React from 'react';
 import { Modal, View, Text, TouchableOpacity } from 'react-native';
 import { X, Zap, Snowflake } from 'lucide-react-native';
 import useStore from '../contexts/store';
-import PressableScale from './ui/PressableScale';
+import Button from './ui/Button';
+import { useReduceMotion } from '../utils/motion';
 import ProgressRing from './ui/ProgressRing';
-import { useTheme, radius, typeScale } from '../theme/theme';
+import { useTheme, radius } from '../theme/theme';
 import { WEEKLY_QUIZ_GOAL } from '../utils/weeklyActivity';
 import { tapLight } from '../utils/haptics';
 
@@ -32,7 +33,8 @@ export default function WeeklyGoalSheet({
   onStartQuiz: () => void;
   onSeeLeaderboard: () => void;
 }) {
-  const { colors } = useTheme();
+  const { colors, typeScale: ts } = useTheme();
+  const reduce = useReduceMotion();
   const language = useStore((s) => s.language);
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
 
@@ -40,7 +42,7 @@ export default function WeeklyGoalSheet({
   const reached = quizzesThisWeek >= WEEKLY_QUIZ_GOAL;
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType={reduce ? 'none' : 'slide'} onRequestClose={onClose}>
       <TouchableOpacity
         style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.55)' }}
         activeOpacity={1}
@@ -50,7 +52,7 @@ export default function WeeklyGoalSheet({
       <View
         accessibilityViewIsModal
         style={{
-          backgroundColor: colors.surface,
+          backgroundColor: colors.bg,
           borderTopLeftRadius: radius.hero,
           borderTopRightRadius: radius.hero,
           padding: 20,
@@ -59,14 +61,14 @@ export default function WeeklyGoalSheet({
       >
         {/* Header */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Text style={[typeScale.title, { color: colors.ink }]}>
+          <Text accessibilityRole="header" style={[ts.section, { color: colors.ink, flex: 1 }]}>
             {t('Objectif de la semaine', 'Objektif semèn nan')}
           </Text>
           <TouchableOpacity
             onPress={onClose}
-            hitSlop={10}
             accessibilityRole="button"
             accessibilityLabel={t('Fermer', 'Fèmen')}
+            style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceAlt }}
           >
             <X size={20} color={colors.muted} />
           </TouchableOpacity>
@@ -81,10 +83,10 @@ export default function WeeklyGoalSheet({
             strokeWidth={9}
             showLabel={false}
           />
-          <Text style={[typeScale.h2, { color: colors.ink, marginTop: 12 }]}>
-            {done}/{WEEKLY_QUIZ_GOAL} {t('quiz', 'quiz')}
+          <Text style={[ts.numeral, { color: colors.ink, marginTop: 12, fontSize: 30, lineHeight: 34 }]}>
+            {done}/{WEEKLY_QUIZ_GOAL} <Text style={[ts.meta, { color: colors.muted }]}>{t('quiz', 'quiz')}</Text>
           </Text>
-          <Text style={[typeScale.caption, { color: colors.muted, marginTop: 2 }]}>
+          <Text style={[ts.meta, { color: colors.muted, marginTop: 4, textAlign: 'center' }]}>
             {reached
               ? t('Objectif atteint, bravo ! Continue sur ta lancée.', 'Ou rive sou objektif la, bravo ! Kontinye konsa.')
               : t('cette semaine (lundi à dimanche)', 'semèn sa a (lendi rive dimanch)')}
@@ -95,9 +97,7 @@ export default function WeeklyGoalSheet({
                 key={i}
                 style={{
                   width: 12, height: 12, borderRadius: 6,
-                  backgroundColor: i < done ? (reached ? colors.success : colors.azure) : colors.surfaceAlt,
-                  borderWidth: 1,
-                  borderColor: i < done ? 'transparent' : colors.border,
+                  backgroundColor: i < done ? (reached ? colors.successFill : colors.azure) : colors.surfaceAlt,
                 }}
               />
             ))}
@@ -108,13 +108,13 @@ export default function WeeklyGoalSheet({
         <View
           style={{
             flexDirection: 'row', alignItems: 'center', gap: 10,
-            backgroundColor: colors.surfaceAlt, borderRadius: radius.tile,
-            padding: 12, marginTop: 18,
+            backgroundColor: colors.surface, borderRadius: radius.card,
+            padding: 16, marginTop: 20,
           }}
         >
-          <Snowflake color={colors.azure} size={22} />
+          <Snowflake color={colors.azureInk} size={22} />
           {/* The rule that earns a freeze — an instruction, so ≥14pt. */}
-          <Text style={[typeScale.body, { color: colors.muted, flex: 1 }]}>
+          <Text style={[ts.body, { color: colors.ink, flex: 1 }]}>
             {t(
               `Termine ${WEEKLY_QUIZ_GOAL} quiz dans la semaine et gagne 1 gel. Il protège ta série si tu rates un jour.`,
               `Fini ${WEEKLY_QUIZ_GOAL} quiz nan semèn nan epi genyen 1 jèl. Li pwoteje seri w si w rate yon jou.`,
@@ -124,26 +124,20 @@ export default function WeeklyGoalSheet({
 
         {/* Weekly XP context */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 }}>
-          <Zap color={colors.warn} size={14} />
-          <Text style={[typeScale.caption, { color: colors.muted }]}>
+          <Zap color={colors.muted} size={16} />
+          <Text style={[ts.meta, { color: colors.muted }]}>
             {weeklyXp} {t('XP gagnés cette semaine', 'XP ou genyen semèn sa a')}
           </Text>
         </View>
 
         {/* Action */}
-        <PressableScale
+        <Button
+          size="lg"
+          fullWidth
           onPress={() => { tapLight(); onClose(); (reached ? onSeeLeaderboard : onStartQuiz)(); }}
-          accessibilityRole="button"
-          accessibilityLabel={reached ? t('Voir le classement', 'Wè klasman an') : t('Faire un quiz maintenant', 'Fè yon quiz kounye a')}
-          style={{
-            marginTop: 18, borderRadius: 999, backgroundColor: colors.azure,
-            paddingVertical: 14, alignItems: 'center',
-          }}
-        >
-          <Text style={[typeScale.titleSm, { color: '#ffffff' }]}>
-            {reached ? t('Voir le classement', 'Wè klasman an') : t('Faire un quiz maintenant', 'Fè yon quiz kounye a')}
-          </Text>
-        </PressableScale>
+          label={reached ? t('Voir le classement', 'Wè klasman an') : t('Faire un quiz maintenant', 'Fè yon quiz kounye a')}
+          style={{ marginTop: 20 }}
+        />
       </View>
     </Modal>
   );

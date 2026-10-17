@@ -5,12 +5,14 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { View, Text, Image } from 'react-native';
 import { X, Check, Timer, Flame } from 'lucide-react-native';
 import { buildVraiFauxItems } from '../../utils/gameGen';
 import GameOverCard, { GameReward } from './GameOverCard';
 import { useRoundTimer, TimeBar } from './RoundTimer';
-import { useColors, useTheme, typeScale, radius } from '../../theme/theme';
+import { typeScale, radius } from '../../theme/theme';
+import { useArenaColors, arenaColors as C } from '../../theme/arenaTheme';
+import { ArenaButton } from '../arena/ArenaKit';
 import PressableScale from '../ui/PressableScale';
 import { success, warn } from '../../utils/haptics';
 
@@ -29,8 +31,7 @@ interface VraiFauxGameProps {
 export default function VraiFauxGame({
   questionsMap, isCreole, onExit, onRecord, highScore = null,
 }: VraiFauxGameProps) {
-  const colors = useColors();
-  const { shadow } = useTheme();
+  const colors = useArenaColors();
   const [nonce, setNonce] = useState(0);
   const items = useMemo(() => buildVraiFauxItems(questionsMap, 80), [questionsMap, nonce]);
 
@@ -105,18 +106,11 @@ export default function VraiFauxGame({
         <Text style={[typeScale.body, { color: colors.muted, textAlign: 'center', marginBottom: 20 }]}>
           {isCreole ? 'Tounen pita, n ap ajoute kesyon.' : 'Revenez plus tard, des questions arrivent.'}
         </Text>
-        <TouchableOpacity
+        <ArenaButton
+          variant="secondary"
           onPress={onExit}
-          accessibilityRole="button"
-          accessibilityLabel={isCreole ? 'Tounen nan jwèt yo' : 'Retour aux jeux'}
-          activeOpacity={0.85}
-          className="items-center justify-center py-4 px-8 border"
-          style={{ borderColor: colors.border, backgroundColor: colors.surface, borderRadius: radius.tile }}
-        >
-          <Text style={[typeScale.title, { color: colors.muted }]}>
-            ← {isCreole ? 'Jwèt yo' : 'Les jeux'}
-          </Text>
-        </TouchableOpacity>
+          label={isCreole ? 'Tounen nan jwèt yo' : 'Retour aux jeux'}
+        />
       </View>
     );
   }
@@ -134,7 +128,7 @@ export default function VraiFauxGame({
         onReplay={replay}
         onExit={onExit}
         isCreole={isCreole}
-        accent={colors.coral}
+        accent={C.coral}
         highScore={highScore}
         shareSubject={isCreole ? 'Vre oswa Fo' : 'Vrai ou Faux'}
       />
@@ -143,7 +137,8 @@ export default function VraiFauxGame({
 
   if (!item) return null;
 
-  const cardBorder = feedback === 'right' ? colors.success : feedback === 'wrong' ? colors.danger : colors.border;
+  // Verdict is a tonal wash on the card, never an outline.
+  const cardBg = feedback === 'right' ? C.successSoft : feedback === 'wrong' ? C.dangerSoft : C.surfaceRaised;
 
   return (
     <View className="flex-1 px-4 pt-3" style={{ backgroundColor: colors.bg }}>
@@ -167,17 +162,14 @@ export default function VraiFauxGame({
       </View>
 
       {/* Time bar */}
-      <TimeBar timeLeft={timeLeft} total={ROUND_SECONDS} color={colors.coral} />
+      <TimeBar timeLeft={timeLeft} total={ROUND_SECONDS} color={urgent ? C.danger : C.coral} />
 
       {/* Question card */}
       <View
         className="px-5 py-6 mt-4 items-center"
         style={{
-          borderRadius: radius.hero,
-          backgroundColor: colors.surface,
-          borderWidth: 2,
-          borderColor: cardBorder,
-          ...shadow.md,
+          borderRadius: 24,
+          backgroundColor: cardBg,
         }}
       >
         {item.flag && (
@@ -197,7 +189,7 @@ export default function VraiFauxGame({
           {isCreole ? item.qHt : item.q}
         </Text>
         <Text
-          style={[typeScale.h1, { color: colors.coral, textAlign: 'center', marginTop: 12 }]}
+          style={[typeScale.h1, { color: C.ink, textAlign: 'center', marginTop: 12 }]}
         >
           {item.proposed}
         </Text>
@@ -216,24 +208,24 @@ export default function VraiFauxGame({
           disabled={!!feedback}
           accessibilityRole="button"
           accessibilityLabel={isCreole ? 'Repons lan fo' : 'La réponse est fausse'}
-          style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, borderRadius: radius.tile, backgroundColor: colors.danger, opacity: feedback ? 0.55 : 1 }}
+          style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 56, borderRadius: 999, backgroundColor: C.dangerSoft, opacity: feedback ? 0.55 : 1 }}
         >
-          <X color="#fff" size={20} />
-          <Text style={[typeScale.title, { color: '#fff' }]}>{isCreole ? 'Fo' : 'Faux'}</Text>
+          <X color={C.danger} size={20} />
+          <Text style={[typeScale.title, { color: C.danger }]}>{isCreole ? 'Fo' : 'Faux'}</Text>
         </PressableScale>
         <PressableScale
           onPress={() => answer(true)}
           disabled={!!feedback}
           accessibilityRole="button"
           accessibilityLabel={isCreole ? 'Repons lan vre' : 'La réponse est vraie'}
-          style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, borderRadius: radius.tile, backgroundColor: colors.success, opacity: feedback ? 0.55 : 1 }}
+          style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 56, borderRadius: 999, backgroundColor: C.successSoft, opacity: feedback ? 0.55 : 1 }}
         >
-          <Check color="#fff" size={20} />
-          <Text style={[typeScale.title, { color: '#fff' }]}>{isCreole ? 'Vre' : 'Vrai'}</Text>
+          <Check color={C.success} size={20} />
+          <Text style={[typeScale.title, { color: C.success }]}>{isCreole ? 'Vre' : 'Vrai'}</Text>
         </PressableScale>
       </View>
 
-      <Text style={[typeScale.label, { color: colors.faint, textAlign: 'center', marginTop: 12 }]}>
+      <Text style={[typeScale.label, { color: colors.muted, textAlign: 'center', marginTop: 12 }]}>
         {isCreole ? 'Èske repons ki pwopoze a kòrèk ?' : 'La réponse proposée est-elle correcte ?'}
       </Text>
     </View>

@@ -21,6 +21,7 @@ import { arenaColors as C, arenaType, arenaRadius, ARENA_TOUCH } from '../../the
 import ArenaWorld from './art/environment/ArenaWorld';
 import type { Occasion } from './art/environment/ArenaWorld';
 import type { EventStatus, LivePhase } from '../../utils/arenaViewState';
+import useNightStatusBar from './useNightStatusBar';
 
 type T = (fr: string, ht: string) => string;
 
@@ -36,6 +37,8 @@ export function ArenaScreen({
   edges?: Edge[];
   style?: StyleProp<ViewStyle>;
 }) {
+  // Night in both OS themes → light-content status bar while focused.
+  useNightStatusBar();
   return (
     <View style={[{ flex: 1, backgroundColor: C.bg }, style]}>
       {world ? (

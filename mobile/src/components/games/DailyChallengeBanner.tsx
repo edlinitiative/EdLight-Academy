@@ -1,120 +1,85 @@
 import React from 'react';
-import { View, Text } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { CalendarCheck, Check, ChevronRight } from 'lucide-react-native';
-import PressableScale from '../ui/PressableScale';
-import { useColors, radius, typeScale } from '../../theme/theme';
+import { View, Text, type StyleProp, type ViewStyle } from 'react-native';
+import { Clock, Check } from 'lucide-react-native';
+import { ArenaButton } from '../arena/ArenaKit';
+import { arenaColors as C, arenaType } from '../../theme/arenaTheme';
+import { nightType } from './night';
 
 /**
- * "Défi du jour" banner — a shared once-a-day round (same 10 questions for
- * everyone) worth a +50 XP bonus. Active state is a gradient hero card (matching
- * the app's 2026 language); collapses to a calm "done" state after playing.
+ * "Défi du jour" — a shared once-a-day round (the same 10 questions for
+ * everyone, drawn across every subject) worth a +50 XP bonus.
+ *
+ * The night feature card (DIRECTION §8): raised surface, radius 24, a quiet
+ * sentence-case label, a 24 title, the deadline, and the screen's one coral
+ * button. The reward preview is NOT gold — nothing has been earned yet.
+ * Done → a settled card with the real score and no coral at all.
  */
 export default function DailyChallengeBanner({
   daily,
   isCreole,
   onStart,
   style,
+  compact = false,
 }: {
   daily: { completedToday?: boolean; score?: number | null; total?: number | null } | null;
   isCreole: boolean;
   onStart: () => void;
-  style?: object;
+  style?: StyleProp<ViewStyle>;
+  /** A row-sized version (above the trivia category grid). */
+  compact?: boolean;
 }) {
-  const colors = useColors();
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const done = !!daily?.completedToday;
 
-  // Done → a quiet, settled card so the eye moves on to the categories.
   if (done) {
     return (
       <View
-        style={[
-          {
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 12,
-            padding: 16,
-            borderRadius: radius.card,
-            backgroundColor: colors.surfaceAlt,
-          },
-          style,
-        ]}
+        accessible
+        accessibilityLabel={t(
+          `Défi du jour terminé : ${daily?.score ?? 0} sur ${daily?.total ?? 10}. Reviens demain.`,
+          `Defi jodi a fini : ${daily?.score ?? 0} sou ${daily?.total ?? 10}. Tounen demen.`,
+        )}
+        style={[{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 20, borderRadius: 24, backgroundColor: C.surface }, style]}
       >
-        <View style={{ width: 44, height: 44, borderRadius: radius.tile, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.azureSoft }}>
-          <Check color={colors.azure} size={22} />
+        <View style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: C.successSoft }}>
+          <Check color={C.success} size={22} />
         </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[typeScale.title, { color: colors.ink }]}>
-            {isCreole ? 'Defi jodi a' : 'Défi du jour'}
-          </Text>
-          <Text style={[typeScale.caption, { marginTop: 2, color: colors.muted }]}>
-            {isCreole
-              ? `Fini : ${daily?.score}/${daily?.total}. Retounen demen !`
-              : `Terminé : ${daily?.score}/${daily?.total}. Revenez demain !`}
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={[nightType.cardTitle, { color: C.ink }]}>{t('Défi du jour terminé', 'Defi jodi a fini')}</Text>
+          <Text style={[nightType.meta, { color: C.muted }]}>
+            {t(`${daily?.score ?? 0}/${daily?.total ?? 10} · Reviens demain`, `${daily?.score ?? 0}/${daily?.total ?? 10} · Tounen demen`)}
           </Text>
         </View>
+        <Text style={[arenaType.num, { fontSize: 20, color: C.gold }]}>{daily?.score ?? 0}/{daily?.total ?? 10}</Text>
       </View>
     );
   }
 
   return (
-    <PressableScale
-      onPress={onStart}
-      accessibilityRole="button"
-      accessibilityLabel={isCreole ? 'Jwe defi jodi a' : 'Jouer le défi du jour'}
-      style={[
-        {
-          borderRadius: radius.card,
-          overflow: 'hidden',
-          shadowColor: colors.azure,
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.28,
-          shadowRadius: 14,
-          elevation: 5,
-        },
-        style,
-      ]}
-    >
-      <LinearGradient
-        colors={['#2E86F0', '#1B6FE0', '#0857A6']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 }}
-      >
-        <View
-          style={{
-            width: 46,
-            height: 46,
-            borderRadius: radius.tile,
-            alignItems: 'center',
-            justifyContent: 'center',
-            // Opaque tone of the banner's own blue — no translucent fill + hairline.
-            backgroundColor: '#3F8DF2',
-          }}
-        >
-          <CalendarCheck color="#ffffff" size={23} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[typeScale.title, { color: '#ffffff' }]}>
-            {isCreole ? 'Defi jodi a' : 'Défi du jour'}
+    <View style={[{ padding: compact ? 20 : 24, gap: compact ? 12 : 14, borderRadius: 24, backgroundColor: C.surfaceRaised }, style]}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+        <View style={{ flex: 1, gap: 4 }}>
+          <Text style={[nightType.meta, { color: C.muted }]}>{t('Défi du jour', 'Defi jodi a')}</Text>
+          <Text style={[compact ? nightType.cardTitle : nightType.feature, { color: C.ink }]}>
+            {t('10 questions · Toutes les matières', '10 kesyon · Tout matyè yo')}
           </Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
-            <Text style={[typeScale.caption, { color: 'rgba(255,255,255,0.9)' }]}>
-              {isCreole ? '10 kesyon' : '10 questions'}
-            </Text>
-            <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: radius.chip, paddingHorizontal: 7, paddingVertical: 1.5 }}>
-              <Text style={{ fontSize: 11, fontWeight: '800', color: '#fde68a' }}>+50 XP</Text>
-            </View>
-          </View>
         </View>
-        {/* Frosted CTA chip — a clearer tap target than a bare arrow. */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: radius.chip, paddingLeft: 12, paddingRight: 8, paddingVertical: 7 }}>
-          <Text style={{ fontSize: 13.5, fontWeight: '800', color: '#ffffff' }}>
-            {isCreole ? 'Jwe' : 'Jouer'}
-          </Text>
-          <ChevronRight color="#ffffff" size={16} />
+        <View style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: C.surface }}>
+          <Text style={[arenaType.status, { color: C.inkSoft }]} maxFontSizeMultiplier={1.3}>+50 XP</Text>
         </View>
-      </LinearGradient>
-    </PressableScale>
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Clock color={C.muted} size={18} />
+        <Text style={[nightType.meta, { color: C.muted, flex: 1 }]}>
+          {t('Les mêmes pour tous · se termine à minuit', 'Menm yo pou tout moun · fini a minwi')}
+        </Text>
+      </View>
+      <ArenaButton
+        label={t('Jouer le défi', 'Jwe defi a')}
+        onPress={onStart}
+        accessibilityHint={t('Lance les 10 questions du jour, 15 secondes chacune', 'Lanse 10 kesyon jodi a, 15 segonn chak')}
+        style={{ marginTop: 4 }}
+      />
+    </View>
   );
 }

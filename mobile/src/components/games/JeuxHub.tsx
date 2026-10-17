@@ -1,15 +1,25 @@
 /**
- * JeuxHub — the games arcade landing, "Ligue + Console" layout (chosen from the
- * 5-direction design pass, Aug 2026): a segmented hub (Jouer · Records ·
- * Classement) so the leaderboard lives INSIDE the tab, with the 6 games as
- * compact round console-style buttons (56px, small icons) instead of the old
- * 170px tiles. Défi du jour and Jeu de la semaine (×2 XP) stay first-class.
+ * JeuxHub — the games tab landing, "Ligue + Console" (chosen Aug 2026) on the
+ * Arène's night (Stitch 08 / 08b, DIRECTION §8). One world for the whole tab:
+ * Jouer, Arène, Records and Classement all sit on #050B1A with opaque tonal
+ * cards, so switching segments never switches palettes.
+ *
+ *  - Header: page title + two opaque total chips (XP, série) — white, not
+ *    gold: they are totals, not something just earned.
+ *  - Segmented tone="night".
+ *  - Jouer: Défi du jour feature card (the screen's one coral), the six games
+ *    as 64px round console buttons in 3 columns (Ted's chosen shape; the
+ *    rainbow fills are gone — every button is the same night tone), then the
+ *    duel / invite / rank rows.
+ *  - Arène: ArenaHubPanel (real school, real rank, real events only).
+ *  - Records: community best per game + your own best.
+ *  - Classement: the school race + the shared board in tone="night".
  */
 
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, Dimensions, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Zap, Flame, Trophy, Crown, Sparkles, Share2, Snowflake, ChevronRight, Gift, UserPlus } from 'lucide-react-native';
+import { Flame, Share2, Snowflake, Star, UserPlus, Swords, ChevronRight } from 'lucide-react-native';
 import { GAMES, GAME_ICONS } from '../../data/games';
 import { getGameRecords } from '../../services/leaderboardService';
 import { weeklyGameId, WEEKLY_GAME_XP_MULTIPLIER } from '../../utils/weeklyGame';
@@ -21,23 +31,26 @@ import DailyChallengeBanner from './DailyChallengeBanner';
 import DuelResults from './DuelResults';
 import SchoolRace from '../trivia/SchoolRace';
 import Leaderboard from '../Leaderboard';
-import { Skeleton } from '../StateViews';
-import { useColors, useTheme, typeScale, radius } from '../../theme/theme';
 import PressableScale from '../ui/PressableScale';
+import { tapLight } from '../../utils/haptics';
 import ShareCardCapture, { type ShareCardCaptureHandle } from '../share/ShareCardCapture';
 import InviteSheet from '../InviteSheet';
 import { shareScore } from '../../services/scoreShare';
 import ArenaHubPanel from '../arena/ArenaHubPanel';
-import { ArenaScreen } from '../arena/ArenaKit';
-import arenaHaptics from '../arena/arenaHaptics';
+import { ArenaButton } from '../arena/ArenaKit';
+import { Avatar } from '../arena/art';
+import ArenaWorld from '../arena/art/environment/ArenaWorld';
+import { arenaColors as C, arenaType } from '../../theme/arenaTheme';
+import { fonts } from '../../theme/theme';
+import { NightRow, NightSection, StatChip, groupDigits, nightType } from './night';
 
-const GRID_PAD = 16;
+const SIDE = 20;
 // Cap so the 3-col console grid doesn't balloon on iPad (portrait +
 // requireFullScreen → stable width). Phones fall under the cap unchanged.
 const GRID_W = Math.min(Dimensions.get('window').width, 560);
-const COL_W = Math.floor((GRID_W - GRID_PAD * 2) / 3);
-const BTN = 56; // round console button — the whole "smaller tiles" ask
-const BTN_ICON = 24;
+const COL_W = Math.floor((GRID_W - SIDE * 2) / 3);
+const BTN = 64; // round console button (jeux-ligue-console: 56–64, 3 columns)
+const BTN_ICON = 26;
 
 type HubTab = 'jouer' | 'arene' | 'records' | 'classement';
 
@@ -57,165 +70,135 @@ interface JeuxHubProps {
 
 /* ─── Records: best-ever score per arcade game + holder ─── */
 function GameRecords({
-  isCreole, records, loading,
-}: { isCreole: boolean; records: Record<string, GameRecord>; loading: boolean }) {
-  const colors = useColors();
-  const { shadow } = useTheme();
+  isCreole, records, loading, highScores,
+}: { isCreole: boolean; records: Record<string, GameRecord>; loading: boolean; highScores: Record<string, number> }) {
   const user = useStore((s) => s.user);
   const shareRef = useRef<ShareCardCaptureHandle>(null);
-
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const arcade = GAMES.filter((g) => g.id !== 'trivia');
 
-  // Fetch in flight → show a layout-matched skeleton instead of a silent gap.
-  if (loading) {
-    return (
-      <View
-        className="px-4 py-4 mx-4 mt-4"
-        style={{ backgroundColor: colors.surface, borderRadius: radius.hero, ...shadow.md }}
-        accessible
-        accessibilityLabel={isCreole ? 'Ap chaje' : 'Chargement…'}
-        accessibilityLiveRegion="polite"
-      >
-        <View className="flex-row items-center gap-1.5 mb-3">
-          <Crown color={colors.warn} size={15} />
-          <Skeleton width={90} height={16} radius={6} />
-        </View>
-        {arcade.map((g, i) => (
-          <View
-            key={g.id}
-            className="flex-row items-center justify-between py-2"
-            style={{ borderTopWidth: i === 0 ? 0 : 1, borderTopColor: colors.hairline }}
-          >
-            <Skeleton width={110} height={13} radius={6} />
-            <Skeleton width={64} height={13} radius={6} />
-          </View>
-        ))}
-      </View>
-    );
-  }
-
-  // Even with zero records set, the strip stays visible — five "À prendre !"
-  // rows are an invitation; a vanished section invites nothing.
   return (
     <>
-    <ShareCardCapture ref={shareRef} />
-    <View
-      className="px-4 py-4 mx-4 mt-4"
-      style={{
-        backgroundColor: colors.surface,
-        borderRadius: radius.hero,
-        ...shadow.md,
-      }}
-    >
-      <View className="flex-row items-center gap-1.5 mb-0.5">
-        <Crown color={colors.warn} size={15} />
-        <Text style={[typeScale.title, { color: colors.ink }]}>
-          {isCreole ? 'Rekò yo' : 'Records'}
-        </Text>
-      </View>
-      <Text style={[typeScale.caption, { color: colors.muted, marginBottom: 10 }]}>
-        {isCreole ? 'Meyè nòt kominote a' : 'Meilleurs scores de la communauté'}
-      </Text>
-      {arcade.map((g, i) => {
-        const rec = records[g.id];
-        const Icon = GAME_ICONS[g.id];
-        // The signed-in student holds this record → offer to share the N°1 card.
-        const isHolder = !!rec?.uid && !!user?.uid && rec.uid === user.uid;
-        return (
-          <View
-            key={g.id}
-            className="flex-row items-center justify-between py-2"
-            style={{ borderTopWidth: i === 0 ? 0 : 1, borderTopColor: colors.hairline }}
-          >
-            <View className="flex-row items-center gap-1.5" style={{ flexShrink: 1 }}>
-              <Icon color={g.color} size={14} />
-              <Text style={[typeScale.label, { color: g.color }]}>
-                {isCreole ? g.nameHt : g.name}
-              </Text>
-            </View>
-            {rec ? (
-              <View className="flex-row items-center" style={{ gap: 10 }}>
-                {isHolder ? (
-                  <TouchableOpacity
-                    onPress={() => shareRef.current?.share({ mode: 'rank', subject: g.name, scoreLabel: `${rec.score}`, holder: rec.displayName })}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    accessibilityRole="button"
-                    accessibilityLabel={isCreole ? 'Pataje rang mwen' : 'Partager mon rang'}
-                    style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: colors.azureSoft, alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <Share2 color={colors.azure} size={15} />
-                  </TouchableOpacity>
-                ) : null}
-                {/* Score is the hero (gold chip); the holder is a clear caption so
-                    a bare "L · 12" no longer reads as a mystery — it's "🏆 12, par L". */}
-                <View style={{ alignItems: 'flex-end' }}>
-                  <View
-                    className="flex-row items-center gap-1 rounded-full"
-                    style={{ backgroundColor: colors.warnSoft, paddingHorizontal: 9, paddingVertical: 3 }}
-                  >
-                    <Trophy color={colors.warn} size={12} />
-                    <Text style={[typeScale.label, { color: colors.ink }]}>{rec.score}</Text>
-                  </View>
-                  <Text style={[typeScale.micro, { color: colors.faint, marginTop: 2 }]} numberOfLines={1}>
-                    {isCreole ? 'pa' : 'par'} {rec.displayName}
-                  </Text>
-                </View>
+      <ShareCardCapture ref={shareRef} />
+      <NightSection
+        title={t('Records de la communauté', 'Rekò kominote a')}
+        meta={t('meilleur score par jeu', 'meyè nòt pa jwèt')}
+        style={{ marginTop: 20 }}
+      />
+      <View style={{ gap: 10 }} accessibilityLiveRegion={loading ? 'polite' : 'none'}>
+        {arcade.map((g) => {
+          const rec = records[g.id];
+          const Icon = GAME_ICONS[g.id];
+          const mine = highScores[g.id];
+          // The signed-in student holds this record → offer to share the N°1 card.
+          const isHolder = !!rec?.uid && !!user?.uid && rec.uid === user.uid;
+          const name = isCreole ? g.nameHt : g.name;
+          return (
+            <View
+              key={g.id}
+              accessible
+              accessibilityLabel={[
+                name,
+                loading ? t('chargement', 'ap chaje') : rec ? t(`record ${rec.score} par ${rec.displayName}`, `rekò ${rec.score} pa ${rec.displayName}`) : t('record à prendre', 'rekò pou pran'),
+                mine != null ? t(`ton record ${mine}`, `rekò pa w ${mine}`) : null,
+              ].filter(Boolean).join(', ')}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 72, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 20, backgroundColor: C.surface }}
+            >
+              <View style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surfaceRaised }}>
+                <Icon color={C.ink} size={20} strokeWidth={2.2} />
               </View>
-            ) : (
-              <View className="rounded-full px-2.5 py-0.5" style={{ backgroundColor: colors.surfaceAlt }}>
-                <Text style={[typeScale.micro, { color: colors.muted }]}>
-                  {isCreole ? 'Poko gen rekò !' : 'À prendre !'}
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text numberOfLines={1} style={[nightType.cardTitle, { color: C.ink }]}>{name}</Text>
+                <Text numberOfLines={1} style={[arenaType.status, { color: C.muted }]}>
+                  {loading
+                    ? t('Chargement…', 'N ap chaje…')
+                    : rec
+                      ? t(`par ${rec.displayName}`, `pa ${rec.displayName}`)
+                      : t('Personne encore : à prendre', 'Poko gen pèsonn : pou pran')}
+                  {mine != null ? t(` · toi ${mine}`, ` · ou ${mine}`) : ''}
                 </Text>
               </View>
-            )}
-          </View>
-        );
-      })}
-    </View>
+              {isHolder ? (
+                <PressableScale
+                  onPress={() => shareRef.current?.share({ mode: 'rank', subject: g.name, scoreLabel: `${rec!.score}`, holder: rec!.displayName })}
+                  hitSlop={8}
+                  pressedScale={0.92}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Partager mon record', 'Pataje rekò mwen')}
+                  style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: C.surfaceRaised, alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Share2 color={C.ink} size={18} />
+                </PressableScale>
+              ) : null}
+              {/* A record is an earned result → gold numeral. */}
+              <Text style={[arenaType.num, { fontSize: 20, lineHeight: 24, color: rec ? C.gold : C.faint }]}>
+                {rec ? rec.score : '—'}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
     </>
   );
 }
 
-/* ─── Segmented control: Jouer · Records · Classement ─── */
-function HubSegments({
-  tab, onChange, isCreole,
-}: { tab: HubTab; onChange: (t: HubTab) => void; isCreole: boolean }) {
-  const colors = useColors();
-  const { shadow } = useTheme();
-  const segs: { id: HubTab; fr: string; ht: string }[] = [
-    { id: 'jouer', fr: 'Jouer', ht: 'Jwe' },
-    // The Arena's permanent home (audit #11): always one tap from the tab
-    // bar, between national events too — without a sixth tab.
-    { id: 'arene', fr: 'Arène', ht: 'Arèn' },
-    { id: 'records', fr: 'Records', ht: 'Rekò' },
-    { id: 'classement', fr: 'Classement', ht: 'Klasman' },
-  ];
+/* ─── One round console button ─── */
+function ConsoleButton({
+  id, isCreole, weekly, record, onPress,
+}: { id: string; isCreole: boolean; weekly: boolean; record: number | undefined; onPress: () => void }) {
+  const g = GAMES.find((x) => x.id === id)!;
+  const Icon = GAME_ICONS[g.id];
+  const name = isCreole ? g.nameHt : g.name;
+  const sub = weekly
+    ? (isCreole ? 'Jwèt semèn nan' : 'Jeu de la semaine')
+    : record != null
+      ? (isCreole ? `rekò ${record}` : `record ${record}`)
+      : `~${g.minutes} min`;
   return (
-    <View
-      className="flex-row mx-4 mb-1"
-      style={{ backgroundColor: colors.surfaceAlt, borderRadius: 999, padding: 3 }}
-      accessibilityRole="tablist"
+    <PressableScale
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${name}. ${isCreole ? g.descriptionHt : g.description}${weekly ? (isCreole ? ` Jwèt semèn nan, XP fwa ${WEEKLY_GAME_XP_MULTIPLIER}.` : ` Jeu de la semaine, XP fois ${WEEKLY_GAME_XP_MULTIPLIER}.`) : ''}`}
+      pressedScale={0.93}
+      style={{ width: COL_W, alignItems: 'center' }}
     >
-      {segs.map((s) => {
-        const on = tab === s.id;
+      <View style={{ width: BTN, height: BTN, borderRadius: BTN / 2, backgroundColor: C.surfaceRaised, alignItems: 'center', justifyContent: 'center' }}>
+        <Icon color={C.ink} size={BTN_ICON} strokeWidth={2.2} />
+        {weekly ? (
+          <View style={{ position: 'absolute', top: -6, right: -14, backgroundColor: C.gold, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
+            <Text style={{ fontFamily: fonts.bold, fontSize: 14, lineHeight: 18, color: C.onGold }} maxFontSizeMultiplier={1.2}>×{WEEKLY_GAME_XP_MULTIPLIER}</Text>
+          </View>
+        ) : null}
+      </View>
+      <Text numberOfLines={1} style={[arenaType.name, { fontSize: 15, color: C.ink, marginTop: 10, textAlign: 'center' }]}>{name}</Text>
+      <Text numberOfLines={1} style={[arenaType.status, { color: weekly ? C.gold : C.muted, marginTop: 1, textAlign: 'center' }]}>{sub}</Text>
+    </PressableScale>
+  );
+}
+
+/**
+ * The hub's four segments on the night. Same look as ui/Segmented tone="night"
+ * (track #13243F, raised thumb, 48h, 15 bold white / muted), but each segment
+ * takes the width its label needs: four equal quarters truncate "Classement"
+ * on a 402pt phone. (Needs a `distribute="content"` option on ui/Segmented.)
+ */
+function HubSegments({ options, value, onChange }: { options: { key: HubTab; label: string }[]; value: HubTab; onChange: (k: HubTab) => void }) {
+  return (
+    <View accessibilityRole="tablist" style={{ flexDirection: 'row', marginHorizontal: SIDE, padding: 4, minHeight: 48, borderRadius: 999, backgroundColor: C.surface }}>
+      {options.map((o) => {
+        const on = o.key === value;
         return (
-          <TouchableOpacity
-            key={s.id}
-            onPress={() => { if (!on) arenaHaptics.choose(); onChange(s.id); }}
+          <PressableScale
+            key={o.key}
+            onPress={() => { if (!on) { tapLight(); onChange(o.key); } }}
+            pressedScale={0.97}
             accessibilityRole="tab"
             accessibilityState={{ selected: on }}
-            accessibilityLabel={isCreole ? s.ht : s.fr}
-            className="flex-1 items-center rounded-full"
-            style={{
-              paddingVertical: 7,
-              backgroundColor: on ? colors.surface : 'transparent',
-              ...(on ? shadow.sm : null),
-            }}
+            accessibilityLabel={o.label}
+            style={{ flexGrow: 1, minHeight: 40, paddingHorizontal: 10, borderRadius: 999, alignItems: 'center', justifyContent: 'center', backgroundColor: on ? C.secondary : 'transparent' }}
           >
-            <Text style={[typeScale.label, { color: on ? colors.azure : colors.muted }]}>
-              {isCreole ? s.ht : s.fr}
-            </Text>
-          </TouchableOpacity>
+            <Text numberOfLines={1} maxFontSizeMultiplier={1.4} style={{ fontFamily: fonts.bold, fontSize: 15, lineHeight: 20, color: on ? C.ink : C.muted }}>{o.label}</Text>
+          </PressableScale>
         );
       })}
     </View>
@@ -226,25 +209,24 @@ function HubSegments({
 export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily, onRematch }: JeuxHubProps) {
   const { profile, level, isAuthed, daily } = useTrivia();
   const { streak } = useStreak();
-  const { myRank } = useLeaderboard(25);
+  const { myRank, myEntry } = useLeaderboard(25);
   const navigation = useNavigation<any>();
-  const colors = useColors();
-  const { shadow } = useTheme();
+  const user = useStore((s) => s.user);
+  const toggleAuthModal = useStore((s) => s.toggleAuthModal);
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   const [tab, setTab] = useState<HubTab>('jouer');
-  // Invite/referral sheet — the SAME component ProfileScreen opens (it fetches
-  // the referral code itself, so there's nothing to wire here beyond visibility).
+  // Invite/referral sheet — the SAME component ProfileScreen opens.
   const [inviteOpen, setInviteOpen] = useState(false);
 
   const highScores: Record<string, number> = profile?.games?.highScores || {};
-  const gamesPlayed: number = profile?.games?.gamesPlayed || 0;
   const freezes: number = streak?.streakFreezes || 0;
+  const days = streak?.currentStreak || 0;
 
-  // Best personal record across the games — the one number worth bragging about
-  // from the hub (XP/streak aren't a "score" a friend can beat). Null for a
-  // brand-new player, which turns the block into invite-only (never share a 0).
+  // Best personal record across the games — the one number worth bragging
+  // about. Null for a brand-new player (never share a 0).
   const bestPersonal = (() => {
     let bestId: string | null = null;
     let bestScore = 0;
@@ -256,7 +238,7 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily, onR
     return game ? { game, score: bestScore } : null;
   })();
 
-  // One records fetch feeds the weekly strip target and the Records segment.
+  // One records fetch feeds the Records segment.
   const [records, setRecords] = useState<Record<string, GameRecord>>({});
   const [recordsLoading, setRecordsLoading] = useState(true);
   useEffect(() => {
@@ -269,404 +251,187 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily, onR
 
   // Jeu de la semaine — rotates on the leaderboard's ISO week (Monday reset).
   const featuredId = weeklyGameId();
-  const featured = GAMES.find((g) => g.id === featuredId) || null;
-  const featuredRec = records[featuredId];
+  const open = (id: string) => (id === 'trivia' ? onStartTrivia() : onSelectGame(id));
 
-  const statChips = (
-    <View className="flex-row" style={{ gap: 6 }}>
-      <View
-        className="flex-row items-center rounded-full"
-        style={{ gap: 4, paddingHorizontal: 9, paddingVertical: 4, backgroundColor: colors.surfaceAlt }}
-        accessible
-        accessibilityLabel={`${level.xp} XP, ${isCreole ? 'nivo' : 'niveau'} ${level.level}`}
-      >
-        <Zap color={colors.azure} size={12} />
-        <Text style={[typeScale.label, { color: colors.ink }]}>{level.xp}</Text>
-      </View>
-      <View
-        className="flex-row items-center rounded-full"
-        style={{ gap: 4, paddingHorizontal: 9, paddingVertical: 4, backgroundColor: colors.surfaceAlt }}
-        accessible
-        accessibilityLabel={`${isCreole ? 'Seri' : 'Série'} ${streak?.currentStreak || 0}${freezes > 0 ? `, ${freezes} ${isCreole ? 'jèl' : 'gel'}` : ''}`}
-      >
-        <Flame color={colors.danger} size={12} />
-        <Text style={[typeScale.label, { color: colors.ink }]}>{streak?.currentStreak || 0}</Text>
-        {freezes > 0 && (
-          <>
-            <Snowflake color={colors.azure} size={10} />
-            <Text style={[typeScale.micro, { color: colors.azure }]}>{freezes}</Text>
-          </>
-        )}
-      </View>
-      <View
-        className="flex-row items-center rounded-full"
-        style={{ gap: 4, paddingHorizontal: 9, paddingVertical: 4, backgroundColor: colors.surfaceAlt }}
-        accessible
-        accessibilityLabel={`${gamesPlayed} ${isCreole ? 'pati' : 'parties'}`}
-      >
-        <Trophy color={colors.warn} size={12} />
-        <Text style={[typeScale.label, { color: colors.ink }]}>{gamesPlayed}</Text>
-      </View>
-    </View>
-  );
+  const segs: { key: HubTab; label: string }[] = [
+    { key: 'jouer', label: t('Jouer', 'Jwe') },
+    // The Arena's permanent home (audit #11): always one tap from the tab bar.
+    { key: 'arene', label: t('Arène', 'Arèn') },
+    { key: 'records', label: t('Records', 'Rekò') },
+    { key: 'classement', label: t('Classement', 'Klasman') },
+  ];
+
+  const scrollPad = { paddingHorizontal: SIDE, paddingTop: 20, paddingBottom: 120 };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      {/* Header: title + compact stat chips (replaces the old 3-card stats band) */}
-      <View className="flex-row items-center justify-between px-4 pt-3 pb-2">
-        <Text style={[typeScale.h1, { color: colors.ink }]}>{isCreole ? 'Jwèt' : 'Jeux'}</Text>
-        {isAuthed ? statChips : null}
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      {/* The mornes and sea, still and barely there, along the bottom. */}
+      <View pointerEvents="none" style={[StyleSheet.absoluteFill, { top: '55%', opacity: 0.16 }]}>
+        <ArenaWorld still />
       </View>
 
-      <HubSegments tab={tab} onChange={setTab} isCreole={isCreole} />
+      {/* Header: title + total chips. No band. */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: SIDE, paddingTop: 12, paddingBottom: 16 }}>
+        <Text accessibilityRole="header" style={[nightType.page, { color: C.ink }]}>{t('Jeux', 'Jwèt')}</Text>
+        {isAuthed ? (
+          <View style={{ flexDirection: 'row', gap: 8, flexShrink: 1 }}>
+            <StatChip
+              icon={<Star color={C.ink} size={16} />}
+              label={`${groupDigits(level.xp)} XP`}
+              accessibilityLabel={t(`${level.xp} XP, niveau ${level.level}`, `${level.xp} XP, nivo ${level.level}`)}
+            />
+            <StatChip
+              icon={freezes > 0 ? <Snowflake color={C.signal} size={16} /> : <Flame color={C.coral} size={16} />}
+              label={t(`Série ${days} j`, `Seri ${days} j`)}
+              accessibilityLabel={t(`Série de ${days} jours${freezes > 0 ? `, ${freezes} gel` : ''}`, `Seri ${days} jou${freezes > 0 ? `, ${freezes} jèl` : ''}`)}
+            />
+          </View>
+        ) : null}
+      </View>
+
+      <HubSegments options={segs} value={tab} onChange={setTab} />
 
       {/* ── Jouer ── */}
       {tab === 'jouer' && (
-        <ScrollView
-          contentContainerStyle={{ paddingTop: 10, paddingBottom: 100 }}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Défi du jour — stays first: it's the daily XP + streak protector. */}
-          <View className="px-4 pb-2">
-            <DailyChallengeBanner daily={daily} isCreole={isCreole} onStart={onStartDaily} />
-          </View>
+        <ScrollView contentContainerStyle={scrollPad} showsVerticalScrollIndicator={false}>
+          {/* Défi du jour — first: the daily XP + streak protector. */}
+          <DailyChallengeBanner daily={daily} isCreole={isCreole} onStart={onStartDaily} />
 
-          {/* What came back from the duels you sent — renders nothing until
-              an opponent has actually played one. */}
+          {/* What came back from the duels you sent — nothing until an
+              opponent has actually played one. */}
           <DuelResults isCreole={isCreole} onRematch={onRematch} />
 
-          {/* The school race, for everyone — you do not have to be playing to
-              care which school is winning, and watching it is what makes
-              someone start. */}
-          <View className="px-4 pb-3">
-            <SchoolRace isCreole={isCreole} />
+          <NightSection title={t('Tous les jeux', 'Tout jwèt yo')} meta={t(`${GAMES.length} disponibles`, `${GAMES.length} disponib`)} />
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: 22 }}>
+            {GAMES.map((g) => (
+              <ConsoleButton
+                key={g.id}
+                id={g.id}
+                isCreole={isCreole}
+                weekly={g.id === featuredId}
+                record={highScores[g.id]}
+                onPress={() => open(g.id)}
+              />
+            ))}
           </View>
 
-          {/* Jeu de la semaine — thin strip (was a tall hero card). */}
-          {featured && (
-            <View className="px-4 pb-3">
-              <PressableScale
-                onPress={() => (featured.id === 'trivia' ? onStartTrivia() : onSelectGame(featured.id))}
-                accessibilityRole="button"
-                accessibilityLabel={
-                  isCreole
-                    ? `Jwèt semèn nan: ${featured.nameHt}, XP fwa ${WEEKLY_GAME_XP_MULTIPLIER}`
-                    : `Jeu de la semaine : ${featured.name}, XP fois ${WEEKLY_GAME_XP_MULTIPLIER}`
-                }
-                pressedScale={0.97}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 8,
-                  borderRadius: radius.control,
-                  backgroundColor: featured.color,
-                  paddingHorizontal: 12,
-                  paddingVertical: 9,
-                  ...shadow.sm,
-                  shadowColor: featured.color,
-                }}
-              >
-                <Zap color="#fde68a" size={14} />
-                <Text style={[typeScale.label, { color: '#ffffff', flexShrink: 1 }]} numberOfLines={1}>
-                  {isCreole ? `Jwèt semèn nan : ${featured.nameHt}` : `Jeu de la semaine : ${featured.name}`}
-                </Text>
-                <Text style={[typeScale.micro, { color: 'rgba(255,255,255,0.85)', flex: 1 }]} numberOfLines={1}>
-                  {featuredRec
-                    ? (isCreole ? `· rekò ${featuredRec.score}` : `· record ${featuredRec.score}`)
-                    : ''}
-                </Text>
-                <View
-                  className="rounded-full"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.28)', paddingHorizontal: 8, paddingVertical: 2 }}
-                >
-                  <Text style={[typeScale.micro, { color: '#fff' }]}>XP ×{WEEKLY_GAME_XP_MULTIPLIER}</Text>
-                </View>
-              </PressableScale>
-            </View>
-          )}
-
-          {/* Guest nudge — replaces the stat chips the un-signed-in can't have. */}
-          {!isAuthed && (
-            <View
-              className="flex-row items-center mx-4 mb-3 px-4 py-3 rounded-2xl"
-              style={{ backgroundColor: colors.surfaceAlt, gap: 12 }}
-              accessible
-              accessibilityLabel={isCreole
-                ? 'Konekte pou swiv XP, seri ak pati ou yo'
-                : 'Connecte-toi pour suivre tes XP, ta série et tes parties'}
-            >
-              <View
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: radius.control,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: colors.azureSoft,
-                }}
-              >
-                <Sparkles color={colors.azure} size={18} />
-              </View>
-              <View className="flex-1">
-                <Text style={[typeScale.titleSm, { color: colors.ink }]}>
-                  {isCreole ? 'Konekte pou kenbe pwogrè w' : 'Connecte-toi pour suivre tes XP'}
-                </Text>
-                <Text style={[typeScale.caption, { color: colors.muted, marginTop: 2 }]}>
-                  {isCreole
-                    ? 'XP, seri ak pati ap parèt isit la.'
-                    : 'Tes XP, ta série et tes parties s\'afficheront ici.'}
-                </Text>
-              </View>
-            </View>
-          )}
-
-          {/* Console grid — 6 round game buttons, 3 per row. The weekly game
-              wears a gold ring + ×2 chip; personal bests sit under the name. */}
-          <View
-            style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              paddingHorizontal: GRID_PAD,
-              rowGap: 14,
-            }}
-          >
-            {GAMES.map((g) => {
-              const Icon = GAME_ICONS[g.id];
-              const hs = highScores[g.id];
-              const isWeekly = g.id === featuredId;
-              return (
-                <PressableScale
-                  key={g.id}
-                  onPress={() => (g.id === 'trivia' ? onStartTrivia() : onSelectGame(g.id))}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${isCreole ? g.nameHt : g.name} — ${isCreole ? g.descriptionHt : g.description}${isWeekly ? (isCreole ? `, XP fwa ${WEEKLY_GAME_XP_MULTIPLIER}` : `, XP fois ${WEEKLY_GAME_XP_MULTIPLIER}`) : ''}`}
-                  pressedScale={0.93}
-                  style={{ width: COL_W, alignItems: 'center' }}
-                >
-                  <View
-                    style={{
-                      width: BTN,
-                      height: BTN,
-                      borderRadius: 19,
-                      backgroundColor: g.color,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      shadowColor: g.color,
-                      shadowOffset: { width: 0, height: 5 },
-                      shadowOpacity: 0.32,
-                      shadowRadius: 9,
-                      elevation: 5,
-                      ...(isWeekly
-                        ? { borderWidth: 2.5, borderColor: '#fde68a' }
-                        : null),
-                    }}
-                  >
-                    <Icon color="#fff" size={BTN_ICON} />
-                    {isWeekly && (
-                      <View
-                        style={{
-                          position: 'absolute',
-                          top: -7,
-                          right: -10,
-                          backgroundColor: colors.warn,
-                          borderRadius: 999,
-                          paddingHorizontal: 5,
-                          paddingVertical: 1,
-                        }}
-                      >
-                        <Text style={[typeScale.micro, { color: '#ffffff', fontSize: 9 }]}>×{WEEKLY_GAME_XP_MULTIPLIER}</Text>
-                      </View>
-                    )}
+          <View style={{ gap: 10, marginTop: 28 }}>
+            {/* A duel starts from a round: play, then send the same questions. */}
+            <NightRow
+              leading={(
+                <View style={{ width: 64, height: 40 }}>
+                  <View style={{ position: 'absolute', left: 0 }}>
+                    <Avatar seed={user?.uid || 'toi'} size={40} />
                   </View>
-                  <Text
-                    style={[typeScale.label, { color: colors.ink, marginTop: 6, textAlign: 'center' }]}
-                    numberOfLines={1}
-                  >
-                    {isCreole ? g.nameHt : g.name}
-                  </Text>
-                  <Text style={[typeScale.micro, { color: colors.faint, marginTop: 1 }]} numberOfLines={1}>
-                    {hs != null ? `${isCreole ? 'rekò' : 'record'} ${hs}` : `~${g.minutes} min`}
-                  </Text>
-                </PressableScale>
-              );
-            })}
-          </View>
-
-          {/* My rank — the tab's built-in door to the Classement. */}
-          <TouchableOpacity
-            onPress={() => setTab('classement')}
-            accessibilityRole="button"
-            accessibilityLabel={isCreole ? 'Wè klasman an' : 'Voir le classement'}
-            className="flex-row items-center mx-4 mt-5 px-4 py-3 rounded-2xl"
-            style={{ backgroundColor: colors.surfaceAlt, gap: 10 }}
-            activeOpacity={0.85}
-          >
-            <Crown color={colors.warn} size={18} />
-            <View className="flex-1">
-              <Text style={[typeScale.label, { color: colors.ink }]}>
-                {myRank
-                  ? (isCreole ? `Ou se ${myRank}ᵉ semèn sa a` : `Tu es ${myRank}ᵉ cette semaine`)
-                  : (isCreole ? 'Klasman semèn nan' : 'Classement de la semaine')}
-              </Text>
-              <Text style={[typeScale.micro, { color: colors.muted, marginTop: 1 }]}>
-                {myRank
-                  ? (isCreole ? 'Wè klasman konplè a' : 'Voir le classement complet')
-                  : (isCreole ? 'Jwe pou parèt nan klasman an !' : 'Joue pour apparaître au classement !')}
-              </Text>
-            </View>
-            <ChevronRight color={colors.faint} size={16} />
-          </TouchableOpacity>
-
-          {/* Amis — fills the old dead space under the rank row: brag about the
-              best record (text share w/ referral code baked in by scoreShare) and
-              open the existing referral sheet. Signed-in only: the referral code
-              endpoint needs an ID token, and guests already get the sign-in nudge
-              above. New players see invite alone — no 0 to share. */}
-          {isAuthed && (
-            <View
-              className="mx-4 mt-3 px-4 py-4 rounded-2xl"
-              style={{ backgroundColor: colors.surfaceAlt }}
-            >
-              <View className="flex-row items-center" style={{ gap: 10 }}>
-                <View
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: radius.control,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: colors.azureSoft,
-                  }}
-                >
-                  <Gift color={colors.azure} size={18} />
+                  <View style={{ position: 'absolute', left: 24, width: 40, height: 40, borderRadius: 20, backgroundColor: C.coral, alignItems: 'center', justifyContent: 'center' }}>
+                    <Swords color={C.onCoral} size={18} />
+                  </View>
                 </View>
-                <View className="flex-1">
-                  <Text style={[typeScale.titleSm, { color: colors.ink }]}>
-                    {isCreole ? 'Jwe ak zanmi w' : 'Joue avec tes amis'}
-                  </Text>
-                  <Text style={[typeScale.caption, { color: colors.muted, marginTop: 2 }]}>
-                    {bestPersonal
-                      ? (isCreole
-                          ? 'Pataje rekò w oswa envite yo : nou chak ap genyen yon bonus.'
-                          : 'Partage ton record ou invite-les : vous gagnez chacun un bonus.')
-                      : (isCreole
-                          ? 'Envite yo jwe : nou chak ap genyen +1 jèl seri ak XP.'
-                          : 'Invite-les à jouer : vous gagnez chacun +1 gel de série et des XP.')}
-                  </Text>
-                </View>
-              </View>
+              )}
+              title={t('Défier un ami', 'Defye yon zanmi')}
+              meta={t('Joue une manche, puis envoie-lui les mêmes questions', 'Jwe yon manch, epi voye menm kesyon yo ba li')}
+              onPress={onStartTrivia}
+            />
 
-              <View className="flex-row" style={{ gap: 8, marginTop: 12 }}>
-                {bestPersonal && (
-                  <PressableScale
-                    onPress={() => {
-                      void shareScore({
-                        title: isCreole ? bestPersonal.game.nameHt : bestPersonal.game.name,
-                        score: bestPersonal.score,
-                        lang: isCreole ? 'ht' : 'fr',
-                      });
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel={
-                      isCreole
-                        ? `Pataje nòt mwen : ${bestPersonal.score} nan ${bestPersonal.game.nameHt}`
-                        : `Partager mon score : ${bestPersonal.score} à ${bestPersonal.game.name}`
-                    }
-                    pressedScale={0.96}
-                    style={{
-                      flex: 1,
-                      minHeight: 44,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 6,
-                      paddingHorizontal: 10,
-                      borderRadius: radius.control,
-                      backgroundColor: colors.azureSoft,
-                    }}
-                  >
-                    <Share2 color={colors.azure} size={15} />
-                    <Text style={[typeScale.label, { color: colors.azure, flexShrink: 1 }]} numberOfLines={1}>
-                      {isCreole ? 'Pataje nòt mwen' : 'Partager mon score'}
-                    </Text>
-                  </PressableScale>
+            {isAuthed ? (
+              <NightRow
+                leading={(
+                  <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: C.surfaceRaised, alignItems: 'center', justifyContent: 'center' }}>
+                    <UserPlus color={C.ink} size={18} />
+                  </View>
                 )}
-                <PressableScale
-                  onPress={() => setInviteOpen(true)}
-                  accessibilityRole="button"
-                  accessibilityLabel={isCreole ? 'Envite zanmi w yo vin jwe' : 'Inviter des amis à jouer'}
-                  pressedScale={0.96}
-                  style={{
-                    flex: 1,
-                    minHeight: 44,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 6,
-                    paddingHorizontal: 10,
-                    borderRadius: radius.control,
-                    backgroundColor: colors.azure,
-                    ...shadow.sm,
-                  }}
-                >
-                  <UserPlus color="#ffffff" size={15} />
-                  <Text style={[typeScale.label, { color: '#ffffff', flexShrink: 1 }]} numberOfLines={1}>
-                    {isCreole ? 'Envite zanmi' : 'Inviter des amis'}
-                  </Text>
-                </PressableScale>
+                title={t('Inviter des amis', 'Envite zanmi')}
+                meta={t('Vous gagnez chacun +1 gel de série et des XP', 'Nou chak genyen +1 jèl seri ak XP')}
+                onPress={() => setInviteOpen(true)}
+              />
+            ) : null}
+
+            {isAuthed && bestPersonal ? (
+              <NightRow
+                leading={(
+                  <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: C.surfaceRaised, alignItems: 'center', justifyContent: 'center' }}>
+                    <Share2 color={C.ink} size={18} />
+                  </View>
+                )}
+                title={t('Partager mon meilleur score', 'Pataje pi bon nòt mwen')}
+                meta={`${isCreole ? bestPersonal.game.nameHt : bestPersonal.game.name} · ${bestPersonal.score}`}
+                onPress={() => {
+                  void shareScore({
+                    title: isCreole ? bestPersonal.game.nameHt : bestPersonal.game.name,
+                    score: bestPersonal.score,
+                    lang: isCreole ? 'ht' : 'fr',
+                  });
+                }}
+              />
+            ) : null}
+
+            {/* My rank — the tab's built-in door to the Classement. */}
+            <PressableScale
+              onPress={() => setTab('classement')}
+              pressedScale={0.98}
+              accessibilityRole="button"
+              accessibilityLabel={myRank
+                ? t(`Tu es ${myRank}e cette semaine. Voir le classement`, `Ou se ${myRank}yèm semèn sa a. Wè klasman an`)
+                : t('Voir le classement de la semaine', 'Wè klasman semèn nan')}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 72, paddingHorizontal: 18, borderRadius: 20, backgroundColor: C.surface }}
+            >
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={[nightType.cardTitle, { color: C.ink }]}>
+                  {myRank ? t(`Tu es ${myRank}ᵉ cette semaine`, `Ou se ${myRank}yèm semèn sa a`) : t('Classement de la semaine', 'Klasman semèn nan')}
+                </Text>
+                <Text style={[arenaType.status, { color: C.muted }]}>
+                  {myRank ? t('Voir le classement complet', 'Wè tout klasman an') : t('Joue pour y apparaître', 'Jwe pou w parèt ladan l')}
+                </Text>
               </View>
-            </View>
-          )}
+              {myRank && myEntry ? (
+                <Text style={[arenaType.num, { fontSize: 18, color: C.ink }]}>{groupDigits((myEntry as any).xp ?? 0)} XP</Text>
+              ) : null}
+              <ChevronRight color={C.muted} size={20} />
+            </PressableScale>
+
+            {!isAuthed ? (
+              <View style={{ padding: 20, gap: 12, borderRadius: 20, backgroundColor: C.surface }}>
+                <Text style={[nightType.cardTitle, { color: C.ink }]}>{t('Connecte-toi pour garder tes XP', 'Konekte pou kenbe XP ou')}</Text>
+                <Text style={[arenaType.body, { color: C.muted }]}>
+                  {t('Tes XP, ta série et tes records s’afficheront ici, et ton école pourra compter sur toi.', 'XP ou, seri ou ak rekò ou ap parèt isit la, epi lekòl ou ka konte sou ou.')}
+                </Text>
+                <ArenaButton variant="secondary" label={t('Se connecter', 'Konekte')} onPress={toggleAuthModal} />
+              </View>
+            ) : null}
+          </View>
         </ScrollView>
       )}
 
-      {/* ── Arène — the competition world, in its own night palette ── */}
+      {/* ── Arène — the competition world ── */}
       {tab === 'arene' && (
-        // The venue art behind the hub, still and faded (ArenaScreen), so the
-        // segment reads as walking into the Arène — not a flat dark page.
-        <ArenaScreen edges={[]}>
-          <ScrollView
-            contentContainerStyle={{ padding: 16, paddingBottom: 110 }}
-            showsVerticalScrollIndicator={false}
-          >
-            <ArenaHubPanel onPractice={onStartTrivia} onDuel={onStartTrivia} />
-          </ScrollView>
-        </ArenaScreen>
+        <ScrollView contentContainerStyle={scrollPad} showsVerticalScrollIndicator={false}>
+          <ArenaHubPanel onPractice={onStartTrivia} onDuel={onStartTrivia} />
+        </ScrollView>
       )}
 
       {/* ── Records ── */}
       {tab === 'records' && (
-        <ScrollView
-          contentContainerStyle={{ paddingBottom: 100 }}
-          showsVerticalScrollIndicator={false}
-        >
-          <GameRecords isCreole={isCreole} records={records} loading={recordsLoading} />
+        <ScrollView contentContainerStyle={{ ...scrollPad, paddingTop: 0 }} showsVerticalScrollIndicator={false}>
+          <GameRecords isCreole={isCreole} records={records} loading={recordsLoading} highScores={highScores} />
         </ScrollView>
       )}
 
-      {/* ── Classement — the shared board, full mode, embedded in the tab ── */}
+      {/* ── Classement — the race, then the shared board, embedded ── */}
       {tab === 'classement' && (
-        <ScrollView
-          contentContainerStyle={{ paddingTop: 10, paddingHorizontal: 16, paddingBottom: 100 }}
-          showsVerticalScrollIndicator={false}
-        >
-          <Leaderboard compact={false} maxRows={25} />
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Leaderboard')}
-            accessibilityRole="button"
-            accessibilityLabel={isCreole ? 'Ouvri paj klasman konplè a' : 'Ouvrir la page classement complète'}
-            className="items-center mt-3 py-2.5 rounded-full"
-            style={{ backgroundColor: colors.azureSoft }}
-            activeOpacity={0.85}
-          >
-            <Text style={[typeScale.label, { color: colors.azure }]}>
-              {isCreole ? 'Paj konplè (lekòl, vil…)' : 'Page complète (écoles, villes…)'}
-            </Text>
-          </TouchableOpacity>
+        <ScrollView contentContainerStyle={scrollPad} showsVerticalScrollIndicator={false}>
+          <View style={{ gap: 14 }}>
+            <SchoolRace isCreole={isCreole} />
+            <Leaderboard compact={false} maxRows={25} tone="night" />
+            <ArenaButton
+              variant="secondary"
+              label={t('Page complète : écoles, villes…', 'Paj konplè : lekòl, vil…')}
+              onPress={() => navigation.navigate('Leaderboard')}
+            />
+          </View>
         </ScrollView>
       )}
 
-      {/* Referral sheet (Modal) — mounted once at the root, driven by the Amis block. */}
+      {/* Referral sheet (Modal) — mounted once at the root. */}
       <InviteSheet visible={inviteOpen} onClose={() => setInviteOpen(false)} lang={isCreole ? 'ht' : 'fr'} />
     </View>
   );

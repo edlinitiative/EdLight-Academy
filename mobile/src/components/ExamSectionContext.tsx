@@ -41,8 +41,6 @@ function PassageCard({ passage, label = 'Texte à lire' }: { passage: string; la
         {
           backgroundColor: colors.surface,
           borderRadius: radius.card,
-          borderWidth: 1,
-          borderColor: colors.border,
           maxHeight: 240,
           overflow: 'hidden',
         },
@@ -50,7 +48,7 @@ function PassageCard({ passage, label = 'Texte à lire' }: { passage: string; la
       ]}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingTop: 12 }}>
-        <BookOpen color={colors.azure} size={14} />
+        <BookOpen color={colors.azureInk} size={14} />
         <Text style={[typeScale.overline, { color: colors.muted }]}>
           {label}
         </Text>
@@ -116,14 +114,12 @@ export default function ExamSectionContext({
             {
               backgroundColor: colors.surface,
               borderRadius: radius.card,
-              borderWidth: 1,
-              borderColor: colors.border,
               padding: 16,
             },
             cardShadow,
           ]}
         >
-          <Text style={[typeScale.overline, { color: colors.azure, marginBottom: 4 }]}>
+          <Text style={[typeScale.overline, { color: colors.azureInk, marginBottom: 4 }]}>
             {t('Nouvelle section', 'Nouvo seksyon')}
           </Text>
           {safeTitle ? (
@@ -144,8 +140,6 @@ export default function ExamSectionContext({
                 paddingHorizontal: 10,
                 paddingVertical: 6,
                 borderRadius: 999,
-                borderWidth: 1,
-                borderColor: colors.border,
                 backgroundColor: colors.surfaceAlt,
               }}
               hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
@@ -153,8 +147,8 @@ export default function ExamSectionContext({
               accessibilityState={{ expanded }}
               accessibilityLabel={t('Consignes', 'Konsiy')}
             >
-              <Text style={[typeScale.label, { color: colors.azure, fontFamily: fonts.headingBold }]}>{t('Consignes', 'Konsiy')}</Text>
-              {expanded ? <ChevronUp color={colors.azure} size={14} /> : <ChevronDown color={colors.azure} size={14} />}
+              <Text style={[typeScale.label, { color: colors.azureInk, fontFamily: fonts.headingBold }]}>{t('Consignes', 'Konsiy')}</Text>
+              {expanded ? <ChevronUp color={colors.azureInk} size={14} /> : <ChevronDown color={colors.azureInk} size={14} />}
             </TouchableOpacity>
           ) : null}
 
@@ -178,7 +172,7 @@ export default function ExamSectionContext({
     <View style={{ marginBottom: 14 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <View style={{ flex: 1, backgroundColor: colors.azureSoft, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, alignSelf: 'flex-start' }}>
-          <Text style={[typeScale.micro, { color: colors.azure, fontFamily: fonts.headingBold }]} numberOfLines={1}>
+          <Text style={[typeScale.micro, { color: colors.azureInk, fontFamily: fonts.headingBold }]} numberOfLines={1}>
             {displayTitle}
           </Text>
         </View>
@@ -192,8 +186,6 @@ export default function ExamSectionContext({
               paddingHorizontal: 10,
               paddingVertical: 5,
               borderRadius: 999,
-              borderWidth: 1,
-              borderColor: colors.border,
               backgroundColor: colors.surface,
             }}
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
@@ -217,8 +209,6 @@ export default function ExamSectionContext({
                 {
                   backgroundColor: colors.surface,
                   borderRadius: radius.card,
-                  borderWidth: 1,
-                  borderColor: colors.border,
                   padding: 14,
                 },
                 cardShadow,

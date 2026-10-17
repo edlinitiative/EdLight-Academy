@@ -1,14 +1,16 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { ArrowRight } from 'lucide-react-native';
+import { Play, RotateCcw } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useStore from '../contexts/store';
-import { useTheme, typeScale, courseTint } from '../theme/theme';
+import { useTheme } from '../theme/theme';
+import Button from './ui/Button';
+import VideoCover from './ui/VideoCover';
+import { displayCourseName } from '../utils/courseName';
 import { masteryNextStep } from '../utils/mastery';
 import type { NextStep, LessonStep } from '../utils/nextStep';
-import PressableScale from './ui/PressableScale';
 import { TabParamList } from '../navigation/TabNavigator';
 import { tapLight } from '../utils/haptics';
 import { loadExamAttemptDraft } from '../services/examAttempts';
@@ -31,10 +33,12 @@ type Nav = BottomTabNavigationProp<TabParamList>;
  * chapter, and what the lesson still asks for.
  */
 export default function NextStepCard({
-  step, onOpenReview, thumbs,
+  step, onOpenReview, thumbs, reviewDue = 0,
 }: {
   step: NonNullable<NextStep>;
   onOpenReview: () => void;
+  /** Missed questions waiting; shown as the card's "↺ N à revoir" link. */
+  reviewDue?: number;
   /**
    * Ordered video-still candidates, sharpest first. A list rather than one URL
    * because the sharp `hq720` still isn't served for every upload: the card
@@ -43,7 +47,7 @@ export default function NextStepCard({
   thumbs?: string[];
 }) {
   const navigation = useNavigation<Nav>();
-  const { colors, cardSurface, shadow, radius } = useTheme();
+  const { colors, featureSurface, radius, typeScale, fonts } = useTheme();
   const [thumbAttempt, setThumbAttempt] = React.useState(0);
   const firstThumb = thumbs?.[0];
   React.useEffect(() => { setThumbAttempt(0); }, [firstThumb]);
@@ -132,7 +136,6 @@ export default function NextStepCard({
     if (s.evidence) parts.push(evidenceLabel(s.evidence, isCreole));
     const ask = masteryNextStep(s.level, isCreole);
     if (ask) parts.push(ask);
-    if (s.duration) parts.push(`${s.duration} min`);
     return parts.join(' · ');
   };
   const lessonCta = (s: LessonStep) => {
@@ -148,7 +151,7 @@ export default function NextStepCard({
   const lessonEyebrow = (s: LessonStep) => {
     if (s.reason === 'resume') return t('Reprendre', 'Kontinye');
     if (s.reason === 'next') return t('Leçon suivante', 'Pwochen leson');
-    if (s.reason === 'start') return t('Pour commencer', 'Pou kòmanse');
+    if (s.reason === 'start') return t('Ta première leçon', 'Premye leson ou');
     return t('Continuer', 'Kontinye');
   };
 
@@ -161,8 +164,8 @@ export default function NextStepCard({
   let tag: string | null = null;
   let cta = '';
   let onPress: () => void = () => {};
-  let secondary: { label: string; onPress: () => void }[] = [];
-  let accent = colors.azure;
+  let secondary: { label: string; onPress: () => void; review?: boolean }[] = [];
+  let lessonDuration: number | null = null;
   let showImagery = false;
 
   switch (step.kind) {
@@ -176,7 +179,7 @@ export default function NextStepCard({
         meta = statusOf(target) || null;
         cta = target.reason === 'resume' ? t('Reprendre la leçon', 'Kontinye leson an') : lessonCta(target);
         onPress = () => openLesson(target, 'welcome-back');
-        accent = courseTint(target.courseColor);
+        lessonDuration = target.duration ?? null;
         showImagery = true;
       } else {
         title = step.resume.type === 'exam' ? subjectDisplayName(step.resume.title) : step.resume.title;
@@ -231,7 +234,7 @@ export default function NextStepCard({
       }
       cta = lessonCta(step);
       onPress = () => openLesson(step, 'lesson');
-      accent = courseTint(step.courseColor);
+      lessonDuration = step.duration ?? null;
       showImagery = !step.fromSaved;
       secondary = [{ label: t('Voir tous les cours', 'Wè tout kou yo'), onPress: openCatalogue }];
       break;
@@ -270,10 +273,10 @@ export default function NextStepCard({
         title = s.lessonTitle;
         course = s.courseName || null;
         place = placeOf(s) || null;
-        meta = s.duration ? `${s.duration} min` : null;
+        meta = null;
         cta = t('Commencer cette leçon', 'Kòmanse leson sa a');
         onPress = () => openLesson(s, 'choose-class');
-        accent = courseTint(s.courseColor);
+        lessonDuration = s.duration ?? null;
         showImagery = true;
         secondary = [{ label: t('Choisir ma classe d\'abord', 'Chwazi klas mwen anvan'), onPress: chooseClass }];
       } else {
@@ -315,38 +318,70 @@ export default function NextStepCard({
   }
 
   const showThumb = showImagery && !!thumb;
+  // The duration chip only states what the catalogue knows (no watch position
+  // is stored on mobile, so no invented "7 min restantes").
+  const durationChip = showThumb && lessonDuration ? `${lessonDuration} min` : null;
+  if (!showThumb && lessonDuration) meta = [meta, `${lessonDuration} min`].filter(Boolean).join(' · ');
+  // ReviewCard folds into this card as a quiet link (web parity), unless the
+  // card already IS the review.
+  if (step.kind !== 'review' && reviewDue > 0) {
+    secondary = [
+      {
+        label: reviewDue === 1
+          ? t('1 question à revoir', '1 kesyon pou revize')
+          : `${reviewDue} ${t('questions à revoir', 'kesyon pou revize')}`,
+        onPress: () => {
+          trackJourney('learning_next_action_selected', { kind: 'review-link', due: reviewDue });
+          onOpenReview();
+        },
+        review: true,
+      },
+      ...secondary,
+    ];
+  }
+  const press = () => { tapLight(); onPress(); };
 
   return (
-    <View style={{ ...cardSurface, ...shadow.md, padding: 0, overflow: 'hidden' }}>
+    <View style={{ ...featureSurface, padding: showThumb ? 16 : 20 }}>
       {showThumb && (
-        <Image
-          source={{ uri: thumb! }}
-          resizeMode="cover"
+        <VideoCover
+          uri={thumb}
           onError={() => setThumbAttempt((a) => a + 1)}
-          accessibilityIgnoresInvertColors
-          style={{ width: '100%', height: 150, backgroundColor: colors.surfaceAlt }}
-        />
+          play={false}
+          radiusTop={18}
+          radiusBottom={18}
+          onPress={press}
+          accessibilityLabel={`${cta}. ${title}`}
+        >
+          {durationChip ? (
+            <View style={{ position: 'absolute', top: 12, right: 12, backgroundColor: '#12213A', borderRadius: radius.pill, paddingVertical: 6, paddingHorizontal: 12 }}>
+              <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: fonts.medium, fontSize: 14, lineHeight: 18, color: '#ffffff' }}>{durationChip}</Text>
+            </View>
+          ) : null}
+        </VideoCover>
       )}
-      <View style={{ padding: 16 }}>
+      <View style={showThumb ? { paddingHorizontal: 4, paddingTop: 16, paddingBottom: 4 } : null}>
         <View accessible accessibilityLabel={[eyebrow, title, course, place, meta, tag, note].filter(Boolean).join('. ')}>
-          <Text style={[typeScale.overline, { color: accent, marginBottom: 4 }]} numberOfLines={1}>
-            {eyebrow}
-          </Text>
-          <Text style={[typeScale.title, { color: colors.ink, fontSize: 18, lineHeight: 23 }]} numberOfLines={3}>
-            {title}
-          </Text>
-          {course || place ? (
-            <Text style={[typeScale.body, { color: colors.muted, marginTop: 3 }]} numberOfLines={2}>
-              {[course, place].filter(Boolean).join(' · ')}
+          {eyebrow ? (
+            <Text style={[typeScale.meta, { fontFamily: fonts.medium, color: colors.azureInk, marginBottom: 6 }]} numberOfLines={1}>
+              {eyebrow}
             </Text>
           ) : null}
+          {course || place ? (
+            <Text style={[typeScale.meta, { color: colors.muted, marginBottom: 4 }]} numberOfLines={2}>
+              {[course ? displayCourseName(course) : null, place].filter(Boolean).join(' · ')}
+            </Text>
+          ) : null}
+          <Text style={[typeScale.cardTitle, { color: colors.ink, fontSize: 22, lineHeight: 27, letterSpacing: -0.5 }]} numberOfLines={3}>
+            {title}
+          </Text>
           {meta ? (
-            <Text style={[typeScale.status, { color: colors.ink, marginTop: 6 }]} numberOfLines={2}>
+            <Text style={[typeScale.meta, { color: colors.muted, marginTop: 6 }]} numberOfLines={2}>
               {meta}
             </Text>
           ) : null}
           {tag ? (
-            <View style={{ alignSelf: 'flex-start', marginTop: 8, borderRadius: radius.pill, backgroundColor: colors.warnSoft, paddingHorizontal: 10, paddingVertical: 3 }}>
+            <View style={{ alignSelf: 'flex-start', marginTop: 10, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt, paddingHorizontal: 12, paddingVertical: 5 }}>
               <Text style={[typeScale.label, { color: colors.ink }]}>{tag}</Text>
             </View>
           ) : null}
@@ -357,39 +392,29 @@ export default function NextStepCard({
           ) : null}
         </View>
 
-        <PressableScale
-          onPress={() => { tapLight(); onPress(); }}
-          accessibilityRole="button"
+        {/* The page's one solid azure. */}
+        <Button
+          label={cta}
+          onPress={onPress}
+          size="lg"
+          fullWidth
           accessibilityLabel={`${cta}. ${title}`}
-          style={{
-            marginTop: 14,
-            // One blue for every action — subject tints stay on eyebrows.
-            backgroundColor: colors.azureFill,
-            borderRadius: radius.control,
-            minHeight: 48,
-            paddingVertical: 13,
-            paddingHorizontal: 14,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 6,
-          }}
-        >
-          <Text style={[typeScale.action, { color: '#ffffff', flexShrink: 1 }]} numberOfLines={1}>{cta}</Text>
-          <ArrowRight color="#ffffff" size={16} />
-        </PressableScale>
+          icon={<Play color="#ffffff" size={16} fill="#ffffff" strokeWidth={0} />}
+          style={{ marginTop: 16 }}
+        />
 
         {secondary.length > 0 ? (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', columnGap: 18, marginTop: 6 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', columnGap: 20, marginTop: 4 }}>
             {secondary.map((s) => (
               <TouchableOpacity
                 key={s.label}
                 onPress={() => { tapLight(); s.onPress(); }}
                 accessibilityRole="button"
                 accessibilityLabel={s.label}
-                style={{ minHeight: 44, justifyContent: 'center' }}
+                style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 6 }}
               >
-                <Text style={[typeScale.bodyMd, { color: colors.azure }]}>{s.label}</Text>
+                {s.review ? <RotateCcw color={colors.azureInk} size={16} strokeWidth={2.4} /> : null}
+                <Text style={{ fontFamily: fonts.bold, fontSize: 16, lineHeight: 21, color: s.review ? colors.azureInk : colors.muted }}>{s.label}</Text>
               </TouchableOpacity>
             ))}
           </View>

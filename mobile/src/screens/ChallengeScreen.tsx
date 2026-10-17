@@ -1,16 +1,18 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, Swords, Trophy } from 'lucide-react-native';
+import { ChevronLeft, Star } from 'lucide-react-native';
 import { TRIVIA_CATEGORIES } from '../data/triviaData';
 import { QuizPlayer, prepareChallengeQuestions, type PreparedQuestion } from './TriviaScreen';
 import ChallengeCard from '../components/games/ChallengeCard';
 import { useChallenge } from '../hooks/useChallenges';
 import { acceptChallenge, type AcceptOutcome } from '../services/challengeService';
-import QuizResultHero, { HeroButton, glass } from '../components/quiz/QuizResultHero';
 import useStore from '../contexts/store';
-import { useColors, typeScale } from '../theme/theme';
-import { Skeleton } from '../components/StateViews';
+import { arenaColors as C, arenaType } from '../theme/arenaTheme';
+import NightResult, { RewardChip } from '../components/games/NightResult';
+import { NightIconButton, nightType } from '../components/games/night';
+import { ArenaButton } from '../components/arena/ArenaKit';
+import useNightStatusBar from '../components/arena/useNightStatusBar';
 
 type Phase = 'card' | 'playing' | 'done';
 
@@ -23,8 +25,8 @@ type Phase = 'card' | 'playing' | 'done';
  * endpoint (and the challenge read itself) require a signed-in user.
  */
 export default function ChallengeScreen({ code, onClose }: { code: string; onClose: () => void }) {
-  const colors = useColors();
   const { user, language, toggleAuthModal } = useStore();
+  useNightStatusBar();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -34,6 +36,8 @@ export default function ChallengeScreen({ code, onClose }: { code: string; onClo
   const [outcome, setOutcome] = useState<AcceptOutcome | null>(null);
   const [acceptError, setAcceptError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Your own count, shown while the server confirms (or if it never answers).
+  const [myLocalScore, setMyLocalScore] = useState(0);
 
   const category = useMemo(
     () => TRIVIA_CATEGORIES.find((c: any) => c.id === challenge?.categoryId) ?? null,
@@ -57,6 +61,7 @@ export default function ChallengeScreen({ code, onClose }: { code: string; onClo
 
   const handleFinish = useCallback(
     async (score: number) => {
+      setMyLocalScore(score);
       setPhase('done');
       setBusy(true);
       try {
@@ -74,18 +79,26 @@ export default function ChallengeScreen({ code, onClose }: { code: string; onClo
   // ── Playing: full-bleed quiz, same player as a normal round ────────────────
   if (phase === 'playing' && challenge) {
     return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 10 }}>
-          <Swords color={colors.azure} size={18} />
-          <Text style={[typeScale.title, { color: colors.ink }]} numberOfLines={1}>
-            {t('Défi', 'Defi')} · {categoryLabel}
-          </Text>
-        </View>
+      <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top']}>
         <QuizPlayer
           questions={questions}
-          category={category ?? { id: challenge.categoryId, name: categoryLabel, icon: '⚔️' }}
+          category={category ?? { id: challenge.categoryId, name: categoryLabel }}
           isCreole={isCreole}
           onFinish={(score) => handleFinish(score)}
+          title={t(`Défi · ${categoryLabel}`, `Defi · ${categoryLabel}`)}
+          opponent={{
+            seed: challenge.challengerUid || challenge.challengerName || 'ami',
+            name: challenge.challengerName ?? t('Ton ami', 'Zanmi ou'),
+            score: challenge.challengerScore,
+          }}
+          onQuit={() => Alert.alert(
+            t('Abandonner le défi ?', 'Abandone defi a ?'),
+            t('Tu n’as qu’une seule tentative : quitter maintenant la perd.', 'Ou gen yon sèl chans : si w kite kounye a, ou pèdi l.'),
+            [
+              { text: t('Continuer', 'Kontinye'), style: 'cancel' },
+              { text: t('Quitter', 'Kite'), style: 'destructive', onPress: onClose },
+            ],
+          )}
           // A scored duel: the challenger's clock did not stop, so this one
           // keeps running in the background (utils/deadlineTimer.ts).
           timerPolicy="run"
@@ -94,94 +107,67 @@ export default function ChallengeScreen({ code, onClose }: { code: string; onClo
     );
   }
 
-  // ── Done: duel outcome over the shared victory surface ─────────────────────
+  // ── Done: the duel result, faces and all ───────────────────────────────────
   if (phase === 'done' && challenge) {
-    const myScore = outcome?.opponentScore ?? 0;
-    const title = busy
-      ? t('Envoi du résultat…', 'Ap voye rezilta a…')
+    const myScore = outcome?.opponentScore ?? myLocalScore;
+    const rival = challenge.challengerName ?? t('Ton ami', 'Zanmi ou');
+    const won = outcome?.result === 'won';
+    const tie = outcome?.result === 'tie';
+    const line = busy
+      ? t('Envoi du résultat…', 'N ap voye rezilta a…')
       : outcome
-        ? outcome.result === 'won'
-          ? t('Tu as gagné !', 'Ou genyen !')
-          : outcome.result === 'tie'
-            ? t('Égalité !', 'Egalite !')
-            : t('Perdu de peu…', 'Ou pèdi tou piti…')
-        : t('Résultat non enregistré', 'Rezilta a pa anrejistre');
+        ? won
+          ? t(`Victoire · ${myScore} à ${challenge.challengerScore} contre ${rival}`, `Viktwa · ${myScore} kont ${challenge.challengerScore} sou ${rival}`)
+          : tie
+            ? t(`Égalité · ${myScore} partout avec ${rival}`, `Egalite · ${myScore} chak ak ${rival}`)
+            : t(`Perdu de peu · ${myScore} à ${challenge.challengerScore} contre ${rival}`, `Pèdi tou piti · ${myScore} kont ${challenge.challengerScore} sou ${rival}`)
+        : t('Le score n’a pas pu être envoyé. Vérifie ta connexion.', 'Nòt la pa t ka voye. Verifye koneksyon ou.');
     return (
-      <QuizResultHero
-        score={myScore}
-        total={challenge.total}
-        isCreole={isCreole}
-        title={title}
-        celebrateHaptic={outcome?.result === 'won'}
-        showConfetti={outcome?.result === 'won'}
-        footer={
-          <HeroButton variant="glass" label={t('Retour aux jeux', 'Tounen nan jwèt yo')} onPress={onClose} />
-        }
-      >
-        <View style={{ marginTop: 12, alignItems: 'center', gap: 8 }}>
-          <View style={{ ...glass, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 8 }}>
-            <Text style={{ fontFamily: typeScale.title.fontFamily, fontSize: 14, color: '#fff' }}>
-              {challenge.challengerName ?? t('Ton ami', 'Zanmi ou')} {challenge.challengerScore} — {myScore} {t('toi', 'ou menm')}
-            </Text>
-          </View>
-          {outcome && outcome.xpAwarded > 0 && (
-            <View style={{ ...glass, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6 }}>
-              <Trophy color="#fde68a" size={14} />
-              <Text style={{ fontFamily: typeScale.label.fontFamily, fontSize: 13, color: '#fde68a' }}>
-                +{outcome.xpAwarded} XP
-              </Text>
-            </View>
-          )}
-          {acceptError && (
-            <Text style={{ fontFamily: typeScale.caption.fontFamily, fontSize: 12, color: 'rgba(255,255,255,0.7)', textAlign: 'center' }}>
-              {t('Le score n’a pas pu être envoyé. Vérifie ta connexion.', 'Nòt la pa t ka voye. Verifye koneksyon ou.')}
-            </Text>
-          )}
-        </View>
-      </QuizResultHero>
+      <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top']}>
+        <NightResult
+          title={t('Résultat du duel', 'Rezilta duèl la')}
+          subtitle={`Trivia · ${categoryLabel}`}
+          onClose={onClose}
+          closeLabel={t('Fermer', 'Fèmen')}
+          me={{ seed: user?.uid || 'toi', label: t('Toi', 'Ou') }}
+          opponent={{ seed: challenge.challengerUid || rival, label: rival }}
+          winner={outcome ? (won ? 'me' : tie ? null : 'opponent') : null}
+          score={myScore}
+          total={challenge.total}
+          scoreEarned={!!outcome && myScore > 0}
+          scoreLine={line}
+          chips={outcome && outcome.xpAwarded > 0 ? (
+            <RewardChip earned icon={<Star color={C.gold} size={16} />} label={`+${outcome.xpAwarded} XP`} />
+          ) : null}
+          primary={{ label: t('Retour aux jeux', 'Tounen nan jwèt yo'), onPress: onClose }}
+        />
+      </SafeAreaView>
     );
   }
 
   // ── Card / loading / edge states ────────────────────────────────────────────
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 10 }}>
-        <TouchableOpacity
-          onPress={onClose}
-          hitSlop={10}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel={t('Retour', 'Tounen')}
-          style={{ padding: 4 }}
-        >
-          <ChevronLeft color={colors.ink} size={26} />
-        </TouchableOpacity>
-        <Text style={[typeScale.h1, { color: colors.ink }]}>{t('Défi reçu', 'Defi ou resevwa')}</Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top']}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8 }}>
+        <NightIconButton onPress={onClose} label={t('Retour', 'Tounen')} icon={<ChevronLeft color={C.ink} size={22} />} />
       </View>
-
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 16 }} showsVerticalScrollIndicator={false}>
+        <Text accessibilityRole="header" style={[nightType.page, { color: C.ink }]}>{t('Défi reçu', 'Defi ou resevwa')}</Text>
         {!user ? (
-          <View style={{ gap: 12 }}>
-            <Text style={[typeScale.bodyMd, { color: colors.muted, textAlign: 'center' }]}>
+          <View style={{ padding: 20, gap: 14, borderRadius: 20, backgroundColor: C.surface }}>
+            <Text style={[arenaType.body, { color: C.inkSoft }]}>
               {t('Connecte-toi pour voir et relever ce défi.', 'Konekte pou wè epi reponn defi sa a.')}
             </Text>
-            <TouchableOpacity
-              onPress={toggleAuthModal}
-              activeOpacity={0.85}
-              accessibilityRole="button"
-              style={{ alignSelf: 'center', backgroundColor: colors.azure, borderRadius: 999, paddingHorizontal: 24, paddingVertical: 12 }}
-            >
-              <Text style={[typeScale.bodyMd, { color: '#fff' }]}>{t('Se connecter', 'Konekte')}</Text>
-            </TouchableOpacity>
+            <ArenaButton label={t('Se connecter', 'Konekte')} onPress={toggleAuthModal} />
           </View>
         ) : isLoading ? (
-          <Skeleton height={220} radius={18} />
+          <View style={{ height: 260, borderRadius: 24, backgroundColor: C.surface }} accessibilityLabel={t('Chargement…', 'N ap chaje…')} />
         ) : !challenge ? (
-          <Text style={[typeScale.bodyMd, { color: colors.muted, textAlign: 'center' }]}>
+          <Text style={[arenaType.body, { color: C.muted }]}>
             {t('Défi introuvable ou expiré.', 'Nou pa jwenn defi a, oswa li ekspire.')}
           </Text>
         ) : acceptError === 'version' ? (
-          <Text style={[typeScale.bodyMd, { color: colors.muted, textAlign: 'center' }]}>
+          <Text style={[arenaType.body, { color: C.muted }]}>
             {t('Mets à jour l’app pour jouer ce défi.', 'Mete app la ajou pou w jwe defi sa a.')}
           </Text>
         ) : (

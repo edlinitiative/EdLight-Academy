@@ -10,13 +10,15 @@ import { Timer, Delete, CornerDownLeft, Flame } from 'lucide-react-native';
 import { nextCalcProblem } from '../../utils/gameGen';
 import GameOverCard, { GameReward } from './GameOverCard';
 import { useRoundTimer, TimeBar } from './RoundTimer';
-import { useColors, useTheme, typeScale, radius } from '../../theme/theme';
+import { typeScale } from '../../theme/theme';
+import { useArenaColors, arenaColors as C } from '../../theme/arenaTheme';
 import PressableScale from '../ui/PressableScale';
 import { success, warn } from '../../utils/haptics';
 
 const ROUND_SECONDS = 60;
 const MIN_DENOMINATOR = 15;
-const ACCENT = '#d97706';
+// The night has one accent: coral, for the one primary action.
+const ACCENT = C.coral;
 
 const PAD_KEYS = ['7', '8', '9', '4', '5', '6', '1', '2', '3', '−', '0', '⌫'];
 
@@ -30,8 +32,7 @@ interface CalculGameProps {
 export default function CalculGame({
   isCreole, onExit, onRecord, highScore = null,
 }: CalculGameProps) {
-  const colors = useColors();
-  const { shadow } = useTheme();
+  const colors = useArenaColors();
   const [nonce, setNonce] = useState(0);
   const [solved, setSolved] = useState(0);
   const [attempts, setAttempts] = useState(0);
@@ -126,7 +127,8 @@ export default function CalculGame({
     );
   }
 
-  const problemBorder = flash === 'right' ? colors.success : flash === 'wrong' ? colors.danger : colors.border;
+  // Verdict is a tonal wash on the problem card, never an outline.
+  const problemBg = flash === 'right' ? C.successSoft : flash === 'wrong' ? C.dangerSoft : C.surfaceRaised;
   const okDisabled = input === '' || input === '-';
 
   return (
@@ -154,7 +156,7 @@ export default function CalculGame({
       </View>
 
       {/* Time bar */}
-      <TimeBar timeLeft={timeLeft} total={ROUND_SECONDS} color={ACCENT} />
+      <TimeBar timeLeft={timeLeft} total={ROUND_SECONDS} color={urgent ? C.danger : C.coral} />
 
       {/* Problem */}
       <View
@@ -163,11 +165,8 @@ export default function CalculGame({
           // Absorbs the slack so nothing is stranded at the top of a tall phone.
           flexGrow: 1,
           maxHeight: 220,
-          borderRadius: radius.hero,
-          backgroundColor: colors.surface,
-          borderWidth: 2,
-          borderColor: problemBorder,
-          ...shadow.md,
+          borderRadius: 24,
+          backgroundColor: problemBg,
         }}
       >
         <Text style={[typeScale.display, { color: colors.ink }]}>
@@ -179,11 +178,11 @@ export default function CalculGame({
             paddingHorizontal: 12,
             paddingVertical: 6,
             borderRadius: 12,
-            backgroundColor: colors.surfaceAlt,
+            backgroundColor: C.surface,
             alignItems: 'center',
           }}
         >
-          <Text style={[typeScale.display, { color: ACCENT }]}>
+          <Text style={[typeScale.display, { color: C.ink }]}>
             {input || ' '}
           </Text>
         </View>
@@ -204,7 +203,7 @@ export default function CalculGame({
                 : k
             }
             pressedScale={0.94}
-            style={{ alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: radius.tile, width: '30%', height: 56, backgroundColor: colors.surfaceAlt, borderColor: colors.border, ...shadow.sm }}
+            style={{ alignItems: 'center', justifyContent: 'center', borderRadius: 16, width: '30%', height: 56, backgroundColor: C.surface }}
           >
             {k === '⌫' ? (
               <Delete color={colors.ink} size={20} />
@@ -222,10 +221,10 @@ export default function CalculGame({
           accessibilityRole="button"
           accessibilityLabel={isCreole ? 'Sote pwoblèm nan' : 'Passer le problème'}
           activeOpacity={0.85}
-          className="flex-1 items-center justify-center py-4 border"
-          style={{ borderRadius: radius.tile, borderColor: colors.border, backgroundColor: colors.surface }}
+          className="flex-1 items-center justify-center"
+          style={{ minHeight: 52, borderRadius: 999, backgroundColor: C.secondary }}
         >
-          <Text style={[typeScale.title, { color: colors.muted }]}>
+          <Text style={[typeScale.title, { color: C.ink }]}>
             {isCreole ? 'Sote' : 'Passer'}
           </Text>
         </TouchableOpacity>
@@ -235,11 +234,11 @@ export default function CalculGame({
           accessibilityRole="button"
           accessibilityLabel={isCreole ? 'Valide repons lan' : 'Valider la réponse'}
           activeOpacity={0.85}
-          className="flex-1 flex-row items-center justify-center gap-2 py-4"
-          style={{ borderRadius: radius.tile, backgroundColor: ACCENT, opacity: okDisabled ? 0.5 : 1 }}
+          className="flex-1 flex-row items-center justify-center gap-2"
+          style={{ minHeight: 52, borderRadius: 999, backgroundColor: okDisabled ? '#76362D' : C.coral }}
         >
-          <CornerDownLeft color="#fff" size={16} />
-          <Text style={[typeScale.title, { color: '#fff' }]}>OK</Text>
+          <CornerDownLeft color={C.onCoral} size={16} />
+          <Text style={[typeScale.title, { color: C.onCoral }]}>OK</Text>
         </TouchableOpacity>
       </View>
     </View>

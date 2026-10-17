@@ -4,7 +4,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { X, Check } from 'lucide-react-native';
 import { useAppData } from '../hooks/useData';
 import useStore from '../contexts/store';
-import { useColors, typeScale, radius } from '../theme/theme';
+import { useColors, useTheme, typeScale, radius, fonts } from '../theme/theme';
 import { toPracticeCard, type PracticeCard } from '../utils/practiceCards';
 import type { ReviewMap } from '../utils/review';
 import { trackJourney } from '../utils/learningJourney';
@@ -104,24 +104,24 @@ export default function ReviewSession({
           <View
             style={{
               flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-              paddingHorizontal: 16, paddingVertical: 12, backgroundColor: colors.surface,
-              borderBottomWidth: 1, borderBottomColor: colors.border,
+              paddingLeft: 20, paddingRight: 10, paddingVertical: 10, backgroundColor: colors.surface, zIndex: 1,
+              shadowColor: '#0B296B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
             }}
           >
             <View style={{ flex: 1 }}>
-              <Text accessibilityRole="header" style={[typeScale.title, { color: colors.ink }]}>
+              <Text accessibilityRole="header" style={{ fontFamily: fonts.headingBold, fontSize: 17, lineHeight: 22, color: colors.ink }}>
                 {t('Révision', 'Revizyon')}
               </Text>
-              <Text numberOfLines={1} style={[typeScale.body, { color: colors.muted, marginTop: 1 }]}>{scopeLine}</Text>
+              <Text numberOfLines={1} style={[typeScale.meta, { color: colors.muted, marginTop: 1 }]}>{scopeLine}</Text>
             </View>
             <TouchableOpacity
               onPress={onClose}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              style={{ padding: 4 }}
+              style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
               accessibilityRole="button"
               accessibilityLabel={t('Fermer', 'Fèmen')}
             >
-              <X color={colors.muted} size={24} />
+              <X color={colors.ink} size={24} />
             </TouchableOpacity>
           </View>
 
@@ -187,10 +187,10 @@ function CaughtUp({ t, scoped, otherDue, onWide, onClose }: {
   const colors = useColors();
   return (
     <View style={{ flex: 1, justifyContent: 'center', padding: 28, gap: 14 }}>
-      <View style={{ width: 48, height: 48, borderRadius: radius.chip, backgroundColor: colors.successSoft, alignItems: 'center', justifyContent: 'center', alignSelf: 'center' }}>
-        <Check color={colors.success} size={24} strokeWidth={2.5} />
+      <View style={{ width: 56, height: 56, borderRadius: radius.chip, backgroundColor: colors.successSoft, alignItems: 'center', justifyContent: 'center', alignSelf: 'center' }}>
+        <Check color={colors.successFill} size={28} strokeWidth={2.6} />
       </View>
-      <Text style={[typeScale.title, { color: colors.ink, textAlign: 'center' }]}>
+      <Text style={[typeScale.cardTitle, { color: colors.ink, textAlign: 'center' }]}>
         {scoped ? t('Rien à réviser dans ce chapitre', 'Anyen pou revize nan chapit sa a') : t('Rien à réviser', 'Anyen pou revize')}
       </Text>
       <Text style={[typeScale.body, { color: colors.muted, textAlign: 'center' }]}>
@@ -217,19 +217,20 @@ function ReviewDone({ t, fixed, missed, remaining, onMore, onClose, onReport }: 
   onReport: () => void;
 }) {
   const colors = useColors();
+  const { cardSurface } = useTheme();
   const reported = useRef(false);
   React.useEffect(() => { if (!reported.current) { reported.current = true; onReport(); } }, [onReport]);
   return (
-    <ScrollView contentContainerStyle={{ padding: 24, gap: 14 }}>
-      <Text accessibilityRole="header" style={[typeScale.h1, { color: colors.ink }]}>{t('Révision terminée', 'Revizyon fini')}</Text>
-      <View style={{ gap: 6 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+    <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }}>
+      <Text accessibilityRole="header" style={[typeScale.section, { color: colors.ink }]}>{t('Révision terminée', 'Revizyon fini')}</Text>
+      <View style={{ flexDirection: 'row', gap: 12 }}>
+        <View style={{ ...cardSurface, flex: 1, padding: 18, gap: 8 }}>
+          <Text style={{ fontFamily: fonts.heading, fontSize: 40, lineHeight: 44, letterSpacing: -1.2, color: colors.ink, fontVariant: ['tabular-nums'] }}>{fixed}</Text>
           <AnswerStatus kind="correct" t={t} label={t('Corrigées', 'Korije')} />
-          <Text style={[typeScale.title, { color: colors.ink, fontVariant: ['tabular-nums'] }]}>{fixed}</Text>
         </View>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <View style={{ ...cardSurface, flex: 1, padding: 18, gap: 8 }}>
+          <Text style={{ fontFamily: fonts.heading, fontSize: 40, lineHeight: 44, letterSpacing: -1.2, color: colors.ink, fontVariant: ['tabular-nums'] }}>{missed}</Text>
           <AnswerStatus kind="incorrect" t={t} label={t('Encore ratées', 'Rate ankò')} />
-          <Text style={[typeScale.title, { color: colors.ink, fontVariant: ['tabular-nums'] }]}>{missed}</Text>
         </View>
       </View>
       <Text style={[typeScale.body, { color: colors.ink }]}>
@@ -241,7 +242,7 @@ function ReviewDone({ t, fixed, missed, remaining, onMore, onClose, onReport }: 
       {remaining > 0 ? (
         <>
           <Button label={t('Continuer la révision', 'Kontinye revizyon an')} onPress={onMore} size="lg" fullWidth />
-          <Button label={t('Fermer', 'Fèmen')} onPress={onClose} variant="ghost" size="lg" fullWidth />
+          <Button label={t('Fermer', 'Fèmen')} onPress={onClose} variant="secondary" size="lg" fullWidth />
         </>
       ) : (
         <Button label={t('Fermer', 'Fèmen')} onPress={onClose} size="lg" fullWidth />

@@ -51,6 +51,10 @@ export interface VideoCoverProps {
   style?: StyleProp<ViewStyle>;
 }
 
+/** YouTube's sd and hq stills are 4:3 with the 16:9 picture letterboxed; a 16:9
+ *  cover crop lands on the bar edge and leaves a 1px dark line. Overscan. */
+const LETTERBOXED = /\/(sd|hq)(default|\d)\.jpg/;
+
 export default function VideoCover({
   uri,
   onError,
@@ -98,7 +102,7 @@ export default function VideoCover({
           resizeMode="cover"
           onLoad={() => setLoaded(true)}
           onError={() => { setLoaded(false); handleError?.(); }}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: loaded ? 1 : 0 }}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: loaded ? 1 : 0, transform: LETTERBOXED.test(src) ? [{ scale: 1.04 }] : undefined }}
           accessibilityIgnoresInvertColors
         />
       ) : null}

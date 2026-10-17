@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, Modal, FlatList,
+  View, Text, ScrollView, TouchableOpacity, RefreshControl, Modal, FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -8,12 +8,10 @@ import { useReduceMotion } from '../utils/motion';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
-  ArrowLeft, Search, ChevronRight, CheckCircle2, SlidersHorizontal, X,
-  Clock, Layers, Award, GraduationCap,
+  ChevronLeft, ChevronRight, CheckCircle2, SlidersHorizontal, X,
 } from 'lucide-react-native';
 import { fetchFullCatalog } from '../utils/examCatalog';
-import { normalizeSubject, normalizeLevel, normalizeExamTitle, examTitleParts, subjectColor, subjectDisplayName } from '../utils/examUtils';
-import { examSubjectIcon } from '../utils/subjectMeta';
+import { normalizeSubject, normalizeExamTitle, examTitleParts, subjectDisplayName } from '../utils/examUtils';
 import { loadAllExamResultSummaries } from '../services/examResults';
 import useStore from '../contexts/store';
 import { gradeProfile } from '../config/trackConfig';
@@ -21,6 +19,9 @@ import { deriveSignals, selectAdaptiveItems } from '../services/adaptiveEngine';
 import { useColors, useTheme, fonts } from '../theme/theme';
 import { ErrorState, EmptyState, Skeleton } from '../components/StateViews';
 import PressableScale from '../components/ui/PressableScale';
+import SearchField from '../components/ui/SearchField';
+import Segmented from '../components/ui/Segmented';
+import Button from '../components/ui/Button';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
 
@@ -77,32 +78,36 @@ function ExamCard({
   onPress: () => void;
 }) {
   const language = useStore((s) => s.language);
-  const colors = useColors();
-  const { cardSurface, typeScale } = useTheme();
+  const { colors, cardSurface, typeScale, isDark } = useTheme();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   const parts = examTitleParts(exam);
   const subject = parts.subject || normalizeSubject(exam.subject ?? '') || t('Examen', 'Egzamen');
-  const color = subjectColor(subject);
   // "Mixed" is a catalog key, not a word to show a French-speaking student.
   const subjectLabel = subjectDisplayName(subject);
-  const SubjectIcon = examSubjectIcon(subject);
-  const yearOrSession = parts.session || (parts.year ? String(parts.year) : '');
-  const levelLbl = normalizeLevel(exam.level ?? exam.niveau ?? '');
-  // Meta = "Niveau · [topic / série]" — the distinguishing detail so two exams of
-  // the same subject/year never read as one.
-  const metaBits = [levelLbl, parts.topic || parts.series].filter(Boolean);
+  const yearNum = parts.year ? Number(parts.year) : 0;
+  const session = parts.session && parts.session !== String(parts.year) ? parts.session : '';
+  // The distinguishing detail so two exams of the same subject/year never read as one.
+  const detail = [session, parts.topic || parts.series].filter(Boolean).join(' · ');
 
   const durationMin = Number(exam.duration_minutes) || 0;
   const totalPoints = Number(exam.total_points) || 0;
   const secCount = sectionCount(exam);
   const qCount = questionCount(exam);
+  const stats = [
+    durationMin > 0 ? `${durationMin} min` : '',
+    secCount > 0
+      ? `${secCount} ${t(secCount > 1 ? 'exercices' : 'exercice', 'egzèsis')}`
+      : qCount > 0 ? `${qCount} ${t(qCount > 1 ? 'questions' : 'question', 'kesyon')}` : '',
+    totalPoints > 0 ? `${totalPoints} ${t('pts', 'pwen')}` : '',
+  ].filter(Boolean).join(' · ');
 
   const done = !!attemptInfo?.attempted;
   const pct = typeof attemptInfo?.percentage === 'number' ? Math.round(attemptInfo.percentage) : null;
+  const good = pct != null && pct >= 50;
 
-  const a11y = `${subjectLabel}${yearOrSession ? ' ' + yearOrSession : ''}`;
+  const a11y = [subjectLabel, yearNum ? String(yearNum) : t('Sujet modèle', 'Sijè modèl'), detail, stats, pct != null ? `${pct}%` : ''].filter(Boolean).join(', ');
 
   return (
     <PressableScale
@@ -110,88 +115,44 @@ function ExamCard({
       accessibilityRole="button"
       accessibilityLabel={a11y}
       pressedScale={0.98}
-      style={[cardSurface, { marginBottom: 12, padding: 14 }]}
+      style={[cardSurface, { marginBottom: 12, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 84 }]}
     >
-      <View className="flex-row items-center" style={{ gap: 12 }}>
-        {/* Subject badge — the only carrier of the subject color (no left stripe) */}
-        <View
-          className="items-center justify-center flex-shrink-0"
-          style={{ width: 46, height: 46, borderRadius: 13, backgroundColor: color + '1f' }}
+      {/* The year leads the row — the number a student scans for. */}
+      <View style={{ width: 56, height: 56, borderRadius: 14, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' }}>
+        <Text
+          maxFontSizeMultiplier={1.3}
+          style={{ fontFamily: fonts.heading, fontSize: yearNum ? 17 : 14, lineHeight: 21, color: colors.azureInk, fontVariant: ['tabular-nums'] }}
         >
-          <SubjectIcon color={color} size={22} strokeWidth={1.75} />
-        </View>
+          {yearNum ? String(yearNum) : t('Modèle', 'Modèl')}
+        </Text>
+      </View>
 
-        <View className="flex-1" style={{ minWidth: 0 }}>
-          {/* Title: "Matière · Année" */}
-          <Text style={[typeScale.titleSm, { color: colors.ink }]} numberOfLines={1}>
-            {subjectLabel}
-            {yearOrSession ? <Text style={{ color }}>{`  ·  ${yearOrSession}`}</Text> : null}
-          </Text>
+      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+        <Text style={{ fontFamily: fonts.headingBold, fontSize: 17, lineHeight: 22, color: colors.ink }} numberOfLines={1}>
+          {subjectLabel}
+        </Text>
+        {detail ? (
+          <Text style={[typeScale.meta, { color: colors.muted }]} numberOfLines={1}>{detail}</Text>
+        ) : null}
+        {stats ? (
+          <Text style={[typeScale.meta, { color: colors.muted }]} numberOfLines={1}>{stats}</Text>
+        ) : null}
+      </View>
 
-          {/* Meta: "Niveau · Session/Topic" */}
-          {metaBits.length > 0 ? (
-            <Text style={[typeScale.caption, { color: colors.muted, marginTop: 2 }]} numberOfLines={1}>
-              {metaBits.join('  ·  ')}
+      {/* A finished exam shows the score: the number is the reason to come back. */}
+      {done ? (
+        pct !== null ? (
+          <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: good ? colors.successSoft : colors.warnSoft }}>
+            <Text style={{ fontFamily: fonts.headingBold, fontSize: 14, lineHeight: 18, color: good ? (isDark ? colors.success : colors.successFill) : (isDark ? colors.warn : '#9A5B00'), fontVariant: ['tabular-nums'] }}>
+              {pct}%
             </Text>
-          ) : null}
-
-          {/* Stats row: ⏱ min · sections/questions · pts */}
-          <View className="flex-row items-center flex-wrap" style={{ gap: 12, marginTop: 7 }}>
-            {durationMin > 0 ? (
-              <View className="flex-row items-center" style={{ gap: 4 }}>
-                <Clock color={colors.faint} size={13} />
-                <Text style={[typeScale.micro, { color: colors.muted }]}>{durationMin} min</Text>
-              </View>
-            ) : null}
-            {secCount > 0 ? (
-              <View className="flex-row items-center" style={{ gap: 4 }}>
-                <Layers color={colors.faint} size={13} />
-                <Text style={[typeScale.micro, { color: colors.muted }]}>
-                  {secCount} {t(secCount > 1 ? 'exercices' : 'exercice', 'egzèsis')}
-                </Text>
-              </View>
-            ) : qCount > 0 ? (
-              <View className="flex-row items-center" style={{ gap: 4 }}>
-                <Layers color={colors.faint} size={13} />
-                <Text style={[typeScale.micro, { color: colors.muted }]}>
-                  {qCount} {t(qCount > 1 ? 'questions' : 'question', 'kesyon')}
-                </Text>
-              </View>
-            ) : null}
-            {totalPoints > 0 ? (
-              <View className="flex-row items-center" style={{ gap: 4 }}>
-                <Award color={colors.faint} size={13} />
-                <Text style={[typeScale.micro, { color: colors.muted }]}>{totalPoints} {t('pts', 'pwen')}</Text>
-              </View>
-            ) : null}
-          </View>
-        </View>
-
-        {/* Right: completion badge or chevron */}
-        {done ? (
-          // A finished exam shows the score as a pill rather than a bare check:
-          // the number is the reason to come back and beat it.
-          <View className="items-center" style={{ gap: 3 }}>
-            {pct !== null ? (
-              <View
-                style={{
-                  paddingHorizontal: 9, paddingVertical: 4, borderRadius: 999,
-                  backgroundColor: (pct >= 50 ? colors.successFill : colors.warn) + '1f',
-                }}
-              >
-                <Text style={[typeScale.micro, { color: pct >= 50 ? colors.successFill : colors.warn, fontFamily: fonts.headingBold }]}>
-                  {pct}%
-                </Text>
-              </View>
-            ) : (
-              <CheckCircle2 color={colors.success} size={20} />
-            )}
-            <Text style={[typeScale.micro, { color: colors.faint }]}>{t('Refaire', 'Refè')}</Text>
           </View>
         ) : (
-          <ChevronRight color={colors.faint} size={18} />
-        )}
-      </View>
+          <CheckCircle2 color={isDark ? colors.success : colors.successFill} size={20} />
+        )
+      ) : (
+        <ChevronRight color={colors.faint} size={20} />
+      )}
     </PressableScale>
   );
 }
@@ -199,11 +160,11 @@ function ExamCard({
 export default function ExamBrowserScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
-  const { level, subject: initialSubject } = route.params;
+  const { level, subject: initialSubject, explicit } = route.params;
   const { user, language } = useStore();
   const grade = useStore((s) => s.grade);
   const colors = useColors();
-  const { typeScale, radius, shadow } = useTheme();
+  const { typeScale, cardSurface, isDark } = useTheme();
   const centerColumn = useContentContainerStyle('readable');
   const reduceMotion = useReduceMotion();
   const isCreole = language === 'ht';
@@ -228,8 +189,9 @@ export default function ExamBrowserScreen() {
   // is. Dismissible, never locked (see the level chip below).
   const curatedLevel = useMemo(() => {
     const mapped = EXAM_LEVEL_TO_ROUTE[gradeProfile(grade).examLevel ?? ''] ?? null;
+    if (explicit) return null; // chosen on the landing's level switch
     return level === 'terminale' && mapped && mapped !== 'terminale' ? mapped : null;
-  }, [grade, level]);
+  }, [grade, level, explicit]);
   const [activeLevel, setActiveLevel] = useState<string>(curatedLevel ?? level);
   const levelTouched = useRef(false);
   // Late store hydration: snap to the curated level once grade resolves, unless
@@ -395,39 +357,61 @@ export default function ExamBrowserScreen() {
     setActiveLevel((cur) => (cur === curatedLevel ? 'all' : (curatedLevel ?? level)));
   }
 
+  // One header for the loading, error and loaded states, so nothing shifts.
+  const headerRow = (withFilters: boolean) => (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingTop: 4, paddingBottom: 8, backgroundColor: colors.bg }}>
+      <TouchableOpacity
+        onPress={goBackToExams}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel={t('Retour', 'Retounen')}
+        style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+      >
+        <ChevronLeft color={colors.ink} size={26} />
+      </TouchableOpacity>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text accessibilityRole="header" numberOfLines={1} style={[typeScale.section, { color: colors.ink }]}>{screenTitle}</Text>
+        {withFilters && exams.length > 0 ? (
+          <Text style={[typeScale.meta, { color: colors.muted }]}>
+            {exams.length} {t('sujets', 'sijè')} · {doneCount} {t('terminé', 'fini')}{doneCount > 1 ? t('s', '') : ''}
+          </Text>
+        ) : null}
+      </View>
+      {withFilters ? (
+        <TouchableOpacity
+          onPress={() => setShowFilters(true)}
+          hitSlop={6}
+          accessibilityRole="button"
+          accessibilityLabel={activeFilterCount > 0 ? t(`Filtres, ${activeFilterCount} actifs`, `Filt, ${activeFilterCount} aktif`) : t('Filtres', 'Filt')}
+          style={{
+            flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 14, marginRight: 6,
+            borderRadius: 999, backgroundColor: activeFilterCount > 0 ? colors.ink : colors.surfaceAlt,
+          }}
+        >
+          <SlidersHorizontal color={activeFilterCount > 0 ? colors.bg : colors.ink} size={17} />
+          <Text style={{ fontFamily: fonts.bold, fontSize: 15, lineHeight: 20, color: activeFilterCount > 0 ? colors.bg : colors.ink }}>
+            {activeFilterCount > 0 ? String(activeFilterCount) : t('Filtres', 'Filt')}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
+
   if (loading)
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
-        {/* Header (matches the loaded layout so nothing shifts) */}
-        <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.bg }}>
-          <TouchableOpacity
-            onPress={goBackToExams}
-            className="mr-3 p-1"
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={t('Retour', 'Retounen')}
-          >
-            <ArrowLeft color={colors.muted} size={22} />
-          </TouchableOpacity>
-          <Text style={[typeScale.h1, { color: colors.ink }]}>{screenTitle}</Text>
+        {headerRow(false)}
+        <View style={{ paddingHorizontal: 20, paddingTop: 6 }}>
+          <Skeleton height={56} radius={999} />
         </View>
-        {/* Search bar placeholder */}
-        <View className="px-4 pt-3 pb-1">
-          <Skeleton height={44} radius={radius.control} />
-        </View>
-        {/* Exam card skeletons — match the real ExamCard (radius.card) so cards
-            don't resize when the catalog loads. */}
-        <View className="px-4 pt-3" style={{ gap: 12 }}>
+        {/* Card skeletons match the real ExamCard so nothing resizes on load. */}
+        <View style={{ paddingHorizontal: 20, paddingTop: 16, gap: 12 }}>
           {Array.from({ length: 7 }).map((_, i) => (
-            <View
-              key={i}
-              className="flex-row items-center"
-              style={{ gap: 12, backgroundColor: colors.surface, borderRadius: radius.card, padding: 16, borderWidth: 1, borderColor: colors.border, ...shadow.sm }}
-            >
-              <Skeleton width={44} height={44} radius={12} />
+            <View key={i} style={[cardSurface, { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, minHeight: 84 }]}>
+              <Skeleton width={56} height={56} radius={14} />
               <View className="flex-1" style={{ gap: 8 }}>
-                <Skeleton width="80%" height={13} />
-                <Skeleton width="45%" height={11} />
+                <Skeleton width="70%" height={16} />
+                <Skeleton width="45%" height={14} />
               </View>
             </View>
           ))}
@@ -440,81 +424,32 @@ export default function ExamBrowserScreen() {
   if (error)
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
-        <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.bg }}>
-          <TouchableOpacity
-            onPress={goBackToExams}
-            className="mr-3 p-1"
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={t('Retour', 'Retounen')}
-          >
-            <ArrowLeft color={colors.muted} size={22} />
-          </TouchableOpacity>
-          <Text style={[typeScale.h1, { color: colors.ink }]}>{screenTitle}</Text>
-        </View>
+        {headerRow(false)}
         <ErrorState onRetry={() => setRetryCount((n) => n + 1)} />
       </SafeAreaView>
     );
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
-      {/* Header — shares the page background (no white-bar seam) */}
-      <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.bg }}>
-        <TouchableOpacity
-          onPress={goBackToExams}
-          className="mr-3 p-1"
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={t('Retour', 'Retounen')}
-        >
-          <ArrowLeft color={colors.muted} size={22} />
-        </TouchableOpacity>
-        <View className="flex-1">
-          <Text style={[typeScale.h1, { color: colors.ink }]}>{screenTitle}</Text>
-          {exams.length > 0 && (
-            <Text style={[typeScale.caption, { color: colors.faint, marginTop: 2 }]}>
-              {exams.length} {t('examens', 'egzamen')} · {doneCount} {t('terminé', 'fini')}{doneCount > 1 ? t('s', '') : ''}
-            </Text>
-          )}
-        </View>
-        <TouchableOpacity
-          onPress={() => setShowFilters(true)}
-          className={`flex-row items-center gap-1.5 px-3 py-2 rounded-xl ${activeFilterCount > 0 ? 'bg-primary-600 dark:bg-[#4C9AF5]' : 'bg-gray-100 dark:bg-slate-800'}`}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={t('Filtres', 'Filt')}
-        >
-          <SlidersHorizontal color={activeFilterCount > 0 ? '#fff' : colors.muted} size={16} />
-          {activeFilterCount > 0 && (
-            <Text className="text-white text-xs font-bold">{activeFilterCount}</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+      {headerRow(true)}
 
       {/* Level context — grade-curated by default (e.g. "Préfac · Concours"),
           with a one-tap escape to browse every level. Only shown when the
           student's grade implies a different pool than the default Bac papers. */}
       {curatedLevel ? (
-        <View style={{ paddingHorizontal: 16, paddingTop: 4, backgroundColor: colors.bg }}>
+        <View style={{ paddingHorizontal: 20, paddingTop: 4, backgroundColor: colors.bg }}>
           <View
             style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 10,
-              paddingHorizontal: 12,
-              paddingVertical: 9,
-              borderRadius: radius.control,
+              flexDirection: 'row', alignItems: 'center', gap: 12,
+              paddingLeft: 16, paddingRight: 8, paddingVertical: 8, borderRadius: 16,
               backgroundColor: colors.azureSoft,
-              borderWidth: 1,
-              borderColor: colors.azure + '33',
             }}
           >
-            <GraduationCap color={colors.azure} size={17} />
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={[typeScale.label, { color: colors.azure, fontFamily: fonts.headingBold }]} numberOfLines={1}>
+              <Text style={{ fontFamily: fonts.bold, fontSize: 15, lineHeight: 20, color: colors.azureInk }} numberOfLines={1}>
                 {curatedChipLabel}
               </Text>
-              <Text style={[typeScale.micro, { color: colors.muted }]} numberOfLines={1}>
+              <Text style={[typeScale.label, { color: colors.muted }]} numberOfLines={1}>
                 {activeLevel === curatedLevel
                   ? t('Adapté à ton profil', 'Adapte pou pwofil ou')
                   : t('Affichage de tous les examens', 'N ap montre tout egzamen')}
@@ -522,16 +457,15 @@ export default function ExamBrowserScreen() {
             </View>
             <TouchableOpacity
               onPress={toggleLevel}
-              hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel={
                 activeLevel === curatedLevel
                   ? t('Voir tous les niveaux', 'Wè tout nivo')
                   : t('Revenir à mon niveau', 'Retounen nan nivo mwen')
               }
-              style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}
+              style={{ minHeight: 40, paddingHorizontal: 14, borderRadius: 999, backgroundColor: colors.surface, justifyContent: 'center' }}
             >
-              <Text style={[typeScale.micro, { color: colors.azure, fontFamily: fonts.headingBold }]}>
+              <Text style={{ fontFamily: fonts.bold, fontSize: 14, lineHeight: 19, color: colors.azureInk }}>
                 {activeLevel === curatedLevel ? t('Tous les niveaux', 'Tout nivo') : t('Mon niveau', 'Nivo mwen')}
               </Text>
             </TouchableOpacity>
@@ -540,19 +474,17 @@ export default function ExamBrowserScreen() {
       ) : null}
 
       {/* Search */}
-      <View className="px-4 pt-3 pb-2" style={{ backgroundColor: colors.bg }}>
-        <View className="flex-row items-center bg-gray-50 dark:bg-slate-800 border rounded-xl px-3 mb-3" style={{ borderColor: colors.border }}>
-          <Search color={colors.faint} size={16} />
-          <TextInput
-            className="flex-1 py-3 ml-2 text-sm text-gray-900 dark:text-slate-100"
-            placeholder={t('Rechercher un examen…', 'Chèche yon egzamen…')}
-            value={search}
-            onChangeText={setSearch}
-            placeholderTextColor={colors.faint}
-          />
-        </View>
-        {/* Matière filter pills — active = brand fill, inactive = hairline tint */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+      <View style={{ paddingTop: 10, paddingBottom: 6, backgroundColor: colors.bg }}>
+        <SearchField
+          value={search}
+          onChangeText={setSearch}
+          placeholder={t('Rechercher un examen…', 'Chèche yon egzamen…')}
+          clearLabel={t('Effacer', 'Efase')}
+          keyboardAppearance={isDark ? 'dark' : 'light'}
+          style={{ marginHorizontal: 20, marginBottom: 12 }}
+        />
+        {/* Matière chips — ink-filled when active, grey otherwise. */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 20 }}>
           {subjects.map((s) => {
             const active = subject === s;
             return (
@@ -560,17 +492,15 @@ export default function ExamBrowserScreen() {
                 key={s}
                 onPress={() => setSubject(s)}
                 activeOpacity={0.8}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: active }}
                 style={{
-                  paddingHorizontal: 14,
-                  paddingVertical: 8,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  borderColor: active ? colors.azure : colors.border,
-                  backgroundColor: active ? colors.azure : colors.surface,
+                  minHeight: 40, paddingHorizontal: 16, borderRadius: 999, justifyContent: 'center',
+                  backgroundColor: active ? colors.ink : colors.surfaceAlt,
                 }}
               >
-                <Text style={[typeScale.label, { color: active ? '#ffffff' : colors.muted }]}>
-                  {s === 'Tout' ? t('Toutes', 'Tout') : s}
+                <Text style={{ fontFamily: fonts.bold, fontSize: 15, lineHeight: 20, color: active ? colors.bg : colors.ink }}>
+                  {s === 'Tout' ? t('Toutes', 'Tout') : subjectDisplayName(s)}
                 </Text>
               </TouchableOpacity>
             );
@@ -580,27 +510,30 @@ export default function ExamBrowserScreen() {
 
       {/* Active filters row */}
       {(yearFilter !== 'Tout' || statusFilter !== 'all') && (
-        <View className="flex-row items-center gap-2 px-4 py-2 border-b" style={{ backgroundColor: colors.bg, borderBottomColor: colors.border }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, paddingHorizontal: 20, paddingVertical: 6, backgroundColor: colors.bg }}>
           {yearFilter !== 'Tout' && (
             <TouchableOpacity
               onPress={() => setYearFilter('Tout')}
-              className="flex-row items-center gap-1 bg-primary-600 dark:bg-[#4C9AF5] px-3 py-1 rounded-full"
+              accessibilityRole="button"
+              accessibilityLabel={t(`Retirer le filtre ${yearFilter}`, `Retire filt ${yearFilter}`)}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36, paddingHorizontal: 12, borderRadius: 999, backgroundColor: colors.azureSoft }}
             >
-              <Text className="text-white text-xs font-semibold">{yearFilter}</Text>
-              <X color="#fff" size={12} />
+              <Text style={{ fontFamily: fonts.bold, fontSize: 14, lineHeight: 19, color: colors.azureInk }}>{yearFilter}</Text>
+              <X color={colors.azureInk} size={14} />
             </TouchableOpacity>
           )}
           {statusFilter !== 'all' && (
             <TouchableOpacity
               onPress={() => setStatusFilter('all')}
-              className="flex-row items-center gap-1 bg-primary-600 dark:bg-[#4C9AF5] px-3 py-1 rounded-full"
+              accessibilityRole="button"
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36, paddingHorizontal: 12, borderRadius: 999, backgroundColor: colors.azureSoft }}
             >
-              <Text className="text-white text-xs font-semibold">{statusFilter === 'done' ? t('Terminés', 'Fini') : t('À faire', 'Pou fè')}</Text>
-              <X color="#fff" size={12} />
+              <Text style={{ fontFamily: fonts.bold, fontSize: 14, lineHeight: 19, color: colors.azureInk }}>{statusFilter === 'done' ? t('Terminés', 'Fini') : t('À faire', 'Pou fè')}</Text>
+              <X color={colors.azureInk} size={14} />
             </TouchableOpacity>
           )}
-          <TouchableOpacity onPress={() => { setYearFilter('Tout'); setStatusFilter('all'); }}>
-            <Text className="text-primary-600 dark:text-[#4C9AF5] text-xs font-medium">{t('Effacer tout', 'Efase tout')}</Text>
+          <TouchableOpacity onPress={() => { setYearFilter('Tout'); setStatusFilter('all'); }} accessibilityRole="button" style={{ minHeight: 36, justifyContent: 'center', paddingHorizontal: 6 }}>
+            <Text style={[typeScale.label, { color: colors.azureInk }]}>{t('Effacer tout', 'Efase tout')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -609,7 +542,7 @@ export default function ExamBrowserScreen() {
         className="flex-1"
         data={displayed}
         keyExtractor={(exam, i) => String(exam.exam_id ?? exam.id ?? i)}
-        contentContainerStyle={[{ flexGrow: 1, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 100 }, centerColumn]}
+        contentContainerStyle={[{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 110 }, centerColumn]}
         refreshControl={
           <RefreshControl
             refreshing={false}
@@ -621,9 +554,9 @@ export default function ExamBrowserScreen() {
         ListHeaderComponent={
           displayed.length > 0 ? (
             <View style={{ marginBottom: 12 }}>
-              <Text style={[typeScale.caption, { color: colors.faint }]}>{displayed.length} {t('résultat', 'rezilta')}{displayed.length > 1 ? t('s', '') : ''}</Text>
+              <Text style={[typeScale.meta, { color: colors.muted }]}>{displayed.length} {t('résultat', 'rezilta')}{displayed.length > 1 ? t('s', '') : ''}</Text>
               {adaptiveActive && (
-                <Text style={[typeScale.caption, { color: colors.faint, marginTop: 2 }]}>
+                <Text style={[typeScale.meta, { color: colors.muted, marginTop: 2 }]}>
                   {t('Trié pour ton niveau', 'Klase pou nivo ou')}
                 </Text>
               )}
@@ -662,59 +595,62 @@ export default function ExamBrowserScreen() {
       {/* Filter modal */}
       <Modal visible={showFilters} transparent animationType="slide" onRequestClose={() => setShowFilters(false)}>
         <TouchableOpacity
-          className="flex-1 bg-black/40"
+          style={{ flex: 1, backgroundColor: 'rgba(15,30,56,0.45)' }}
           activeOpacity={1}
           onPress={() => setShowFilters(false)}
           accessibilityRole="button"
           accessibilityLabel={t('Fermer', 'Fèmen')}
         />
-        <View className="bg-white dark:bg-[#131c2e] rounded-t-3xl px-5 pt-5 pb-10" accessibilityViewIsModal>
-          <View className="flex-row items-center justify-between mb-5">
-            <Text style={[typeScale.h2, { color: colors.ink }]}>{t('Filtres', 'Filt')}</Text>
+        <View
+          accessibilityViewIsModal
+          style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 36 }}
+        >
+          <View style={{ alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: colors.surfaceAlt, marginBottom: 14 }} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+            <Text accessibilityRole="header" style={[typeScale.section, { color: colors.ink }]}>{t('Filtres', 'Filt')}</Text>
             <TouchableOpacity
               onPress={() => setShowFilters(false)}
-              hitSlop={12}
               accessibilityRole="button"
               accessibilityLabel={t('Fermer', 'Fèmen')}
+              style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: -10 }}
             >
               <X color={colors.muted} size={22} />
             </TouchableOpacity>
           </View>
 
           {/* Year filter */}
-          <Text style={[typeScale.label, { color: colors.muted, marginBottom: 8 }]}>{t('Année', 'Ane')}</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} className="mb-5">
-            {years.map((y) => (
-              <TouchableOpacity
-                key={y}
-                onPress={() => setYearFilter(y)}
-                className={`px-4 py-2 rounded-full ${yearFilter === y ? 'bg-primary-600 dark:bg-[#4C9AF5]' : 'bg-gray-100 dark:bg-slate-800'}`}
-              >
-                <Text className={`text-sm font-semibold ${yearFilter === y ? 'text-white' : 'text-gray-600 dark:text-slate-400'}`}>{y === 'Tout' ? t('Toutes', 'Tout') : y}</Text>
-              </TouchableOpacity>
-            ))}
+          <Text style={[typeScale.meta, { color: colors.muted, marginBottom: 10 }]}>{t('Année', 'Ane')}</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} style={{ marginBottom: 20 }}>
+            {years.map((y) => {
+              const on = yearFilter === y;
+              return (
+                <TouchableOpacity
+                  key={y}
+                  onPress={() => setYearFilter(y)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: on }}
+                  style={{ minHeight: 40, paddingHorizontal: 16, borderRadius: 999, justifyContent: 'center', backgroundColor: on ? colors.ink : colors.surfaceAlt }}
+                >
+                  <Text style={{ fontFamily: fonts.bold, fontSize: 15, lineHeight: 20, color: on ? colors.surface : colors.ink }}>{y === 'Tout' ? t('Toutes', 'Tout') : y}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
 
           {/* Status filter */}
-          <Text style={[typeScale.label, { color: colors.muted, marginBottom: 8 }]}>{t('Statut', 'Eta')}</Text>
-          <View className="flex-row gap-3 mb-6">
-            {([['all', t('Tous', 'Tout')], ['todo', t('À faire', 'Pou fè')], ['done', t('Terminés', 'Fini')]] as const).map(([val, label]) => (
-              <TouchableOpacity
-                key={val}
-                onPress={() => setStatusFilter(val)}
-                className={`flex-1 py-3 rounded-xl items-center ${statusFilter === val ? 'bg-primary-600 dark:bg-[#4C9AF5]' : 'bg-gray-100 dark:bg-slate-800'}`}
-              >
-                <Text className={`text-sm font-semibold ${statusFilter === val ? 'text-white' : 'text-gray-600 dark:text-slate-400'}`}>{label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <Text style={[typeScale.meta, { color: colors.muted, marginBottom: 10 }]}>{t('Statut', 'Eta')}</Text>
+          <Segmented<'all' | 'todo' | 'done'>
+            options={[
+              { key: 'all', label: t('Tous', 'Tout') },
+              { key: 'todo', label: t('À faire', 'Pou fè') },
+              { key: 'done', label: t('Terminés', 'Fini') },
+            ]}
+            value={statusFilter}
+            onChange={setStatusFilter}
+            style={{ marginBottom: 24 }}
+          />
 
-          <TouchableOpacity
-            onPress={() => setShowFilters(false)}
-            className="bg-primary-600 dark:bg-[#4C9AF5] py-4 rounded-2xl items-center"
-          >
-            <Text className="text-white font-bold text-base">{t('Appliquer', 'Aplike')}</Text>
-          </TouchableOpacity>
+          <Button label={t('Appliquer', 'Aplike')} onPress={() => setShowFilters(false)} size="lg" fullWidth />
         </View>
       </Modal>
     </SafeAreaView>

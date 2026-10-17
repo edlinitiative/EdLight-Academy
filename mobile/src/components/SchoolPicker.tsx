@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Modal, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { FlatList, Modal, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Search, X, Plus, MapPin, Check } from 'lucide-react-native';
 import PressableScale from './ui/PressableScale';
+import Button from './ui/Button';
+import { SchoolCrest } from './arena/art';
+import { useReduceMotion } from '../utils/motion';
 import useStore from '../contexts/store';
 import { useColors, useTheme, typeScale } from '../theme/theme';
 import { select, tapMedium } from '../utils/haptics';
@@ -45,7 +48,8 @@ export default function SchoolPicker({ visible, commune, onSelect, onClose }: {
   onClose: () => void;
 }) {
   const colors = useColors();
-  const { radius, shadow } = useTheme();
+  const { radius, shadow, fonts, elevation, cardSurface } = useTheme();
+  const reduce = useReduceMotion();
   const language = useStore((s) => s.language);
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
 
@@ -119,39 +123,44 @@ export default function SchoolPicker({ visible, commune, onSelect, onClose }: {
     setProblem(res);
   };
 
+  // Opaque grey field, no outline (web form anatomy: 52 tall, radius 12).
   const field = {
-    borderWidth: 1,
-    borderColor: colors.border,
     borderRadius: radius.control,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-    fontSize: 15,
+    paddingHorizontal: 14,
+    minHeight: 52,
+    fontFamily: fonts.regular,
+    fontSize: 16,
     backgroundColor: colors.surfaceAlt,
     color: colors.ink,
   } as const;
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'flex-end' }}>
+    <Modal visible={visible} animationType={reduce ? 'none' : 'slide'} transparent onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.55)', justifyContent: 'flex-end' }}>
         <View style={[
-          { backgroundColor: colors.bg, borderTopLeftRadius: 22, borderTopRightRadius: 22, paddingTop: 10, maxHeight: '88%' },
+          { backgroundColor: colors.bg, borderTopLeftRadius: radius.hero, borderTopRightRadius: radius.hero, paddingTop: 12, maxHeight: '88%' },
           shadow.lg ?? shadow.sm,
         ]}>
           {/* Grab handle + header */}
-          <View style={{ alignSelf: 'center', width: 38, height: 4, borderRadius: 999, backgroundColor: colors.border, marginBottom: 12 }} />
-          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, gap: 12, marginBottom: 12 }}>
-            <Text style={[typeScale.titleSm, { color: colors.ink, flex: 1 }]}>
+          <View style={{ alignSelf: 'center', width: 40, height: 5, borderRadius: 999, backgroundColor: colors.surfaceAlt, marginBottom: 12 }} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, gap: 12, marginBottom: 12 }}>
+            <Text accessibilityRole="header" style={[typeScale.section, { color: colors.ink, flex: 1 }]}>
               {t('Ton école', 'Lekòl ou')}
             </Text>
-            <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityRole="button" accessibilityLabel={t('Fermer', 'Fèmen')}>
+            <TouchableOpacity
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel={t('Fermer', 'Fèmen')}
+              style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceAlt }}
+            >
               <X color={colors.muted} size={20} />
             </TouchableOpacity>
           </View>
 
           {/* Search */}
-          <View style={{ paddingHorizontal: 16, marginBottom: 10 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Search color={colors.muted} size={16} />
+          <View style={{ paddingHorizontal: 20, marginBottom: 10 }}>
+            <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface, borderRadius: radius.pill, paddingLeft: 18, minHeight: 52 }, elevation.thumb]}>
+              <Search color={colors.muted} size={20} />
               <TextInput
                 value={q}
                 onChangeText={(v) => { setQ(v); setProblem(null); }}
@@ -160,12 +169,12 @@ export default function SchoolPicker({ visible, commune, onSelect, onClose }: {
                 maxLength={80}
                 placeholder={t('Chercher une école…', 'Chèche yon lekòl…')}
                 placeholderTextColor={colors.faint}
-                style={[field, { flex: 1 }]}
+                style={[field, { flex: 1, backgroundColor: 'transparent', paddingHorizontal: 0 }]}
                 accessibilityLabel={t('Chercher une école', 'Chèche yon lekòl')}
               />
             </View>
             {!q ? (
-              <Text style={[typeScale.caption, { color: colors.muted, marginTop: 6 }]}>
+              <Text style={[typeScale.meta, { color: colors.muted, marginTop: 10 }]}>
                 {t('Les écoles les plus fréquentées', 'Lekòl yo plis moun ale')}
               </Text>
             ) : null}
@@ -173,25 +182,25 @@ export default function SchoolPicker({ visible, commune, onSelect, onClose }: {
 
           {adding ? (
             // ── Adding the one that isn't there ──────────────────────────
-            <View style={{ paddingHorizontal: 16, gap: 10, paddingBottom: 22 }}>
+            <View style={{ paddingHorizontal: 20, gap: 10, paddingBottom: 26 }}>
               {maybeSame ? (
                 <View style={{ backgroundColor: colors.azureSoft, borderRadius: radius.card, padding: 12, gap: 8 }}>
-                  <Text style={[typeScale.caption, { color: colors.ink }]}>
+                  <Text style={[typeScale.body, { color: colors.ink }]}>
                     {t('Est-ce plutôt celle-ci ?', 'Èske se pito sa a ?')}
                   </Text>
                   <PressableScale
                     onPress={() => choose(maybeSame)}
                     pressedScale={0.98}
                     accessibilityRole="button"
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 }}
                   >
-                    <Check color={colors.azure} size={16} />
-                    <Text style={[typeScale.label, { color: colors.azure, flex: 1 }]}>{maybeSame.name}</Text>
+                    <Check color={colors.azureInk} size={18} />
+                    <Text style={[typeScale.bodyMd, { color: colors.azureInk, flex: 1 }]}>{maybeSame.name}</Text>
                   </PressableScale>
                 </View>
               ) : null}
 
-              <Text style={[typeScale.label, { color: colors.muted }]}>{t("Commune de l'école", 'Komin lekòl la')}</Text>
+              <Text style={[typeScale.label, { color: colors.muted, fontSize: 15 }]}>{t("Commune de l'école", 'Komin lekòl la')}</Text>
               <TextInput
                 value={newCommune}
                 onChangeText={setNewCommune}
@@ -273,25 +282,19 @@ export default function SchoolPicker({ visible, commune, onSelect, onClose }: {
               ) : null}
 
               <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
-                <PressableScale
+                <Button
+                  variant="secondary"
+                  label={t('Retour', 'Tounen')}
                   onPress={() => setAdding(false)}
-                  pressedScale={0.97}
-                  accessibilityRole="button"
-                  style={{ flex: 1, alignItems: 'center', paddingVertical: 13, borderRadius: radius.control, borderWidth: 1, borderColor: colors.border }}
-                >
-                  <Text style={[typeScale.label, { color: colors.muted }]}>{t('Retour', 'Tounen')}</Text>
-                </PressableScale>
-                <PressableScale
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  label={t('Ajouter', 'Ajoute')}
                   onPress={submitNew}
-                  disabled={busy || !canSubmit}
-                  pressedScale={0.97}
-                  accessibilityRole="button"
-                  style={{ flex: 2, alignItems: 'center', paddingVertical: 13, borderRadius: radius.control, backgroundColor: canSubmit ? colors.azure : colors.border }}
-                >
-                  {busy
-                    ? <ActivityIndicator color="#fff" size="small" />
-                    : <Text style={[typeScale.label, { color: '#fff' }]}>{t('Ajouter', 'Ajoute')}</Text>}
-                </PressableScale>
+                  disabled={!canSubmit}
+                  loading={busy}
+                  style={{ flex: 2 }}
+                />
               </View>
             </View>
           ) : (
@@ -300,25 +303,28 @@ export default function SchoolPicker({ visible, commune, onSelect, onClose }: {
               data={results}
               keyExtractor={(s) => s.key}
               keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 28 }}
+              contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 28, gap: 8 }}
               renderItem={({ item }) => (
                 <PressableScale
                   onPress={() => choose(item)}
                   pressedScale={0.98}
                   accessibilityRole="button"
                   accessibilityLabel={[item.name, item.shortName, item.commune].filter(Boolean).join(', ')}
-                  style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}
+                  style={[cardSurface, { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14, minHeight: 60 }]}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Text style={[typeScale.label, { color: colors.ink, flexShrink: 1 }]}>{item.name}</Text>
+                  <SchoolCrest name={item.name} size={36} />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <Text style={{ fontFamily: fonts.headingBold, fontSize: 16, lineHeight: 21, color: colors.ink, flexShrink: 1 }}>{item.name}</Text>
                     {/* The short name is how students recognise their school
                         faster than the registered name — and seeing it here is
                         what teaches everyone else that it exists. */}
                     {item.shortName ? (
                       <Text style={[typeScale.caption, {
-                        color: colors.azure,
-                        backgroundColor: colors.azureSoft,
-                        paddingHorizontal: 6,
+                        color: colors.ink,
+                        fontFamily: fonts.headingBold,
+                        backgroundColor: colors.surfaceAlt,
+                        paddingHorizontal: 8,
                         paddingVertical: 2,
                         borderRadius: 999,
                         overflow: 'hidden',
@@ -329,14 +335,15 @@ export default function SchoolPicker({ visible, commune, onSelect, onClose }: {
                   </View>
                   {item.commune ? (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                      <MapPin color={colors.faint} size={11} />
+                      <MapPin color={colors.muted} size={14} />
                       <Text style={[typeScale.caption, { color: colors.muted }]}>{item.commune}</Text>
                     </View>
                   ) : null}
+                  </View>
                 </PressableScale>
               )}
               ListEmptyComponent={
-                <Text style={[typeScale.caption, { color: colors.muted, paddingVertical: 18, textAlign: 'center' }]}>
+                <Text style={[typeScale.body, { color: colors.muted, paddingVertical: 18, textAlign: 'center' }]}>
                   {q
                     ? t('Aucune école trouvée.', 'Nou pa jwenn okenn lekòl.')
                     : t('Cherche le nom de ton école.', 'Chèche non lekòl ou.')}
@@ -350,10 +357,10 @@ export default function SchoolPicker({ visible, commune, onSelect, onClose }: {
                     onPress={() => { select(); setNewCommune(commune ?? ''); setAdding(true); }}
                     pressedScale={0.98}
                     accessibilityRole="button"
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 14 }}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 52, paddingVertical: 8 }}
                   >
-                    <Plus color={colors.azure} size={16} />
-                    <Text style={[typeScale.label, { color: colors.azure, flex: 1 }]}>
+                    <Plus color={colors.azureInk} size={20} />
+                    <Text style={[typeScale.bodyMd, { color: colors.azureInk, flex: 1, fontFamily: fonts.bold }]}>
                       {t(`Ajouter « ${q.trim()} »`, `Ajoute « ${q.trim()} »`)}
                     </Text>
                   </PressableScale>

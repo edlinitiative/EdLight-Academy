@@ -10,12 +10,15 @@ import { Timer, MousePointerClick } from 'lucide-react-native';
 import { CAPITAL_PAIRS } from '../../data/triviaData';
 import { buildMemoryDeck, MemoryCard } from '../../utils/gameGen';
 import GameOverCard, { GameReward } from './GameOverCard';
-import { useColors, typeScale, radius } from '../../theme/theme';
+import { typeScale } from '../../theme/theme';
+import { useArenaColors, arenaColors as C } from '../../theme/arenaTheme';
+import { ArenaButton } from '../arena/ArenaKit';
 import PressableScale from '../ui/PressableScale';
 import { success, warn } from '../../utils/haptics';
 
 const PAIRS = 6;
-const ACCENT = '#7c3aed';
+// The night has one accent (coral); the cards speak in tonal steps.
+const ACCENT = C.coral;
 
 const GRID_PAD = 16;
 const CARD_GAP = 10;
@@ -35,7 +38,7 @@ interface MemoireGameProps {
 export default function MemoireGame({
   isCreole, onExit, onRecord, highScore = null,
 }: MemoireGameProps) {
-  const colors = useColors();
+  const colors = useArenaColors();
   const [nonce, setNonce] = useState(0);
   const deck = useMemo(() => buildMemoryDeck(CAPITAL_PAIRS, PAIRS, isCreole), [isCreole, nonce]);
 
@@ -133,16 +136,11 @@ export default function MemoireGame({
         <Text style={[typeScale.body, { color: colors.muted, textAlign: 'center', marginBottom: 20 }]}>
           {isCreole ? 'Tounen pita, n ap ajoute kontni.' : 'Revenez plus tard, du contenu arrive.'}
         </Text>
-        <PressableScale
+        <ArenaButton
+          variant="secondary"
           onPress={onExit}
-          accessibilityRole="button"
-          accessibilityLabel={isCreole ? 'Tounen nan jwèt yo' : 'Retour aux jeux'}
-          style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 16, paddingHorizontal: 32, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, borderRadius: radius.tile }}
-        >
-          <Text style={[typeScale.title, { color: colors.muted }]}>
-            ← {isCreole ? 'Jwèt yo' : 'Les jeux'}
-          </Text>
-        </PressableScale>
+          label={isCreole ? 'Tounen nan jwèt yo' : 'Retour aux jeux'}
+        />
       </View>
     );
   }
@@ -157,7 +155,7 @@ export default function MemoireGame({
             {moves} {isCreole ? 'mouvman' : 'coups'}
           </Text>
         </View>
-        <Text style={[typeScale.label, { color: ACCENT }]}>
+        <Text style={[typeScale.label, { color: C.inkSoft }]}>
           {isCreole ? 'Peyi ↔ Kapital' : 'Pays ↔ Capitale'}
         </Text>
         <View className="flex-row items-center gap-1.5">
@@ -188,14 +186,13 @@ export default function MemoireGame({
               style={{
                 width: CARD_W,
                 height: CARD_H,
-                borderRadius: radius.tile,
+                borderRadius: 14,
                 alignItems: 'center',
                 justifyContent: 'center',
                 paddingHorizontal: 6,
-                backgroundColor: isUp ? colors.surface : card.side === 'a' ? ACCENT : '#9d6ff0',
-                borderWidth: isUp ? 2 : 0,
-                borderColor: isMatched ? colors.success : colors.border,
-                opacity: isMatched ? 0.75 : 1,
+                // Opaque tonal steps only: face-down countries vs capitals
+                // differ by one step; face-up lifts; a match is a success wash.
+                backgroundColor: isMatched ? C.successSoft : isUp ? C.signalSoft : card.side === 'a' ? C.surfaceRaised : C.secondary,
               }}
             >
               {isUp ? (
@@ -210,7 +207,7 @@ export default function MemoireGame({
                   {card.label}
                 </Text>
               ) : (
-                <Text style={[typeScale.display, { color: 'rgba(255,255,255,0.9)' }]}>
+                <Text style={[typeScale.display, { color: C.muted }]}>
                   ?
                 </Text>
               )}

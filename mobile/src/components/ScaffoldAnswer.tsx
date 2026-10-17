@@ -170,11 +170,10 @@ export default function ScaffoldAnswer({ question, value, onChange, mathMode = f
     shadowRadius: 8,
     elevation: 1,
   } as const;
+  // Opaque card, no ring: separation comes from the soft drop (Stitch 06).
   const card = {
     backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 16,
+    borderRadius: 18,
   } as const;
   const blanks: any[] = Array.isArray(question?.scaffold_blanks) ? question.scaffold_blanks : [];
   const parts: any[] = Array.isArray(question?.answer_parts) ? question.answer_parts : [];
@@ -245,11 +244,9 @@ export default function ScaffoldAnswer({ question, value, onChange, mathMode = f
             <Text
               style={{
                 flex: 1,
-                fontSize: 11,
-                fontWeight: '700',
+                fontSize: 14,
+                fontWeight: '600',
                 color: colors.muted,
-                textTransform: 'uppercase',
-                letterSpacing: 0.8,
               }}
             >
               {t('Complète la démarche', 'Konplete demach la')}
@@ -263,7 +260,7 @@ export default function ScaffoldAnswer({ question, value, onChange, mathMode = f
           {(!isLongDemarche || demarcheOpen) ? (
             <MathText text={displayText} style={{ fontSize: 15, lineHeight: 23, color: colors.ink }} />
           ) : (
-            <Text style={{ fontSize: 13, color: colors.faint }}>
+            <Text style={{ fontSize: 14, color: colors.muted }}>
               {t('Touche pour voir la démarche complète.', 'Tape pou wè tout demach la.')}
             </Text>
           )}
@@ -292,7 +289,7 @@ export default function ScaffoldAnswer({ question, value, onChange, mathMode = f
               <Text style={{ fontSize: 16, color: colors.azure }}>{circled(i)}</Text>
               <MathText
                 text={label}
-                style={{ flex: 1, fontSize: 13, fontWeight: '600', color: colors.ink }}
+                style={{ flex: 1, fontSize: 15, fontWeight: '600', color: colors.ink }}
               />
             </View>
 
@@ -306,19 +303,20 @@ export default function ScaffoldAnswer({ question, value, onChange, mathMode = f
                     <TouchableOpacity
                       key={oi}
                       onPress={() => setBlank(i, selected ? '' : optValue)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: selected }}
                       style={{
-                        paddingHorizontal: 12,
-                        paddingVertical: 8,
-                        borderRadius: 10,
-                        borderWidth: 1,
-                        borderColor: selected ? colors.azure : colors.border,
-                        backgroundColor: selected ? colors.azureSoft : colors.surface,
+                        paddingHorizontal: 14,
+                        minHeight: 40,
+                        justifyContent: 'center',
+                        borderRadius: 999,
+                        backgroundColor: selected ? colors.azureFill : colors.surfaceAlt,
                       }}
                     >
                       <Text
                         style={{
-                          fontSize: 14,
-                          color: selected ? colors.azure : colors.ink,
+                          fontSize: 15,
+                          color: selected ? '#ffffff' : colors.ink,
                           fontWeight: selected ? '700' : '400',
                         }}
                       >

@@ -53,7 +53,7 @@ export default function ConditionBuilder({
 
   return (
     <View style={{ gap: 12 }}>
-      <Text style={{ fontSize: 12, fontWeight: '600', color: colors.muted }}>
+      <Text style={{ fontSize: 14, fontWeight: '600', color: colors.muted }}>
         {t('Complétez chaque condition :', 'Konplete chak kondisyon :')}
       </Text>
       {conditions.map((cond, i) => (

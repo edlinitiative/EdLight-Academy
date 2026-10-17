@@ -1,13 +1,16 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withDelay, withSpring, Easing } from 'react-native-reanimated';
-import { Crown, Medal, Trophy, Pencil, ShieldCheck, ChevronDown, Sparkles, Timer, Share2 } from 'lucide-react-native';
+import { Crown, Trophy, Pencil, ShieldCheck, ChevronDown, Sparkles, Timer, Share2 } from 'lucide-react-native';
 import ShareCardCapture, { type ShareCardCaptureHandle } from './share/ShareCardCapture';
 import { useLeaderboard, useCollectives } from '../hooks/useLeaderboard';
 import { useTrivia } from '../hooks/useTrivia';
 import { isValidAlias, weekId, weekNumber, timeToWeekEnd } from '../services/leaderboardService';
 import useStore from '../contexts/store';
-import { useTheme, typeScale } from '../theme/theme';
+import { useTheme, typeScale, fonts } from '../theme/theme';
+import { arenaColors as NC, arenaPalette } from '../theme/arenaTheme';
+import { Avatar as FaceAvatar, SchoolCrest } from './arena/art';
+import Segmented from './ui/Segmented';
 import { aggregateBy, normalizeName, type GroupField, type GroupRanking } from '../../../shared/leaderboardAgg';
 import { useReduceMotion } from '../utils/motion';
 import { tapLight } from '../utils/haptics';
@@ -16,6 +19,37 @@ import ChampionMedallion from './celebration/ChampionMedallion';
 import Avatar from './ui/Avatar';
 import Stagger from './ui/Stagger';
 import LeaderboardJoinModal from './LeaderboardJoinModal';
+
+/**
+ * Two worlds share this board: the Jeux tab / full Classement page draw it on
+ * the Arène's night (`tone="night"`), Home keeps the day look. One context so
+ * every row, podium and footer reads the same palette without prop-drilling.
+ */
+type BoardTone = 'day' | 'night';
+const BoardToneContext = createContext<BoardTone>('day');
+
+function useBoard() {
+  const theme = useTheme();
+  const tone = useContext(BoardToneContext);
+  if (tone === 'night') {
+    return {
+      ...theme,
+      colors: arenaPalette,
+      isDark: true,
+      night: true as const,
+      cardSurface: { backgroundColor: NC.surface, borderRadius: 20, borderWidth: 0 },
+    };
+  }
+  return { ...theme, night: false as const };
+}
+
+/** A student's face: the generated arena face on the night, the app avatar by day. */
+function BoardAvatar({ entry, size }: { entry: any; size: number }) {
+  const { night } = useBoard();
+  const seed = entry.id || entry.uid || entry.displayName || '';
+  if (night) return <FaceAvatar seed={seed} size={size} />;
+  return <Avatar name={entry.displayName || ''} uri={entry.photoURL || entry.picture || null} seed={seed} size={size} />;
+}
 
 /**
  * Medal tones per scheme. The light values are the classic gold/silver/bronze;
@@ -29,19 +63,33 @@ function medalPalette(isDark: boolean) {
   };
 }
 
+/**
+ * The rank chip: a 36 square, radius 10, with the numeral always written out
+ * (never colour alone). 1-3 wear their metal as an OPAQUE fill with a marine
+ * numeral; every other rank sits on the quiet secondary step.
+ */
 function rankBadge(rank: number, isDark: boolean) {
   const m = medalPalette(isDark);
-  if (rank === 1) return { icon: <Crown size={16} color={m.gold.metal} />, bg: m.gold.ring + '20', text: m.gold.ink };
-  if (rank === 2) return { icon: <Medal size={16} color={m.silver.metal} />, bg: m.silver.ring + '20', text: m.silver.ink };
-  if (rank === 3) return { icon: <Medal size={16} color={m.bronze.metal} />, bg: m.bronze.ring + '20', text: m.bronze.ink };
-  return { icon: null, bg: 'transparent', text: isDark ? '#9aa8c0' : '#6b7280' };
+  if (rank === 1) return { bg: isDark ? NC.gold : m.gold.ring, text: '#12213A' };
+  if (rank === 2) return { bg: isDark ? '#C9D3E3' : '#D9DEE6', text: '#12213A' };
+  if (rank === 3) return { bg: isDark ? '#E8B48A' : '#E8B48A', text: '#12213A' };
+  return { bg: isDark ? NC.secondary : '#EEF2F7', text: isDark ? NC.inkSoft : '#46587A' };
+}
+
+function RankChip({ rank }: { rank: number }) {
+  const { isDark } = useBoard();
+  const b = rankBadge(rank, isDark);
+  return (
+    <View style={{ width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: b.bg, marginRight: 12 }}>
+      <Text style={{ fontFamily: fonts.headingBold, fontSize: 16, color: b.text }} maxFontSizeMultiplier={1.3}>{rank}</Text>
+    </View>
+  );
 }
 
 function EntryRow({ entry, isMe, compact = false, delta = 0 }: { entry: any; isMe: boolean; compact?: boolean; delta?: number }) {
-  const { colors, isDark } = useTheme();
+  const { colors, night } = useBoard();
   const { language } = useStore();
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
-  const badge = rankBadge(entry.rank, isDark);
   const name = entry.displayName || t('Élève', 'Elèv');
   // One grouped label so VoiceOver reads "Rang 3, Sandra, 215 XP" as a single
   // unit rather than three disjoint bits (rank chip · name · number · "XP").
@@ -51,50 +99,37 @@ function EntryRow({ entry, isMe, compact = false, delta = 0 }: { entry: any; isM
       ? t(`, en baisse de ${-delta}`, `, desann ${-delta}`)
       : '';
   const rowLabel = `${t('Rang', 'Ran')} ${entry.rank}, ${name}${isMe ? t(' (vous)', ' (ou)') : ''}, ${entry.xp ?? 0} XP${deltaLabel}`;
+  // Only the leader's numeral is gold — the one place on the board that is won.
+  const xpColor = night ? (Number(entry.rank) === 1 ? NC.gold : NC.ink) : colors.azure;
 
   return (
     <View
       accessible
       accessibilityLabel={rowLabel}
-      className="flex-row items-center py-2.5 px-3 rounded-xl mb-1.5"
-      // Ordinary rows are plain: they already sit inside the leaderboard card,
-      // so giving each one its own outline drew a border inside a border
-      // ("i don't like the outer border", TestFlight 2026-09-09). Only YOUR row
-      // keeps a frame, which is now the one thing the eye lands on.
-      style={isMe
-        ? { backgroundColor: colors.azureSoft, borderWidth: 1, borderColor: colors.azure }
-        : { backgroundColor: 'transparent' }}
+      // Rows are plain inside the card; YOUR row is a tonal wash, never an
+      // outline (no rings, no hairlines).
+      style={{
+        flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 10,
+        borderRadius: 14, marginBottom: 4,
+        backgroundColor: isMe ? (night ? NC.surfaceRaised : colors.azureSoft) : 'transparent',
+      }}
     >
-      {/* Rank badge */}
-      <View
-        className="w-7 h-7 rounded-full items-center justify-center mr-3"
-        style={{ backgroundColor: badge.bg }}
-      >
-        {badge.icon ?? (
-          <Text style={[typeScale.caption, { color: colors.muted }]}>{entry.rank}</Text>
-        )}
-      </View>
+      <RankChip rank={Number(entry.rank) || 0} />
 
-      {/* Avatar — the user's real profile photo when we have one, else the same
-          seeded robot used across the app (never bare initials). */}
-      <View className="mr-2.5">
-        <Avatar
-          name={entry.displayName || ''}
-          uri={entry.photoURL || entry.picture || null}
-          seed={entry.id || entry.uid || entry.displayName || ''}
-          size={32}
-        />
+      {/* Face — the generated arena face on the night, never bare initials. */}
+      <View style={{ marginRight: 12 }}>
+        <BoardAvatar entry={entry} size={40} />
       </View>
 
       {/* Name + city · school (parity with the web leaderboard) */}
-      <View className="flex-1">
-        <Text style={[typeScale.bodyMd, { color: isMe ? colors.azure : colors.ink }]} numberOfLines={1}>
-          {entry.displayName || t('Élève', 'Elèv')}
-          {isMe ? t(' (vous)', ' (ou)') : ''}
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontFamily: fonts.bold, fontSize: 16, lineHeight: 21, color: colors.ink }} numberOfLines={1}>
+          {name}
+          {isMe ? t(' (toi)', ' (ou)') : ''}
         </Text>
         {!compact && (entry.city || entry.school) && (
-          <Text style={[typeScale.caption, { color: colors.faint }]} numberOfLines={1}>
-            {[entry.city, entry.school].filter(Boolean).join(' · ')}
+          <Text style={[typeScale.caption, { color: colors.muted }]} numberOfLines={1}>
+            {[entry.school, entry.city].filter(Boolean).join(' · ')}
           </Text>
         )}
       </View>
@@ -102,7 +137,7 @@ function EntryRow({ entry, isMe, compact = false, delta = 0 }: { entry: any; isM
       {/* Day-over-day movement — colour plus direction glyph, never colour alone. */}
       {delta !== 0 && (
         <Text
-          style={{ fontSize: 11, fontWeight: '800', marginRight: 8, color: delta > 0 ? colors.success : colors.danger }}
+          style={{ fontFamily: fonts.bold, fontSize: 14, marginRight: 10, color: delta > 0 ? colors.success : colors.danger }}
           maxFontSizeMultiplier={1.3}
         >
           {delta > 0 ? `▲${delta}` : `▼${-delta}`}
@@ -110,77 +145,76 @@ function EntryRow({ entry, isMe, compact = false, delta = 0 }: { entry: any; isM
       )}
 
       {/* XP */}
-      <View className="items-end">
-        <Text style={[typeScale.bodyMd, { color: colors.azure }]} maxFontSizeMultiplier={1.3}>{entry.xp ?? 0}</Text>
-        <Text style={[typeScale.caption, { color: colors.faint }]}>XP</Text>
-      </View>
+      <Text style={{ fontFamily: fonts.headingBold, fontSize: 16, color: xpColor, fontVariant: ['tabular-nums'] }} maxFontSizeMultiplier={1.3}>
+        {entry.xp ?? 0} <Text style={{ fontFamily: fonts.medium, fontSize: 14, color: colors.muted }}>XP</Text>
+      </Text>
     </View>
   );
 }
 
 /** A ranked collective (school/city) with tap-to-expand member drill-down. */
 function GroupRow({
-  group, isMine, open, onToggle, myUid,
+  group, isMine, open, onToggle, myUid, field,
 }: {
   group: GroupRanking;
   isMine: boolean;
   open: boolean;
   onToggle: () => void;
   myUid?: string;
+  field: GroupField;
 }) {
-  const { colors, isDark } = useTheme();
+  const { colors, night } = useBoard();
   const { language } = useStore();
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
-  const badge = rankBadge(group.rank, isDark);
   const memberWord = group.members === 1 ? t('élève', 'elèv') : t('élèves', 'elèv');
+  const wash = isMine ? (night ? NC.surfaceRaised : colors.azureSoft) : (night ? NC.surfaceAlt : colors.surfaceAlt);
 
   return (
-    <View
-      className="rounded-xl mb-1.5"
-      style={isMine
-        ? { backgroundColor: colors.azureSoft, borderWidth: 1, borderColor: colors.azure }
-        : { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}
-    >
-      <TouchableOpacity onPress={onToggle} activeOpacity={0.7} className="flex-row items-center py-2.5 px-3">
-        <View className="w-7 h-7 rounded-full items-center justify-center mr-3" style={{ backgroundColor: badge.bg }}>
-          {badge.icon ?? <Text style={[typeScale.caption, { color: colors.muted }]}>{group.rank}</Text>}
-        </View>
-        <View className="flex-1">
-          <Text
-            style={[typeScale.bodyMd, { color: isMine ? colors.azure : colors.ink }]}
-            numberOfLines={1}
-          >
-            {group.label}{isMine ? t(' (vous)', ' (ou)') : ''}
+    <View style={{ borderRadius: 16, marginBottom: 8, backgroundColor: wash }}>
+      <TouchableOpacity
+        onPress={onToggle}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        accessibilityLabel={`${t('Rang', 'Ran')} ${group.rank}, ${group.label}, ${group.totalXp} XP, ${group.members} ${memberWord}`}
+        style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 12, minHeight: 60 }}
+      >
+        <RankChip rank={group.rank} />
+        {/* Schools wear their crest; cities and departments have none. */}
+        {field === 'school' ? (
+          <View style={{ marginRight: 10 }}><SchoolCrest name={group.label} size={32} /></View>
+        ) : null}
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontFamily: fonts.bold, fontSize: 16, lineHeight: 21, color: colors.ink }} numberOfLines={1}>
+            {group.label}{isMine ? t(' (toi)', ' (ou)') : ''}
           </Text>
           <Text style={[typeScale.caption, { color: colors.muted }]} numberOfLines={1}>
             {group.members} {memberWord} · {t('moy.', 'mwayèn')} {group.avgXp} XP
           </Text>
         </View>
-        <View className="items-end mr-2">
-          <Text style={[typeScale.bodyMd, { color: colors.azure }]}>{group.totalXp}</Text>
-          <Text style={[typeScale.caption, { color: colors.muted }]}>XP</Text>
-        </View>
-        <ChevronDown size={16} color={colors.muted} style={{ transform: [{ rotate: open ? '180deg' : '0deg' }] }} />
+        <Text style={{ fontFamily: fonts.headingBold, fontSize: 16, color: night ? (group.rank === 1 ? NC.gold : NC.ink) : colors.azure, marginRight: 8, fontVariant: ['tabular-nums'] }}>
+          {group.totalXp}
+        </Text>
+        <ChevronDown size={18} color={colors.muted} style={{ transform: [{ rotate: open ? '180deg' : '0deg' }] }} />
       </TouchableOpacity>
       {open && (
-        <View className="px-3 pb-2.5" style={{ gap: 4 }}>
+        <View style={{ paddingHorizontal: 12, paddingBottom: 12, gap: 4 }}>
           {group.topMembers.map((m, i) => {
             const isMe = m.uid === myUid;
             return (
               <View
                 key={m.uid || i}
-                className="flex-row items-center py-1.5 px-2 rounded-lg"
-                style={{ backgroundColor: isMe ? colors.azureSoft : colors.surfaceAlt }}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 12,
+                  backgroundColor: isMe ? (night ? NC.secondary : colors.azureSoft) : (night ? NC.surface : colors.surface),
+                }}
               >
-                <Text className="w-5 text-center mr-2" style={[typeScale.caption, { color: colors.muted }]}>{i + 1}</Text>
-                <Text
-                  className="flex-1"
-                  style={[typeScale.bodyMd, { color: isMe ? colors.azure : colors.ink }]}
-                  numberOfLines={1}
-                >
-                  {m.displayName || t('Élève', 'Elèv')}{isMe ? t(' (vous)', ' (ou)') : ''}
+                <Text style={[typeScale.caption, { color: colors.muted, width: 20, textAlign: 'center' }]}>{i + 1}</Text>
+                <BoardAvatar entry={{ id: m.uid, displayName: m.displayName }} size={28} />
+                <Text style={[typeScale.bodyMd, { flex: 1, color: colors.ink }]} numberOfLines={1}>
+                  {m.displayName || t('Élève', 'Elèv')}{isMe ? t(' (toi)', ' (ou)') : ''}
                 </Text>
-                <Text style={[typeScale.bodyMd, { color: colors.azure }]}>{m.xp}</Text>
+                <Text style={[typeScale.bodyMd, { color: night ? NC.ink : colors.azure }]}>{m.xp}</Text>
               </View>
             );
           })}
@@ -225,7 +259,7 @@ function PodiumColumn({
   myUid?: string;
   t: (fr: string, ht: string) => string;
 }) {
-  const { colors, isDark } = useTheme();
+  const { colors, isDark, night } = useBoard();
   const reduce = useReduceMotion();
   const rank = Number(e.rank) || 3;
   const m = PODIUM_META[rank] ?? PODIUM_META[3];
@@ -272,32 +306,26 @@ function PodiumColumn({
     >
       {rank === 1 ? (
         <Animated.View style={crownStyle}>
-          <Crown size={18} color="#F5C518" style={{ marginBottom: 2 }} />
+          <Crown size={20} color={night ? NC.gold : '#F5C518'} style={{ marginBottom: 2 }} />
         </Animated.View>
       ) : (
         <View style={{ height: 20 }} />
       )}
-      <View style={{ borderWidth: 2.5, borderColor: medal.ring, borderRadius: 999, padding: 2 }}>
-        <Avatar
-          name={e.displayName || ''}
-          uri={e.photoURL || e.picture || null}
-          seed={e.id || e.uid || e.displayName || ''}
-          size={m.av}
-        />
-      </View>
-      <Text numberOfLines={1} style={{ marginTop: 6, fontSize: 12.5, fontWeight: '800', color: isMe ? colors.azure : colors.ink, maxWidth: 104 }}>
-        {e.displayName || t('Élève', 'Elèv')}{isMe ? t(' (vous)', ' (ou)') : ''}
+      <BoardAvatar entry={e} size={m.av} />
+      <Text numberOfLines={1} style={{ marginTop: 8, fontFamily: fonts.bold, fontSize: 15, color: colors.ink, maxWidth: 104 }}>
+        {e.displayName || t('Élève', 'Elèv')}{isMe ? t(' (toi)', ' (ou)') : ''}
       </Text>
-      <Text style={{ fontSize: 12, fontWeight: '700', color: colors.azure }} maxFontSizeMultiplier={1.3}>{e.xp ?? 0} XP</Text>
+      <Text style={{ fontFamily: fonts.headingBold, fontSize: 14, color: night ? (rank === 1 ? NC.gold : NC.inkSoft) : colors.azure }} maxFontSizeMultiplier={1.3}>{e.xp ?? 0} XP</Text>
+      {/* Opaque pedestal, no outline; the place is written, not just tinted. */}
       <View
         style={{
           width: '100%', height: m.h, marginTop: 8,
           borderTopLeftRadius: 12, borderTopRightRadius: 12,
-          backgroundColor: medal.tint, borderWidth: 1, borderColor: medal.ring + '66',
+          backgroundColor: night ? NC.surfaceRaised : colors.surfaceAlt,
           alignItems: 'center', paddingTop: 6,
         }}
       >
-        <Text style={{ fontSize: 19, fontWeight: '900', color: medal.ink }} maxFontSizeMultiplier={1.3}>{rank}</Text>
+        <Text style={{ fontFamily: fonts.heading, fontSize: 20, color: medal.ink }} maxFontSizeMultiplier={1.3}>{rank}</Text>
       </View>
     </Animated.View>
   );
@@ -340,11 +368,21 @@ interface LeaderboardProps {
   maxRows?: number;
   /** Notifies the host screen of tab changes (e.g. to show/hide its sticky "you" bar). */
   onViewChange?: (view: { period: BoardPeriod; scope: BoardScope }) => void;
+  /** 'night' on the Jeux tab / Classement page; 'day' (default) on Home. */
+  tone?: BoardTone;
 }
 
-export default function Leaderboard({ compact = false, maxRows = 10, onViewChange }: LeaderboardProps) {
+export default function Leaderboard({ tone = 'day', ...rest }: LeaderboardProps) {
+  return (
+    <BoardToneContext.Provider value={tone}>
+      <BoardBody {...rest} />
+    </BoardToneContext.Provider>
+  );
+}
+
+function BoardBody({ compact = false, maxRows = 10, onViewChange }: Omit<LeaderboardProps, 'tone'>) {
   const { language, toggleAuthModal } = useStore();
-  const { colors, cardSurface } = useTheme();
+  const { colors, cardSurface, night } = useBoard();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -408,10 +446,10 @@ export default function Leaderboard({ compact = false, maxRows = 10, onViewChang
         <TouchableOpacity
           onPress={() => setShowJoin(true)}
           activeOpacity={0.85}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, padding: 10, borderRadius: 12, backgroundColor: colors.warn + '1A' }}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, padding: 12, borderRadius: 14, backgroundColor: colors.warnSoft }}
         >
-          <Pencil size={14} color={colors.warn} />
-          <Text style={{ flex: 1, fontSize: 12.5, fontWeight: '700', color: colors.warn }}>
+          <Pencil size={16} color={colors.warn} />
+          <Text style={{ flex: 1, fontFamily: fonts.bold, fontSize: 14, color: colors.warn }}>
             {t(
               'Il vous manque un pseudo. Choisissez-en un pour apparaître.',
               'Ou manke yon ti non. Chwazi youn pou parèt.',
@@ -424,8 +462,8 @@ export default function Leaderboard({ compact = false, maxRows = 10, onViewChang
           activeOpacity={0.7}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, alignSelf: 'center' }}
         >
-          <Pencil size={12} color={colors.muted} />
-          <Text style={{ fontSize: 12, fontWeight: '600', color: colors.muted }}>
+          <Pencil size={14} color={colors.muted} />
+          <Text style={{ fontFamily: fonts.medium, fontSize: 14, color: colors.muted }}>
             {t('Modifier mon pseudo, mon école ou ma ville', 'Chanje ti non, lekòl oswa vil mwen')}
           </Text>
         </TouchableOpacity>
@@ -433,10 +471,10 @@ export default function Leaderboard({ compact = false, maxRows = 10, onViewChang
         <TouchableOpacity
           onPress={() => setShowJoin(true)}
           activeOpacity={0.85}
-          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, paddingVertical: 11, borderRadius: 999, backgroundColor: colors.azure }}
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, minHeight: 50, borderRadius: 999, backgroundColor: night ? NC.coral : colors.azure }}
         >
-          <ShieldCheck size={15} color="#fff" />
-          <Text style={{ color: '#fff', fontSize: 13.5, fontWeight: '800' }}>
+          <ShieldCheck size={16} color={night ? NC.onCoral : '#fff'} />
+          <Text style={{ color: night ? NC.onCoral : '#fff', fontFamily: fonts.bold, fontSize: 16 }}>
             {t('Rejoindre le classement', 'Antre nan klasman')}
           </Text>
         </TouchableOpacity>
@@ -450,10 +488,10 @@ export default function Leaderboard({ compact = false, maxRows = 10, onViewChang
     <TouchableOpacity
       onPress={toggleAuthModal}
       activeOpacity={0.85}
-      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, paddingVertical: 11, borderRadius: 999, backgroundColor: colors.azure }}
+      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, minHeight: 50, borderRadius: 999, backgroundColor: night ? NC.coral : colors.azure }}
     >
-      <ShieldCheck size={15} color="#fff" />
-      <Text style={{ color: '#fff', fontSize: 13.5, fontWeight: '800' }}>
+      <ShieldCheck size={16} color={night ? NC.onCoral : '#fff'} />
+      <Text style={{ color: night ? NC.onCoral : '#fff', fontFamily: fonts.bold, fontSize: 16 }}>
         {t('Se connecter pour jouer', 'Konekte pou jwe')}
       </Text>
     </TouchableOpacity>
@@ -489,7 +527,7 @@ export default function Leaderboard({ compact = false, maxRows = 10, onViewChang
       accessibilityLabel={t('Partager ma victoire', 'Pataje viktwa mwen')}
       style={{
         flexDirection: 'row', alignItems: 'center', gap: 10,
-        backgroundColor: colors.azureSoft, borderRadius: 14,
+        backgroundColor: night ? NC.goldSoft : colors.azureSoft, borderRadius: 16,
         paddingHorizontal: 14, paddingVertical: 12, marginBottom: 12,
       }}
     >
@@ -497,14 +535,14 @@ export default function Leaderboard({ compact = false, maxRows = 10, onViewChang
           student LEARNS they are champion, so the medallion assembles. */}
       <ChampionMedallion size={40} animate playKey={`${scope}-${period}-${myRank}`} />
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 14, fontWeight: '800', color: colors.ink }}>
+        <Text style={{ fontFamily: fonts.bold, fontSize: 16, color: night ? NC.gold : colors.ink }}>
           {t('Tu es N°1 !', 'Ou se N°1 !')}
         </Text>
-        <Text style={{ fontSize: 12, color: colors.muted }}>
+        <Text style={{ fontFamily: fonts.regular, fontSize: 14, color: colors.muted }}>
           {t('Partage ta victoire en story', 'Pataje viktwa w nan istwa')}
         </Text>
       </View>
-      <Share2 color={colors.azure} size={18} />
+      <Share2 color={night ? NC.ink : colors.azure} size={18} />
     </TouchableOpacity>
   );
 
@@ -512,62 +550,40 @@ export default function Leaderboard({ compact = false, maxRows = 10, onViewChang
     <>
       <ShareCardCapture ref={shareRef} />
       {championBanner}
-      <View className="flex-row items-center gap-2 mb-3">
-        <Trophy color={colors.azure} size={18} />
-        <Text style={{ fontSize: 16, fontWeight: '800', color: colors.ink }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+        <Text accessibilityRole="header" style={{ fontFamily: fonts.heading, fontSize: 19, lineHeight: 24, color: colors.ink, flex: 1 }}>
           {period === 'all' ? t('Classement général', 'Klasman jeneral') : t('Classement de la semaine', 'Klasman semèn nan')}
         </Text>
         {myRank && (
-          <View className="ml-auto px-2 py-0.5 rounded-full" style={{ backgroundColor: colors.azureSoft }}>
-            <Text className="text-xs font-bold" style={{ color: colors.azure }}>#{myRank}</Text>
+          <View style={{ paddingHorizontal: 12, paddingVertical: 4, borderRadius: 999, backgroundColor: night ? NC.surfaceRaised : colors.azureSoft }}>
+            <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: night ? NC.ink : colors.azure }}>{t(`Toi : ${myRank}e`, `Ou : ${myRank}yèm`)}</Text>
           </View>
         )}
       </View>
-      <View style={{ flexDirection: 'row', gap: 4, backgroundColor: colors.surfaceAlt, borderRadius: 10, padding: 3, marginBottom: 12 }}>
-        {(['week', 'all'] as const).map((p) => (
-          <TouchableOpacity
-            key={p}
-            onPress={() => changePeriod(p)}
-            activeOpacity={0.8}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: period === p }}
-            accessibilityLabel={p === 'week' ? t('Cette semaine', 'Semèn sa a') : t('Tous les temps', 'Tout tan')}
-            style={{ flex: 1, alignItems: 'center', paddingVertical: 7, borderRadius: 8, backgroundColor: period === p ? colors.surface : 'transparent' }}
-          >
-            <Text style={{ fontSize: 12, fontWeight: '700', color: period === p ? colors.azure : colors.muted }}>
-              {p === 'week' ? t('Cette semaine', 'Semèn sa a') : t('Tous les temps', 'Tout tan')}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      {/* Scope: National (individuals) · École · Ville (collectives) */}
-      <View style={{ flexDirection: 'row', gap: 4, backgroundColor: colors.surfaceAlt, borderRadius: 10, padding: 3, marginBottom: 12 }}>
-        {([
-          ['national', t('National', 'Nasyonal')],
-          ['school', t('École', 'Lekòl')],
-          ['city', t('Ville', 'Vil')],
-          ['department', t('Département', 'Depatman')],
-        ] as const).map(([key, label]) => (
-          <TouchableOpacity
-            key={key}
-            onPress={() => changeScope(key)}
-            activeOpacity={0.8}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: scope === key }}
-            accessibilityLabel={label}
-            style={{ flex: 1, alignItems: 'center', paddingVertical: 7, paddingHorizontal: 2, borderRadius: 8, backgroundColor: scope === key ? colors.surface : 'transparent' }}
-          >
-            <Text
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.8}
-              style={{ fontSize: 12, fontWeight: '700', color: scope === key ? colors.azure : colors.muted }}
-            >
-              {label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <Segmented
+        tone={night ? 'night' : 'auto'}
+        options={[
+          { key: 'week', label: t('Cette semaine', 'Semèn sa a') },
+          { key: 'all', label: t('Tous les temps', 'Tout tan') },
+        ]}
+        value={period}
+        onChange={changePeriod}
+        style={{ marginBottom: 10 }}
+      />
+      {/* Scope: National (individuals) · École · Ville · Département (collectives) */}
+      <Segmented
+        tone={night ? 'night' : 'auto'}
+        scroll
+        options={[
+          { key: 'national', label: t('National', 'Nasyonal') },
+          { key: 'school', label: t('École', 'Lekòl') },
+          { key: 'city', label: t('Ville', 'Vil') },
+          { key: 'department', label: t('Département', 'Depatman') },
+        ]}
+        value={scope}
+        onChange={changeScope}
+        style={{ marginBottom: 14 }}
+      />
       {/* Week chip + reset countdown — makes the Monday reset legible before it
           happens instead of surprising everyone with a blank board. */}
       {period === 'week' && !showingLastWeek && (() => {
@@ -577,14 +593,14 @@ export default function Leaderboard({ compact = false, maxRows = 10, onViewChang
           : t(`Fin dans ${hours} h`, `Fini nan ${hours} è`);
         return (
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <View style={{ backgroundColor: colors.azureSoft, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
-              <Text style={{ fontSize: 11.5, fontWeight: '800', color: colors.azure }} maxFontSizeMultiplier={1.3}>
+            <View style={{ backgroundColor: night ? NC.surfaceRaised : colors.azureSoft, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4 }}>
+              <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: night ? NC.ink : colors.azure }} maxFontSizeMultiplier={1.3}>
                 {t('Semaine', 'Semèn')} {weekNumber(weekId())}
               </Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Timer size={12} color={colors.faint} />
-              <Text style={{ fontSize: 11.5, fontWeight: '700', color: colors.faint }} maxFontSizeMultiplier={1.3}>
+              <Timer size={16} color={colors.muted} />
+              <Text style={{ fontFamily: fonts.medium, fontSize: 14, color: colors.muted }} maxFontSizeMultiplier={1.3}>
                 {countdown}
               </Text>
             </View>
@@ -597,11 +613,11 @@ export default function Leaderboard({ compact = false, maxRows = 10, onViewChang
         <View
           style={{
             flexDirection: 'row', alignItems: 'center', gap: 8,
-            padding: 10, borderRadius: 12, backgroundColor: colors.azureSoft, marginBottom: 12,
+            padding: 12, borderRadius: 14, backgroundColor: night ? NC.surfaceRaised : colors.azureSoft, marginBottom: 12,
           }}
         >
-          <Sparkles size={14} color={colors.azure} />
-          <Text style={{ flex: 1, fontSize: 12.5, fontWeight: '600', color: colors.azure }}>
+          <Sparkles size={16} color={night ? NC.inkSoft : colors.azure} />
+          <Text style={{ flex: 1, fontFamily: fonts.medium, fontSize: 14, color: night ? NC.inkSoft : colors.azure }}>
             {t(
               'Semaine dernière : joue pour prendre la tête.',
               'Semèn pase a : jwe pou pran devan.',
@@ -641,7 +657,7 @@ export default function Leaderboard({ compact = false, maxRows = 10, onViewChang
       {header}
       {/* The compact widget has no header row, so flag the fallback inline. */}
       {compact && showingLastWeek && (
-        <Text style={{ fontSize: 11.5, fontWeight: '700', color: colors.muted, marginBottom: 6 }}>
+        <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: colors.muted, marginBottom: 6 }}>
           {t('Semaine dernière', 'Semèn pase a')}
         </Text>
       )}
@@ -656,6 +672,7 @@ export default function Leaderboard({ compact = false, maxRows = 10, onViewChang
                 open={expandedKey === g.key}
                 onToggle={() => setExpandedKey(expandedKey === g.key ? null : g.key)}
                 myUid={myUid}
+                field={collectiveField}
               />
             ))}
             {!myGroupKey && isAuthed && (
@@ -664,8 +681,8 @@ export default function Leaderboard({ compact = false, maxRows = 10, onViewChang
                 activeOpacity={0.7}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6, alignSelf: 'center' }}
               >
-                <Pencil size={12} color={colors.azure} />
-                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.azure }}>
+                <Pencil size={14} color={night ? NC.inkSoft : colors.azure} />
+                <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: night ? NC.inkSoft : colors.azure }}>
                   {scope === 'school'
                     ? t('Ajoutez votre école pour y figurer', 'Ajoute lekòl ou pou parèt ladan l')
                     : scope === 'city'
@@ -677,7 +694,7 @@ export default function Leaderboard({ compact = false, maxRows = 10, onViewChang
           </>
         ) : (
           <View style={{ alignItems: 'center', paddingVertical: 16 }}>
-            <Text style={{ color: colors.faint, fontSize: 13, textAlign: 'center' }}>
+            <Text style={{ color: colors.muted, fontFamily: fonts.regular, fontSize: 14, textAlign: 'center' }}>
               {collLoading
                 ? t('Chargement…', 'Ap chaje…')
                 : scope === 'school'
@@ -707,7 +724,7 @@ export default function Leaderboard({ compact = false, maxRows = 10, onViewChang
             ))
           )}
           {myEntry && !displayList.find((e: any) => e.id === myUid) && (
-            <View className="border-t border-dashed border-gray-200 dark:border-slate-700 mt-1 pt-2">
+            <View style={{ marginTop: 8 }}>
               <EntryRow entry={myEntry} isMe compact={compact} delta={deltas[(myEntry as any).id] || 0} />
             </View>
           )}

@@ -118,7 +118,7 @@ export default function TournamentCard() {
           {t('Tournoi des écoles', 'Tounwa lekòl yo')}
         </Text>
         <View style={{ marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-          <Timer color={colors.faint} size={13} />
+          <Timer color={colors.muted} size={16} />
           <Text style={[typeScale.micro, { color: colors.muted }]}>
             {days > 0 ? t(`${days}j ${hours}h`, `${days}j ${hours}è`) : t(`${hours}h`, `${hours}è`)}
           </Text>
@@ -136,11 +136,12 @@ export default function TournamentCard() {
         accessibilityLabel={t('Inviter pour mon école', 'Envite pou lekòl mwen')}
         style={{
           flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-          height: 48, borderRadius: radius.pill, backgroundColor: colors.azureFill, ...lift.azureGlow,
+          height: 48, borderRadius: radius.pill, backgroundColor: colors.azureSoft,
         }}
       >
-        <Share2 color="#ffffff" size={16} />
-        <Text style={[typeScale.label, { color: '#ffffff' }]}>
+        {/* Tonal, no glow: Home keeps its one primary elsewhere. */}
+        <Share2 color={colors.azure} size={16} />
+        <Text style={[typeScale.label, { fontFamily: typeScale.titleSm.fontFamily, color: colors.azure }]}>
           {t('Recruter pour mon école', 'Rekrite pou lekòl mwen')}
         </Text>
       </PressableScale>

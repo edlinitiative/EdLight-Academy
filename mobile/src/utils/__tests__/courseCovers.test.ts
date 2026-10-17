@@ -10,7 +10,7 @@ describe('courseCovers (ported from the web)', () => {
   it('maps the 9 hand-picked courses to an i.ytimg frame', () => {
     expect(Object.keys(COURSE_COVER_FRAMES)).toHaveLength(9);
     expect(courseCover('math-ns1')).toBe('https://i.ytimg.com/vi/eLmxna326QM/sddefault.jpg');
-    expect(courseCover('math-ns4')).toBe('https://i.ytimg.com/vi/ztUcXCU82pA/sd1.jpg');
+    expect(courseCover('math-ns4')).toBe('https://i.ytimg.com/vi/JH_sSDwehqo/sd3.jpg');
   });
 
   it('is null for an unknown or missing course', () => {
@@ -19,7 +19,7 @@ describe('courseCovers (ported from the web)', () => {
   });
 
   it('falls back from id to the course code', () => {
-    expect(courseCoverFor({ id: 'xyz', code: 'ECON-NS1' })).toBe('https://i.ytimg.com/vi/HNOuKpOp1AE/sd3.jpg');
+    expect(courseCoverFor({ id: 'xyz', code: 'ECON-NS1' })).toBe('https://i.ytimg.com/vi/s8V74XR5BcY/sd2.jpg');
   });
 
   it('leads the thumbnail candidates, ahead of the first lesson still', () => {

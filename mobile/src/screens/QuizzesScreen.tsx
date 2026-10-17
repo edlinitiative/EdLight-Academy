@@ -19,14 +19,18 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
-import { ChevronRight, BookOpen } from 'lucide-react-native';
+import { ChevronRight, ChevronLeft } from 'lucide-react-native';
 import { usePracticeQuizzes, useCourses } from '../hooks/useData';
 import { logAnswerEvent } from '../services/answerEventsService';
 import { useCrowdOrderedQuestions } from '../hooks/useCrowdOrderedQuestions';
 import useStore from '../contexts/store';
 import { ListSkeleton, ErrorState, EmptyState } from '../components/StateViews';
-import { useColors, useTheme, typeScale, radius } from '../theme/theme';
-import { subjectColor } from '../utils/examUtils';
+import { useColors, useTheme, typeScale, fonts } from '../theme/theme';
+import PageTitle from '../components/ui/PageTitle';
+import Segmented from '../components/ui/Segmented';
+import StatNumeral from '../components/ui/StatNumeral';
+import Button from '../components/ui/Button';
+import PressableScale from '../components/ui/PressableScale';
 import { tapLight, success, warn } from '../utils/haptics';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import BeatMyScoreCard from '../components/share/BeatMyScoreCard';
@@ -36,6 +40,7 @@ import { resolveCorrectIndex, normKey } from '../utils/practiceCards';
 import { dueQuestionIds } from '../utils/review';
 import { readPracticeHandoff, trackJourney, type PracticeHandoff } from '../utils/learningJourney';
 import { readableCourseMeta } from '../services/searchIndex';
+import { displayCourseName } from '../utils/courseName';
 import PracticeEntry, { ScopeNotice } from '../components/journey/practice/PracticeEntry';
 import PracticeRunner, { type FinishReason } from '../components/journey/practice/PracticeRunner';
 import PracticeResult from '../components/journey/practice/PracticeResult';
@@ -119,8 +124,10 @@ export default function QuizzesScreen() {
   const coursesQ = useCourses();
   const { language, recordQuizAttempt, setFocusMode, isAuthenticated, recordReviewOutcome, setShowAuthModal } = useStore();
   const review = useStore((s) => s.review);
+  const grade = useStore((s) => s.grade);
+  const quizAttempts = useStore((s) => s.quizAttempts);
   const colors = useColors();
-  const { shadow } = useTheme();
+  const { cardSurface } = useTheme();
   const centerColumn = useContentContainerStyle('readable');
   const online = useOnline();
   const isCreole = language === 'ht';
@@ -195,6 +202,17 @@ export default function QuizzesScreen() {
     [activeLevel, courses],
   );
 
+  /** The level a subject opens on: the student's own grade when the subject has it. */
+  const gradeLevel = useMemo(() => {
+    const m: Record<string, string> = { NS1: 'NSI', NS2: 'NSII', NS3: 'NSIII', NS4: 'NSIV' };
+    return grade ? (m[grade] ?? null) : null;
+  }, [grade]);
+  const pickLevel = useCallback((b: QuizSubject): string | null => {
+    if (b.levels.length === 0) return null;
+    const mine = gradeLevel ? b.levels.find((l) => (l.levelLabel ?? '').replace(/[^A-Z]/gi, '').toUpperCase() === gradeLevel) : null;
+    return (mine ?? b.levels[0]).code;
+  }, [gradeLevel]);
+
   /** Drill straight to a course's chapter list. */
   const openLevelFor = useCallback((courseCode: string) => {
     const want = normalizeCourseCode(courseCode);
@@ -204,16 +222,40 @@ export default function QuizzesScreen() {
     }
   }, [subjectGroups]);
 
-  const openBase = useCallback((b: QuizSubject) => {
-    tapLight();
-    setSelectedSubject(b.baseName);
-    setSelectedLevel(b.levels.length === 1 ? b.levels[0].code : null);
-  }, []);
-  const backFromChapters = useCallback(() => {
-    tapLight();
-    if (activeBase && activeBase.levels.length === 1) setSelectedSubject(null);
-    setSelectedLevel(null);
-  }, [activeBase]);
+  // Open on chapters: the course last practised, else the first subject that
+  // has the student's own level, else the first subject.
+  const defaulted = useRef(false);
+  useEffect(() => {
+    if (defaulted.current || selectedSubject || subjectGroups.length === 0) return;
+    defaulted.current = true;
+    let lastCode: string | null = null;
+    let lastAt = 0;
+    for (const [key, list] of Object.entries(quizAttempts ?? {})) {
+      if (!key.startsWith('bank:') || !Array.isArray(list)) continue;
+      for (const a of list) {
+        const at = Number(a?.date) || 0;
+        if (at > lastAt) { lastAt = at; lastCode = key.slice(5).split('|')[0] || null; }
+      }
+    }
+    if (lastCode) {
+      const want = normalizeCourseCode(lastCode);
+      for (const b of subjectGroups) {
+        const lvl = b.levels.find((l) => normalizeCourseCode(l.code) === want);
+        if (lvl) { setSelectedSubject(b.baseName); setSelectedLevel(lvl.code); return; }
+      }
+    }
+    const withMine = gradeLevel
+      ? subjectGroups.find((b) => b.levels.some((l) => (l.levelLabel ?? '').replace(/[^A-Z]/gi, '').toUpperCase() === gradeLevel))
+      : null;
+    const first = withMine ?? subjectGroups[0];
+    setSelectedSubject(first.baseName);
+    setSelectedLevel(pickLevel(first));
+  }, [subjectGroups, selectedSubject, quizAttempts, gradeLevel, pickLevel]);
+
+  // A subject chosen without a level (e.g. a stale handoff) still lands on chapters.
+  useEffect(() => {
+    if (activeBase && !activeLevel) setSelectedLevel(pickLevel(activeBase));
+  }, [activeBase, activeLevel, pickLevel]);
 
   // ── Session state ──────────────────────────────────────────────────────────
   const [notice, setNotice] = useState<ResolvedScope | null>(null);
@@ -273,17 +315,17 @@ export default function QuizzesScreen() {
       setEntry(null); setSession(null); setResult(null);
       setNotice(scope);
       if (scope.courseCode) openLevelFor(scope.courseCode);
-      else { setSelectedSubject(null); setSelectedLevel(null); }
+      else { defaulted.current = false; setSelectedSubject(null); setSelectedLevel(null); }
     }
   }, [pendingHandoff, dataReady, courses, allItems, openEntry, openLevelFor]);
 
   // ── Labels ─────────────────────────────────────────────────────────────────
   const subjectLabelOf = useCallback((scope: ResolvedScope): string => {
     const c = scope.course;
-    if (c?.subject && c?.level) return readableCourseMeta(`${c.subject} · ${c.level}`, isCreole);
+    if (c?.subject && c?.level) return displayCourseName(readableCourseMeta(`${c.subject} · ${c.level}`, isCreole));
     const code = String(scope.courseCode || '');
     const [subj, lvl] = code.split('-');
-    return readableCourseMeta([subj, lvl].filter(Boolean).join(' · '), isCreole);
+    return displayCourseName(readableCourseMeta([subj, lvl].filter(Boolean).join(' · '), isCreole));
   }, [isCreole]);
   const contextOf = useCallback((scope: ResolvedScope) => {
     const chapter = scope.unitIndex ? t(`Chapitre ${scope.unitIndex}`, `Chapit ${scope.unitIndex}`) : '';
@@ -481,19 +523,6 @@ export default function QuizzesScreen() {
     );
   }
 
-  const cardStyle = {
-    backgroundColor: colors.surface,
-    borderRadius: radius.tile,
-    borderWidth: 1,
-    borderColor: colors.border,
-    ...shadow.sm,
-    marginBottom: 12,
-    padding: 16,
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: 12,
-  };
-
   const noticeView = notice ? (
     <ScopeNotice
       scope={notice}
@@ -507,154 +536,182 @@ export default function QuizzesScreen() {
   ) : null;
 
   const offlineLine = online === false ? (
-    <Text style={[typeScale.body, { color: colors.muted, marginBottom: 12 }]}>
+    <Text style={[typeScale.meta, { color: colors.muted, marginBottom: 12 }]}>
       {t('Hors ligne : les questions déjà chargées restent disponibles.', 'San rezo : kesyon ki te deja chaje yo rete disponib.')}
     </Text>
   ) : null;
 
-  const backArrow = (onPress: () => void) => (
-    <TouchableOpacity onPress={onPress} hitSlop={8} className="p-1" accessibilityRole="button" accessibilityLabel={t('Retour', 'Tounen')}>
-      <ChevronRight color={colors.muted} size={24} style={{ transform: [{ rotate: '180deg' }] }} />
-    </TouchableOpacity>
-  );
+  // ── Browse: subject chips → (level switch) → this course's chapters ───────
+  // Opens straight on chapters (web /quizzes): no subject → level → chapter
+  // drill. The level switch only appears when a subject spans several levels.
+  const levelOptions = (activeBase?.levels ?? []).map((l) => ({
+    key: l.code,
+    label: displayCourseName(readableCourseMeta(l.levelLabel ?? l.name, isCreole)),
+  }));
+  const chapterAttempted = (ch: BrowseChapter) =>
+    (quizAttempts?.[`bank:${ch.subjectCode}|${ch.unitNo != null ? `U${ch.unitNo}` : ch.key}`]?.length ?? 0) > 0;
+  const currentKey = levelChapters.find((ch) => ch.items.length > 0 && !chapterAttempted(ch))?.key ?? null;
+  const dueAll = dueQuestionIds(review).length;
 
-  // ── Level 3: chapters within the chosen grade level ────────────────────────
-  if (activeLevel) {
-    const tint = subjectColor(activeBase?.baseName ?? '');
-    const headerTitle = activeBase
-      ? `${activeBase.baseName}${activeLevel.levelLabel ? ` · ${readableCourseMeta(activeLevel.levelLabel, isCreole)}` : ''}`
-      : activeLevel.name;
-    return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
-        {reviewModal}
-        <View className="flex-row items-center px-4 pt-6 pb-3" style={{ gap: 8 }}>
-          {backArrow(() => { setNotice(null); backFromChapters(); })}
-          <View className="flex-1">
-            <Text accessibilityRole="header" style={[typeScale.h1, { color: colors.ink }]}>{headerTitle}</Text>
-            <Text style={[typeScale.body, { color: colors.muted, marginTop: 2 }]}>
-              {countOf(levelChapters.length, 'chapitre', 'chapit')} · {questionsLabel(activeLevel.questionCount, t)}
-            </Text>
-          </View>
-        </View>
-        <ScrollView className="flex-1 px-5" contentContainerStyle={[{ paddingBottom: 100 }, centerColumn]}>
-          {noticeView}
-          {offlineLine}
-          {levelChapters.map((ch) => (
-            <TouchableOpacity
-              key={ch.key}
-              onPress={() => { tapLight(); openEntry(scopeForChapter(ch, courses, allItems), ch.items, 'browse'); }}
-              activeOpacity={0.82}
-              style={cardStyle}
-              accessibilityRole="button"
-              accessibilityLabel={`${ch.title}, ${questionsLabel(ch.items.length, t)}`}
-            >
-              <View style={{ width: 44, height: 44, borderRadius: radius.tile, backgroundColor: tint + '22', alignItems: 'center', justifyContent: 'center' }}>
-                <BookOpen color={tint} size={20} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[typeScale.bodyMd, { color: colors.ink, fontSize: 15 }]} numberOfLines={2}>{ch.title}</Text>
-                <Text style={[typeScale.body, { color: colors.muted, marginTop: 2 }]}>
-                  {[ch.unitNo != null ? t(`Chapitre ${ch.unitNo}`, `Chapit ${ch.unitNo}`) : '', questionsLabel(ch.items.length, t)].filter(Boolean).join(' · ')}
-                </Text>
-              </View>
-              <ChevronRight color={colors.faint} size={18} />
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
+  const openChapter = (ch: BrowseChapter, wanted?: SessionMode) => {
+    tapLight();
+    setNotice(null);
+    openEntry(scopeForChapter(ch, courses, allItems), ch.items, 'browse', undefined, wanted);
+  };
 
-  // ── Level 2: grade levels within the chosen subject ────────────────────────
-  if (activeBase) {
-    return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
-        {reviewModal}
-        <View className="flex-row items-center px-4 pt-6 pb-3" style={{ gap: 8 }}>
-          {backArrow(() => { tapLight(); setNotice(null); setSelectedSubject(null); setSelectedLevel(null); })}
-          <View className="flex-1">
-            <Text accessibilityRole="header" style={[typeScale.h1, { color: colors.ink }]}>{activeBase.baseName}</Text>
-            <Text style={[typeScale.body, { color: colors.muted, marginTop: 2 }]}>{t('Choisis un niveau', 'Chwazi yon nivo')}</Text>
-          </View>
-        </View>
-        <ScrollView className="flex-1 px-5" contentContainerStyle={[{ paddingBottom: 100 }, centerColumn]}>
-          {noticeView}
-          {activeBase.levels.map((lvl) => (
-            <TouchableOpacity
-              key={lvl.code}
-              onPress={() => { tapLight(); setSelectedLevel(lvl.code); }}
-              activeOpacity={0.82}
-              style={cardStyle}
-              accessibilityRole="button"
-              accessibilityLabel={`${readableCourseMeta(lvl.levelLabel ?? lvl.name, isCreole)}, ${questionsLabel(lvl.questionCount, t)}`}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={[typeScale.titleSm, { color: colors.ink }]} numberOfLines={1}>{readableCourseMeta(lvl.levelLabel ?? lvl.name, isCreole)}</Text>
-                <Text style={[typeScale.body, { color: colors.muted, marginTop: 2 }]}>{questionsLabel(lvl.questionCount, t)}</Text>
-              </View>
-              <ChevronRight color={colors.faint} size={18} />
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
-
-  // ── Level 1: subject picker ────────────────────────────────────────────────
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
       {reviewModal}
-      {/* Gate the back arrow on THIS stack's depth, not canGoBack(): canGoBack()
-          also counts the parent tab navigator's history, so it stays true when
-          this screen is its stack's only route (the Quiz tab) and the arrow then
-          threw Quiz-primary students out to Accueil. */}
-      <View className="flex-row items-center px-5 pt-6 pb-3" style={{ gap: 8 }}>
-        {stackDepth > 1 ? backArrow(() => navigation.goBack()) : null}
-        <View className="flex-1">
-          <Text accessibilityRole="header" style={[typeScale.display, { color: colors.ink }]}>{t('Banque de questions', 'Bank kesyon')}</Text>
-          <Text style={[typeScale.body, { color: colors.muted, marginTop: 4 }]}>{t('Entraîne-toi par matière, niveau et chapitre', 'Antrene w pa matyè, nivo ak chapit')}</Text>
-        </View>
-      </View>
-
       <ScrollView
-        className="flex-1 px-5"
+        className="flex-1"
         refreshControl={<RefreshControl refreshing={quizzesQ.isFetching} onRefresh={quizzesQ.refetch} />}
-        contentContainerStyle={[{ paddingBottom: 100 }, centerColumn]}
+        contentContainerStyle={[{ paddingBottom: 110 }, centerColumn]}
       >
-        {noticeView}
-        {offlineLine}
+        {/* Gate the back arrow on THIS stack's depth, not canGoBack(): canGoBack()
+            also counts the parent tab navigator's history, so it stays true when
+            this screen is its stack's only route (the Quiz tab) and the arrow then
+            threw Quiz-primary students out to Accueil. */}
+        {stackDepth > 1 ? (
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('Retour', 'Tounen')}
+            style={{ marginLeft: 10, marginTop: 4, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+          >
+            <ChevronLeft color={colors.ink} size={26} />
+          </TouchableOpacity>
+        ) : null}
+        <PageTitle title={t('Entraînement et quiz', 'Antrènman ak quiz')} />
+
         {subjectGroups.length === 0 ? (
-          <EmptyState
-            message={t('Aucune question disponible pour le moment.', 'Pa gen kesyon disponib pou kounye a.')}
-            ctaLabel={t('Actualiser', 'Aktyalize')}
-            onCta={() => quizzesQ.refetch()}
-          />
+          <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
+            {noticeView}
+            <EmptyState
+              message={t('Aucune question disponible pour le moment.', 'Pa gen kesyon disponib pou kounye a.')}
+              ctaLabel={t('Actualiser', 'Aktyalize')}
+              onCta={() => quizzesQ.refetch()}
+            />
+          </View>
         ) : (
-          subjectGroups.map((b) => {
-            const tint = subjectColor(b.baseName);
-            const levelSummary = b.levels.length > 1 ? `${b.levels.length} ${t('niveaux', 'nivo')} · ` : '';
-            return (
-              <TouchableOpacity
-                key={b.baseName}
-                onPress={() => { setNotice(null); openBase(b); }}
-                activeOpacity={0.82}
-                style={cardStyle}
-                accessibilityRole="button"
-                accessibilityLabel={`${b.baseName}, ${levelSummary}${questionsLabel(b.questionCount, t)}`}
-              >
-                <View style={{ width: 44, height: 44, borderRadius: radius.tile, backgroundColor: tint + '22', alignItems: 'center', justifyContent: 'center' }}>
-                  <BookOpen color={tint} size={20} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[typeScale.titleSm, { color: colors.ink }]} numberOfLines={1}>{b.baseName}</Text>
-                  <Text style={[typeScale.body, { color: colors.muted, marginTop: 2 }]}>
-                    {levelSummary}{questionsLabel(b.questionCount, t)}
-                  </Text>
-                </View>
-                <ChevronRight color={colors.faint} size={18} />
-              </TouchableOpacity>
-            );
-          })
+          <>
+            {/* Subject chips — ink-filled when active, the web's subject chip. */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 20, gap: 8, paddingTop: 18 }}
+            >
+              {subjectGroups.map((b) => {
+                const on = activeBase?.baseName === b.baseName;
+                return (
+                  <TouchableOpacity
+                    key={b.baseName}
+                    onPress={() => {
+                      if (on) return;
+                      tapLight();
+                      setNotice(null);
+                      setSelectedSubject(b.baseName);
+                      setSelectedLevel(pickLevel(b));
+                    }}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: on }}
+                    accessibilityLabel={`${b.baseName}, ${questionsLabel(b.questionCount, t)}`}
+                    style={{
+                      minHeight: 40, paddingHorizontal: 16, borderRadius: 999, justifyContent: 'center',
+                      backgroundColor: on ? colors.ink : colors.surfaceAlt,
+                    }}
+                  >
+                    <Text style={{ fontFamily: fonts.bold, fontSize: 15, lineHeight: 20, color: on ? colors.bg : colors.ink }}>{b.baseName}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
+              {levelOptions.length > 1 && activeLevel ? (
+                <Segmented
+                  options={levelOptions}
+                  value={activeLevel.code}
+                  onChange={(k) => { setNotice(null); setSelectedLevel(k); }}
+                  scroll={levelOptions.length > 3}
+                  style={{ marginBottom: 16 }}
+                />
+              ) : null}
+              {noticeView}
+              {offlineLine}
+
+              {activeLevel ? (
+                <Text style={[typeScale.meta, { color: colors.muted, marginBottom: 14 }]}>
+                  {`${countOf(levelChapters.length, 'chapitre', 'chapit')} · ${questionsLabel(activeLevel.questionCount, t)}`}
+                </Text>
+              ) : null}
+
+              {levelChapters.map((ch, i) => {
+                const current = ch.key === currentKey;
+                const numeral = String(ch.unitNo ?? i + 1).padStart(2, '0');
+                const n = ch.items.length;
+                const canQuiz = countQuizzable(ch.items) > 0;
+                return (
+                  <PressableScale
+                    key={ch.key}
+                    onPress={() => openChapter(ch)}
+                    pressedScale={0.985}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${t('Chapitre', 'Chapit')} ${numeral}, ${ch.title}, ${questionsLabel(n, t)}`}
+                    style={{ ...cardSurface, padding: 20, marginBottom: 14 }}
+                  >
+                    <View style={{ flexDirection: 'row', gap: 16, alignItems: 'flex-start' }}>
+                      <Text
+                        style={[typeScale.numeral, { fontSize: 36, lineHeight: 40, color: current ? colors.coral : colors.azureInk }]}
+                        accessibilityElementsHidden
+                        importantForAccessibility="no"
+                      >
+                        {numeral}
+                      </Text>
+                      <View style={{ flex: 1, gap: 4, paddingTop: 2 }}>
+                        <Text numberOfLines={3} style={[typeScale.cardTitle, { fontSize: 20, lineHeight: 25, color: colors.ink }]}>{ch.title}</Text>
+                        <Text style={[typeScale.meta, { color: colors.muted }]}>{questionsLabel(n, t)}</Text>
+                      </View>
+                      {!current ? <ChevronRight color={colors.faint} size={20} style={{ marginTop: 10 }} /> : null}
+                    </View>
+                    {current ? (
+                      <View style={{ flexDirection: 'row', gap: 12, marginTop: 18 }}>
+                        <Button
+                          label={t('S’entraîner', 'Antrene')}
+                          variant="secondary"
+                          onPress={() => openChapter(ch, 'practice')}
+                          style={{ flex: 1 }}
+                        />
+                        {canQuiz ? (
+                          <Button label={t('Quiz', 'Kwiz')} onPress={() => openChapter(ch, 'quiz')} style={{ flex: 1 }} />
+                        ) : null}
+                      </View>
+                    ) : null}
+                  </PressableScale>
+                );
+              })}
+
+              {/* Tes erreurs à revoir — the whole Révision pile, one tap away. */}
+              {dueAll > 0 ? (
+                <PressableScale
+                  onPress={() => { tapLight(); trackJourney('learning_next_action_selected', { action: 'review', source: 'quiz_tab' }); setReviewOpen(true); }}
+                  pressedScale={0.985}
+                  accessibilityRole="button"
+                  accessibilityLabel={t(`Tes erreurs à revoir, ${questionsLabel(dueAll, t)}`, `Erè ou pou revize, ${dueAll} kesyon`)}
+                  style={{ ...cardSurface, padding: 20, marginTop: 18, flexDirection: 'row', alignItems: 'center', gap: 16 }}
+                >
+                  <StatNumeral value={dueAll} color={colors.coral} size={30} />
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={[typeScale.cardTitle, { color: colors.ink }]}>{t('Tes erreurs à revoir', 'Erè ou pou revize')}</Text>
+                    <Text style={[typeScale.meta, { color: colors.muted }]}>
+                      {t('Une question quitte la Révision quand tu y réponds juste.', 'Yon kesyon soti nan Revizyon lè ou reponn li kòrèk.')}
+                    </Text>
+                  </View>
+                  <ChevronRight color={colors.faint} size={20} />
+                </PressableScale>
+              ) : null}
+            </View>
+          </>
         )}
       </ScrollView>
     </SafeAreaView>

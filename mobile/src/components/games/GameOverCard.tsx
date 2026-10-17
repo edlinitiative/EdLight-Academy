@@ -1,19 +1,18 @@
 /**
- * Shared game-over screen for the arcade games — now built on the same
- * "Aurora Depth" QuizResultHero as the Trivia and practice-quiz results, so
- * every surface in the app ends on one victory language. The per-game accent is
- * preserved (it tints the deep gradient, the count-up score ring and the glows),
- * while the stat rows, XP reward block and replay/exit actions ride on glass.
+ * Shared game-over screen for the arcade games, on the Jeux night: the same
+ * NightResult as a trivia round, so every game in the tab ends in one language
+ * — your face, the gold score (earned), the rewards as chips, one coral
+ * "Rejouer". `accent` is accepted for API stability but no longer tints
+ * anything: the night has one accent.
  */
 
 import React, { useEffect, useRef } from 'react';
-import { View, Text } from 'react-native';
-import {
-  Trophy, Star, ThumbsUp, Dumbbell, Sparkles, Crown, RefreshCw, Share2,
-} from 'lucide-react-native';
-import { typeScale } from '../../theme/theme';
+import { Text } from 'react-native';
+import { Trophy, Star, Crown, RefreshCw, Share2 } from 'lucide-react-native';
+import { arenaColors as C, arenaType } from '../../theme/arenaTheme';
 import { success } from '../../utils/haptics';
-import QuizResultHero, { HeroButton, glass } from '../quiz/QuizResultHero';
+import useStore from '../../contexts/store';
+import NightResult, { RewardChip } from './NightResult';
 import ShareCardCapture, { type ShareCardCaptureHandle } from '../share/ShareCardCapture';
 import BeatMyScoreCard from '../share/BeatMyScoreCard';
 
@@ -62,6 +61,7 @@ export default function GameOverCard({
   highScore = null,
   shareSubject = null,
 }: GameOverCardProps) {
+  const user = useStore((s) => s.user);
   const pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
   const shareRef = useRef<ShareCardCaptureHandle>(null);
 
@@ -73,148 +73,76 @@ export default function GameOverCard({
     if (recordRound || pct >= 80) success();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  let IconCmp: typeof Trophy;
   let message: string;
   let messageHt: string;
   if (pct >= 90) {
-    IconCmp = Trophy;
-    message = 'Excellent ! Tu es un champion !';
-    messageHt = 'Ekselan! Ou se yon chanpyon!';
+    message = 'Excellent';
+    messageHt = 'Ekselan';
   } else if (pct >= 70) {
-    IconCmp = Star;
-    message = 'Très bien ! Continue comme ça !';
-    messageHt = 'Trè byen! Kontinye konsa!';
+    message = 'Très bien';
+    messageHt = 'Trè byen';
   } else if (pct >= 50) {
-    IconCmp = ThumbsUp;
-    message = 'Pas mal ! Tu peux encore progresser.';
-    messageHt = 'Pa mal! Ou ka amelyore.';
+    message = 'Pas mal';
+    messageHt = 'Pa mal';
   } else {
-    IconCmp = Dumbbell;
-    message = 'Courage ! Réessaie pour progresser.';
-    messageHt = 'Kouraj! Eseye ankò pou pwogrese.';
+    message = 'Courage, réessaie';
+    messageHt = 'Kouraj, eseye ankò';
   }
 
   const isRecord = highScore != null && score >= highScore && score > 0;
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  const statLine = stats.map((s) => `${s.label} ${s.value}`).join(' · ');
 
   return (
     <>
-    {shareSubject ? <ShareCardCapture ref={shareRef} /> : null}
-    <QuizResultHero
-      score={score}
-      total={maxScore}
-      isCreole={isCreole}
-      accent={accent}
-      title={isCreole ? 'Rezilta Ou' : 'Vos Résultats'}
-      showConfetti={pct >= 90 || !!reward?.leveledUp}
-      footer={
-        <>
-          {onReplay && (
-            <HeroButton
-              variant="solid"
-              color={accent}
-              icon={<RefreshCw color="#fff" size={18} />}
-              label={isCreole ? 'Jwe ankò' : 'Rejouer'}
-              onPress={onReplay}
-              style={{ marginBottom: 10 }}
-            />
-          )}
-          {shareSubject && (
-            <HeroButton
-              variant="glass"
-              icon={<Share2 color="#fff" size={18} />}
-              label={isCreole ? 'Pataje nòt mwen' : 'Partager mon score'}
-              onPress={() => shareRef.current?.share({ mode: 'score', subject: shareSubject, score, total: maxScore })}
-              style={{ marginBottom: 10 }}
-            />
-          )}
-          {/* Invite someone to play. "Partager mon score" posts a picture;
-              this asks a specific person to beat it, which is the thing that
-              actually brings a second player in. Games had neither until now —
-              the duel prompt only reached quiz results. */}
-          {shareSubject && (
-            <View style={{ marginBottom: 10 }}>
-              <BeatMyScoreCard
-                title={shareSubject}
-                score={score}
-                total={maxScore}
-                variant="glass"
-                source="game"
+      {shareSubject ? <ShareCardCapture ref={shareRef} /> : null}
+      <NightResult
+        title={t('Résultat', 'Rezilta')}
+        subtitle={shareSubject ?? undefined}
+        onClose={onExit}
+        closeLabel={t('Retour aux jeux', 'Tounen nan jwèt yo')}
+        me={{ seed: user?.uid || 'toi', label: t('Toi', 'Ou') }}
+        winner={isRecord || pct >= 90 ? 'me' : null}
+        headline={isCreole ? messageHt : message}
+        score={score}
+        total={maxScore}
+        scoreEarned={score > 0}
+        scoreLine={statLine || null}
+        chips={(
+          <>
+            {isRecord ? <RewardChip earned icon={<Trophy color={C.gold} size={16} />} label={t('Nouveau record personnel', 'Nouvo rekò pèsonèl')} /> : null}
+            {reward && reward.xpEarned > 0 ? (
+              <RewardChip earned icon={<Star color={C.gold} size={16} />} label={`+${reward.xpEarned} XP${reward.weeklyFeatured ? t(' · ×2 cette semaine', ' · ×2 semèn nan') : ''}`} />
+            ) : null}
+            {reward?.leveledUp ? (
+              <RewardChip
+                earned
+                icon={<Crown color={C.gold} size={16} />}
+                label={reward.prevLevel != null && reward.newLevel != null && reward.prevLevel !== reward.newLevel
+                  ? t(`Niveau ${reward.prevLevel} → ${reward.newLevel}`, `Nivo ${reward.prevLevel} → ${reward.newLevel}`)
+                  : t(`Niveau ${reward.newLevel}`, `Nivo ${reward.newLevel}`)}
               />
-            </View>
-          )}
-          <HeroButton
-            variant="ghost"
-            label={`← ${isCreole ? 'Jwèt yo' : 'Les jeux'}`}
-            accessibilityLabel={isCreole ? 'Tounen nan jwèt yo' : 'Retour aux jeux'}
-            onPress={onExit}
-          />
-        </>
-      }
-    >
-      {/* Tier badge + message */}
-      <View style={{ ...glass, width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', marginTop: 16 }}>
-        <IconCmp color="#fff" size={24} />
-      </View>
-      <Text style={{ fontFamily: typeScale.body.fontFamily, fontSize: 14, lineHeight: 20, color: 'rgba(255,255,255,0.85)', textAlign: 'center', marginTop: 12, paddingHorizontal: 8 }}>
-        {isCreole ? messageHt : message}
-      </Text>
-
-      {/* Stat chips */}
-      {stats.length > 0 && (
-        <View style={{ flexDirection: 'row', gap: 10, marginTop: 20, width: '100%' }}>
-          {stats.map((s) => (
-            <View key={s.label} style={{ ...glass, flex: 1, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 6, alignItems: 'center' }}>
-              <Text style={{ fontSize: 18, fontFamily: typeScale.num.fontFamily, color: '#fff' }}>{s.value}</Text>
-              <Text numberOfLines={1} style={{ fontSize: 10, fontFamily: typeScale.overline.fontFamily, color: 'rgba(255,255,255,0.6)', letterSpacing: 0.5, marginTop: 2, textAlign: 'center' }}>{s.label}</Text>
-            </View>
-          ))}
-        </View>
-      )}
-
-      {/* Personal record */}
-      {isRecord && (
-        <View style={{ ...glass, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8, marginTop: 14 }}>
-          <Trophy color="#fde68a" size={14} />
-          <Text style={{ fontFamily: typeScale.label.fontFamily, fontSize: 13, color: '#fde68a' }}>
-            {isCreole ? 'Nouvo rekò pèsonèl !' : 'Nouveau record personnel !'}
+            ) : null}
+          </>
+        )}
+        primary={onReplay ? { label: t('Rejouer', 'Jwe ankò'), icon: <RefreshCw color={C.onCoral} size={18} />, onPress: onReplay } : null}
+        secondary={shareSubject ? [{
+          label: t('Partager mon score', 'Pataje nòt mwen'),
+          icon: <Share2 color={C.ink} size={18} />,
+          onPress: () => shareRef.current?.share({ mode: 'score', subject: shareSubject, score, total: maxScore }),
+        }] : []}
+        link={{ label: t('Retour aux jeux', 'Tounen nan jwèt yo'), onPress: onExit }}
+      >
+        {reward?.guest ? (
+          <Text style={[arenaType.status, { color: C.muted, textAlign: 'center' }]}>
+            {t('Connecte-toi pour garder tes XP.', 'Konekte pou kenbe XP ou.')}
           </Text>
-        </View>
-      )}
-
-      {/* XP reward */}
-      {reward && reward.xpEarned > 0 && (
-        <View style={{ alignItems: 'center', marginTop: 16 }}>
-          <View style={{ ...glass, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 8 }}>
-            <Sparkles color="#fde68a" size={16} />
-            <Text style={{ fontFamily: typeScale.bodyMd.fontFamily, fontSize: 14, color: '#fde68a' }}>
-              +{reward.xpEarned} XP
-            </Text>
-            {reward.weeklyFeatured && (
-              <View style={{ backgroundColor: '#fde68a', borderRadius: 999, paddingHorizontal: 7, paddingVertical: 1 }}>
-                <Text style={{ fontFamily: typeScale.label.fontFamily, fontSize: 11, color: '#3a2c00' }}>
-                  {isCreole ? '×2 semèn nan' : '×2 cette semaine'}
-                </Text>
-              </View>
-            )}
-          </View>
-          {reward.leveledUp && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
-              <Crown color="#fde68a" size={14} />
-              <Text style={{ fontFamily: typeScale.label.fontFamily, fontSize: 13, color: '#fde68a' }}>
-                {reward.prevLevel != null && reward.newLevel != null && reward.prevLevel !== reward.newLevel
-                  ? (isCreole ? `Nivo ${reward.prevLevel} → ${reward.newLevel} !` : `Niveau ${reward.prevLevel} → ${reward.newLevel} !`)
-                  : (isCreole ? `Nivo ${reward.newLevel} !` : `Niveau ${reward.newLevel} !`)}
-              </Text>
-            </View>
-          )}
-          {reward.guest && (
-            <Text style={{ fontFamily: typeScale.caption.fontFamily, fontSize: 12, color: 'rgba(255,255,255,0.65)', marginTop: 6, textAlign: 'center' }}>
-              {isCreole ? 'Konekte pou anrejistre XP ou' : 'Connectez-vous pour sauvegarder vos XP'}
-            </Text>
-          )}
-        </View>
-      )}
-    </QuizResultHero>
+        ) : null}
+        {/* Invite someone to beat it — the thing that brings a second player in. */}
+        {shareSubject ? (
+          <BeatMyScoreCard title={shareSubject} score={score} total={maxScore} variant="night" source="game" />
+        ) : null}
+      </NightResult>
     </>
   );
 }

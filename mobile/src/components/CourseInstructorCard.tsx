@@ -15,7 +15,8 @@ import { GraduationCap, School, ChevronDown, ChevronUp } from 'lucide-react-nati
 import { collection, getDocs, query, where, limit as fbLimit } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import useStore from '../contexts/store';
-import { useTheme, radius, typeScale } from '../theme/theme';
+import { useTheme, typeScale } from '../theme/theme';
+import SectionHeader from './ui/SectionHeader';
 
 interface Instructor {
   id: string;
@@ -35,7 +36,7 @@ export default function CourseInstructorCard({ courseId }: { courseId: string })
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
-  const { colors, cardSurface } = useTheme();
+  const { colors, cardSurface, fonts } = useTheme();
 
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -63,11 +64,9 @@ export default function CourseInstructorCard({ courseId }: { courseId: string })
   if (instructors.length === 0) return null;
 
   return (
-    <View style={{ marginTop: 26 }}>
-      <Text style={[typeScale.overline, { color: colors.faint, marginBottom: 10 }]}>
-        {instructors.length > 1 ? t('VOS ENSEIGNANTS', 'PWOFESÈ OU YO') : t('VOTRE ENSEIGNANT', 'PWOFESÈ OU')}
-      </Text>
-      <View style={{ gap: 10 }}>
+    <View>
+      <SectionHeader title={instructors.length > 1 ? t('Tes enseignants', 'Pwofesè ou yo') : t('Ton enseignant', 'Pwofesè ou')} />
+      <View style={{ gap: 12 }}>
         {instructors.map((i) => {
           const bio = (isCreole ? i.bio_ht : i.bio_fr) || i.bio_fr || '';
           const isOpen = expanded === i.id;
@@ -78,20 +77,20 @@ export default function CourseInstructorCard({ courseId }: { courseId: string })
               onPress={() => bio && setExpanded(isOpen ? null : i.id)}
               accessibilityRole={bio ? 'button' : undefined}
               accessibilityState={bio ? { expanded: isOpen } : undefined}
-              style={{ ...cardSurface, padding: 14 }}
+              style={{ ...cardSurface, padding: 16 }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                 {i.photoUrl ? (
-                  <Image source={{ uri: i.photoUrl }} style={{ width: 46, height: 46, borderRadius: 23 }} />
+                  <Image source={{ uri: i.photoUrl }} style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: colors.surfaceAlt }} />
                 ) : (
-                  <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.azureSoft }}>
-                    <Text style={{ fontWeight: '800', color: colors.azure, fontSize: 15 }}>{initials(i.name)}</Text>
+                  <View style={{ width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.azureSoft }}>
+                    <Text style={{ fontFamily: fonts.heading, color: colors.azureInk, fontSize: 17 }}>{initials(i.name)}</Text>
                   </View>
                 )}
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={[typeScale.titleSm, { color: colors.ink }]} numberOfLines={1}>{i.name}</Text>
+                  <Text style={[typeScale.titleSm, { color: colors.ink, fontSize: 17, lineHeight: 22 }]} numberOfLines={1}>{i.name}</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
-                    {i.school ? <School size={12} color={colors.muted} /> : <GraduationCap size={12} color={colors.muted} />}
+                    {i.school ? <School size={14} color={colors.muted} /> : <GraduationCap size={14} color={colors.muted} />}
                     <Text style={[typeScale.micro, { color: colors.muted, flex: 1 }]} numberOfLines={1}>
                       {[i.credentials, i.school].filter(Boolean).join(' · ') || t('Enseignant EdLight', 'Pwofesè EdLight')}
                     </Text>
@@ -104,7 +103,7 @@ export default function CourseInstructorCard({ courseId }: { courseId: string })
                 ) : null}
               </View>
               {isOpen && bio ? (
-                <Text style={[typeScale.caption, { color: colors.muted, marginTop: 10, lineHeight: 19 }]}>
+                <Text style={[typeScale.body, { color: colors.muted, marginTop: 12 }]}>
                   {bio}
                 </Text>
               ) : null}

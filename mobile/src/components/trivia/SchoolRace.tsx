@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo } from 'react';
 import { Text, View } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withDelay, withTiming } from 'react-native-reanimated';
-import { School, Crown } from 'lucide-react-native';
-import { useColors, useTheme, typeScale } from '../../theme/theme';
+import { arenaColors as C, arenaType } from '../../theme/arenaTheme';
+import { fonts } from '../../theme/theme';
+import SchoolCrest from '../arena/art/crest/SchoolCrest';
 import { duration, easing, stagger } from '../../theme/motion';
 import { useReduceMotion } from '../../utils/motion';
 import { useCollectives, useLeaderboard } from '../../hooks/useLeaderboard';
@@ -30,8 +31,6 @@ function Lane({ team, leader, mine, index, isCreole }: {
   index: number;
   isCreole: boolean;
 }) {
-  const colors = useColors();
-  const { radius } = useTheme();
   const reduceMotion = useReduceMotion();
   const share = leader > 0 ? Math.max(team.teamXp / leader, 0.06) : 0.06;
   const grow = useSharedValue(reduceMotion ? share : 0);
@@ -45,31 +44,33 @@ function Lane({ team, leader, mine, index, isCreole }: {
   }, [share, index, reduceMotion, grow]);
 
   const bar = useAnimatedStyle(() => ({ width: `${grow.value * 100}%` }));
-  const tone = mine ? colors.azure : colors.border;
+  // Your school's lane is the coral one; the rest are a quiet tonal step.
+  const tone = mine ? C.coral : C.secondary;
 
   return (
-    <View style={{ gap: 3 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-        {index === 0 ? <Crown color={colors.warn} size={12} /> : null}
+    <View
+      accessible
+      accessibilityLabel={`${index + 1}. ${team.label}, ${team.teamXp} XP${mine ? (isCreole ? ', lekòl ou' : ', ton école') : ''}`}
+      style={{ gap: 6 }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <SchoolCrest name={team.label} size={24} />
         <Text
           numberOfLines={1}
-          style={[
-            mine ? typeScale.label : typeScale.caption,
-            { color: mine ? colors.ink : colors.muted, flex: 1 },
-          ]}
+          style={[arenaType.status, { fontSize: 15, fontFamily: mine ? fonts.bold : fonts.medium, color: mine ? C.ink : C.inkSoft, flex: 1 }]}
         >
           {team.label}
         </Text>
-        <Text style={[typeScale.caption, { color: mine ? colors.azure : colors.faint }]}>
+        <Text style={[arenaType.num, { fontSize: 15, color: index === 0 ? C.gold : mine ? C.ink : C.muted }]}>
           {team.teamXp}
         </Text>
       </View>
-      <View style={{ height: 6, borderRadius: radius.pill ?? 999, backgroundColor: colors.surfaceAlt, overflow: 'hidden' }}>
+      <View style={{ height: 6, borderRadius: 999, backgroundColor: C.surfaceAlt, overflow: 'hidden' }}>
         <Animated.View style={[{ height: 6, borderRadius: 999, backgroundColor: tone }, bar]} />
       </View>
       {mine && !team.qualified ? (
         // The one number a student can act on tonight.
-        <Text style={[typeScale.micro, { color: colors.warn }]}>
+        <Text style={[arenaType.status, { color: C.warn }]}>
           {isCreole
             ? `${team.needed} jwè ankò pou lekòl ou kalifye`
             : `Encore ${team.needed} joueur${team.needed > 1 ? 's' : ''} pour qualifier ton école`}
@@ -84,8 +85,6 @@ export default function SchoolRace({ isCreole, compact = false }: {
   /** Three lanes instead of five, for sitting beside a running question. */
   compact?: boolean;
 }) {
-  const colors = useColors();
-  const { radius } = useTheme();
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   const { groups, isLoading } = useCollectives('school', 'week');
@@ -109,21 +108,13 @@ export default function SchoolRace({ isCreole, compact = false }: {
   const leader = lanes[0]?.teamXp ?? 0;
 
   return (
-    <View style={{
-      gap: 9,
-      padding: 13,
-      borderRadius: radius.card,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-    }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-        <School color={colors.muted} size={13} />
-        <Text style={[typeScale.overline, { color: colors.muted, flex: 1 }]}>
+    <View style={{ gap: 14, padding: 20, borderRadius: 20, backgroundColor: C.surface }}>
+      <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
+        <Text accessibilityRole="header" style={[arenaType.name, { fontSize: 17, color: C.ink, flex: 1 }]}>
           {t('La course des écoles', 'Kous lekòl yo')}
         </Text>
-        <Text style={[typeScale.micro, { color: colors.faint }]}>
-          {t(`meilleurs ${TEAM_SIZE}`, `${TEAM_SIZE} pi bon yo`)}
+        <Text style={[arenaType.status, { color: C.muted }]}>
+          {t(`ses ${TEAM_SIZE} meilleurs comptent`, `${TEAM_SIZE} pi bon yo konte`)}
         </Text>
       </View>
       {lanes.map((team, i) => (

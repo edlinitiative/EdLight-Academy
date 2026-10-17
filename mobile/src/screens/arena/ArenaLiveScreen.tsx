@@ -1,14 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Line } from 'react-native-svg';
 import Animated, {
   useSharedValue, useAnimatedStyle, withTiming, withSequence, withSpring, withRepeat, Easing,
 } from 'react-native-reanimated';
 import { Check, X, Zap } from 'lucide-react-native';
 import useStore from '../../contexts/store';
-import MathText from '../../components/MathText';
+import MathText, { HAS_MATH } from '../../components/MathText';
 import StageEnter from '../../components/trivia/StageEnter';
 import ScoreCounter from '../../components/trivia/ScoreCounter';
 import CorrectFlash from '../../components/trivia/CorrectFlash';
@@ -16,8 +15,8 @@ import { useArenaLive, useArenaAnswer } from '../../hooks/useArena';
 import { tierRing } from '../../services/arenaService';
 import { useFocusLossCounter, useBlockScreenCapture, useScreenshotNotice } from '../../utils/integrity';
 import { classifyAnswerResult, type AnswerReceiptStatus } from '../../utils/arenaAnswerReceipt';
-import { useColors, useTheme, typeScale, radius } from '../../theme/theme';
-import { useArenaColors, arenaType } from '../../theme/arenaTheme';
+import { useColors, typeScale, fonts } from '../../theme/theme';
+import { useArenaColors, arenaType, arenaColors as C } from '../../theme/arenaTheme';
 import { warn } from '../../utils/haptics';
 import arenaHaptics from '../../components/arena/arenaHaptics';
 import { ArenaScreen, ArenaStateView, ArenaPanel, StaleBanner } from '../../components/arena/ArenaKit';
@@ -54,7 +53,6 @@ export default function ArenaLiveScreen() {
   const colors = useArenaColors();
   // The question itself sits on the calm reading surface, like a lesson.
   const calm = useColors();
-  const { shadow } = useTheme();
   const language = useStore((s) => s.language);
   const setFocusMode = useStore((s) => s.setFocusMode);
   const isCreole = language === 'ht';
@@ -235,13 +233,10 @@ export default function ArenaLiveScreen() {
   return (
     <ArenaScreen world={false} edges={['top', 'bottom']}>
       {/* ── Head: where we are, and what this answer is worth ───────────── */}
-      <View style={{
-        paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12,
-        backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border,
-      }}>
+      <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 12 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <View style={{ flex: 1, gap: 4 }}>
-            <Text style={[typeScale.label, { color: colors.ink, fontVariant: ['tabular-nums'] }]}>
+            <Text style={[arenaType.name, { fontSize: 17, color: colors.ink, fontVariant: ['tabular-nums'] }]}>
               {t('Question', 'Kesyon')} {(index ?? 0) + 1} / {tournament?.questionCount ?? '—'}
             </Text>
             {question?.category ? (
@@ -258,11 +253,11 @@ export default function ArenaLiveScreen() {
               right while the question was still open for everyone else. */}
           {me ? (
             <View style={{
-              flexDirection: 'row', alignItems: 'center', gap: 5,
-              backgroundColor: colors.azureSoft, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5,
+              flexDirection: 'row', alignItems: 'center', gap: 6, height: 40,
+              backgroundColor: C.surface, borderRadius: 999, paddingHorizontal: 14,
             }}>
-              <Zap color={colors.azure} size={13} />
-              <ScoreCounter value={me.score} style={{ ...typeScale.label, color: colors.azure }} />
+              <Zap color={C.ink} size={16} />
+              <ScoreCounter value={me.score} style={{ ...arenaType.num, color: C.ink }} />
             </View>
           ) : null}
 
@@ -270,7 +265,7 @@ export default function ArenaLiveScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 30 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 30 }} showsVerticalScrollIndicator={false}>
         {stale || phase === 'reconnecting' ? (
           <View style={{ marginBottom: 12 }}><StaleBanner t={t} onRetry={live.retry} /></View>
         ) : null}
@@ -305,19 +300,22 @@ export default function ArenaLiveScreen() {
         {question && (answerable || locked || question.state === 'closed') ? (
           <>
             <StageEnter playKey={index ?? 0} index={0} springy style={{ marginBottom: 16 }}>
-              <View style={{
-                borderRadius: radius.card, overflow: 'hidden',
-                borderWidth: 1, borderColor: calm.border, ...shadow.md,
-              }}>
-                <LinearGradient
-                  colors={[calm.surface, calm.surfaceAlt]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 0, y: 1 }}
-                  style={{ padding: 18 }}
-                >
+              {HAS_MATH.test(prompt) ? (
+                // KaTeX stays on the calm reading surface (legible math).
+                <View style={{ borderRadius: 24, padding: 20, backgroundColor: calm.surface }}>
                   <MathText text={prompt} />
-                </LinearGradient>
-              </View>
+                </View>
+              ) : (
+                <View style={{ borderRadius: 24, padding: 22, gap: 10, backgroundColor: C.surfaceRaised }}>
+                  {question.category ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.coral }} />
+                      <Text numberOfLines={1} style={[arenaType.status, { color: C.muted }]}>{question.category}</Text>
+                    </View>
+                  ) : null}
+                  <Text accessibilityRole="header" style={{ fontFamily: fonts.heading, fontSize: 22, lineHeight: 30, letterSpacing: -0.3, color: C.ink }}>{prompt}</Text>
+                </View>
+              )}
             </StageEnter>
 
             <View style={{ gap: 10 }}>
@@ -418,7 +416,7 @@ function TierRing({ ring, active, isCreole }: {
   return (
     <Animated.View style={[{ width: 46, height: 46, alignItems: 'center', justifyContent: 'center' }, pulse]}>
       <Svg width={46} height={46} viewBox="0 0 120 120">
-        <Circle cx={60} cy={60} r={52} fill="none" stroke={colors.border} strokeWidth={10} />
+        <Circle cx={60} cy={60} r={52} fill="none" stroke={C.surfaceRaised} strokeWidth={10} />
         <Circle
           cx={60} cy={60} r={52} fill="none"
           stroke={tone} strokeWidth={10}
@@ -437,12 +435,12 @@ function TierRing({ ring, active, isCreole }: {
         />
       </Svg>
       <View style={{ position: 'absolute', alignItems: 'center' }}>
-        <Text style={{ fontSize: 13, fontWeight: '800', color: tone, fontVariant: ['tabular-nums'] }}>
+        <Text style={{ fontFamily: fonts.heading, fontSize: 15, color: tone, fontVariant: ['tabular-nums'] }}>
           {ring.secondsInTier}
         </Text>
       </View>
       <Text
-        style={{ position: 'absolute', bottom: -13, fontSize: 9, color: tone }}
+        style={{ position: 'absolute', bottom: -18, fontFamily: fonts.bold, fontSize: 14, color: tone }}
         accessibilityLabel={isCreole ? 'Nivo pwen an' : 'Palier de points'}
       >
         {ring.tier === 'full' ? '1000' : ring.tier === 'half' ? '500' : '0'}
@@ -538,7 +536,6 @@ function AnswerOption({
   onPress: () => void;
   reduceMotion: boolean;
 }) {
-  const colors = useArenaColors();
   const scale = useSharedValue(1);
   const shake = useSharedValue(0);
 
@@ -562,20 +559,21 @@ function AnswerOption({
     transform: [{ scale: scale.value }, { translateX: shake.value }],
   }));
 
-  let borderColor = colors.border;
-  let bgColor = colors.surface;
-  let labelBg = colors.surfaceAlt;
-  let labelText = colors.muted;
+  // State is a tonal wash, never an edge. Your locked pick is the coral row
+  // (marine text) until the reveal; then the truth takes over.
+  let bgColor: string = C.surface;
+  let labelBg: string = C.surfaceRaised;
+  let labelText: string = C.ink;
+  let textColor: string = C.ink;
 
   if (revealed) {
     if (isCorrectOpt) {
-      borderColor = colors.success; bgColor = colors.successSoft; labelBg = colors.successFill; labelText = '#fff';
+      bgColor = C.successSoft; labelBg = C.success; labelText = C.marine;
     } else if (isSelected) {
-      borderColor = colors.danger; bgColor = colors.dangerSoft; labelBg = colors.danger; labelText = '#12213A';
+      bgColor = C.dangerSoft; labelBg = C.danger; labelText = C.marine;
     }
   } else if (isSelected) {
-    // Locked, not "selected": the tap already committed it.
-    borderColor = colors.azure; bgColor = colors.azureSoft; labelBg = colors.azureFill; labelText = '#fff';
+    bgColor = C.coral; labelBg = C.marine; labelText = C.ink; textColor = C.onCoral;
   }
 
   return (
@@ -587,22 +585,27 @@ function AnswerOption({
         accessibilityRole="button"
         accessibilityState={{ disabled: locked, selected: isSelected }}
         style={{
-          flexDirection: 'row', alignItems: 'center', overflow: 'hidden',
-          borderWidth: 1.5, borderColor, backgroundColor: bgColor, borderRadius: 15,
+          flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 72,
+          paddingHorizontal: 14, paddingVertical: 12, backgroundColor: bgColor, borderRadius: 18,
           opacity: locked && !isSelected && !revealed ? 0.6 : 1,
         }}
       >
         <View style={{
-          width: 34, height: 34, margin: 8, borderRadius: 10,
+          width: 44, height: 44, borderRadius: 12,
           alignItems: 'center', justifyContent: 'center', backgroundColor: labelBg,
         }}>
-          <Text style={{ fontSize: 14, fontWeight: '800', color: labelText }}>{label}</Text>
+          <Text style={{ fontFamily: fonts.heading, fontSize: 17, color: labelText }}>{label}</Text>
         </View>
-        <Text style={[typeScale.bodyMd, { color: colors.ink, flex: 1, paddingRight: 12, paddingVertical: 10 }]}>
+        <Text style={{ fontFamily: fonts.medium, fontSize: 18, lineHeight: 24, color: textColor, flex: 1 }}>
           {opt}
         </Text>
-        {revealed && isCorrectOpt ? <View style={{ paddingRight: 12 }}><Check color={colors.success} size={18} /></View> : null}
-        {revealed && isSelected && !isCorrectOpt ? <View style={{ paddingRight: 12 }}><X color={colors.danger} size={18} /></View> : null}
+        {revealed && isCorrectOpt ? <Check color={C.success} size={22} /> : null}
+        {revealed && isSelected && !isCorrectOpt ? <X color={C.danger} size={22} /> : null}
+        {!revealed && isSelected ? (
+          <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: C.marine, alignItems: 'center', justifyContent: 'center' }}>
+            <Check color={C.ink} size={16} />
+          </View>
+        ) : null}
       </TouchableOpacity>
     </Animated.View>
   );
@@ -622,7 +625,6 @@ function SchoolPosition({ line, isCreole }: {
   isCreole: boolean;
 }) {
   const colors = useArenaColors();
-  const { radius: r } = useTheme();
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   if (!line) {
@@ -637,7 +639,7 @@ function SchoolPosition({ line, isCreole }: {
 
   return (
     <View style={{
-      gap: 10, padding: 16, borderRadius: r.card,
+      gap: 10, padding: 22, borderRadius: 24,
       backgroundColor: colors.surface, alignItems: 'center',
     }}>
       <Text style={[arenaType.label, { color: colors.muted }]}>
@@ -648,7 +650,7 @@ function SchoolPosition({ line, isCreole }: {
           would be inventing, so it is simply not shown. */}
       <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
         {line.rank > 0 ? (
-          <Text style={[typeScale.display, { color: colors.azure, fontVariant: ['tabular-nums'] }]}>
+          <Text style={[typeScale.display, { color: colors.ink, fontVariant: ['tabular-nums'] }]}>
             {line.rank}
             <Text style={[typeScale.label, { color: colors.muted }]}>
               {line.rank === 1 ? t('er', 'yèm') : t('e', 'yèm')}
@@ -665,8 +667,8 @@ function SchoolPosition({ line, isCreole }: {
         paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999,
         backgroundColor: line.inFive ? colors.successSoft : colors.warnSoft,
       }}>
-        {line.inFive ? <Check color={colors.successFill} size={14} /> : <Zap color={colors.warn} size={14} />}
-        <Text style={[typeScale.label, { color: line.inFive ? colors.successFill : colors.warn }]}>
+        {line.inFive ? <Check color={colors.success} size={16} /> : <Zap color={colors.warn} size={16} />}
+        <Text style={[typeScale.label, { color: line.inFive ? colors.success : colors.warn }]}>
           {line.inFive
             ? t(`Tu es dans les ${line.teamSize}`, `Ou nan ${line.teamSize} yo`)
             : t(`Pas encore dans les ${line.teamSize}`, `Ou poko nan ${line.teamSize} yo`)}

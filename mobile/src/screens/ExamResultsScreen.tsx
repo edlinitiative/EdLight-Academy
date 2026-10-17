@@ -3,10 +3,9 @@ import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { CheckCircle2, XCircle, Trophy, RefreshCw, ArrowLeft, ChevronDown, ChevronRight as ChevronRightIcon, Share2, Lightbulb } from 'lucide-react-native';
+import { CheckCircle2, XCircle, Trophy, RefreshCw, ChevronLeft, ChevronDown, ChevronUp, Share2, Circle } from 'lucide-react-native';
 import { loadExamResult } from '../services/examResults';
 import { shareScore } from '../services/scoreShare';
-import { LinearGradient } from 'expo-linear-gradient';
 import { fetchSingleExam } from '../utils/examCatalog';
 import { flattenQuestions } from '../utils/examUtils';
 import useStore from '../contexts/store';
@@ -17,7 +16,7 @@ import Button from '../components/ui/Button';
 import { LoadingState, ErrorState, EmptyState } from '../components/StateViews';
 import ProgressBar from '../components/ProgressBar';
 import Confetti from '../components/ui/Confetti';
-import PopIn from '../components/ui/PopIn';
+import Segmented from '../components/ui/Segmented';
 import { useReduceMotion } from '../utils/motion';
 import { success as hapticSuccess, tapMedium, tapLight } from '../utils/haptics';
 import { mathToText } from '../utils/mathText';
@@ -46,21 +45,21 @@ function isUnansweredResult(item: any, answer: any): boolean {
   return given == null || given === '';
 }
 
-function ScoreGauge({ percentage, onDark = false }: { percentage: number; onDark?: boolean }) {
+/**
+ * The score card (Stitch 06b register): "Score", a 56pt numeral, the verdict as
+ * an azure tonal pill and an 8pt bar. Opaque, no gradient, no glow. Counts up
+ * from 0 unless the OS asks for reduced motion.
+ */
+function ScoreCard({ percentage, scoreLine }: { percentage: number; scoreLine?: string }) {
   const language = useStore((s) => s.language);
-  const colors = useColors();
+  const { colors, cardSurface } = useTheme();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
-  const color = onDark ? '#ffffff' : percentage >= 70 ? colors.success : percentage >= 50 ? colors.warn : colors.danger;
-  const trophyBg = onDark ? 'rgba(255,255,255,0.16)' : colors.azureSoft;
-  const trophyColor = onDark ? '#ffffff' : colors.azure;
   const reduceMotion = useReduceMotion();
 
   // Celebrate a strong result — this is the emotional peak of the exam flow.
   useEffect(() => { if (percentage >= 70) hapticSuccess(); }, [percentage]);
 
-  // Count the score up from 0 on mount (easeOutCubic over ~0.8s). Reduced-motion
-  // users see the final number immediately.
   const [display, setDisplay] = useState(reduceMotion ? percentage : 0);
   useEffect(() => {
     if (reduceMotion) { setDisplay(percentage); return; }
@@ -82,29 +81,23 @@ function ScoreGauge({ percentage, onDark = false }: { percentage: number; onDark
   const scoreA11y = `${t('Score', 'Nòt')} : ${percentage} ${t('pour cent', 'pou san')}, ${phrase}`;
 
   return (
-    <View className="items-center py-8">
-      {/* Decorative trophy — hidden from VoiceOver (the score node speaks it). */}
-      <PopIn from={0.6}>
-        <View
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
-          style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: trophyBg, borderWidth: onDark ? 1 : 0, borderColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}
-        >
-          <Trophy color={trophyColor} size={32} />
+    <View style={{ ...cardSurface, borderRadius: 24, padding: 20, gap: 12 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+        <View accessible accessibilityLabel={scoreA11y} style={{ gap: 2 }}>
+          <Text style={[typeScale.meta, { color: colors.muted }]}>{t('Score', 'Nòt')}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={{ fontFamily: fonts.heading, fontSize: 56, lineHeight: 60, letterSpacing: -2, color: colors.ink, fontVariant: ['tabular-nums'] }}>
+            {display}
+            <Text style={{ fontFamily: fonts.headingBold, fontSize: 22, letterSpacing: 0, color: colors.muted }}> %</Text>
+          </Text>
+          {scoreLine ? <Text style={[typeScale.meta, { color: colors.muted }]}>{scoreLine}</Text> : null}
         </View>
-      </PopIn>
-      <Text
-        accessible
-        accessibilityLabel={scoreA11y}
-        maxFontSizeMultiplier={1.3}
-        style={{ fontSize: 52, fontWeight: '900', color, letterSpacing: -1 }}
-      >
-        {display}%
-      </Text>
-      {/* Already spoken via the score label above — kept visual only. */}
-      <Text importantForAccessibility="no" style={{ marginTop: 4, color: onDark ? 'rgba(255,255,255,0.82)' : colors.muted }}>
-        {phrase}
-      </Text>
+        <View importantForAccessibility="no" style={{ backgroundColor: colors.azureSoft, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6, marginTop: 4, flexShrink: 1 }}>
+          <Text style={{ fontFamily: fonts.headingBold, fontSize: 14, lineHeight: 18, color: colors.azureInk }}>{phrase}</Text>
+        </View>
+      </View>
+      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ height: 8, borderRadius: 99, backgroundColor: colors.surfaceAlt, overflow: 'hidden' }}>
+        <View style={{ height: 8, borderRadius: 99, width: `${Math.max(0, Math.min(100, percentage))}%`, backgroundColor: colors.azureFill }} />
+      </View>
     </View>
   );
 }
@@ -112,10 +105,11 @@ function ScoreGauge({ percentage, onDark = false }: { percentage: number; onDark
 function QuestionReviewItem({ question, index, answer, result }: { question: any; index: number; answer: any; result: any }) {
   const language = useStore((s) => s.language);
   const colors = useColors();
-  const { radius, shadow } = useTheme();
+  const { cardSurface, isDark } = useTheme();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const [expanded, setExpanded] = useState(false);
+  const okInk = isDark ? colors.success : colors.successFill;
   const correctAnswer = question.correct;
   const given = answer?.given ?? answer;
   const isUnanswered = isUnansweredResult(result, answer);
@@ -132,41 +126,50 @@ function QuestionReviewItem({ question, index, answer, result }: { question: any
       accessibilityState={{ expanded }}
       accessibilityLabel={`${t('Question', 'Kesyon')} ${index + 1}, ${statusLabel}. ${questionText}`}
       accessibilityHint={t('Toucher pour voir le détail', 'Manyen pou wè detay')}
-      style={[{ borderRadius: radius.card, marginBottom: 8, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }, shadow.sm]}
+      style={{ ...cardSurface, marginBottom: 12, overflow: 'hidden' }}
     >
-      <View className="flex-row items-center px-4 py-3 gap-3">
-        {isUnanswered
-          ? <View style={{ width: 20, height: 20, borderRadius: 999, borderWidth: 2, borderColor: colors.border }} />
-          : isCorrect
-            ? <CheckCircle2 color={colors.success} size={20} />
-            : <XCircle color={colors.danger} size={20} />}
-        <Text style={[typeScale.caption, { width: 24, color: colors.muted, fontFamily: fonts.headingBold }]}>Q{index + 1}</Text>
-        <Text style={[typeScale.bodyMd, { flex: 1, color: colors.ink }]} numberOfLines={expanded ? undefined : 2}>
-          {questionText}
-        </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 14, minHeight: 64 }}>
+        <View style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: isUnanswered ? colors.surfaceAlt : isCorrect ? colors.successSoft : colors.dangerSoft }}>
+          {isUnanswered
+            ? <Circle color={colors.muted} size={16} strokeWidth={2.4} />
+            : isCorrect
+              ? <CheckCircle2 color={okInk} size={18} strokeWidth={2.4} />
+              : <XCircle color={colors.danger} size={18} strokeWidth={2.4} />}
+        </View>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={[typeScale.bodyMd, { color: colors.ink }]} numberOfLines={expanded ? undefined : 1}>
+            {questionText}
+          </Text>
+          <Text style={[typeScale.meta, { color: colors.muted }]}>{t(`Question ${index + 1}`, `Kesyon ${index + 1}`)} · {statusLabel}</Text>
+        </View>
         {expanded
-          ? <ChevronDown color={colors.faint} size={16} />
-          : <ChevronRightIcon color={colors.faint} size={16} />}
+          ? <ChevronUp color={colors.azureInk} size={18} />
+          : <ChevronDown color={colors.azureInk} size={18} />}
       </View>
       {expanded && (
-        <View className="px-4 pb-3 gap-2">
-          <View style={{ height: 1, backgroundColor: colors.border, marginBottom: 4 }} />
-          <View className="flex-row gap-2">
-            <Text style={[typeScale.caption, { width: 80, color: colors.faint, fontFamily: fonts.headingBold }]}>{t('Votre réponse', 'Repons ou')}</Text>
-            <Text style={[typeScale.caption, { flex: 1, fontFamily: fonts.medium, color: isUnanswered ? colors.faint : isCorrect ? colors.success : colors.danger }]}>
-              {isUnanswered ? t('Sans réponse', 'San repons') : String(given)}
-            </Text>
+        <View style={{ paddingHorizontal: 16, paddingBottom: 16, gap: 12 }}>
+          <View style={{ gap: 6 }}>
+            <Text style={[typeScale.body, { color: colors.muted }]}>{t('Ta réponse :', 'Repons ou :')}</Text>
+            <View style={{ backgroundColor: isUnanswered ? colors.surfaceAlt : isCorrect ? colors.successSoft : colors.dangerSoft, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 }}>
+              <Text style={{ fontFamily: fonts.medium, fontSize: 16, lineHeight: 23, color: isUnanswered ? colors.muted : isCorrect ? okInk : colors.danger }}>
+                {isUnanswered ? t('Sans réponse', 'San repons') : String(given)}
+              </Text>
+            </View>
           </View>
           {!isCorrect && correctAnswer != null && (
-            <View className="flex-row gap-2">
-              <Text style={[typeScale.caption, { width: 80, color: colors.faint, fontFamily: fonts.headingBold }]}>{t('Bonne réponse', 'Bon repons')}</Text>
-              <Text style={[typeScale.caption, { flex: 1, color: colors.success, fontFamily: fonts.medium }]}>{String(correctAnswer)}</Text>
+            <View style={{ gap: 6 }}>
+              <Text style={[typeScale.body, { color: colors.muted }]}>{t('Bonne réponse :', 'Bon repons :')}</Text>
+              <View style={{ backgroundColor: colors.successSoft, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 }}>
+                <Text style={{ fontFamily: fonts.medium, fontSize: 16, lineHeight: 23, color: okInk }}>{String(correctAnswer)}</Text>
+              </View>
             </View>
           )}
           {question.explanation && (
-            <View style={{ marginTop: 4, flexDirection: 'row', gap: 8, padding: 12, backgroundColor: colors.surfaceAlt, borderRadius: radius.tile, borderWidth: 1, borderColor: colors.border }}>
-              <Lightbulb color={colors.azure} size={15} style={{ marginTop: 1 }} />
-              <Text style={[typeScale.caption, { flex: 1, lineHeight: 18, color: colors.muted }]}>{question.explanation}</Text>
+            <View style={{ gap: 8 }}>
+              <Text style={[typeScale.body, { color: colors.muted }]}>{t('Explication :', 'Eksplikasyon :')}</Text>
+              <View style={{ padding: 16, backgroundColor: isDark ? colors.surfaceAlt : colors.bg, borderRadius: 14 }}>
+                <MathText text={String(question.explanation)} style={{ fontSize: 16, lineHeight: 24, color: colors.ink }} />
+              </View>
             </View>
           )}
         </View>
@@ -193,17 +196,17 @@ function MasteryBar({ section, pct, correct, total }: { section: string; pct: nu
   const colors = useColors();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
-  const color = pct >= 75 ? colors.success : pct >= 50 ? colors.warn : colors.danger;
+  const color = pct >= 75 ? colors.successFill : pct >= 50 ? colors.warn : colors.danger;
   return (
     <View style={{ marginBottom: 12 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-        <Text style={[typeScale.label, { flex: 1, color: colors.muted }]} numberOfLines={1}>{section === 'Général' ? t('Général', 'Jeneral') : section}</Text>
-        <Text style={[typeScale.caption, { marginLeft: 8, color, fontFamily: fonts.headingBold }]}>{pct}%</Text>
+        <Text style={[typeScale.bodyMd, { flex: 1, color: colors.ink }]} numberOfLines={1}>{section === 'Général' ? t('Général', 'Jeneral') : section}</Text>
+        <Text style={{ marginLeft: 8, color: colors.ink, fontFamily: fonts.headingBold, fontSize: 15, fontVariant: ['tabular-nums'] }}>{pct}%</Text>
       </View>
-      <View style={{ height: 6, backgroundColor: colors.hairline, borderRadius: 99, overflow: 'hidden' }}>
+      <View style={{ height: 6, backgroundColor: colors.surfaceAlt, borderRadius: 99, overflow: 'hidden' }}>
         <View style={{ width: `${pct}%` as any, height: 6, backgroundColor: color, borderRadius: 99 }} />
       </View>
-      <Text style={[typeScale.micro, { color: colors.faint, marginTop: 3 }]}>{correct}/{total} {t('correctes', 'kòrèk')}</Text>
+      <Text style={[typeScale.meta, { color: colors.muted, marginTop: 4 }]}>{correct}/{total} {t('correctes', 'kòrèk')}</Text>
     </View>
   );
 }
@@ -214,7 +217,7 @@ export default function ExamResultsScreen() {
   const { level, examId } = route.params;
   const { user, incrementGuestInteraction, language, setShowAuthModal } = useStore();
   const colors = useColors();
-  const { cardSurface, shadow } = useTheme();
+  const { cardSurface } = useTheme();
   const centerColumn = useContentContainerStyle('readable');
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -265,14 +268,14 @@ export default function ExamResultsScreen() {
       <View className="flex-row items-center px-5 pt-2 pb-3">
         <TouchableOpacity
           onPress={goBack}
-          className="p-1 mr-3"
+          style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginLeft: -10, marginRight: 2 }}
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel={t('Retour', 'Retounen')}
         >
-          <ArrowLeft color={colors.muted} size={22} />
+          <ChevronLeft color={colors.ink} size={26} />
         </TouchableOpacity>
-        <Text style={[typeScale.title, { color: colors.ink }]}>{t('Résultats', 'Rezilta')}</Text>
+        <Text accessibilityRole="header" style={[typeScale.section, { color: colors.ink }]}>{t('Résultats', 'Rezilta')}</Text>
       </View>
       {body}
     </SafeAreaView>
@@ -294,14 +297,14 @@ export default function ExamResultsScreen() {
               if (stackRoutes.length > 1) navigation.goBack();
               else navigation.reset({ index: 0, routes: [{ name: 'ExamLanding' }] });
             }}
-            className="p-1 mr-3"
+            style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginLeft: -10, marginRight: 2 }}
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={t('Retour', 'Retounen')}
           >
-            <ArrowLeft color={colors.muted} size={22} />
+            <ChevronLeft color={colors.ink} size={26} />
           </TouchableOpacity>
-          <Text style={[typeScale.title, { color: colors.ink }]}>{t('Résultats', 'Rezilta')}</Text>
+          <Text accessibilityRole="header" style={[typeScale.section, { color: colors.ink }]}>{t('Résultats', 'Rezilta')}</Text>
         </View>
         <EmptyState
           title={t('Connecte-toi pour voir ton score', 'Konekte pou wè nòt ou')}
@@ -347,32 +350,26 @@ export default function ExamResultsScreen() {
             if (stackRoutes.length > 1) navigation.goBack();
             else navigation.reset({ index: 0, routes: [{ name: 'ExamLanding' }] });
           }}
-          className="p-1 mr-3"
+          style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginLeft: -10, marginRight: 2 }}
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel={t('Retour', 'Retounen')}
         >
-          <ArrowLeft color={colors.muted} size={22} />
+          <ChevronLeft color={colors.ink} size={26} />
         </TouchableOpacity>
-        <Text style={[typeScale.title, { color: colors.ink }]}>{t('Résultats', 'Rezilta')}</Text>
+        <Text accessibilityRole="header" style={[typeScale.section, { color: colors.ink }]}>{t('Résultats', 'Rezilta')}</Text>
       </View>
 
       {/* Celebration burst for a passing result (skipped under reduce-motion) */}
       {Math.round(percentage) >= 70 && <Confetti />}
 
       <ScrollView className="flex-1" contentContainerStyle={[{ paddingBottom: 100 }, centerColumn]}>
-        {/* Score — Aurora Depth hero */}
-        <View style={{ marginHorizontal: 16, marginTop: 16, borderRadius: 22, overflow: 'hidden', shadowColor: '#0A1F52', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.35, shadowRadius: 20, elevation: 8 }}>
-          <LinearGradient colors={['#2E6FE6', '#123A86', '#0A1F52']} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }}>
-            <View pointerEvents="none" style={{ position: 'absolute', top: -50, left: -30, width: 180, height: 180, borderRadius: 90, backgroundColor: '#3B82F6', opacity: 0.3 }} />
-            <View pointerEvents="none" style={{ position: 'absolute', bottom: -40, right: -20, width: 180, height: 180, borderRadius: 90, backgroundColor: '#7C3AED', opacity: 0.28 }} />
-            <ScoreGauge percentage={Math.round(percentage)} onDark />
-            <View style={{ paddingHorizontal: 24, paddingBottom: 22 }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-              <View style={{ height: 8, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.18)', overflow: 'hidden' }}>
-                <View style={{ height: 8, borderRadius: 99, width: `${Math.round(percentage)}%`, backgroundColor: '#ffffff' }} />
-              </View>
-            </View>
-          </LinearGradient>
+        {/* Score — the 06b score card, opaque */}
+        <View style={{ marginHorizontal: 20, marginTop: 8 }}>
+          <ScoreCard
+            percentage={Math.round(percentage)}
+            scoreLine={maxScore > 0 ? t(`${scored} points sur ${maxScore}`, `${scored} pwen sou ${maxScore}`) : undefined}
+          />
         </View>
 
         {/* Share the score — doubles as a referral invite. */}
@@ -383,38 +380,38 @@ export default function ExamResultsScreen() {
             asPercent: true,
             lang: isCreole ? 'ht' : 'fr',
           })}
-          variant="success"
+          variant="secondary"
           size="lg"
           fullWidth
-          icon={<Share2 color="#fff" size={18} />}
+          icon={<Share2 color={colors.azureInk} size={18} />}
           accessibilityLabel={t('Partager mon score', 'Pataje nòt mwen')}
           label={t('Partager mon score', 'Pataje nòt mwen')}
-          style={{ marginHorizontal: 16, marginTop: 20 }}
+          style={{ marginHorizontal: 20, marginTop: 16 }}
         />
 
         {/* Handoff into the XP loop — an exam just finished is the moment a
             content-only user is most likely to try the Défi (falls back to
             the ×2 weekly game once today's défi is done). */}
-        <View className="mx-4 mt-4">
+        <View className="mt-4" style={{ marginHorizontal: 20 }}>
           <DefiHandoffCard showWeeklyWhenDone />
         </View>
 
         {/* Stats */}
-        <View className="flex-row gap-3 mx-4 mt-4">
+        <View className="flex-row gap-3 mt-4" style={{ marginHorizontal: 20 }}>
           {[
-            { label: t('Correctes', 'Kòrèk'), value: String(correct), icon: <CheckCircle2 color={colors.success} size={20} />, color: colors.success },
+            { label: t('Correctes', 'Kòrèk'), value: String(correct), icon: <CheckCircle2 color={colors.successFill} size={20} />, color: colors.success },
             { label: t('Incorrectes', 'Pa kòrèk'), value: String(incorrect), icon: <XCircle color={colors.danger} size={20} />, color: colors.danger },
-            { label: t('Score', 'Nòt'), value: maxScore > 0 ? `${scored}/${maxScore}` : `${Math.round(percentage)}%`, icon: <Trophy color={colors.warn} size={20} />, color: colors.warn },
+            { label: t('Points', 'Pwen'), value: maxScore > 0 ? `${scored}/${maxScore}` : `${Math.round(percentage)}%`, icon: <Trophy color={colors.azureInk} size={20} />, color: colors.azureInk },
           ].map((stat) => (
             <View
               key={stat.label}
               accessible
               accessibilityLabel={`${stat.label}: ${stat.value}`}
-              style={[cardSurface, { flex: 1, padding: 12, alignItems: 'center', gap: 4 }]}
+              style={[cardSurface, { flex: 1, paddingVertical: 16, paddingHorizontal: 8, alignItems: 'center', gap: 6 }]}
             >
               {stat.icon}
-              <Text maxFontSizeMultiplier={1.3} style={[typeScale.h2, { color: colors.ink }]}>{stat.value}</Text>
-              <Text style={[typeScale.caption, { color: colors.muted, textAlign: 'center' }]}>{stat.label}</Text>
+              <Text maxFontSizeMultiplier={1.3} numberOfLines={1} adjustsFontSizeToFit style={{ fontFamily: fonts.heading, fontSize: 24, lineHeight: 28, color: colors.ink, fontVariant: ['tabular-nums'] }}>{stat.value}</Text>
+              <Text style={[typeScale.label, { color: colors.muted, textAlign: 'center' }]}>{stat.label}</Text>
             </View>
           ))}
         </View>
@@ -424,8 +421,8 @@ export default function ExamResultsScreen() {
           const mastery = computeMastery(questions, answers, gradedResults);
           if (mastery.length <= 1) return null;
           return (
-            <View style={[cardSurface, { marginHorizontal: 16, marginTop: 16, padding: 16 }]}>
-              <Text style={[typeScale.titleSm, { color: colors.ink, marginBottom: 14 }]}>{t('Par section', 'Dapre seksyon')}</Text>
+            <View style={[cardSurface, { marginHorizontal: 20, marginTop: 16, padding: 18 }]}>
+              <Text style={[typeScale.cardTitle, { color: colors.ink, marginBottom: 14 }]}>{t('Par section', 'Dapre seksyon')}</Text>
               {mastery.map((m) => (
                 <MasteryBar key={m.section} section={m.section} pct={m.pct} correct={m.correct} total={m.total} />
               ))}
@@ -435,8 +432,8 @@ export default function ExamResultsScreen() {
 
         {/* Exam info */}
         {result && (
-          <View style={[cardSurface, { marginHorizontal: 16, marginTop: 16, padding: 16 }]}>
-            <Text style={[typeScale.title, { color: colors.ink, marginBottom: 4 }]} numberOfLines={2}>{result.title ?? t('Examen', 'Egzamen')}</Text>
+          <View style={[cardSurface, { marginHorizontal: 20, marginTop: 16, padding: 18 }]}>
+            <Text style={[typeScale.cardTitle, { color: colors.ink, marginBottom: 4 }]} numberOfLines={2}>{result.title ?? t('Examen', 'Egzamen')}</Text>
             {result.subject && <Text style={[typeScale.body, { color: colors.muted }]}>{t('Matière', 'Matyè')} : {result.subject}</Text>}
             {result.level && <Text style={[typeScale.body, { color: colors.muted }]}>{t('Niveau', 'Nivo')} : {result.level}</Text>}
           </View>
@@ -444,30 +441,23 @@ export default function ExamResultsScreen() {
 
         {/* Question review */}
         {questions.length > 0 && (
-          <View className="mx-4 mt-5">
+          <View className="mt-6" style={{ marginHorizontal: 20 }}>
             <View className="flex-row items-center justify-between mb-3">
-              <Text style={[typeScale.title, { color: colors.ink }]}>{t('Revue des questions', 'Revi kesyon yo')}</Text>
-              <Text style={[typeScale.caption, { color: colors.faint }]}>{questions.length} {t('questions', 'kesyon')}</Text>
+              <Text accessibilityRole="header" style={[typeScale.section, { fontSize: 20, lineHeight: 25, color: colors.ink }]}>{t('Revue des questions', 'Revi kesyon yo')}</Text>
+              <Text style={[typeScale.meta, { color: colors.muted }]}>{questions.length} {t('questions', 'kesyon')}</Text>
             </View>
 
-            {/* Filter tabs */}
-            <View className="flex-row rounded-xl p-1 mb-4" style={{ backgroundColor: colors.surfaceAlt }}>
-              {([['all', t('Toutes', 'Tout')], ['wrong', t('À revoir', 'Pou revize')], ['correct', t('Réussies', 'Reyisi')]] as const).map(([val, label]) => (
-                <PressableScale
-                  key={val}
-                  onPress={() => setReviewFilter(val)}
-                  pressedScale={0.97}
-                  haptic={false}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: reviewFilter === val }}
-                  accessibilityLabel={label}
-                  className={`flex-1 py-2 rounded-lg items-center`}
-                  style={reviewFilter === val ? { backgroundColor: colors.surface, ...shadow.sm } : {}}
-                >
-                  <Text style={[typeScale.label, { color: reviewFilter === val ? colors.ink : colors.muted, fontFamily: fonts.headingBold }]}>{label}</Text>
-                </PressableScale>
-              ))}
-            </View>
+            {/* Filter — the shared pill switch */}
+            <Segmented<'all' | 'wrong' | 'correct'>
+              options={[
+                { key: 'all', label: t('Toutes', 'Tout') },
+                { key: 'wrong', label: t('À revoir', 'Pou revize') },
+                { key: 'correct', label: t('Réussies', 'Reyisi') },
+              ]}
+              value={reviewFilter}
+              onChange={setReviewFilter}
+              style={{ marginBottom: 16 }}
+            />
 
             {filteredQuestions.length === 0 ? (
               <View className="items-center py-6">
@@ -491,7 +481,7 @@ export default function ExamResultsScreen() {
         )}
 
         {/* Actions */}
-        <View className="px-4 mt-6 gap-3">
+        <View className="mt-6 gap-3" style={{ paddingHorizontal: 20 }}>
           <Button
             onPress={() => { tapMedium(); navigation.replace('ExamTake', { level, examId, autostart: true }); }}
             variant="primary"
@@ -503,7 +493,7 @@ export default function ExamResultsScreen() {
           />
           <Button
             onPress={() => { tapLight(); navigation.navigate('ExamBrowser', { level }); }}
-            variant="ghost"
+            variant="secondary"
             size="lg"
             fullWidth
             accessibilityLabel={t("Voir d'autres examens", 'Wè lòt egzamen')}

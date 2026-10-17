@@ -78,7 +78,7 @@ export default function ResumeBanner() {
           width: 40,
           height: 40,
           borderRadius: radius.tile,
-          backgroundColor: accent + '18',
+          backgroundColor: colors.azureSoft, // opaque tonal wash, not a translucent tint
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
@@ -121,7 +121,7 @@ export default function ResumeBanner() {
           flexDirection: 'row',
           alignItems: 'center',
           gap: 4,
-          backgroundColor: accent,
+          backgroundColor: colors.azureFill,
           paddingHorizontal: 12,
           paddingVertical: 8,
           borderRadius: radius.control,
@@ -129,7 +129,7 @@ export default function ResumeBanner() {
         }}
       >
         <Play color="#ffffff" size={12} fill="#ffffff" />
-        <Text style={[typeScale.caption, { color: '#ffffff' }]}>{t('Reprendre', 'Kontinye')}</Text>
+        <Text style={[typeScale.label, { color: '#ffffff' }]}>{t('Reprendre', 'Kontinye')}</Text>
       </TouchableOpacity>
 
       {/* Dismiss button */}

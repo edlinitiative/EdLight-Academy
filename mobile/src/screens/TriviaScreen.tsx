@@ -1,14 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import {
-  View, Text, ScrollView, TouchableOpacity, Dimensions, FlatList, Alert,
-} from 'react-native';
+import { View, Text, ScrollView, Dimensions, FlatList, Alert } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Circle, SvgUri } from 'react-native-svg';
+import { SvgUri } from 'react-native-svg';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, withSequence, withSpring, Easing } from 'react-native-reanimated';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { Zap, Flame, Check, X, RefreshCw, ChevronRight, Trophy, Share2, Crown, Snowflake, Swords } from 'lucide-react-native';
+import { Flame, Check, X, RefreshCw, ChevronRight, ChevronLeft, Share2, Crown, Snowflake, Swords, Star, Clock, Shuffle } from 'lucide-react-native';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
 import { getDailyChallengeQuestions } from '../utils/dailyChallenge';
 import { todayStr, awardStreakFreeze } from '../services/streakService';
@@ -18,23 +15,26 @@ import { getWeeklyTop } from '../services/leaderboardService';
 import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
 import { useStreak } from '../hooks/useStreak';
-import MathText from '../components/MathText';
 import PressableScale from '../components/ui/PressableScale';
-import { useColors, useTheme, typeScale, radius } from '../theme/theme';
+import { fonts } from '../theme/theme';
+import { arenaColors as C, arenaType } from '../theme/arenaTheme';
 import { success, warn, select, tapMedium, tapLight } from '../utils/haptics';
 import { useReduceMotion } from '../utils/motion';
 import { shuffleAligned } from '../utils/shuffleAligned';
+import { mathToText } from '../utils/mathText';
 import PopIn from '../components/ui/PopIn';
 import StageEnter from '../components/trivia/StageEnter';
 import ScoreCounter from '../components/trivia/ScoreCounter';
 import CorrectFlash from '../components/trivia/CorrectFlash';
 import SchoolRace from '../components/trivia/SchoolRace';
-import QuizResultHero, { HeroButton, glass } from '../components/quiz/QuizResultHero';
 import { notifyLeaderboardRank } from '../services/notificationService';
 import { logAnswerEvent } from '../services/answerEventsService';
 import JeuxHub from '../components/games/JeuxHub';
 import DailyChallengeBanner from '../components/games/DailyChallengeBanner';
+import NightResult, { RewardChip } from '../components/games/NightResult';
+import { NightIconButton, NightRow, NightSection, nightType } from '../components/games/night';
 import ShareCardCapture, { type ShareCardCaptureHandle } from '../components/share/ShareCardCapture';
+import ShareCard from '../components/share/ShareCard';
 import { createChallenge, shareChallenge } from '../services/challengeService';
 import VraiFauxGame from '../components/games/VraiFauxGame';
 import MemoireGame from '../components/games/MemoireGame';
@@ -43,6 +43,9 @@ import CalculGame from '../components/games/CalculGame';
 import { useDeadlineCountdown } from '../components/games/RoundTimer';
 import type { BackgroundPolicy } from '../utils/deadlineTimer';
 import SuitesGame from '../components/games/SuitesGame';
+import { ArenaButton } from '../components/arena/ArenaKit';
+import Avatar from '../components/arena/art/avatars/Avatar';
+import useNightStatusBar from '../components/arena/useNightStatusBar';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -139,113 +142,70 @@ function prepareDailyQuestions(count = 10): PreparedQuestion[] {
   return pool.map((q: any) => toPrepared(q));
 }
 
+/** A mixed round: `count` questions drawn at random across every theme. */
+function prepareMixedQuestions(count = 10): PreparedQuestion[] {
+  const banks = TRIVIA_QUESTIONS as Record<string, any[]>;
+  const all: any[] = [];
+  for (const id of Object.keys(banks)) for (const q of banks[id] ?? []) all.push(q);
+  // No bank idx: a mixed draw spans banks, so it cannot become a duel.
+  return shuffle(all).slice(0, count).map((q) => toPrepared(q));
+}
+
 const LETTER_LABELS = ['A', 'B', 'C', 'D'];
-const CIRC = 327; // 2 * π * 52
 
-// ─── TriviaHeader ─────────────────────────────────────────────────────────────
+/** Seconds per practice / duel question. */
+const QUESTION_SECONDS = 15;
 
-function TriviaHeader() {
-  const colors = useColors();
-  const { profile, level } = useTrivia();
-  const { streak } = useStreak();
-  const isCreole = useStore((s) => s.language) === 'ht';
-  const reduceMotion = useReduceMotion();
+const SIDE = 20;
 
-  // Gentle flame flicker so the streak feels alive (skipped for reduce-motion).
-  const flame = useSharedValue(1);
-  useEffect(() => {
-    if (reduceMotion || (streak?.currentStreak ?? 0) <= 0) {
-      flame.value = 1;
-      return;
-    }
-    flame.value = withRepeat(
-      withSequence(
-        withTiming(1.18, { duration: 620, easing: Easing.inOut(Easing.quad) }),
-        withTiming(1, { duration: 620, easing: Easing.inOut(Easing.quad) }),
-      ),
-      -1,
-      false,
-    );
-  }, [reduceMotion, streak?.currentStreak, flame]);
-  const flameStyle = useAnimatedStyle(() => ({ transform: [{ scale: flame.value }] }));
+// ─── Night header for the pre-game phases ──────────────────────────────────────
 
+function PhaseHeader({ title, subtitle, onBack, backLabel }: { title: string; subtitle?: string; onBack: () => void; backLabel: string }) {
   return (
-    <View className="flex-row items-center px-4 gap-3" style={{ paddingVertical: 10, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-      {/* XP section */}
-      <Zap color={colors.azure} size={16} />
-      <View className="flex-1 flex-row items-center gap-2">
-        <Text className="w-10" style={[typeScale.caption, { color: colors.azure }]}>
-          {profile?.xp ?? 0} XP
-        </Text>
-        {/* Level progress bar */}
-        <View className="flex-1 h-2 rounded-full overflow-hidden" style={{ backgroundColor: colors.border }}>
-          <View
-            className="h-2 rounded-full"
-            style={{ width: `${Math.min(100, level?.progressPct ?? 0)}%`, backgroundColor: colors.azure }}
-          />
-        </View>
-        <Text style={[typeScale.caption, { color: colors.faint }]}>
-          Niv.{level?.level ?? 1}
-        </Text>
+    <View style={{ paddingHorizontal: SIDE, paddingTop: 8, paddingBottom: 8, gap: 14 }}>
+      <NightIconButton onPress={onBack} label={backLabel} icon={<ChevronLeft color={C.ink} size={22} />} />
+      <View style={{ gap: 4 }}>
+        <Text accessibilityRole="header" style={[nightType.page, { color: C.ink }]}>{title}</Text>
+        {subtitle ? <Text style={[nightType.meta, { color: C.muted }]}>{subtitle}</Text> : null}
       </View>
-
-      {/* Streak section */}
-      <View className="flex-row items-center gap-1">
-        <Animated.View style={flameStyle}>
-          <Flame color={colors.danger} size={16} />
-        </Animated.View>
-        <Text style={[typeScale.titleSm, { color: colors.danger }]}>{streak?.currentStreak ?? 0}</Text>
-        <Text className="ml-0.5" style={[typeScale.caption, { color: colors.faint }]}>{isCreole ? 'jou' : 'jours'}</Text>
-      </View>
-
-      {/* Streak freezes — earned by finishing the weekly goal; one bridges a
-          single missed day. Hidden at zero so the header stays calm. */}
-      {(streak?.streakFreezes ?? 0) > 0 && (
-        <View
-          className="flex-row items-center gap-1"
-          accessible
-          accessibilityLabel={isCreole ? `${streak.streakFreezes} jèl seri` : `${streak.streakFreezes} gel de série`}
-        >
-          <Snowflake color={colors.azure} size={14} />
-          <Text style={[typeScale.titleSm, { color: colors.azure }]}>{streak.streakFreezes}</Text>
-        </View>
-      )}
     </View>
   );
 }
 
 // ─── CategoryPicker ───────────────────────────────────────────────────────────
 
-// Two-column illustrated card grid. Cards share ONE calm neutral treatment
-// (clean white surface, soft slate shadow, hairline border); only the SVG
-// illustration carries colour — no per-category background tints.
-const GRID_PAD = 12; // grid outer horizontal padding
-const COL_GAP = 10;  // gutter between the three columns
-// Cap the grid width so 3-column tiles don't balloon on iPad (portrait-locked +
-// requireFullScreen → window width is stable per session). Phones fall under the
-// cap and are unchanged; the grid rows are centered on wide screens below.
+// Two columns of opaque night tiles, the illustration (the tab's best imagery)
+// at the left and the theme's name beside it — the web's "choisis un thème".
 const GRID_W = Math.min(Dimensions.get('window').width, 720);
-const TILE_SIZE = Math.floor(
-  (GRID_W - GRID_PAD * 2 - COL_GAP * 2) / 3,
-);
+const COL_GAP = 12;
+const TILE_W = Math.floor((GRID_W - SIDE * 2 - COL_GAP) / 2);
+const ART = 52;
 const ASSET_BASE_URL = 'https://edlight-academy.web.app';
 
 /**
  * Category tile art. The illustration is a REMOTE SVG, so offline (or when
- * hosting hiccups) it renders nothing — fall back to the category's emoji so
- * a tile is never blank.
+ * hosting hiccups) it renders nothing — fall back to the theme's initial on a
+ * tonal disc so a tile is never blank (no emoji).
  */
-function CategoryArt({ image, icon, size }: { image?: string; icon?: string; size: number }) {
+function CategoryArt({ image, name, size }: { image?: string; name: string; size: number }) {
   const [failed, setFailed] = useState(false);
-  if (!image || failed) return <Text style={{ fontSize: 38 }}>{icon ?? '🎯'}</Text>;
+  if (!image || failed) {
+    return (
+      <View style={{ width: size, height: size, borderRadius: 14, backgroundColor: C.surfaceRaised, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ fontFamily: fonts.heading, fontSize: 24, color: C.inkSoft }}>{(name || '?').charAt(0).toUpperCase()}</Text>
+      </View>
+    );
+  }
   return (
-    <SvgUri
-      uri={`${ASSET_BASE_URL}${image}`}
-      width={size}
-      height={size}
-      preserveAspectRatio="xMidYMid slice"
-      onError={() => setFailed(true)}
-    />
+    <View style={{ width: size, height: size, borderRadius: 14, overflow: 'hidden', backgroundColor: C.surfaceRaised }}>
+      <SvgUri
+        uri={`${ASSET_BASE_URL}${image}`}
+        width={size}
+        height={size}
+        preserveAspectRatio="xMidYMid slice"
+        onError={() => setFailed(true)}
+      />
+    </View>
   );
 }
 
@@ -276,100 +236,74 @@ function orderCategoriesForTrack(cats: any[], track: string | null | undefined) 
 }
 
 function CategoryPicker({
-  onSelect,
-  isCreole,
+  onSelect, onMixed, onBack, header, isCreole,
 }: {
   onSelect: (id: string) => void;
+  onMixed: () => void;
+  onBack: () => void;
+  /** Rendered above the grid (the Défi du jour card). */
+  header?: React.ReactNode;
   isCreole: boolean;
 }) {
-  const colors = useColors();
-  const { shadow } = useTheme();
   const track = useStore((s) => s.track);
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const { list: orderedCategories, recommendedId } = useMemo(
     () => orderCategoriesForTrack(TRIVIA_CATEGORIES as any[], track),
     [track],
   );
   return (
     <FlatList
-      style={{ backgroundColor: colors.bg }}
-      contentContainerStyle={{ paddingTop: 12, paddingBottom: 100 }}
+      style={{ backgroundColor: C.bg }}
+      contentContainerStyle={{ paddingBottom: 120 }}
       showsVerticalScrollIndicator={false}
       data={orderedCategories}
       keyExtractor={(cat: any) => cat.id}
-      numColumns={3}
-      // gap → column gutters + side padding; the extra marginBottom + the tile's
-      // own marginBottom reproduce the original wrapped grid's row spacing.
-      columnWrapperStyle={{ gap: COL_GAP, paddingHorizontal: GRID_PAD, marginBottom: COL_GAP, justifyContent: 'center' }}
+      numColumns={2}
+      columnWrapperStyle={{ gap: COL_GAP, paddingHorizontal: SIDE, marginBottom: COL_GAP }}
       ListHeaderComponent={
-        <View className="px-4 pt-4 pb-3">
-          <Text style={[typeScale.display, { color: colors.ink }]}>
-            {isCreole ? 'Jwèt Trivia' : 'Jeu Trivia'}
-          </Text>
-          <Text style={[typeScale.body, { color: colors.muted, marginTop: 4 }]}>
-            {isCreole ? 'Chwazi yon kategori' : 'Choisis une catégorie'}
-          </Text>
+        <View>
+          <PhaseHeader
+            title="Trivia"
+            subtitle={t('Choisis un thème, ou mélange-les', 'Chwazi yon tèm, oswa melanje yo')}
+            onBack={onBack}
+            backLabel={t('Retour aux jeux', 'Tounen nan jwèt yo')}
+          />
+          <View style={{ paddingHorizontal: SIDE, paddingTop: 8, gap: 12 }}>
+            {header}
+            <ArenaButton
+              variant="secondary"
+              label={t('Jouer un mélange de thèmes', 'Jwe yon melanj tèm')}
+              accessibilityHint={t('10 questions tirées de tous les thèmes', '10 kesyon nan tout tèm yo')}
+              icon={<Shuffle color={C.ink} size={18} />}
+              onPress={onMixed}
+              style={{ minHeight: 52 }}
+            />
+          </View>
+          <NightSection title={t('Les thèmes', 'Tèm yo')} meta={t(`${orderedCategories.length} thèmes`, `${orderedCategories.length} tèm`)} style={{ marginHorizontal: SIDE }} />
         </View>
       }
-      renderItem={({ item: cat }: { item: any }) => (
-        <PressableScale
-          onPress={() => onSelect(cat.id)}
-          pressedScale={0.94}
-          accessibilityRole="button"
-          accessibilityLabel={isCreole ? (cat.nameHt ?? cat.name) : cat.name}
-          style={{ width: TILE_SIZE, alignItems: 'center', marginBottom: 6 }}
-        >
-          {/* Shadow on the outer view; clipped illustration on the inner. */}
-          <View
+      renderItem={({ item: cat }: { item: any }) => {
+        const name = isCreole ? (cat.nameHt ?? cat.name) : cat.name;
+        const recommended = cat.id === recommendedId;
+        return (
+          <PressableScale
+            onPress={() => onSelect(cat.id)}
+            pressedScale={0.96}
+            accessibilityRole="button"
+            accessibilityLabel={`${name}${recommended ? t(', recommandé pour ta filière', ', rekòmande pou filyè w') : ''}`}
             style={{
-              borderRadius: radius.hero,
-              ...shadow.md,
+              width: TILE_W, minHeight: 80, flexDirection: 'row', alignItems: 'center', gap: 10,
+              padding: 12, borderRadius: 16, backgroundColor: C.surface,
             }}
           >
-            {cat.id === recommendedId && (
-              <View
-                style={{
-                  position: 'absolute',
-                  top: 5,
-                  right: 5,
-                  zIndex: 2,
-                  backgroundColor: colors.azure,
-                  borderRadius: 999,
-                  paddingHorizontal: 6,
-                  paddingVertical: 2,
-                }}
-                pointerEvents="none"
-              >
-                <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700' }}>
-                  {isCreole ? 'rekòmande' : 'recommandé'}
-                </Text>
-              </View>
-            )}
-            <View
-              style={{
-                width: TILE_SIZE,
-                height: TILE_SIZE,
-                borderRadius: radius.hero,
-                overflow: 'hidden',
-                backgroundColor: colors.surfaceAlt,
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-            >
-              <CategoryArt image={cat.image} icon={cat.icon} size={TILE_SIZE} />
+            <CategoryArt image={cat.image} name={name} size={ART} />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text numberOfLines={3} style={[arenaType.name, { fontSize: 15, lineHeight: 19, color: C.ink }]}>{name}</Text>
+              {recommended ? <Text style={[arenaType.status, { color: C.coral }]}>{t('Pour toi', 'Pou ou')}</Text> : null}
             </View>
-          </View>
-
-          {/* Name (reserve 2 lines so tiles align) */}
-          <Text
-            numberOfLines={2}
-            style={[typeScale.caption, { color: colors.ink, textAlign: 'center', marginTop: 8, minHeight: 30 }]}
-          >
-            {isCreole ? (cat.nameHt ?? cat.name) : cat.name}
-          </Text>
-        </PressableScale>
-      )}
+          </PressableScale>
+        );
+      }}
     />
   );
 }
@@ -377,181 +311,63 @@ function CategoryPicker({
 // ─── RoundPicker ──────────────────────────────────────────────────────────────
 
 const ROUND_OPTIONS = [
-  { count: 10,  label: '10 questions', labelHt: '10 kesyon', time: '~2 min',  timeHt: '~2 min',  desc: 'Rapide',   descHt: 'Rapid' },
-  { count: 25,  label: '25 questions', labelHt: '25 kesyon', time: '~5 min',  timeHt: '~5 min',  desc: 'Standard', descHt: 'Estanda' },
-  { count: 50,  label: '50 questions', labelHt: '50 kesyon', time: '~10 min', timeHt: '~10 min', desc: 'Long',     descHt: 'Long' },
-  { count: 0,   label: 'Tout',         labelHt: 'Tout',      time: 'Complet', timeHt: 'Konplè',  desc: 'Toutes les questions', descHt: 'Tout kesyon yo' },
+  { count: 10, label: '10 questions', labelHt: '10 kesyon', time: '~2 min', timeHt: '~2 min', desc: 'Rapide', descHt: 'Rapid' },
+  { count: 25, label: '25 questions', labelHt: '25 kesyon', time: '~5 min', timeHt: '~5 min', desc: 'Standard', descHt: 'Estanda' },
+  { count: 50, label: '50 questions', labelHt: '50 kesyon', time: '~10 min', timeHt: '~10 min', desc: 'Long', descHt: 'Long' },
+  { count: 0, label: 'Tout', labelHt: 'Tout', time: 'Complet', timeHt: 'Konplè', desc: 'Toutes les questions', descHt: 'Tout kesyon yo' },
 ];
 
 function RoundPicker({
-  category,
-  onPick,
-  onBack,
-  isCreole,
+  category, onPick, onBack, isCreole,
 }: {
   category: any;
   onPick: (count: number) => void;
   onBack: () => void;
   isCreole: boolean;
 }) {
-  const colors = useColors();
-  const { shadow } = useTheme();
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const totalQuestions = (TRIVIA_QUESTIONS as Record<string, any[]>)[category.id]?.length ?? 0;
+  const name = isCreole ? (category.nameHt ?? category.name) : category.name;
 
   return (
-    <View className="flex-1" style={{ backgroundColor: colors.bg }}>
-      {/* Mini header */}
-      <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-        <TouchableOpacity onPress={onBack} className="p-1 mr-3" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel={isCreole ? 'Tounen' : 'Retour'}>
-          <X color={colors.muted} size={22} />
-        </TouchableOpacity>
-        <View
-          className="w-8 h-8 rounded-lg items-center justify-center mr-2"
-          style={{ backgroundColor: colors.azureSoft }}
-        >
-          <Text style={{ fontSize: 16 }}>{category.icon}</Text>
-        </View>
-        <Text className="flex-1" numberOfLines={1} style={[typeScale.title, { color: colors.ink }]}>
-          {isCreole ? (category.nameHt ?? category.name) : category.name}
-        </Text>
-      </View>
-
-      <View className="px-4 pt-6 pb-3">
-        <Text style={[typeScale.h1, { color: colors.ink }]}>
-          {isCreole ? 'Konbyen kesyon ?' : 'Combien de questions ?'}
-        </Text>
-        <Text className="mt-1" style={[typeScale.body, { color: colors.muted }]}>
-          {totalQuestions} {isCreole ? 'kesyon disponib' : 'questions disponibles'}
-        </Text>
-      </View>
-
-      <View className="px-4 gap-3">
+    <ScrollView style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
+      <PhaseHeader
+        title={name}
+        subtitle={t(`Combien de questions ? ${totalQuestions} disponibles · 15 s chacune`, `Konbyen kesyon ? ${totalQuestions} disponib · 15 s chak`)}
+        onBack={onBack}
+        backLabel={t('Retour aux thèmes', 'Tounen nan tèm yo')}
+      />
+      <View style={{ paddingHorizontal: SIDE, paddingTop: 12, gap: 10 }}>
         {ROUND_OPTIONS.filter((opt) => opt.count === 0 || opt.count <= totalQuestions).map((opt) => {
           const actualCount = opt.count === 0 ? totalQuestions : Math.min(opt.count, totalQuestions);
-          const disabled = actualCount === 0;
+          if (actualCount === 0) return null;
           return (
-            <TouchableOpacity
+            <NightRow
               key={opt.count}
-              onPress={() => !disabled && onPick(opt.count)}
-              disabled={disabled}
-              activeOpacity={0.82}
-              className="rounded-2xl px-5 py-4 flex-row items-center"
-              style={{
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.border,
-                ...shadow.sm,
-                opacity: disabled ? 0.4 : 1,
-              }}
-            >
-              <View className="flex-1">
-                <Text style={[typeScale.h2, { color: colors.ink }]}>
-                  {opt.count === 0 ? `${isCreole ? 'Tout' : 'Tout'} (${totalQuestions})` : (isCreole ? opt.labelHt : opt.label)}
-                </Text>
-                <Text className="mt-0.5" style={[typeScale.body, { color: colors.muted }]}>{isCreole ? opt.descHt : opt.desc}</Text>
-              </View>
-              <View className="items-end">
-                <Text style={[typeScale.label, { color: colors.azure }]}>{isCreole ? opt.timeHt : opt.time}</Text>
-                <ChevronRight color={colors.faint} size={16} />
-              </View>
-            </TouchableOpacity>
+              title={opt.count === 0 ? `${t('Tout', 'Tout')} (${totalQuestions})` : (isCreole ? opt.labelHt : opt.label)}
+              meta={`${isCreole ? opt.descHt : opt.desc} · ${isCreole ? opt.timeHt : opt.time}`}
+              onPress={() => onPick(opt.count)}
+            />
           );
         })}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
-// ─── TriviaQuiz ───────────────────────────────────────────────────────────────
+// ─── QuizPlayer ───────────────────────────────────────────────────────────────
 
-/**
- * The countdown ring, beating once a second when time is short.
- *
- * The arc already shrinks and reddens, but both are slow signals — a player
- * reading the question does not glance up in time to notice either. A pulse is
- * peripheral: it registers without being looked at, which is the whole job of a
- * timer. It starts at five seconds, because before that the pressure is not
- * real yet and a permanently beating ring is just noise.
- */
-/** Theme tokens, not raw hex, so the ring reads in dark mode too. */
-function timerTone(timeLeft: number, colors: ReturnType<typeof useColors>): string {
-  return timeLeft > 8 ? colors.success : timeLeft > 5 ? colors.warn : colors.danger;
-}
-
-function TimerRing({ timeLeft }: { timeLeft: number }) {
-  const colors = useColors();
-  const reduceMotion = useReduceMotion();
-  const progress = timeLeft / QUESTION_SECONDS;
-  const fill = progress * CIRC;
-
-  const color = timerTone(timeLeft, colors);
-
-  const beat = useSharedValue(1);
-  useEffect(() => {
-    if (reduceMotion || timeLeft > 5 || timeLeft <= 0) {
-      beat.value = withTiming(1, { duration: 120 });
-      return;
-    }
-    beat.value = withSequence(
-      withTiming(1.12, { duration: 140, easing: Easing.out(Easing.quad) }),
-      withSpring(1, { damping: 9, stiffness: 300, mass: 0.6 }),
-    );
-  }, [timeLeft, reduceMotion, beat]);
-
-  const pulse = useAnimatedStyle(() => ({ transform: [{ scale: beat.value }] }));
-
-  return (
-    <Animated.View style={pulse}>
-    <Svg width={44} height={44} viewBox="0 0 120 120">
-      {/* Track */}
-      <Circle
-        cx={60}
-        cy={60}
-        r={52}
-        fill="none"
-        stroke={colors.border}
-        strokeWidth={10}
-      />
-      {/* Countdown arc — starts at top (rotation -90) */}
-      <Circle
-        cx={60}
-        cy={60}
-        r={52}
-        fill="none"
-        stroke={color}
-        strokeWidth={10}
-        strokeDasharray={`${fill} ${CIRC}`}
-        strokeLinecap="round"
-        rotation="-90"
-        origin="60, 60"
-      />
-    </Svg>
-    </Animated.View>
-  );
-}
-
-// A single answer option. Owns its tonal state (selected = amber, confirmed =
-// green/red) AND its confirmation animation: the correct option pops (~1→1.06→1
-// via a spring settle) and a wrong pick shakes (translateX ±6 over ~350ms). The
-// motion fires once when `confirmed` turns true and is skipped for reduce-motion
-// (colours still apply).
+/** One answer row: 72h, a letter square, the answer text — and nothing else
+ *  (no formula or symbol hints beside an answer: they give it away). */
 function AnswerOption({
-  opt,
-  label,
-  isSelected,
-  isCorrectOpt,
-  confirmed,
-  onPress,
-  colors,
-  reduceMotion,
+  opt, label, isCorrectOpt, isPicked, confirmed, onPress, reduceMotion,
 }: {
   opt: string;
   label: string;
-  isSelected: boolean;
   isCorrectOpt: boolean;
+  isPicked: boolean;
   confirmed: boolean;
   onPress: () => void;
-  colors: ReturnType<typeof useColors>;
   reduceMotion: boolean;
 }) {
   const scale = useSharedValue(1);
@@ -560,101 +376,61 @@ function AnswerOption({
   useEffect(() => {
     if (!confirmed || reduceMotion) return;
     if (isCorrectOpt) {
-      // Quick celebratory pop, then a soft spring settle back to rest.
       scale.value = withSequence(
-        withTiming(1.06, { duration: 130, easing: Easing.out(Easing.quad) }),
-        withSpring(1, { damping: 7, stiffness: 220, mass: 0.6 }),
+        withTiming(1.04, { duration: 130, easing: Easing.out(Easing.quad) }),
+        withSpring(1, { damping: 8, stiffness: 220, mass: 0.6 }),
       );
-    } else if (isSelected) {
-      // Short horizontal shake for a wrong pick (~350ms total).
+    } else if (isPicked) {
       shake.value = withSequence(
         withTiming(-6, { duration: 50, easing: Easing.linear }),
         withRepeat(withTiming(6, { duration: 70, easing: Easing.linear }), 4, true),
         withTiming(0, { duration: 50, easing: Easing.linear }),
       );
     }
-  }, [confirmed, isCorrectOpt, isSelected, reduceMotion, scale, shake]);
+  }, [confirmed, isCorrectOpt, isPicked, reduceMotion, scale, shake]);
 
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }, { translateX: shake.value }],
-  }));
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }, { translateX: shake.value }] }));
 
-  // Tighter tonal states: selected = amber, confirmed = green/red,
-  // each with a filled letter chip so state reads at a glance.
-  let borderColor = colors.border;
-  let bgColor = colors.surface;
-  let labelBg = colors.surfaceAlt;
-  let labelText = colors.muted;
-  const textColor = colors.ink;
-
-  if (confirmed) {
-    if (isCorrectOpt) {
-      borderColor = colors.success;
-      bgColor = colors.successSoft;
-      labelBg = colors.success;
-      labelText = '#ffffff';
-    } else if (isSelected) {
-      borderColor = colors.danger;
-      bgColor = colors.dangerSoft;
-      labelBg = colors.danger;
-      labelText = '#ffffff';
-    }
-  } else if (isSelected) {
-    borderColor = colors.warn;
-    bgColor = colors.warnSoft;
-    labelBg = colors.warn;
-    labelText = '#ffffff';
-  }
+  // State is a tonal wash, never an edge: right = success wash, your wrong
+  // pick = danger wash, the rest step back.
+  const right = confirmed && isCorrectOpt;
+  const wrong = confirmed && isPicked && !isCorrectOpt;
+  const bg = right ? C.successSoft : wrong ? C.dangerSoft : C.surface;
+  const squareBg = right ? C.success : wrong ? C.danger : C.surfaceRaised;
+  const squareInk = right || wrong ? C.marine : C.ink;
+  const quiet = confirmed && !right && !wrong;
 
   return (
     <Animated.View style={animStyle}>
-      <TouchableOpacity
+      <PressableScale
         onPress={onPress}
         disabled={confirmed}
-        activeOpacity={0.8}
-        className="flex-row items-center overflow-hidden"
+        pressedScale={0.98}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: confirmed, selected: isPicked }}
+        accessibilityLabel={`${label}. ${opt}${right ? (', bonne réponse') : wrong ? ', ta réponse, incorrecte' : ''}`}
         style={{
-          borderWidth: 1.5,
-          borderColor,
-          backgroundColor: bgColor,
-          borderRadius: 15,
+          flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 72,
+          paddingHorizontal: 14, paddingVertical: 12, borderRadius: 18, backgroundColor: bg,
+          opacity: quiet ? 0.6 : 1,
         }}
       >
-        {/* Letter chip */}
-        <View
-          className="items-center justify-center m-2"
-          style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: labelBg }}
-        >
-          <Text style={{ fontSize: 14, fontWeight: '800', color: labelText }}>
-            {label}
-          </Text>
+        <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: squareBg, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ fontFamily: fonts.heading, fontSize: 17, color: squareInk }}>{label}</Text>
         </View>
-
-        <Text
-          className="flex-1 text-sm font-medium pr-3"
-          style={{ color: textColor, lineHeight: 20, paddingVertical: 10 }}
-        >
-          {opt}
-        </Text>
-
-        {/* Check/X icon when confirmed */}
-        {confirmed && isCorrectOpt && (
-          <View className="pr-3">
-            <Check color={colors.success} size={18} />
-          </View>
-        )}
-        {confirmed && isSelected && !isCorrectOpt && (
-          <View className="pr-3">
-            <X color={colors.danger} size={18} />
-          </View>
-        )}
-      </TouchableOpacity>
+        <Text style={{ flex: 1, fontFamily: fonts.medium, fontSize: 18, lineHeight: 24, color: C.ink }}>{opt}</Text>
+        {right ? <Check color={C.success} size={22} /> : wrong ? <X color={C.danger} size={22} /> : null}
+      </PressableScale>
     </Animated.View>
   );
 }
 
-/** Seconds per practice / duel question. */
-const QUESTION_SECONDS = 15;
+export interface QuizOpponent {
+  seed: string;
+  name: string;
+  /** Their final score for this draw (duel), shown as the bar to beat. */
+  score: number;
+}
 
 export function QuizPlayer({
   questions,
@@ -662,6 +438,9 @@ export function QuizPlayer({
   isCreole,
   onFinish,
   timerPolicy = 'pause',
+  onQuit,
+  title,
+  opponent = null,
 }: {
   questions: PreparedQuestion[];
   category: any;
@@ -673,22 +452,24 @@ export function QuizPlayer({
    * 'run' for a scored duel, where the other player's clock did not stop.
    */
   timerPolicy?: BackgroundPolicy;
+  /** The 44 close control; the host confirms before discarding progress. */
+  onQuit?: () => void;
+  /** Centred header title ("Trivia · Sciences"). */
+  title?: string;
+  /** A duel's challenger: the score strip reads "Toi vs <name>". */
+  opponent?: QuizOpponent | null;
 }) {
-  const colors = useColors();
-  const { shadow } = useTheme();
   const insets = useSafeAreaInsets();
   const reduceMotion = useReduceMotion();
+  const me = useStore((s) => s.user);
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const [idx, setIdx] = useState(0);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [picked, setPicked] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [score, setScore] = useState(0);
   // Consecutive correct answers in THIS round — drives how much light a right
   // answer throws. Reset on a miss, so the build is something to protect.
   const [run, setRun] = useState(0);
-  // The current selection, readable from the timeout path without the
-  // set-state-updater side-effect trick; and the round's missed questions,
-  // handed to the results screen for the "Revois tes erreurs" recap.
-  const selectedRef = useRef<string | null>(null);
   const mistakesRef = useRef<RoundMistake[]>([]);
 
   const q = questions[idx];
@@ -703,59 +484,28 @@ export function QuizPlayer({
     [isCreole],
   );
   const displayOptions = isCreole && q?.optionsHt ? q.optionsHt : q?.options ?? [];
-  const isCorrect = confirmed && selected === correctFor(q);
+  const isCorrect = confirmed && picked === correctFor(q);
 
-  // --- Timer ---
-  // Deadline-based: the seconds shown are re-derived from Date.now() on every
-  // tick, so a suspended interval can never make the clock drift. The policy
-  // (pause vs keep running in the background) is explicit — see
-  // utils/deadlineTimer.ts. Frozen once the answer is confirmed.
-  const { timeLeft } = useDeadlineCountdown(QUESTION_SECONDS, {
+  // Deadline-based: re-derived from Date.now() on every tick, so a suspended
+  // interval can never make the clock drift. Frozen once answered.
+  const { timeLeft, remainingMs } = useDeadlineCountdown(QUESTION_SECONDS, {
     policy: timerPolicy,
     paused: confirmed,
     resetKey: idx,
+    tickMs: 100,
   });
 
-  // Reset the question's local state whenever the question changes.
   useEffect(() => {
-    setSelected(null);
-    selectedRef.current = null;
+    setPicked(null);
     setConfirmed(false);
   }, [idx]);
 
-  // Watch for timer reaching 0 and auto-confirm
-  useEffect(() => {
-    if (timeLeft === 0 && !confirmed) {
-      setConfirmed(true);
-      const currentSelected = selectedRef.current;
-      const wasCorrect = currentSelected !== null && currentSelected === correctFor(questions[idx]);
-      if (wasCorrect) {
-        success();
-        setScore((s) => s + 1);
-        setRun((r) => r + 1);
-      } else {
-        warn();
-        setRun(0);
-        if (questions[idx]) mistakesRef.current.push({ q: questions[idx], chosen: currentSelected });
-      }
-      // Crowd-difficulty logging (canonical FR stem so IDs match across langs).
-      if (questions[idx]?.q) logAnswerEvent(questions[idx].q, wasCorrect);
-    }
-  }, [timeLeft, confirmed, idx, questions, correctFor]);
-
-  const handleSelect = (opt: string) => {
-    if (!confirmed) {
-      select();
-      selectedRef.current = opt;
-      setSelected(opt);
-    }
-  };
-
-  const handleConfirm = () => {
-    if (confirmed) return;
-    tapMedium();
+  // A tap IS the answer (one tap, no confirm step) — committed at once.
+  const commit = useCallback((choice: string | null) => {
+    if (confirmed || !q) return;
+    setPicked(choice);
     setConfirmed(true);
-    const correct = selected === correctFor(q);
+    const correct = choice !== null && choice === correctFor(q);
     if (correct) {
       success();
       setScore((s) => s + 1);
@@ -763,215 +513,161 @@ export function QuizPlayer({
     } else {
       warn();
       setRun(0);
-      mistakesRef.current.push({ q, chosen: selected });
+      mistakesRef.current.push({ q, chosen: choice });
     }
-    if (q?.q) logAnswerEvent(q.q, correct);
-  };
+    // Crowd-difficulty logging (canonical FR stem so IDs match across langs).
+    if (q.q) logAnswerEvent(q.q, correct);
+  }, [confirmed, q, correctFor]);
+
+  // Time ran out with nothing chosen → a miss.
+  useEffect(() => {
+    if (timeLeft === 0 && !confirmed) commit(null);
+  }, [timeLeft, confirmed, commit]);
 
   const handleNext = () => {
-    // Moving on is routine — a light tick, not the weight of a commitment.
     tapLight();
-    if (idx + 1 >= questions.length) {
-      onFinish(score, questions.length, mistakesRef.current);
-    } else {
-      setIdx((i) => i + 1);
-    }
+    if (idx + 1 >= questions.length) onFinish(score, questions.length, mistakesRef.current);
+    else setIdx((i) => i + 1);
   };
 
   if (!q) return null;
 
-  const questionText = isCreole ? q.qHt : q.q;
-
-  const pct = ((idx + 1) / questions.length) * 100;
+  const questionText = mathToText(isCreole ? q.qHt : q.q);
+  const urgent = !confirmed && timeLeft <= 5;
+  const timeFrac = Math.max(0, Math.min(1, remainingMs / (QUESTION_SECONDS * 1000)));
+  const categoryName = category ? (isCreole ? (category.nameHt ?? category.name) : category.name) : '';
+  const explanation = isCreole ? (q.explanationHt ?? q.explanation) : q.explanation;
 
   return (
-    <View className="flex-1" style={{ backgroundColor: colors.bg }}>
-      {/* Compact top: slim gradient progress bar + "Question X / N" + timer ring */}
-      <View className="px-4 pt-3 pb-3" style={{ backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-        <View className="flex-row items-center" style={{ gap: 12 }}>
-          <View className="flex-1">
-            <View className="flex-row items-center justify-between" style={{ marginBottom: 7 }}>
-              <Text style={[typeScale.label, { color: colors.ink }]}>
-                {isCreole ? 'Kesyon' : 'Question'} {idx + 1} / {questions.length}
-              </Text>
-              {/* Live score badge */}
-              <View className="flex-row items-center rounded-full px-2.5 py-1" style={{ gap: 4, backgroundColor: colors.azureSoft }}>
-                <Trophy color={colors.azure} size={13} />
-                <ScoreCounter value={score} style={{ ...typeScale.label, color: colors.azure }} />
-              </View>
-            </View>
-            {/* Slim brand-gradient progress bar */}
-            <View className="rounded-full overflow-hidden" style={{ height: 6, backgroundColor: colors.border }}>
-              <LinearGradient
-                colors={[colors.azure, colors.azureDeep]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={{ height: 6, width: `${pct}%`, borderRadius: 999 }}
-              />
-            </View>
-          </View>
-
-          {/* SVG ring timer with number overlay */}
-          <View className="items-center justify-center" style={{ width: 44, height: 44 }}>
-            <TimerRing timeLeft={timeLeft} />
-            <View className="absolute items-center justify-center">
-              <Text
-                style={{
-                  fontSize: 13,
-                  fontWeight: '800',
-                  color: timerTone(timeLeft, colors),
-                }}
-              >
-                {timeLeft}
-              </Text>
-            </View>
-          </View>
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      {/* Header: close · title / progress · timer pill */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: SIDE, paddingTop: 8 }}>
+        {onQuit ? <NightIconButton onPress={onQuit} label={t('Quitter la partie', 'Kite pati a')} /> : <View style={{ width: 44 }} />}
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text numberOfLines={1} style={[arenaType.name, { fontSize: 17, color: C.ink }]}>{title ?? `Trivia · ${categoryName}`}</Text>
+          <Text style={[arenaType.status, { color: C.muted }]}>{t('Question', 'Kesyon')} {idx + 1} / {questions.length}</Text>
+        </View>
+        <View
+          accessible
+          accessibilityRole="timer"
+          accessibilityLabel={t(`${timeLeft} secondes`, `${timeLeft} segonn`)}
+          accessibilityLiveRegion={urgent ? 'polite' : 'none'}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 6, height: 44, paddingHorizontal: 14, borderRadius: 22, backgroundColor: C.surface }}
+        >
+          <Clock color={urgent ? C.danger : C.coral} size={18} />
+          <Text style={[arenaType.num, { fontSize: 17, color: urgent ? C.danger : C.ink, minWidth: 30 }]}>{timeLeft} s</Text>
         </View>
       </View>
+      {/* The countdown bar: the clock's proportion, coral on a night track. */}
+      <View style={{ height: 6, borderRadius: 3, backgroundColor: C.surface, marginHorizontal: SIDE, marginTop: 14, overflow: 'hidden' }}>
+        <View style={{ height: 6, borderRadius: 3, width: `${timeFrac * 100}%`, backgroundColor: urgent ? C.danger : C.coral }} />
+      </View>
 
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Flag (for flags category) */}
-        {q.flag != null && (
-          <View className="items-center mb-4">
-            <Text style={{ fontSize: 64 }}>{q.flag}</Text>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: SIDE, paddingTop: 16, paddingBottom: 24, gap: 14 }} showsVerticalScrollIndicator={false}>
+        {/* Score strip: you (and, in a duel, the score you are chasing). */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12, borderRadius: 20, backgroundColor: C.surface }}>
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <Avatar seed={me?.uid || 'toi'} size={48} mood={confirmed ? (isCorrect ? 'celebrating' : 'recovering') : 'focused'} />
+            <View>
+              <Text style={[arenaType.status, { color: C.muted }]}>{t('Toi', 'Ou')}</Text>
+              <ScoreCounter value={score} style={{ ...arenaType.num, fontSize: 20, lineHeight: 24, color: C.ink }} />
+            </View>
           </View>
-        )}
-
-        {/* Question card — lifted, subtle top→bottom surface gradient */}
-        <StageEnter playKey={idx} index={0} springy style={{ marginBottom: 16 }}>
-        <View
-          style={{
-            borderRadius: radius.card,
-            overflow: 'hidden',
-            borderWidth: 1,
-            borderColor: colors.border,
-            ...shadow.md,
-          }}
-        >
-          <LinearGradient
-            colors={[colors.surface, colors.surfaceAlt]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={{ padding: 18 }}
-          >
-            <MathText text={questionText} />
-          </LinearGradient>
+          {opponent ? (
+            <>
+              <View style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: C.secondary }}>
+                <Text style={[arenaType.status, { fontFamily: fonts.bold, color: C.inkSoft }]}>VS</Text>
+              </View>
+              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 12 }}>
+                <View style={{ alignItems: 'flex-end', flexShrink: 1 }}>
+                  <Text numberOfLines={1} style={[arenaType.status, { color: C.muted }]}>{opponent.name}</Text>
+                  <Text style={[arenaType.num, { fontSize: 20, lineHeight: 24, color: C.ink }]}>{opponent.score}</Text>
+                </View>
+                <Avatar seed={opponent.seed} size={48} />
+              </View>
+            </>
+          ) : (
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={[arenaType.status, { color: C.muted }]}>{t('Série', 'Seri')}</Text>
+              <Text style={[arenaType.num, { fontSize: 20, lineHeight: 24, color: run > 1 ? C.coral : C.ink }]}>{run}</Text>
+            </View>
+          )}
         </View>
+
+        {/* The flag IS the question in the flags theme — it stays. */}
+        {q.flag != null ? (
+          <View style={{ alignItems: 'center' }}>
+            <Text style={{ fontSize: 64 }} accessibilityLabel={t('Drapeau', 'Drapo')}>{q.flag}</Text>
+          </View>
+        ) : null}
+
+        {/* Question card */}
+        <StageEnter playKey={idx} index={0} springy>
+          <View style={{ padding: 22, gap: 10, borderRadius: 24, backgroundColor: C.surfaceRaised }}>
+            {categoryName ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.coral }} />
+                <Text numberOfLines={1} style={[arenaType.status, { color: C.muted }]}>{categoryName}</Text>
+              </View>
+            ) : null}
+            <Text accessibilityRole="header" style={{ fontFamily: fonts.heading, fontSize: 22, lineHeight: 30, letterSpacing: -0.3, color: C.ink }}>
+              {questionText}
+            </Text>
+          </View>
         </StageEnter>
 
-        {/* Answer options — Kreyòl strings when the bank carries them.
-            The wash of light behind them fires only on a right answer, and
-            sits under the options so it never intercepts a tap. */}
+        {/* Answers. The wash of light behind them fires only on a right
+            answer, and sits under the options so it never intercepts a tap. */}
         <View style={{ gap: 10 }}>
           {confirmed && isCorrect ? <CorrectFlash playKey={idx} streak={run} /> : null}
           {displayOptions.map((opt, i) => (
             <StageEnter key={i} playKey={idx} index={i + 1}>
-            <AnswerOption
-              opt={opt}
-              label={LETTER_LABELS[i] ?? String(i + 1)}
-              isSelected={opt === selected}
-              isCorrectOpt={opt === correctFor(q)}
-              confirmed={confirmed}
-              onPress={() => handleSelect(opt)}
-              colors={colors}
-              reduceMotion={reduceMotion}
-            />
+              <AnswerOption
+                opt={opt}
+                label={LETTER_LABELS[i] ?? String(i + 1)}
+                isPicked={opt === picked}
+                isCorrectOpt={opt === correctFor(q)}
+                confirmed={confirmed}
+                onPress={() => { select(); commit(opt); }}
+                reduceMotion={reduceMotion}
+              />
             </StageEnter>
           ))}
         </View>
 
-        {/* Feedback — just the verdict word, no box, border or fill */}
-        {confirmed && (
-          <PopIn style={{ marginTop: 16, paddingHorizontal: 4 }} from={0.85}>
-            <View className="flex-row items-center gap-2 mb-1">
-              {isCorrect ? (
-                <Check color={colors.success} size={18} />
-              ) : (
-                <X color={colors.danger} size={18} />
-              )}
-              <Text
-                style={[typeScale.title, { color: isCorrect ? colors.success : colors.danger }]}
-              >
-                {isCorrect ? (isCreole ? 'Kòrèk !' : 'Correct !') : (isCreole ? 'Pa kòrèk' : 'Incorrect')}
-              </Text>
-            </View>
-
-            {!isCorrect && (
-              <Text className="mt-1" style={[typeScale.body, { color: colors.muted }]}>
-                {isCreole ? 'Bon repons :' : 'Bonne réponse :'}{' '}
-                <Text style={[typeScale.bodyMd, { color: colors.success }]}>{correctFor(q)}</Text>
-              </Text>
-            )}
-
-            {(isCreole && q.explanationHt) || q.explanation ? (
-              <Text className="mt-2" style={[typeScale.body, { color: colors.muted }]}>
-                {isCreole ? (q.explanationHt ?? q.explanation) : q.explanation}
+        {/* Verdict — the word, the right answer when missed, the why. */}
+        {confirmed ? (
+          <PopIn from={0.9} style={{ padding: 18, gap: 6, borderRadius: 20, backgroundColor: C.surface }}>
+            <Text accessibilityLiveRegion="polite" style={[arenaType.title, { color: isCorrect ? C.success : C.danger }]}>
+              {isCorrect
+                ? t('Bonne réponse', 'Bon repons')
+                : picked === null ? t('Temps écoulé', 'Tan an fini') : t('Pas tout à fait', 'Pa tout bon')}
+            </Text>
+            {!isCorrect ? (
+              <Text style={[arenaType.body, { color: C.inkSoft }]}>
+                {t('La bonne réponse : ', 'Bon repons lan : ')}
+                <Text style={{ fontFamily: fonts.bold, color: C.ink }}>{correctFor(q)}</Text>
               </Text>
             ) : null}
+            {explanation ? <Text style={[arenaType.body, { color: C.muted }]}>{explanation}</Text> : null}
           </PopIn>
+        ) : (
+          <View style={{ alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 999, backgroundColor: C.surface }}>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.coral }} />
+            <Text style={[arenaType.status, { color: C.inkSoft }]}>{t('Un toucher = ta réponse. Pas de retour en arrière.', 'Yon touche = repons ou. Pa gen retounen.')}</Text>
+          </View>
         )}
       </ScrollView>
 
-      {/* Action button — safe-area aware so it clears the home indicator /
-          Android gesture bar (the floating tab bar is hidden here via focus mode). */}
-      <View
-        className="px-4 pt-3"
-        style={{ paddingBottom: Math.max(insets.bottom, 20), backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border }}
-      >
-        {!confirmed ? (
-          <TouchableOpacity
-            onPress={handleConfirm}
-            disabled={!selected}
-            activeOpacity={0.85}
-            className="py-4 items-center"
-            style={{
-              backgroundColor: selected ? colors.azure : colors.border,
-              borderRadius: radius.tile,
-              shadowColor: colors.azureDeep,
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: selected ? 0.28 : 0,
-              shadowRadius: 12,
-              elevation: selected ? 5 : 0,
-            }}
-          >
-            <Text
-              style={[typeScale.title, { color: selected ? '#fff' : colors.faint }]}
-            >
-              {isCreole ? 'Konfime' : 'Confirmer'}
-            </Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
+      {confirmed ? (
+        <View style={{ paddingHorizontal: SIDE, paddingTop: 12, paddingBottom: Math.max(insets.bottom, 20), backgroundColor: C.bg }}>
+          <ArenaButton
+            label={idx + 1 >= questions.length ? t('Voir le résultat', 'Wè rezilta a') : t('Question suivante', 'Pwochen kesyon')}
             onPress={handleNext}
-            activeOpacity={0.85}
-            className="flex-row py-4 items-center justify-center gap-1"
-            style={{
-              backgroundColor: colors.azure,
-              borderRadius: radius.tile,
-              shadowColor: colors.azureDeep,
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.28,
-              shadowRadius: 12,
-              elevation: 5,
-            }}
-          >
-            <Text style={[typeScale.title, { color: '#ffffff' }]}>
-              {idx + 1 >= questions.length
-                ? isCreole
-                  ? 'Wè rezilta yo'
-                  : 'Voir les résultats'
-                : isCreole
-                ? 'Swivan'
-                : 'Suivant'}
-            </Text>
-            {idx + 1 < questions.length && <ChevronRight color="#ffffff" size={18} />}
-          </TouchableOpacity>
-        )}
-      </View>
+            style={{ minHeight: 52 }}
+          />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -979,17 +675,8 @@ export function QuizPlayer({
 // ─── TriviaResults ─────────────────────────────────────────────────────────────
 
 function TriviaResults({
-  score,
-  total,
-  category,
-  reward,
-  dailyReplay,
-  mistakes,
-  freezeEarned,
-  onRetry,
-  onChooseCategory,
-  onChallenge,
-  isCreole,
+  score, total, category, reward, dailyReplay, mistakes, freezeEarned,
+  onRetry, onChooseCategory, onChallenge, isCreole,
 }: {
   score: number;
   total: number;
@@ -1002,200 +689,136 @@ function TriviaResults({
   freezeEarned: boolean;
   onRetry: () => void;
   onChooseCategory: () => void;
-  /** "Défier un ami" — present only when this round can become a duel
-      (signed-in, reproducible category round). */
+  /** "Défier un ami" — present only when this round can become a duel. */
   onChallenge?: (() => Promise<void>) | null;
   isCreole: boolean;
 }) {
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  const user = useStore((s) => s.user);
+  const { streak } = useStreak();
   const [challenging, setChallenging] = useState(false);
+  const [review, setReview] = useState(false);
   const pct = total > 0 ? Math.round((score / total) * 100) : 0;
-  // Show the service's real numbers the moment they land; until then the same
-  // math the service runs (xpBreakdown), so the chip never lies about bonuses.
+  // The service's real numbers the moment they land; until then the same math
+  // the service runs (xpBreakdown), so the chip never lies about bonuses.
   const isDaily = category?.id === 'daily';
   const breakdown = reward?.breakdown ?? xpBreakdown({ score, total, isDaily, dailyAlreadyDone: dailyReplay });
   const xpEarned = reward?.xpEarned ?? breakdown.total;
   const categoryName = isCreole ? (category.nameHt ?? category.name) : category.name;
   const shareRef = useRef<ShareCardCaptureHandle>(null);
-  // Always share by the canonical (FR) category name so the same card reads
-  // consistently; the card component localizes its own chrome via `lang`.
-  const shareSubject = category.name ?? categoryName;
+  // Share by the canonical (FR) category name so the same card reads
+  // consistently; the card localizes its own chrome via `lang`.
+  const shareSubject = `Trivia · ${category.name ?? categoryName}`;
+  const days = streak?.currentStreak ?? 0;
 
-  const title = pct >= 80
-    ? (isCreole ? 'Ekselan !' : 'Excellent !')
-    : pct >= 60
-      ? (isCreole ? 'Bon travay !' : 'Bon travail !')
-      : (isCreole ? 'Kontinye pratike !' : 'Continue à pratiquer !');
+  useEffect(() => {
+    if (pct >= 80) success();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const headline = pct >= 100
+    ? t('Sans faute', 'San fot')
+    : pct >= 80
+      ? t('Excellent', 'Ekselan')
+      : pct >= 60
+        ? t('Bon travail', 'Bon travay')
+        : t('Continue à t’entraîner', 'Kontinye antrene w');
+
+  const winW = Dimensions.get('window').width;
+  const previewW = Math.min(winW - SIDE * 2, 380) * 0.72;
 
   return (
     <>
-    <ShareCardCapture ref={shareRef} />
-    <QuizResultHero
-      score={score}
-      total={total}
-      isCreole={isCreole}
-      title={title}
-      celebrateHaptic
-      showConfetti={pct >= 80 || !!reward?.leveledUp}
-      footer={
-        <>
-          <HeroButton
-            variant="glass"
-            icon={<RefreshCw color="#fff" size={18} />}
-            label={isCreole ? 'Jwe ankò' : 'Rejouer'}
-            onPress={onRetry}
-            style={{ marginBottom: 10 }}
-          />
-          {/* What that score did to the school race — the reason to play the
-              next round, shown at the one moment the player is looking. */}
-          <View style={{ marginBottom: 14 }}>
-            <SchoolRace isCreole={isCreole} compact />
-          </View>
-
-          <HeroButton
-            variant="solid"
-            color="#22C55E"
-            icon={<Share2 color="#fff" size={18} />}
-            label={isCreole ? 'Pataje nòt mwen' : 'Partager mon score'}
-            onPress={() => shareRef.current?.share({ mode: 'score', subject: shareSubject, score, total })}
-            style={{ marginBottom: 10 }}
-          />
-          {onChallenge && (
-            <HeroButton
-              variant="glass"
-              icon={<Swords color="#fff" size={18} />}
-              label={
-                challenging
-                  ? (isCreole ? 'Ap prepare defi a…' : 'Préparation du défi…')
-                  : (isCreole ? 'Defye yon zanmi' : 'Défier un ami')
-              }
-              onPress={async () => {
-                if (challenging) return;
-                setChallenging(true);
-                try {
-                  await onChallenge();
-                } finally {
-                  setChallenging(false);
-                }
-              }}
-              style={{ marginBottom: 10 }}
-            />
-          )}
-          <HeroButton
-            variant="ghost"
-            label={isCreole ? 'Chwazi yon kategori' : 'Choisir une catégorie'}
-            onPress={onChooseCategory}
-          />
-        </>
-      }
-    >
-      {/* XP earned — glass chip, with the bonus parts spelled out below */}
-      <PopIn delay={400} style={{ marginTop: 12, alignItems: 'center' }}>
-        <View style={{ ...glass, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 }}>
-          <Zap color="#fde68a" size={16} />
-          <Text style={{ fontFamily: typeScale.title.fontFamily, fontSize: 14, color: '#fde68a' }}>+{xpEarned} XP {isCreole ? 'ou genyen' : 'gagnés'}</Text>
-        </View>
-        {(breakdown.perfect > 0 || breakdown.dailyBonus > 0) && (
-          <View style={{ flexDirection: 'row', gap: 6, marginTop: 8 }}>
-            {breakdown.perfect > 0 && (
-              <View style={{ ...glass, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
-                <Text style={{ fontFamily: typeScale.label.fontFamily, fontSize: 11.5, color: '#fde68a' }}>
-                  +{breakdown.perfect} {isCreole ? 'san fot !' : 'sans faute !'}
-                </Text>
-              </View>
-            )}
-            {breakdown.dailyBonus > 0 && (
-              <View style={{ ...glass, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
-                <Text style={{ fontFamily: typeScale.label.fontFamily, fontSize: 11.5, color: '#fde68a' }}>
-                  +{breakdown.dailyBonus} {isCreole ? 'defi jodi a' : 'défi du jour'}
-                </Text>
-              </View>
-            )}
-          </View>
+      <ShareCardCapture ref={shareRef} />
+      <NightResult
+        title={t('Résultat', 'Rezilta')}
+        subtitle={`Trivia · ${categoryName}`}
+        onClose={onChooseCategory}
+        closeLabel={t('Fermer', 'Fèmen')}
+        me={{ seed: user?.uid || 'toi', label: t('Toi', 'Ou') }}
+        winner={pct >= 80 ? 'me' : null}
+        headline={headline}
+        score={score}
+        total={total}
+        scoreEarned={score > 0}
+        scoreLine={t(`${pct} % de bonnes réponses`, `${pct} % bon repons`)}
+        chips={(
+          <>
+            {xpEarned > 0 ? <RewardChip earned icon={<Star color={C.gold} size={16} />} label={`+${xpEarned} XP`} /> : null}
+            {breakdown.perfect > 0 ? <RewardChip earned label={t(`+${breakdown.perfect} sans faute`, `+${breakdown.perfect} san fot`)} /> : null}
+            {breakdown.dailyBonus > 0 ? <RewardChip earned label={t(`+${breakdown.dailyBonus} défi du jour`, `+${breakdown.dailyBonus} defi jodi a`)} /> : null}
+            {reward?.leveledUp ? <RewardChip earned icon={<Crown color={C.gold} size={16} />} label={t(`Niveau ${reward.newLevel}`, `Nivo ${reward.newLevel}`)} /> : null}
+            {freezeEarned ? <RewardChip earned icon={<Snowflake color={C.gold} size={16} />} label={t('Gel de série gagné', 'Jèl seri genyen')} /> : null}
+            {days > 0 ? <RewardChip icon={<Flame color={C.coral} size={16} />} label={t(`Série ${days} jours`, `Seri ${days} jou`)} /> : null}
+          </>
         )}
-        {dailyReplay && (
-          <Text style={{ fontFamily: typeScale.caption.fontFamily, fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 8, textAlign: 'center' }}>
-            {isCreole
-              ? 'Defi a te fèt deja jodi a. Antrennman (0 XP).'
-              : "Défi déjà joué aujourd'hui. Manche d'entraînement (0 XP)."}
+        primary={{
+          label: t('Partager', 'Pataje'),
+          icon: <Share2 color={C.onCoral} size={18} />,
+          onPress: () => shareRef.current?.share({ mode: 'score', subject: shareSubject, score, total }),
+        }}
+        secondary={[
+          { label: t('Rejouer', 'Rejwe'), icon: <RefreshCw color={C.ink} size={18} />, onPress: onRetry },
+          ...(onChallenge ? [{
+            label: challenging ? t('Préparation du défi…', 'N ap prepare defi a…') : t('Défier un ami', 'Defye yon zanmi'),
+            icon: <Swords color={C.ink} size={18} />,
+            busy: challenging,
+            accessibilityHint: t('Envoie ces mêmes questions à un ami', 'Voye menm kesyon sa yo bay yon zanmi'),
+            onPress: async () => {
+              if (challenging) return;
+              setChallenging(true);
+              try { await onChallenge(); } finally { setChallenging(false); }
+            },
+          }] : []),
+        ]}
+        link={mistakes.length > 0
+          ? { label: review ? t('Masquer mes erreurs', 'Kache erè m yo') : t(`Revoir mes erreurs (${mistakes.length})`, `Revize erè m yo (${mistakes.length})`), onPress: () => setReview((r) => !r) }
+          : { label: t('Choisir un autre thème', 'Chwazi yon lòt tèm'), onPress: onChooseCategory }}
+      >
+        {dailyReplay || reward?.guest ? (
+          <Text style={[arenaType.status, { color: C.muted, textAlign: 'center' }]}>
+            {dailyReplay
+              ? t("Défi déjà joué aujourd'hui : manche d'entraînement (0 XP).", 'Defi a te fèt deja jodi a : antrennman (0 XP).')
+              : t('Connecte-toi pour garder tes XP.', 'Konekte pou kenbe XP ou.')}
           </Text>
-        )}
-        {reward?.guest && (
-          <Text style={{ fontFamily: typeScale.caption.fontFamily, fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 8, textAlign: 'center' }}>
-            {isCreole ? 'Konekte pou kenbe XP ou' : 'Connecte-toi pour garder tes XP'}
-          </Text>
-        )}
-      </PopIn>
+        ) : null}
 
-      {/* Level-up — the crossing gets its own moment, not just a haptic. */}
-      {reward?.leveledUp && (
-        <PopIn delay={600} style={{ marginTop: 12 }}>
-          <View style={{ ...glass, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 }}>
-            <Crown color="#fde68a" size={16} />
-            <Text style={{ fontFamily: typeScale.title.fontFamily, fontSize: 14, color: '#fde68a' }}>
-              {isCreole ? `Nivo ${reward.newLevel} !` : `Niveau ${reward.newLevel} !`}
-            </Text>
-          </View>
-        </PopIn>
-      )}
-
-      {/* Weekly-goal reward */}
-      {freezeEarned && (
-        <PopIn delay={700} style={{ marginTop: 12 }}>
-          <View style={{ ...glass, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 }}>
-            <Snowflake color="#7EE7FF" size={16} />
-            <Text style={{ fontFamily: typeScale.title.fontFamily, fontSize: 14, color: '#7EE7FF' }}>
-              {isCreole ? 'Jèl seri ou genyen !' : 'Gel de série gagné !'}
-            </Text>
-          </View>
-        </PopIn>
-      )}
-
-      {/* Glass stat row */}
-      <View style={{ flexDirection: 'row', gap: 10, marginTop: 20, width: '100%' }}>
-        <View style={{ ...glass, flex: 1, borderRadius: 14, paddingVertical: 12, alignItems: 'center' }}>
-          <Text style={{ fontSize: 18, fontFamily: typeScale.num.fontFamily, color: '#fff' }}>{pct}%</Text>
-          <Text style={{ fontSize: 10, fontFamily: typeScale.overline.fontFamily, color: 'rgba(255,255,255,0.6)', letterSpacing: 0.5 }}>{isCreole ? 'PRESIZYON' : 'PRÉCISION'}</Text>
-        </View>
-        <View style={{ ...glass, flex: 1.4, borderRadius: 14, paddingVertical: 10, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ fontSize: 18 }}>{category.icon}</Text>
-          <Text numberOfLines={1} style={{ fontSize: 10, fontFamily: typeScale.label.fontFamily, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>
-            {categoryName}
-          </Text>
-        </View>
-      </View>
-
-      {/* Revois tes erreurs — a wrong answer should teach, not just count. */}
-      {mistakes.length > 0 && (
-        <View style={{ width: '100%', marginTop: 22 }}>
-          <Text style={{ fontFamily: typeScale.overline.fontFamily, fontSize: 11, letterSpacing: 1, color: 'rgba(255,255,255,0.65)', marginBottom: 4 }}>
-            {isCreole ? 'REVIZE ERÈ OU YO' : 'REVOIS TES ERREURS'} ({mistakes.length})
-          </Text>
-          {mistakes.map((m, i) => {
-            // `chosen` was captured as the DISPLAYED string, so the ✓ answer
-            // and explanation must resolve in the same language.
-            const correct = isCreole && m.q.optionsHt && m.q.correctAnswerHt ? m.q.correctAnswerHt : m.q.correctAnswer;
-            const explanation = isCreole ? (m.q.explanationHt ?? m.q.explanation) : m.q.explanation;
-            return (
-              <View key={i} style={{ ...glass, borderRadius: 14, padding: 12, marginTop: 8 }}>
-                <Text style={{ fontFamily: typeScale.bodyMd.fontFamily, fontSize: 13.5, lineHeight: 19, color: '#ffffff' }}>
-                  {isCreole ? m.q.qHt : m.q.q}
-                </Text>
-                <Text style={{ fontFamily: typeScale.caption.fontFamily, fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 6 }}>
-                  {isCreole ? 'Ou' : 'Toi'} : {m.chosen ?? (isCreole ? '(tan an fini)' : '(temps écoulé)')}
-                  {'   ·   '}
-                  <Text style={{ color: '#86efac' }}>✓ {correct}</Text>
-                </Text>
-                {explanation ? (
-                  <Text style={{ fontFamily: typeScale.caption.fontFamily, fontSize: 12, lineHeight: 17, color: 'rgba(255,255,255,0.65)', marginTop: 6 }}>
-                    {explanation}
+        {/* Revoir mes erreurs — a wrong answer should teach, not just count. */}
+        {review && mistakes.length > 0 ? (
+          <View style={{ gap: 10 }}>
+            {mistakes.map((m, i) => {
+              // `chosen` was captured as the DISPLAYED string, so the right
+              // answer and explanation resolve in the same language.
+              const correct = isCreole && m.q.optionsHt && m.q.correctAnswerHt ? m.q.correctAnswerHt : m.q.correctAnswer;
+              const expl = isCreole ? (m.q.explanationHt ?? m.q.explanation) : m.q.explanation;
+              return (
+                <View key={i} style={{ padding: 18, gap: 8, borderRadius: 20, backgroundColor: C.surface }}>
+                  <Text style={[arenaType.name, { fontSize: 16, lineHeight: 22, color: C.ink }]}>{mathToText(isCreole ? m.q.qHt : m.q.q)}</Text>
+                  <Text style={[arenaType.status, { color: C.danger }]}>
+                    {t('Toi : ', 'Ou : ')}{m.chosen ?? t('temps écoulé', 'tan an fini')}
                   </Text>
-                ) : null}
-              </View>
-            );
-          })}
+                  <Text style={[arenaType.status, { color: C.success }]}>{t('Réponse : ', 'Repons : ')}{correct}</Text>
+                  {expl ? <Text style={[arenaType.body, { color: C.muted }]}>{expl}</Text> : null}
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
+
+        {/* Aperçu du partage — exactly the card that will be posted. */}
+        <View style={{ gap: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
+            <Text style={[nightType.cardTitle, { color: C.ink }]}>{t('Aperçu du partage', 'Apèsi pataj la')}</Text>
+            <Text style={[arenaType.status, { color: C.muted }]}>Story · 9:16</Text>
+          </View>
+          <View accessible accessibilityLabel={t('Aperçu de la carte à partager', 'Apèsi kat pou pataje a')} style={{ alignSelf: 'center', borderRadius: 24, overflow: 'hidden' }}>
+            <ShareCard data={{ mode: 'score', subject: shareSubject, score, total }} lang={isCreole ? 'ht' : 'fr'} width={previewW} />
+          </View>
         </View>
-      )}
-    </QuizResultHero>
+
+        {/* What that score did to the school race — the reason to play the
+            next round, shown at the one moment the player is looking. */}
+        <SchoolRace isCreole={isCreole} compact />
+      </NightResult>
     </>
   );
 }
@@ -1203,9 +826,10 @@ function TriviaResults({
 // ─── Main TriviaScreen ────────────────────────────────────────────────────────
 
 export default function TriviaScreen() {
-  const colors = useColors();
   const { user, language, incrementGuestInteraction, setFocusMode, pendingDailyChallenge, setPendingDailyChallenge, quizAttempts, recordQuizAttempt } = useStore();
   const isCreole = language === 'ht';
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  useNightStatusBar();
 
   const { profile, recordResult, recordGameResult, daily, isAuthed } = useTrivia();
   const { recordActivity } = useStreak();
@@ -1231,7 +855,7 @@ export default function TriviaScreen() {
   const [dailyDoneNote, setDailyDoneNote] = useState(false);
 
   // Hide the floating tab bar during an active game / results so it never
-  // covers the answer & confirm buttons. Reset when leaving the Trivia tab.
+  // covers the answers and the next button. Reset when leaving the tab.
   useFocusEffect(
     useCallback(() => {
       setFocusMode(phase === 'playing' || phase === 'results' || phase === 'arcade');
@@ -1240,8 +864,7 @@ export default function TriviaScreen() {
   );
 
   // Tapping the "Jeux" tab returns to the hub. This screen is phase-based (not
-  // a navigation stack), so there's nothing for the default pop-to-top to reset
-  // — we reset the local phase ourselves.
+  // a navigation stack), so we reset the local phase ourselves.
   useEffect(() => {
     const unsub = navigation.addListener('tabPress', () => {
       setPhase('hub');
@@ -1255,27 +878,31 @@ export default function TriviaScreen() {
   const highScores: Record<string, number> = (profile as any)?.games?.highScores || {};
 
   // Launch today's Daily Challenge: a fixed, shared 10-question round drawn
-  // across all categories. Uses a synthetic 'daily' category so the existing
-  // play/results UI (header icon + name) works unchanged.
+  // across all categories, under a synthetic 'daily' category.
   const startDaily = useCallback(() => {
     const qs = prepareDailyQuestions(10);
     if (!qs.length) return;
-    setSelectedCategory({
-      id: 'daily',
-      name: isCreole ? 'Defi jodi a' : 'Défi du jour',
-      nameHt: 'Defi jodi a',
-      icon: '🎯',
-    });
+    setSelectedCategory({ id: 'daily', name: 'Défi du jour', nameHt: 'Defi jodi a' });
     setQuestions(qs);
     setRoundSize(qs.length);
     setIsDailyRound(true);
     setPhase('playing');
-  }, [isCreole]);
+  }, []);
+
+  const startMixed = useCallback(() => {
+    tapMedium();
+    const qs = prepareMixedQuestions(10);
+    if (!qs.length) return;
+    setSelectedCategory({ id: 'mixed', name: 'Mélange de thèmes', nameHt: 'Melanj tèm' });
+    setQuestions(qs);
+    setRoundSize(qs.length);
+    setIsDailyRound(false);
+    setPhase('playing');
+  }, []);
 
   // Deep-link from the home "Défi du jour" widget: it sets a transient store
   // flag, then navigates to this tab. Consume it on focus (once). When today's
-  // challenge is already done, acknowledge it instead of silently landing on
-  // the hub — the tap should never feel like it did nothing.
+  // challenge is already done, acknowledge it instead of a dead tap.
   useFocusEffect(
     useCallback(() => {
       if (pendingDailyChallenge) {
@@ -1293,10 +920,10 @@ export default function TriviaScreen() {
   }, [dailyDoneNote]);
 
   // "Défier un ami" — only when the finished round is faithfully reproducible:
-  // a signed-in player, a real category round (daily draws span banks), and
-  // every question still carrying its bank index.
+  // a signed-in player, a real category round (daily/mixed draws span banks),
+  // and every question still carrying its bank index.
   const challengeIdxs = useMemo(() => {
-    if (!isAuthed || isDailyRound || !selectedCategory?.id || selectedCategory.id === 'daily') return null;
+    if (!isAuthed || isDailyRound || !selectedCategory?.id || selectedCategory.id === 'daily' || selectedCategory.id === 'mixed') return null;
     const idxs = questions.map((q) => q.idx);
     return idxs.length > 0 && idxs.every((i) => i != null) ? (idxs as number[]) : null;
   }, [isAuthed, isDailyRound, selectedCategory, questions]);
@@ -1324,7 +951,6 @@ export default function TriviaScreen() {
     });
   }, [challengeIdxs, selectedCategory, finalScore, isCreole]);
 
-  // Start from category selection
   const handleSelectCategory = useCallback((categoryId: string) => {
     select();
     const cat = TRIVIA_CATEGORIES.find((c: any) => c.id === categoryId);
@@ -1333,7 +959,6 @@ export default function TriviaScreen() {
     setPhase('roundPicker');
   }, []);
 
-  // Start the actual quiz after picking round size
   const handlePickRound = useCallback(
     (count: number) => {
       if (!selectedCategory) return;
@@ -1346,7 +971,6 @@ export default function TriviaScreen() {
     [selectedCategory],
   );
 
-  // Called when QuizPlayer completes all questions
   const handleGameFinish = useCallback(
     (score: number, total: number, mistakes: RoundMistake[] = []) => {
       // Captured BEFORE recording flips completedToday, so the results screen
@@ -1360,7 +984,6 @@ export default function TriviaScreen() {
       setPhase('results');
       incrementGuestInteraction();
 
-      // Record streak activity
       recordActivity().catch(console.warn);
 
       // Weekly-goal bookkeeping: a trivia round is a quiz. Crossing the weekly
@@ -1376,13 +999,9 @@ export default function TriviaScreen() {
           .catch(() => {});
       }
 
-      // Note: daily-quiz re-engagement nudges are handled centrally by
-      // scheduleEngagementReminders (recurring), so no per-round scheduling here.
-
       // Persist XP/profile via the shared gamification service, and hand the
-      // REAL reward (breakdown, level-up, guest flag) to the results screen —
-      // the old local `score * 10` under-reported every bonus. Leaderboard
-      // submission happens inside recordResult.
+      // REAL reward (breakdown, level-up, guest flag) to the results screen.
+      // Leaderboard submission happens inside recordResult.
       recordResult({ category: selectedCategory?.id, score, total, isDaily: isDailyRound })
         .then((reward) => {
           setLastReward(reward ?? null);
@@ -1397,7 +1016,6 @@ export default function TriviaScreen() {
     [recordActivity, user, incrementGuestInteraction, recordResult, selectedCategory, isDailyRound, daily, quizAttempts, recordQuizAttempt, qc],
   );
 
-  // Arcade wiring — shared reward contract with the classic flow.
   const exitToHub = useCallback(() => {
     setPhase('hub');
     setSelectedGame(null);
@@ -1405,15 +1023,10 @@ export default function TriviaScreen() {
     setIsDailyRound(false);
   }, []);
 
-  const arcadeProps = {
-    isCreole,
-    onExit: exitToHub,
-    onRecord: recordGameResult,
-  };
+  const arcadeProps = { isCreole, onExit: exitToHub, onRecord: recordGameResult };
 
-  // "Rejouer" — replay with same category + round size. For the Daily
-  // Challenge this replays today's fixed set (the +50 XP bonus is only
-  // awarded once/day; the service dedupes further attempts).
+  // "Rejouer" — the same theme and size; the Daily replays today's fixed set
+  // (its +50 XP is awarded once a day; the service dedupes).
   const handleRetry = useCallback(() => {
     tapMedium();
     if (isDailyRound) {
@@ -1424,12 +1037,16 @@ export default function TriviaScreen() {
       }
       return;
     }
+    if (selectedCategory?.id === 'mixed') {
+      setQuestions(prepareMixedQuestions(roundSize || 10));
+      setPhase('playing');
+      return;
+    }
     if (!selectedCategory) {
       setPhase('categories');
       return;
     }
-    const qs = prepareQuestions(selectedCategory.id, roundSize);
-    setQuestions(qs);
+    setQuestions(prepareQuestions(selectedCategory.id, roundSize));
     setPhase('playing');
   }, [isDailyRound, selectedCategory, roundSize]);
 
@@ -1440,9 +1057,31 @@ export default function TriviaScreen() {
     setIsDailyRound(false);
   }, []);
 
+  const confirmQuit = useCallback(() => {
+    // Mid-round progress is unrecoverable — never discard it on one tap.
+    Alert.alert(
+      t('Quitter la partie ?', 'Kite pati a ?'),
+      t('La progression de cette manche sera perdue.', 'Pwogrè manch sa a ap pèdi.'),
+      [
+        { text: t('Continuer', 'Kontinye jwe'), style: 'cancel' },
+        {
+          text: t('Quitter', 'Kite'),
+          style: 'destructive',
+          onPress: () => {
+            if (isDailyRound || selectedCategory?.id === 'mixed') exitToHub();
+            else setPhase('categories');
+          },
+        },
+      ],
+    );
+  }, [isDailyRound, selectedCategory, exitToHub]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const playTitle = selectedCategory
+    ? (isDailyRound ? t('Défi du jour', 'Defi jodi a') : `Trivia · ${isCreole ? (selectedCategory.nameHt ?? selectedCategory.name) : selectedCategory.name}`)
+    : 'Trivia';
+
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
-      {/* Phase router */}
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top']}>
       {phase === 'hub' && (
         <>
           <JeuxHub
@@ -1451,16 +1090,16 @@ export default function TriviaScreen() {
             onStartDaily={startDaily}
             onRematch={handleSelectCategory}
           />
-          {/* Transient ack for the home deep-link when the daily is already
-              done — the tap should read as "seen", not as a dead tap. */}
+          {/* Transient ack for the home deep-link when the daily is done. */}
           {dailyDoneNote && (
             <View pointerEvents="none" style={{ position: 'absolute', top: 10, left: 20, right: 20, zIndex: 10, alignItems: 'center' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.ink, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 9, opacity: 0.94 }}>
-                <Check color="#4ade80" size={14} />
-                <Text style={[typeScale.label, { color: colors.surface }]} numberOfLines={1}>
-                  {isCreole
-                    ? `Defi jodi a fini deja — ${daily?.score ?? ''}/${daily?.total ?? ''}. Tounen demen !`
-                    : `Défi du jour déjà terminé — ${daily?.score ?? ''}/${daily?.total ?? ''}. Reviens demain !`}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.surfaceRaised, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 10 }}>
+                <Check color={C.success} size={16} />
+                <Text style={[arenaType.status, { color: C.ink }]} numberOfLines={1}>
+                  {t(
+                    `Défi du jour déjà terminé : ${daily?.score ?? ''}/${daily?.total ?? ''}. Reviens demain.`,
+                    `Defi jodi a fini deja : ${daily?.score ?? ''}/${daily?.total ?? ''}. Tounen demen.`,
+                  )}
                 </Text>
               </View>
             </View>
@@ -1469,14 +1108,10 @@ export default function TriviaScreen() {
       )}
 
       {phase === 'arcade' && selectedGame && (
-        <View className="flex-1">
-          <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-            <TouchableOpacity onPress={exitToHub} className="p-1 mr-3" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel={isCreole ? 'Fèmen' : 'Fermer'}>
-              <X color={colors.muted} size={20} />
-            </TouchableOpacity>
-            <Text style={[typeScale.title, { color: colors.ink }]}>
-              {isCreole ? 'Jwèt yo' : 'Les jeux'}
-            </Text>
+        <View style={{ flex: 1, backgroundColor: C.bg }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: SIDE, paddingTop: 8, paddingBottom: 4 }}>
+            <NightIconButton onPress={exitToHub} label={t('Fermer', 'Fèmen')} />
+            <Text style={[arenaType.name, { fontSize: 17, color: C.ink }]}>{t('Les jeux', 'Jwèt yo')}</Text>
           </View>
           {selectedGame === 'vrai-faux' && (
             <VraiFauxGame questionsMap={TRIVIA_QUESTIONS as any} highScore={highScores['vrai-faux'] ?? null} {...arcadeProps} />
@@ -1488,26 +1123,14 @@ export default function TriviaScreen() {
         </View>
       )}
 
-      {/* Persistent XP + streak header (classic trivia flow only) */}
-      {phase !== 'hub' && phase !== 'arcade' && <TriviaHeader />}
-
       {phase === 'categories' && (
-        <>
-          <TouchableOpacity
-            onPress={exitToHub}
-            className="flex-row items-center px-4 pt-1 pb-2"
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            accessibilityRole="button"
-            accessibilityLabel={isCreole ? 'Jwèt yo' : 'Les jeux'}
-          >
-            <ChevronRight color={colors.azure} size={16} style={{ transform: [{ rotate: '180deg' }] }} />
-            <Text style={[typeScale.label, { color: colors.azure }]}>
-              {isCreole ? 'Jwèt yo' : 'Les jeux'}
-            </Text>
-          </TouchableOpacity>
-          <DailyChallengeBanner daily={daily} isCreole={isCreole} onStart={startDaily} style={{ marginHorizontal: 16, marginBottom: 14 }} />
-          <CategoryPicker onSelect={handleSelectCategory} isCreole={isCreole} />
-        </>
+        <CategoryPicker
+          onSelect={handleSelectCategory}
+          onMixed={startMixed}
+          onBack={exitToHub}
+          header={<DailyChallengeBanner daily={daily} isCreole={isCreole} onStart={startDaily} compact />}
+          isCreole={isCreole}
+        />
       )}
 
       {phase === 'roundPicker' && selectedCategory && (
@@ -1520,83 +1143,30 @@ export default function TriviaScreen() {
       )}
 
       {phase === 'playing' && selectedCategory && questions.length > 0 && (
-        <View className="flex-1">
-          {/* In-game nav bar */}
-          <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-            <TouchableOpacity
-              onPress={() => {
-                // Mid-round progress is unrecoverable — never discard it on a
-                // single (possibly accidental) tap.
-                Alert.alert(
-                  isCreole ? 'Kite jwèt la ?' : 'Quitter la partie ?',
-                  isCreole ? 'Pwogrè manch sa a ap pèdi.' : 'La progression de cette manche sera perdue.',
-                  [
-                    { text: isCreole ? 'Kontinye jwe' : 'Continuer', style: 'cancel' },
-                    {
-                      text: isCreole ? 'Kite' : 'Quitter',
-                      style: 'destructive',
-                      onPress: () => {
-                        if (isDailyRound) exitToHub();
-                        else setPhase('categories');
-                      },
-                    },
-                  ],
-                );
-              }}
-              className="p-1 mr-3"
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
-              accessibilityLabel={isCreole ? 'Kite' : 'Quitter'}
-            >
-              <X color={colors.muted} size={22} />
-            </TouchableOpacity>
-            <View
-              className="w-7 h-7 rounded-lg items-center justify-center mr-2"
-              style={{ backgroundColor: colors.azureSoft }}
-            >
-              <Text style={{ fontSize: 14 }}>{selectedCategory.icon}</Text>
-            </View>
-            <Text className="flex-1" numberOfLines={1} style={[typeScale.title, { color: colors.ink }]}>
-              {isCreole
-                ? (selectedCategory.nameHt ?? selectedCategory.name)
-                : selectedCategory.name}
-            </Text>
-            <Trophy color={colors.azure} size={18} />
-          </View>
-
-          <QuizPlayer
-            questions={questions}
-            category={selectedCategory}
-            isCreole={isCreole}
-            onFinish={handleGameFinish}
-          />
-        </View>
+        <QuizPlayer
+          questions={questions}
+          category={selectedCategory}
+          isCreole={isCreole}
+          onFinish={handleGameFinish}
+          onQuit={confirmQuit}
+          title={playTitle}
+        />
       )}
 
       {phase === 'results' && selectedCategory && (
-        <View className="flex-1">
-          {/* Results nav bar */}
-          <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-            <Trophy color={colors.azure} size={18} />
-            <Text className="ml-2" style={[typeScale.title, { color: colors.ink }]}>
-              {isCreole ? 'Rezilta' : 'Résultats'}
-            </Text>
-          </View>
-
-          <TriviaResults
-            score={finalScore.score}
-            total={finalScore.total}
-            category={selectedCategory}
-            reward={lastReward}
-            dailyReplay={wasDailyReplay}
-            mistakes={roundMistakes}
-            freezeEarned={freezeEarned}
-            onRetry={handleRetry}
-            onChooseCategory={handleChooseCategory}
-            onChallenge={challengeIdxs ? handleChallenge : null}
-            isCreole={isCreole}
-          />
-        </View>
+        <TriviaResults
+          score={finalScore.score}
+          total={finalScore.total}
+          category={selectedCategory}
+          reward={lastReward}
+          dailyReplay={wasDailyReplay}
+          mistakes={roundMistakes}
+          freezeEarned={freezeEarned}
+          onRetry={handleRetry}
+          onChooseCategory={handleChooseCategory}
+          onChallenge={challengeIdxs ? handleChallenge : null}
+          isCreole={isCreole}
+        />
       )}
     </SafeAreaView>
   );

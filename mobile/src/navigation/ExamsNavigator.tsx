@@ -9,7 +9,8 @@ import ExamHistoryScreen from '../screens/ExamHistoryScreen';
 
 export type ExamsParamList = {
   ExamLanding: undefined;
-  ExamBrowser: { level: string; subject?: string };
+  /** `explicit`: the level was chosen on the landing switch — no grade curation. */
+  ExamBrowser: { level: string; subject?: string; explicit?: boolean };
   /** Coursera-style exam landing: stats, structure, attempts, one clear CTA. */
   ExamOverview: { level: string; examId: string };
   /** `autostart` skips the in-screen intro (set when coming from ExamOverview

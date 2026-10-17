@@ -11,7 +11,7 @@ function StatItem({ icon, value, label }: { icon: React.ReactNode; value: string
   const colors = useColors();
   return (
     <View style={{ flexBasis: '47%', flexGrow: 1, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 12, backgroundColor: colors.bg, borderRadius: 12 }}>
-      <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border }}>
+      <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' }}>
         {icon}
       </View>
       <View style={{ flex: 1 }}>
@@ -54,8 +54,6 @@ export default function ExamOverview({
   const cardStyle = {
     backgroundColor: colors.surface,
     borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
     ...shadow.sm,
   } as const;
 
@@ -80,18 +78,18 @@ export default function ExamOverview({
 
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
             {durationMin > 0 ? (
-              <StatItem icon={<Clock color={colors.azure} size={17} />} value={`${durationMin} min`} label={t('Durée', 'Dire')} />
+              <StatItem icon={<Clock color={colors.azureInk} size={17} />} value={`${durationMin} min`} label={t('Durée', 'Dire')} />
             ) : null}
             {totalPoints > 0 ? (
-              <StatItem icon={<Award color={colors.azure} size={17} />} value={`${totalPoints} pts`} label={t('Total des points', 'Total pwen')} />
+              <StatItem icon={<Award color={colors.azureInk} size={17} />} value={`${totalPoints} pts`} label={t('Total des points', 'Total pwen')} />
             ) : null}
             <StatItem
-              icon={<ListChecks color={colors.azure} size={17} />}
+              icon={<ListChecks color={colors.azureInk} size={17} />}
               value={String(questionCount)}
               label={t(questionCount > 1 ? 'Questions' : 'Question', 'Kesyon')}
             />
             <StatItem
-              icon={<Layers color={colors.azure} size={17} />}
+              icon={<Layers color={colors.azureInk} size={17} />}
               value={String(sections.length)}
               label={t(sections.length > 1 ? 'Sections' : 'Section', 'Seksyon')}
             />
@@ -117,7 +115,7 @@ export default function ExamOverview({
                 }}
               >
                 <View style={{ width: 28, height: 28, borderRadius: 999, backgroundColor: colors.azureSoft, alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={[typeScale.caption, { color: colors.azure, fontFamily: fonts.headingBold }]}>{i + 1}</Text>
+                  <Text style={[typeScale.caption, { color: colors.azureInk, fontFamily: fonts.headingBold }]}>{i + 1}</Text>
                 </View>
                 <Text style={[typeScale.bodyMd, { flex: 1, color: colors.ink }]} numberOfLines={2}>
                   {sec.title}

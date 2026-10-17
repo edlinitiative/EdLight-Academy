@@ -10,12 +10,12 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { Check, Clock, AlertCircle, Smartphone, ChevronDown, ChevronUp, X } from 'lucide-react-native';
-import { useTheme, typeScale, radius } from '../../../theme/theme';
+import { useTheme, typeScale, fonts } from '../../../theme/theme';
 import Button from '../../ui/Button';
 import { AnswerStatus, Correction } from './Answer';
 import { questionsLabel, type Tx } from './copy';
 import {
-  correctionCount, savedLineKind, sessionSlice, tally,
+  correctionCount, savedLineKind, sessionSlice, statusOf, tally,
   type LogEntry, type NextActionChoice, type NextActionKind, type ReviewConfirmState, type SessionItem, type SessionMode,
 } from './session';
 
@@ -54,7 +54,7 @@ export default function PracticeResult({
   onClose?: () => void;
   children?: React.ReactNode;
 }) {
-  const { colors, cardSurface } = useTheme();
+  const { colors, cardSurface, isDark, elevation } = useTheme();
   const [open, setOpen] = useState(false);
 
   const slice = sessionSlice(items, log, mode);
@@ -111,121 +111,203 @@ export default function PracticeResult({
     else actions.onOtherChapter();
   };
 
-  const row = (k: 'correct' | 'incorrect' | 'unanswered' | 'ungraded', n: number, words: string) => (
-    <View key={k} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6 }}>
-      <AnswerStatus kind={k} t={t} label={words} />
-      <Text style={[typeScale.title, { color: colors.ink, fontVariant: ['tabular-nums'] }]}>{n}</Text>
+  const [openMiss, setOpenMiss] = useState<number | null>(null);
+  const pct = tl.scored > 0 ? Math.round((tl.correct / tl.scored) * 100) : 0;
+  // The wrong answers (and ungraded picks) the student should read, in order.
+  const misses = shownItems
+    .map((item, i) => ({ item, entry: shownLog[i], i, kind: statusOf(item, shownLog[i]) }))
+    .filter((m) => m.kind === 'incorrect' || m.kind === 'partial');
+  const headerTitle = title ? `${mode === 'quiz' ? t('Quiz', 'Kwiz') : t('Pratique', 'Pratik')} · ${title}` : '';
+
+  const tallyChip = (k: 'correct' | 'incorrect' | 'unanswered' | 'ungraded', n: number, words: string) => (
+    <View key={k} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+      <AnswerStatus kind={k} t={t} label={`${n} ${words}`} />
     </View>
   );
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 18 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
-        <View style={{ flex: 1, gap: 4 }}>
-          {context ? <Text style={[typeScale.body, { color: colors.muted }]}>{context}</Text> : null}
-          <Text accessibilityRole="header" style={[typeScale.h1, { color: colors.ink }]}>{title}</Text>
-        </View>
-        {onClose ? (
-          <TouchableOpacity onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('Fermer', 'Fèmen')} style={{ padding: 4 }}>
-            <X color={colors.muted} size={22} />
-          </TouchableOpacity>
-        ) : null}
-      </View>
-
-      {/* Score (quiz) or what happened (practice) */}
-      <View style={{ ...cardSurface, padding: 16, gap: 6 }}>
-        {mode === 'quiz' ? (
-          <>
-            <Text
-              accessibilityLabel={t(`${tl.correct} sur ${tl.scored} bonnes réponses`, `${tl.correct} sou ${tl.scored} bon repons`)}
-              style={[typeScale.num, { color: colors.ink, fontVariant: ['tabular-nums'] }]}
+    <View style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 32, gap: 16 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48 }}>
+          {onClose ? (
+            <TouchableOpacity
+              onPress={onClose}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t('Fermer', 'Fèmen')}
+              style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', ...(isDark ? null : elevation.card) }}
             >
-              {tl.correct} <Text style={[typeScale.h2, { color: colors.muted }]}>/ {tl.scored}</Text>
+              <X color={colors.ink} size={22} strokeWidth={2.2} />
+            </TouchableOpacity>
+          ) : null}
+          <View style={{ flex: 1 }}>
+            <Text accessibilityRole="header" numberOfLines={2} style={{ fontFamily: fonts.headingBold, fontSize: 17, lineHeight: 22, color: colors.ink }}>{headerTitle}</Text>
+            {context ? <Text numberOfLines={1} style={[typeScale.meta, { color: colors.muted }]}>{context}</Text> : null}
+          </View>
+        </View>
+
+        {/* Score (quiz) or what happened (practice) */}
+        <View style={{ ...cardSurface, padding: 20, gap: 12 }}>
+          {mode === 'quiz' ? (
+            <>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                <View style={{ gap: 2 }}>
+                  <Text style={[typeScale.meta, { color: colors.muted }]}>{t('Score', 'Nòt')}</Text>
+                  <Text
+                    accessibilityLabel={t(`${tl.correct} sur ${tl.scored} bonnes réponses`, `${tl.correct} sou ${tl.scored} bon repons`)}
+                    style={{ fontFamily: fonts.heading, fontSize: 56, lineHeight: 60, letterSpacing: -2, color: colors.ink, fontVariant: ['tabular-nums'] }}
+                  >
+                    {tl.correct}
+                    <Text style={{ fontFamily: fonts.headingBold, fontSize: 22, letterSpacing: 0, color: colors.muted }}>{`  / ${tl.scored}`}</Text>
+                  </Text>
+                </View>
+                {tl.scored > 0 ? (
+                  <View style={{ backgroundColor: colors.azureSoft, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6, marginTop: 4 }}>
+                    <Text style={{ fontFamily: fonts.headingBold, fontSize: 14, lineHeight: 18, color: colors.azureInk, fontVariant: ['tabular-nums'] }}>{`${pct} %`}</Text>
+                  </View>
+                ) : null}
+              </View>
+              {tl.scored > 0 ? (
+                <View style={{ height: 8, borderRadius: 999, backgroundColor: colors.surfaceAlt, overflow: 'hidden' }}>
+                  <View style={{ width: `${pct}%`, height: 8, borderRadius: 999, backgroundColor: colors.azureFill }} />
+                </View>
+              ) : null}
+            </>
+          ) : (
+            <Text style={[typeScale.bodyMd, { color: colors.ink }]}>
+              {t(`${questionsLabel(seen, t)} vue${seen > 1 ? 's' : ''}. L’entraînement libre n’a pas de score.`, `${seen} kesyon ou wè. Pratik lib pa gen nòt.`)}
             </Text>
-            <Text style={[typeScale.body, { color: colors.muted }]}>{t('bonnes réponses', 'bon repons')}</Text>
-          </>
-        ) : (
-          <Text style={[typeScale.body, { color: colors.ink }]}>
-            {t(`${questionsLabel(seen, t)} vue${seen > 1 ? 's' : ''}. L’entraînement libre n’a pas de score.`, `${seen} kesyon ou wè. Pratik lib pa gen nòt.`)}
-          </Text>
-        )}
-        {verdict ? <Text style={[typeScale.bodyMd, { color: colors.ink, marginTop: 4 }]}>{verdict}</Text> : null}
+          )}
+          {verdict ? <Text style={[typeScale.bodyMd, { color: colors.ink }]}>{verdict}</Text> : null}
 
-        <View style={{ marginTop: 6 }}>
-          {row('correct', tl.correct, t('Correctes', 'Kòrèk'))}
-          {row('incorrect', tl.incorrect, t('Ratées', 'Rate'))}
-          {tl.unanswered > 0 ? row('unanswered', tl.unanswered, t('Sans réponse', 'San repons')) : null}
-          {tl.ungraded > 0 ? row('ungraded', tl.ungraded, t('Non corrigées automatiquement', 'Pa korije otomatikman')) : null}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {tallyChip('correct', tl.correct, t(tl.correct > 1 ? 'correctes' : 'correcte', 'kòrèk'))}
+            {tallyChip('incorrect', tl.incorrect, t(tl.incorrect > 1 ? 'ratées' : 'ratée', 'rate'))}
+            {tl.unanswered > 0 ? tallyChip('unanswered', tl.unanswered, t('sans réponse', 'san repons')) : null}
+            {tl.ungraded > 0 ? tallyChip('ungraded', tl.ungraded, t(tl.ungraded > 1 ? 'non corrigées' : 'non corrigée', 'pa korije')) : null}
+          </View>
+          {tl.unanswered > 0 || tl.ungraded > 0 ? (
+            <Text style={[typeScale.meta, { color: colors.muted }]}>
+              {t('Les questions sans réponse ou non corrigées ne comptent pas comme des erreurs et ne vont pas dans Révision.',
+                'Kesyon san repons oswa ki pa korije yo pa konte kòm erè e yo pa ale nan Revizyon.')}
+            </Text>
+          ) : null}
+
+          {/* What was saved */}
+          <View accessibilityLiveRegion="polite" style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+            <SavedIcon color={kind === 'unconfirmed' ? colors.warn : kind === 'confirmed' ? colors.azureInk : colors.muted} size={18} style={{ marginTop: 2 }} />
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={[typeScale.meta, { color: colors.muted }]}>
+                {mode === 'quiz' ? t('Ton score est gardé sur ce téléphone. ', 'Nòt ou kenbe sou telefòn sa a. ') : ''}
+                {savedText}
+              </Text>
+              {kind === 'unconfirmed' ? (
+                <TouchableOpacity onPress={onRecheck} accessibilityRole="button" style={{ alignSelf: 'flex-start', paddingVertical: 6 }}>
+                  <Text style={[typeScale.bodyMd, { color: colors.azureInk }]}>{t('Réessayer maintenant', 'Eseye ankò kounye a')}</Text>
+                </TouchableOpacity>
+              ) : null}
+              {!signedIn && newErrors > 0 ? (
+                <TouchableOpacity onPress={onSignIn} accessibilityRole="button" style={{ alignSelf: 'flex-start', paddingVertical: 6 }}>
+                  <Text style={[typeScale.bodyMd, { color: colors.azureInk }]}>{t('Connecte-toi', 'Konekte')}</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          </View>
         </View>
-        {tl.unanswered > 0 || tl.ungraded > 0 ? (
-          <Text style={[typeScale.body, { color: colors.muted }]}>
-            {t('Les questions sans réponse ou non corrigées ne comptent pas comme des erreurs et ne vont pas dans Révision.',
-              'Kesyon san repons oswa ki pa korije yo pa konte kòm erè e yo pa ale nan Revizyon.')}
+
+        {next.caughtUp ? (
+          <Text style={[typeScale.bodyMd, { color: colors.ink }]}>
+            {t('Rien à réviser dans ce chapitre pour l’instant.', 'Pa gen anyen pou revize nan chapit sa a pou kounye a.')}
           </Text>
         ) : null}
-      </View>
 
-      {/* What was saved */}
-      <View accessibilityLiveRegion="polite" style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
-        <SavedIcon color={kind === 'unconfirmed' ? colors.warn : colors.muted} size={18} style={{ marginTop: 1 }} />
-        <View style={{ flex: 1, gap: 6 }}>
-          <Text style={[typeScale.body, { color: colors.ink }]}>
-            {mode === 'quiz' ? t('Ton score est gardé sur ce téléphone. ', 'Nòt ou kenbe sou telefòn sa a. ') : ''}
-            {savedText}
-          </Text>
-          {kind === 'unconfirmed' ? (
-            <TouchableOpacity onPress={onRecheck} accessibilityRole="button" style={{ alignSelf: 'flex-start', paddingVertical: 4 }}>
-              <Text style={[typeScale.bodyMd, { color: colors.azure }]}>{t('Réessayer maintenant', 'Eseye ankò kounye a')}</Text>
-            </TouchableOpacity>
-          ) : null}
-          {!signedIn && newErrors > 0 ? (
-            <TouchableOpacity onPress={onSignIn} accessibilityRole="button" style={{ alignSelf: 'flex-start', paddingVertical: 4 }}>
-              <Text style={[typeScale.bodyMd, { color: colors.azure }]}>{t('Connecte-toi', 'Konekte')}</Text>
-            </TouchableOpacity>
-          ) : null}
-        </View>
-      </View>
+        {/* À revoir — every miss, each with its correction one tap away. */}
+        {misses.length > 0 ? (
+          <View style={{ gap: 12 }}>
+            <Text accessibilityRole="header" style={[typeScale.section, { fontSize: 20, lineHeight: 25, color: colors.ink }]}>
+              {t(`À revoir · ${questionsLabel(misses.length, t)}`, `Pou revize · ${misses.length} kesyon`)}
+            </Text>
+            {misses.map((m) => {
+              const isOpen = openMiss === m.i;
+              return (
+                <View key={`${m.item.id}-${m.i}`} style={{ ...cardSurface, overflow: 'hidden' }}>
+                  <TouchableOpacity
+                    onPress={() => { const o = isOpen ? null : m.i; setOpenMiss(o); if (o != null) onCorrectionsOpened?.(1); }}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: isOpen }}
+                    accessibilityLabel={`${t(`Question ${m.i + 1}`, `Kesyon ${m.i + 1}`)}. ${m.item.question}. ${t('Voir la correction', 'Wè koreksyon an')}`}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, minHeight: 72 }}
+                  >
+                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.dangerSoft, alignItems: 'center', justifyContent: 'center' }}>
+                      <X color={colors.danger} size={18} strokeWidth={2.8} />
+                    </View>
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Text numberOfLines={isOpen ? 4 : 1} style={[typeScale.bodyMd, { color: colors.ink }]}>{m.item.question}</Text>
+                      <Text style={[typeScale.meta, { color: colors.muted }]}>{t(`Question ${m.i + 1}`, `Kesyon ${m.i + 1}`)}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                      <Text style={[typeScale.label, { fontFamily: fonts.bold, color: colors.azureInk }]}>
+                        {isOpen ? t('Masquer', 'Kache') : t('Correction', 'Koreksyon')}
+                      </Text>
+                      {isOpen ? <ChevronUp color={colors.azureInk} size={16} /> : <ChevronDown color={colors.azureInk} size={16} />}
+                    </View>
+                  </TouchableOpacity>
+                  {isOpen ? (
+                    <View style={{ paddingHorizontal: 16, paddingBottom: 18 }}>
+                      <Correction item={m.item} entry={m.entry} t={t} />
+                    </View>
+                  ) : null}
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
 
-      {next.caughtUp ? (
-        <Text style={[typeScale.bodyMd, { color: colors.ink }]}>
-          {t('Rien à réviser dans ce chapitre pour l’instant.', 'Pa gen anyen pou revize nan chapit sa a pou kounye a.')}
-        </Text>
-      ) : null}
-
-      {/* One dominant next action */}
-      <View style={{ gap: 10 }}>
         {next.primary === 'nextLesson' && nextLessonTitle ? (
-          <Text style={[typeScale.body, { color: colors.muted }]}>{`${t('Ensuite', 'Apre sa')} : « ${nextLessonTitle} »`}</Text>
+          <View style={{ ...cardSurface, padding: 16, gap: 2 }}>
+            <Text style={[typeScale.meta, { color: colors.muted }]}>{t('Leçon conseillée', 'Leson konseye')}</Text>
+            <Text numberOfLines={2} style={[typeScale.cardTitle, { fontSize: 17, lineHeight: 22, color: colors.ink }]}>{nextLessonTitle}</Text>
+          </View>
         ) : null}
+
+        {/* Every correction, readable before leaving */}
+        {shownItems.length > 0 ? (
+          <View style={{ gap: 12 }}>
+            <TouchableOpacity
+              onPress={() => { const o = !open; setOpen(o); if (o) onCorrectionsOpened?.(corrections); }}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: open }}
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 48 }}
+            >
+              <Text style={[typeScale.bodyMd, { color: colors.azureInk }]}>
+                {open
+                  ? t('Masquer la correction complète', 'Kache tout koreksyon an')
+                  : t(`Voir la correction des ${questionsLabel(shownItems.length, t)}`, `Wè koreksyon ${shownItems.length} kesyon yo`)}
+              </Text>
+              {open ? <ChevronUp color={colors.azureInk} size={20} /> : <ChevronDown color={colors.azureInk} size={20} />}
+            </TouchableOpacity>
+            {open ? shownItems.map((item, i) => (
+              <View key={`${item.id}-${i}`} style={{ ...cardSurface, padding: 18 }}>
+                <Correction item={item} entry={shownLog[i]} t={t} showQuestion index={i + 1} />
+              </View>
+            )) : null}
+          </View>
+        ) : null}
+
+        {children}
+      </ScrollView>
+
+      {/* One dominant next action, pinned; the alternative is tonal. */}
+      <View
+        style={{
+          paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12, gap: 10, backgroundColor: colors.bg,
+        }}
+      >
         <Button label={labelFor(next.primary)} onPress={() => run(next.primary)} size="lg" fullWidth />
         {next.secondary ? (
-          <Button label={labelFor(next.secondary)} onPress={() => run(next.secondary!)} variant="ghost" size="lg" fullWidth />
+          <Button label={labelFor(next.secondary)} onPress={() => run(next.secondary!)} variant="secondary" size="lg" fullWidth />
         ) : null}
       </View>
-
-      {/* Corrections, readable before leaving */}
-      {shownItems.length > 0 ? (
-        <View style={{ gap: 12 }}>
-          <TouchableOpacity
-            onPress={() => { const o = !open; setOpen(o); if (o) onCorrectionsOpened?.(corrections); }}
-            accessibilityRole="button"
-            accessibilityState={{ expanded: open }}
-            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border }}
-          >
-            <Text style={[typeScale.title, { color: colors.ink }]}>
-              {t(`Correction des ${questionsLabel(shownItems.length, t)}`, `Koreksyon ${shownItems.length} kesyon yo`)}
-            </Text>
-            {open ? <ChevronUp color={colors.muted} size={20} /> : <ChevronDown color={colors.muted} size={20} />}
-          </TouchableOpacity>
-          {open ? shownItems.map((item, i) => (
-            <View key={`${item.id}-${i}`} style={{ ...cardSurface, padding: 14, borderRadius: radius.card }}>
-              <Correction item={item} entry={shownLog[i]} t={t} showQuestion index={i + 1} />
-            </View>
-          )) : null}
-        </View>
-      ) : null}
-
-      {children}
-    </ScrollView>
+    </View>
   );
 }

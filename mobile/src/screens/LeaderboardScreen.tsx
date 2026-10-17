@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft } from 'lucide-react-native';
 import Leaderboard, { type BoardPeriod, type BoardScope } from '../components/Leaderboard';
-import Avatar from '../components/ui/Avatar';
+import Avatar from '../components/arena/art/avatars/Avatar';
+import SchoolRace from '../components/trivia/SchoolRace';
+import { NightIconButton, nightType } from '../components/games/night';
+import useNightStatusBar from '../components/arena/useNightStatusBar';
+import { arenaColors as C, arenaType } from '../theme/arenaTheme';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import useStore from '../contexts/store';
-import { useColors, useTheme, typeScale } from '../theme/theme';
 
 /**
  * Dedicated, full-page classement — reached from the "Classement" card on the
@@ -17,8 +20,7 @@ import { useColors, useTheme, typeScale } from '../theme/theme';
  * form (period + scope tabs, join footer, drill-downs all included).
  */
 export default function LeaderboardScreen({ onClose }: { onClose: () => void }) {
-  const colors = useColors();
-  const { cardSurface } = useTheme();
+  useNightStatusBar();
   const centerColumn = useContentContainerStyle('readable');
   const language = useStore((s) => s.language);
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
@@ -44,41 +46,23 @@ export default function LeaderboardScreen({ onClose }: { onClose: () => void }) 
         : '';
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
-      {/* Header — back + title, matching the app's neutral page chrome. */}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 6,
-          paddingHorizontal: 12,
-          paddingVertical: 10,
-        }}
-      >
-        <TouchableOpacity
-          onPress={onClose}
-          hitSlop={10}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel={t('Retour', 'Tounen')}
-          style={{ padding: 4 }}
-        >
-          <ChevronLeft color={colors.ink} size={26} />
-        </TouchableOpacity>
-        <Text style={[typeScale.h1, { color: colors.ink }]}>
-          {t('Classement', 'Klasman')}
-        </Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top']}>
+      {/* Header — back + title, no band. */}
+      <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, gap: 14 }}>
+        <NightIconButton onPress={onClose} label={t('Retour', 'Tounen')} icon={<ChevronLeft color={C.ink} size={22} />} />
+        <Text accessibilityRole="header" style={[nightType.page, { color: C.ink }]}>{t('Classement', 'Klasman')}</Text>
       </View>
 
       <ScrollView
-        className="flex-1"
+        style={{ flex: 1 }}
         contentContainerStyle={[
-          { paddingHorizontal: 20, paddingBottom: showMeBar ? 96 : 40, paddingTop: 4 },
+          { paddingHorizontal: 20, paddingBottom: showMeBar ? 110 : 40, paddingTop: 4, gap: 14 },
           centerColumn,
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Leaderboard compact={false} maxRows={50} onViewChange={setView} />
+        <SchoolRace isCreole={language === 'ht'} />
+        <Leaderboard compact={false} maxRows={50} onViewChange={setView} tone="night" />
       </ScrollView>
 
       {/* Sticky "you" bar — your rank never scrolls off screen, and the nudge
@@ -86,41 +70,24 @@ export default function LeaderboardScreen({ onClose }: { onClose: () => void }) 
       {showMeBar && (
         <View
           accessible
-          accessibilityLabel={`${t('Votre rang', 'Ran ou')} ${myRank}. ${nudge}`}
+          accessibilityLabel={`${t('Ton rang', 'Ran ou')} ${myRank}. ${nudge}`}
           style={{
-            ...cardSurface,
-            position: 'absolute',
-            left: 12,
-            right: 12,
-            bottom: 12,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 10,
-            paddingVertical: 10,
-            paddingHorizontal: 12,
-            borderWidth: 1.5,
-            borderColor: colors.azure,
-            backgroundColor: colors.azureSoft,
+            position: 'absolute', left: 16, right: 16, bottom: 16,
+            flexDirection: 'row', alignItems: 'center', gap: 12,
+            minHeight: 64, paddingHorizontal: 14, borderRadius: 20,
+            backgroundColor: C.surfaceRaised,
           }}
         >
-          <Text style={[typeScale.titleSm, { color: colors.azure }]} maxFontSizeMultiplier={1.3}>
-            #{myRank}
-          </Text>
-          <Avatar
-            name={(myEntry as any)?.displayName || ''}
-            uri={(myEntry as any)?.photoURL || null}
-            seed={(myEntry as any)?.id || ''}
-            size={30}
-          />
-          <Text style={[typeScale.bodyMd, { color: colors.azure, flexShrink: 1 }]} numberOfLines={1}>
-            {(myEntry as any)?.displayName || t('Élève', 'Elèv')}{t(' (vous)', ' (ou)')}
-          </Text>
-          <View style={{ flex: 1 }} />
-          <Text style={[typeScale.caption, { color: colors.muted }]} numberOfLines={1} maxFontSizeMultiplier={1.3}>
-            {nudge}
-          </Text>
-          <Text style={[typeScale.bodyMd, { color: colors.azure }]} maxFontSizeMultiplier={1.3}>
-            {(myEntry as any)?.xp ?? 0}
+          <Text style={[arenaType.num, { fontSize: 18, color: C.ink }]} maxFontSizeMultiplier={1.3}>{myRank}{t('e', 'yèm')}</Text>
+          <Avatar seed={(myEntry as any)?.id || ''} size={36} />
+          <View style={{ flex: 1 }}>
+            <Text style={[arenaType.name, { color: C.ink }]} numberOfLines={1}>
+              {(myEntry as any)?.displayName || t('Élève', 'Elèv')}{t(' (toi)', ' (ou)')}
+            </Text>
+            {nudge ? <Text style={[arenaType.status, { color: C.muted }]} numberOfLines={1} maxFontSizeMultiplier={1.3}>{nudge}</Text> : null}
+          </View>
+          <Text style={[arenaType.num, { color: myRank === 1 ? C.gold : C.ink }]} maxFontSizeMultiplier={1.3}>
+            {(myEntry as any)?.xp ?? 0} XP
           </Text>
         </View>
       )}
