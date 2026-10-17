@@ -1146,7 +1146,9 @@ main {
 
 .chip--success {
 	background: rgba(34, 197, 94, 0.12);
-	color: var(--success-500);
+	/* Status text needs the deep end of the green: --success-500 on its own
+	   wash measured 2.73:1 (LJ audit #2). #11643A on it: 6.3:1. */
+	color: #11643A;
 }
 
 .chip--ghost {
@@ -1166,7 +1168,7 @@ main {
 
 .chip--danger {
 	background: rgba(239, 68, 68, 0.16);
-	color: var(--danger-500);
+	color: #A12232; /* 6.1:1 on this wash; --danger-500 was 3.4:1 */
 }
 
 /* Cards */
@@ -16558,7 +16560,9 @@ input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:f
 }
 .chip--success {
 	background: color-mix(in srgb, var(--lp-accent-3) 12%, transparent);
-	color: var(--lp-accent-3);
+	/* Deep green text, not the accent itself (2.73:1 → 6.3:1, LJ audit #2);
+	   dark mode keeps its own light-green pair above (8.4:1). */
+	color: #11643A;
 	border-color: color-mix(in srgb, var(--lp-accent-3) 28%, transparent);
 }
 .quiz-placeholder {
@@ -18013,3 +18017,12 @@ button.card:hover,
 	.direct-bank-quiz .radio-option__key { width: 36px; height: 36px; }
 	.direct-bank-quiz .quiz-card__check { width: 100%; }
 }
+
+/* Contrast floor (learning-journey audit 2026-10-17): footer copyright was
+   2.0:1, the dark footer language toggle 3.2:1, the dark active tab label
+   3.5:1. All now ≥4.5:1. */
+.footer__copy { color: #5F6B7A; font-size: 0.875rem; }
+[data-theme="dark"] .footer__copy { color: #A7B4C8; }
+[data-theme="dark"] .footer__lang button.is-on { background: #1558B8; color: #fff; }
+[data-theme="dark"] .bottom-nav__item.is-active,
+[data-theme="dark"] .bottom-nav__item.is-active .bottom-nav__icon { color: #8EC0FF; }

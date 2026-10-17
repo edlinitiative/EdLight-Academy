@@ -108,7 +108,67 @@ it('leaving a started quiz asks first and can show the summary with unanswered q
   fireEvent.click(screen.getByRole('button', { name: /Quitter/ }));
   expect(screen.getByText('Quitter le quiz ?')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Voir mon bilan maintenant' }));
-  expect(screen.getByText('Quiz terminé')).toBeInTheDocument();
+  // An early stop is called what it is, and leads with participation.
+  expect(screen.getByRole('heading', { level: 1, name: 'Quiz interrompu' })).toBeInTheDocument();
+  expect(screen.queryByText('Quiz terminé')).not.toBeInTheDocument();
+  expect(screen.getByText('1 question répondue sur 3')).toBeInTheDocument();
+  expect(screen.getByText('1 juste du premier coup')).toBeInTheDocument();
   expect(screen.getByText('sans réponse', { selector: 'li' , exact: false })).toBeInTheDocument();
   expect(mockTrack).toHaveBeenCalledWith('practice_completed', expect.objectContaining({ mode: 'quiz', correct: 1, unanswered: 2, incorrect: 0 }));
+});
+
+it('the focused quiz names its subject and chapter, in the heading too', () => {
+  renderAt('/quizzes?course=chem-ns1&unit=U1&from=lesson');
+  fireEvent.click(screen.getByRole('button', { name: /Commencer/ }));
+  const h1 = screen.getByRole('heading', { level: 1 });
+  expect(h1).toHaveTextContent('Quiz · Chimie · NS I · Grandeurs et Mesures');
+  expect(screen.queryByRole('heading', { name: 'Quiz du programme' })).not.toBeInTheDocument();
+});
+
+it('a quiz answered to the end keeps the "terminé" summary and its score', () => {
+  renderAt('/quizzes?course=chem-ns1&unit=U1&from=lesson');
+  fireEvent.click(screen.getByRole('button', { name: /Commencer/ }));
+  for (let i = 0; i < 3; i += 1) {
+    // Exhaust or solve each question; whatever happens it resolves in ≤3 tries.
+    for (let k = 0; k < 3 && !screen.queryByRole('button', { name: /Question suivante|Voir mon bilan/ }); k += 1) {
+      const radios = screen.getAllByRole('radio').filter((r) => !(r as HTMLInputElement).disabled);
+      fireEvent.click(radios[k] || radios[0]);
+      fireEvent.click(screen.getByText('Vérifier'));
+    }
+    fireEvent.click(screen.getByRole('button', { name: /Question suivante|Voir mon bilan/ }));
+  }
+  expect(screen.getByRole('heading', { level: 1, name: 'Quiz terminé' })).toBeInTheDocument();
+  expect(screen.getByText('bonnes réponses du premier coup')).toBeInTheDocument();
+  expect(screen.queryByText(/répondue sur/)).not.toBeInTheDocument();
+});
+
+describe('phone confirmation', () => {
+  const realMM = window.matchMedia;
+  beforeAll(() => {
+    window.matchMedia = ((q: string) => ({
+      matches: q.includes('max-width'), media: q, onchange: null,
+      addEventListener: jest.fn(), removeEventListener: jest.fn(), addListener: jest.fn(), removeListener: jest.fn(), dispatchEvent: jest.fn(),
+    })) as any;
+  });
+  afterAll(() => { window.matchMedia = realMM; });
+
+  it('puts topic, mode with its real count, three rules and Commencer first; details stay one tap away', () => {
+    renderAt('/quizzes?course=chem-ns1&unit=U1&lesson=CHEM-NSI-U1-L1&from=lesson');
+    expect(screen.getByRole('heading', { level: 1, name: 'Grandeurs et Mesures' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Quiz · 3 questions' })).toBeInTheDocument();
+    const start = screen.getByRole('button', { name: /Commencer/ });
+    const toggle = screen.getByRole('button', { name: /Détails/ });
+    // Commencer comes before the disclosure in reading order.
+    expect(start.compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(document.querySelectorAll('.pe-mode .pe-rules li')).toHaveLength(3);
+    // Coverage and saving are there, but closed.
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByText(/couvrent tout le chapitre/).closest('[hidden]')).not.toBeNull();
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText(/couvrent tout le chapitre/).closest('[hidden]')).toBeNull();
+    expect(screen.getByText(/Sans compte, rien n’est gardé/)).toBeInTheDocument();
+    fireEvent.click(start);
+    expect(screen.getByText('Question 1 sur 3')).toBeInTheDocument();
+  });
 });

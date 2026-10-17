@@ -24,7 +24,8 @@ import CourseInstructors from './CourseInstructors';
 import MasteryBadge from './MasteryBadge';
 import { summarize } from '../../shared/mastery';
 import { subjectCover } from '../utils/subjectCovers';
-import { videoThumb, firstThumb } from '../utils/videoThumb';
+import { firstThumb } from '../utils/videoThumb';
+import { lessonFrame } from '../utils/lessonFrames';
 import { displayCourseName } from '../utils/courseName';
 import { practiceHref } from '../utils/learningJourney';
 
@@ -123,8 +124,9 @@ export default function CourseOverview({
   const resumeModuleTitle = modules[resumeTarget.module]?.title || '';
   const resumeLesson = getLessons(modules[resumeTarget.module])[resumeTarget.lesson];
   const resumeLessonTitle = resumeLesson?.title || '';
-  // The frame of the lesson the CTA opens — what "Commencer" actually starts.
-  const resumeFrame = videoThumb(resumeLesson?.videoUrl, 'hq');
+  // The frame of the lesson the CTA opens — what "Commencer" actually starts —
+  // its best still (utils/lessonFrames). None usable: the course cover below.
+  const resumeFrame = lessonFrame(resumeLesson?.videoUrl);
 
   // ONE action, named after what it opens.
   const ctaLabel = allDone

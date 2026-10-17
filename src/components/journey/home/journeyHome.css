@@ -197,3 +197,93 @@
 
 /* Review counts are amounts to revisit, not red marks. */
 .lws .jh-review .lws-weak__list .lws-weak__count { background: var(--surface); color: var(--text-700) !important; font-size: 0.875rem; }
+
+/* ══ Phone Home order (audit 2026-10-17 #5) ═══════════════════════════════════
+   Phone: continuation → due review → progress → compact subjects. The desktop
+   sidebar's progress and review cards are hidden there (PhoneGlance says the
+   same thing earlier), and the subjects become rows, not stacked desktop
+   cards. Desktop (> 720px) is unchanged. */
+.jh-glance { display: none; }
+
+@media (max-width: 720px) {
+  .lws .jh-desk-only { display: none; }
+  .lws .jh-next__alt--review { display: none; }
+
+  .jh-glance {
+    display: grid; gap: 0.25rem;
+    padding: 0.35rem 1rem 0.9rem;
+    border-radius: 20px;
+    background: var(--surface, #fff);
+    box-shadow: 0 0 0 1px var(--border, #E3EAF4);
+  }
+  [data-theme="dark"] .jh-glance { box-shadow: 0 0 0 1px var(--border-strong, rgba(255,255,255,.16)); }
+
+  .jh-glance__row {
+    display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0.75rem;
+    min-height: 56px; padding: 0.5rem 0;
+    color: var(--text-900); text-decoration: none;
+    box-shadow: none; margin-bottom: 0.5rem;
+  }
+  .jh-glance__row--static { color: var(--text-700); }
+  a.jh-glance__row:focus-visible { outline: 3px solid var(--primary-400, #4C8EF0); outline-offset: 2px; border-radius: 10px; }
+  .jh-glance__icon {
+    display: grid; place-items: center; width: 36px; height: 36px; border-radius: 12px;
+    background: var(--surface-muted, #EEF2F7); color: var(--text-600);
+  }
+  .jh-glance__icon--due { background: color-mix(in srgb, var(--primary-500) 12%, var(--surface, #fff)); color: var(--primary-600, #1558B8); }
+  [data-theme="dark"] .jh-glance__icon--due { color: var(--primary-700, #6FA8F5); }
+  .jh-glance__text { display: grid; gap: 0.05rem; min-width: 0; }
+  .jh-glance__text strong { font-size: 1rem; font-weight: 800; line-height: 1.3; }
+  .jh-glance__text span {
+    overflow: hidden; color: var(--text-600); font-size: 0.875rem; line-height: 1.35;
+    white-space: nowrap; text-overflow: ellipsis;
+  }
+  .jh-glance__chev { color: var(--text-500); }
+  .jh-glance__retry {
+    min-height: 44px; padding: 0; border: 0; background: none; cursor: pointer;
+    color: var(--primary-600, #1558B8); font: inherit; font-size: 0.9375rem; font-weight: 700;
+  }
+
+  .jh-glance__block { display: grid; gap: 0.5rem; padding-top: 0.65rem; }
+  .jh-glance__label { margin: 0; color: var(--text-600); font-size: 0.875rem; font-weight: 700; }
+  .jh-glance__muted { margin: 0; color: var(--text-600); font-size: 0.9375rem; line-height: 1.45; }
+  .jh-glance__prog { display: grid; gap: 0.15rem; margin: 0; padding: 0; list-style: none; }
+  .jh-glance__course {
+    display: grid; gap: 0.35rem; padding: 0.4rem 0; min-height: 44px; align-content: center;
+    color: var(--text-900); text-decoration: none;
+  }
+  .jh-glance__course:focus-visible { outline: 3px solid var(--primary-400, #4C8EF0); outline-offset: 2px; border-radius: 8px; }
+  .jh-glance__course-top { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; }
+  .jh-glance__course-top strong { font-size: 0.9375rem; font-weight: 800; }
+  .jh-glance__course-top span { flex: none; color: var(--text-600); font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+
+  /* ── Compact subject collection: rows with a small real frame ──────────── */
+  .lws--premium .lws-section__head h2 { font-size: 1.3rem; }
+  .lws--premium .lws-subjects { grid-template-columns: minmax(0, 1fr); gap: 0.6rem; }
+  .lws--premium .lws-subj {
+    grid-template-columns: 112px minmax(0, 1fr); grid-template-rows: none; align-items: center;
+    gap: 0.85rem; padding: 0.6rem; border-radius: 18px;
+    box-shadow: 0 0 0 1px var(--border, #E3EAF4);
+  }
+  [data-theme="dark"] .lws--premium .lws-subj { box-shadow: 0 0 0 1px var(--border-strong, rgba(255,255,255,.16)); }
+  .lws--premium .lws-subj:hover { transform: none; box-shadow: 0 0 0 1px var(--border-strong, #D5DEEA); }
+  /* 16:9 exactly: the stills are 16:9 pictures letterboxed in 4:3, so a
+     taller crop shows the black bars; the slight scale hides rounding. */
+  .lws--premium .lws-subj__cover { aspect-ratio: 16 / 9; border-radius: 12px; }
+  .lws--premium .lws-subj__cover img { transform: scale(1.03); }
+  .lws--premium .lws-subj__level,
+  .lws--premium .lws-subj__play,
+  .lws--premium .lws-ring,
+  .lws--premium .lws-subj__cta,
+  .lws--premium .lws-subj__next em { display: none; }
+  .lws--premium .lws-subj__body { gap: 0.15rem; padding: 0; min-width: 0; }
+  .lws--premium .lws-subj__row strong { font-size: 1.0625rem; }
+  .lws--premium .lws-subj__next {
+    display: block; overflow: hidden; font-size: 0.9375rem; font-weight: 600; line-height: 1.35;
+    white-space: nowrap; text-overflow: ellipsis; color: var(--text-700);
+  }
+  .lws--premium .lws-subj__meta { font-size: 0.875rem; line-height: 1.35; }
+  .lws--premium .jh-subj-skel { grid-template-columns: 112px minmax(0, 1fr); }
+  .lws--premium .jh-subj-skel__cover { aspect-ratio: 16 / 9; border-radius: 12px; }
+  .lws--premium .jh-subj-skel__body { padding: 0; }
+}

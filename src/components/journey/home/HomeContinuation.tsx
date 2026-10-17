@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, RefreshCw, RotateCcw, Play } from '../../icons';
 import { evidenceLabel, trackJourney } from '../../../utils/learningJourney';
-import { videoThumb } from '../../../utils/videoThumb';
-import { courseCover } from '../../../utils/courseCovers';
+import { lessonFrame } from '../../../utils/lessonFrames';
 import { GRADES } from '../../../../shared/trackConfig';
 import useStore from '../../../contexts/store';
 import { Skeleton } from '../../Skeleton';
@@ -66,7 +65,7 @@ export default function HomeContinuation({
   const secondary = (
     <>
       {typeof dueCount === 'number' && dueCount > 0 && (
-        <Link to="/revision" className="jh-next__alt" onClick={() => select('review', { due: dueCount })}>
+        <Link to="/revision" className="jh-next__alt jh-next__alt--review" onClick={() => select('review', { due: dueCount })}>
           <RotateCcw size={16} aria-hidden="true" />
           {L(`${dueCount} question${dueCount > 1 ? 's' : ''} à revoir`, `${dueCount} kesyon pou revize`)}
         </Link>
@@ -181,7 +180,10 @@ export default function HomeContinuation({
     const { course, unit, unitIndex, lesson, reason, evidence, positionSec, otherLevel } = state;
     const lvl = courseLevel(course);
     const href = lessonHref(course.id, lesson.id);
-    const frame = videoThumb(lesson.videoUrl, 'hq') || courseCover(course.id) || null;
+    // The lesson's OWN best still. When none of its stills is usable we show
+    // the subject-tinted block, not another lesson's frame: the picture must
+    // be of the lesson the button opens.
+    const frame = lessonFrame(lesson.videoUrl);
     const unitNo = Number(unit?.unit_no) || unitIndex + 1;
     const total = flatLessons(course).length;
     const verb = reason === 'resume' ? L('Reprendre :', 'Kontinye :')

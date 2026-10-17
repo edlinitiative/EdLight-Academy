@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Check } from './icons';
 import { useKatex, renderWithKatex } from '../utils/shared';
 import EssayQuiz from './EssayQuiz';
 import { useTranslation } from 'react-i18next';
@@ -46,6 +45,11 @@ export default function DirectBankQuiz({
   // is shown and answered, but never marked wrong and never sent to review.
   const gradable = isGradable(item);
   const [ungraded, setUngraded] = useState(false);
+  // Once a choice question is resolved, only the choices that carry the
+  // outcome stay open — the student's answer and the right one — so the
+  // explanation and the next action fit the screen (LJ audit #6). The
+  // student can unfold the rest; nothing receives focus when they fold.
+  const [showAllOptions, setShowAllOptions] = useState(false);
 
   const derivedHints = useMemo(() => {
     const base = Array.isArray(item?.hints) ? item.hints.filter(Boolean) : [];
@@ -66,6 +70,7 @@ export default function DirectBankQuiz({
     setLastWrong(null);
     setFinalAnswer('');
     setUngraded(false);
+    setShowAllOptions(false);
   }, [item]);
 
   const handleCheck = () => {
@@ -144,10 +149,10 @@ export default function DirectBankQuiz({
       const left = maxAttempts - attempts;
       return <span className="chip chip--ghost">{t('quizzes.triesLeft', '{{count}} essai restant', { count: left })}</span>;
     }
-    if (ungraded) return null;
-    return correct
-      ? <span className="chip chip--success"><Check size={14} aria-hidden="true" /> {t('quizzes.correctChip', 'Correct')}</span>
-      : <span className="chip chip--danger">{t('quizzes.outOfTries', 'Plus d\'essais')}</span>;
+    // Once answered, the verdict lives in ONE place — the AnswerStatus of
+    // the correction below (LJ audit #2/#6). A second "Correct" chip up here
+    // only repeated it.
+    return null;
   };
 
   const hintToShow = !submitted && attempts > 0 && derivedHints.length
@@ -157,6 +162,12 @@ export default function DirectBankQuiz({
     if (item.kind === 'mcq' || item.kind === 'tf') return item.correctLabel ?? (Array.isArray(item.options) ? item.options[item.correctIndex] : '');
     return item.correctText || '';
   }, [item]);
+
+  const isChoice = item.kind === 'mcq' || item.kind === 'tf';
+  const keptIdx = new Set<number>([selected, item.correctIndex].filter((i) => typeof i === 'number'));
+  const otherCount = Array.isArray(item.options) ? item.options.filter((_, i) => !keptIdx.has(i)).length : 0;
+  const canFold = isChoice && submitted && !ungraded && otherCount > 0;
+  const foldOptions = canFold && !showAllOptions;
 
   if (item.kind === 'essay') {
     return <EssayQuiz item={item} onScore={onScore} />;
@@ -182,8 +193,9 @@ export default function DirectBankQuiz({
       ) : null}
 
       {(item.kind === 'mcq' || item.kind === 'tf') ? (
-        <div className="quiz-card__options">
+        <div className={`quiz-card__options${foldOptions ? ' quiz-card__options--folded' : ''}`}>
           {item.options.map((label, idx) => {
+            if (foldOptions && !keptIdx.has(idx)) return null;
             const isCorrectOpt = idx === item.correctIndex;
             const isSelectedOpt = selected === idx;
             let stateClass = '';
@@ -209,6 +221,20 @@ export default function DirectBankQuiz({
               </label>
             );
           })}
+          {canFold && (
+            <button
+              type="button"
+              className="pq-fold"
+              aria-expanded={!foldOptions}
+              onClick={() => setShowAllOptions((v) => !v)}
+            >
+              {foldOptions
+                ? (otherCount > 1
+                  ? tx(`Voir les ${otherCount} autres choix`, `Wè ${otherCount} lòt chwa yo`)
+                  : tx('Voir l’autre choix', 'Wè lòt chwa a'))
+                : tx('Masquer les autres choix', 'Kache lòt chwa yo')}
+            </button>
+          )}
         </div>
       ) : (
         <div className="exam-take__short-answer-wrap">
@@ -268,7 +294,10 @@ export default function DirectBankQuiz({
                 )}
               </p>
               <dl className="pq-rows">
-                {finalAnswer && (
+                {/* A right choice is still on screen, marked: repeating it
+                    as "Ta réponse" said the same thing twice (LJ audit #6).
+                    Typed answers and misses keep the row. */}
+                {finalAnswer && (!isChoice || kind === 'incorrect' || kind === 'ungraded') && (
                   <div className="pq-row pq-row--yours">
                     <dt>{tx('Ta réponse', 'Repons ou')}</dt>
                     <dd dangerouslySetInnerHTML={renderWithKatex(finalAnswer, katexReady)} />

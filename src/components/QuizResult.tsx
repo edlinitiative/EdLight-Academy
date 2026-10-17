@@ -80,6 +80,7 @@ export default function QuizResult({
   backLabel,
   confirmRead,
   confirmDelays,
+  interrupted = false,
 }: {
   deck: any[];
   log: QuizLogEntry[];
@@ -103,6 +104,8 @@ export default function QuizResult({
   backLabel?: string;
   confirmRead?: ReadReviewMap;
   confirmDelays?: number[];
+  /** The student stopped the quiz early: lead with what was answered. */
+  interrupted?: boolean;
 }) {
   const katexReady = useKatex();
   const reviewRef = useRef<HTMLElement>(null);
@@ -118,6 +121,8 @@ export default function QuizResult({
   const unanswered = n('unanswered');
   const ungraded = n('ungraded');
   const corrections = total - firstTry;
+  const answered = total - unanswered;
+  const earlyStop = mode === 'quiz' && interrupted;
 
   const reviewIds = useMemo(() => reviewIdsOf(deck, log), [deck, log]);
   const effectiveUid = signedIn ? (uid || null) : null;
@@ -143,7 +148,9 @@ export default function QuizResult({
 
   const dueNow = scopeDue ?? reviewIds.length;
 
-  const verdict = mode === 'practice'
+  // An interrupted quiz already leads with "answered X of N" — the verdict
+  // line would only say the same thing again.
+  const verdict = mode === 'practice' || earlyStop
     ? ''
     : unanswered > 0
       ? tx(`Quiz arrêté avant la fin : ${unanswered} question${unanswered > 1 ? 's' : ''} sans réponse.`, `Kwiz la kanpe anvan fen : ${unanswered} kesyon san repons.`)
@@ -259,7 +266,20 @@ export default function QuizResult({
       <section className="qr-score" aria-labelledby="qr-title">
         <p className="qr-score__context">{context}</p>
         <h1 id="qr-title" className="qr-score__title">{title}</h1>
-        {mode === 'quiz' ? (
+        {earlyStop ? (
+          // Participation first, the score second — and the score keeps its
+          // meaning (first-try answers out of the deck), only smaller, so an
+          // early stop is never read as a poor completed attempt (LJ audit #7).
+          <p className="qr-score__lead">
+            <span className="qr-score__lead-main">
+              {tx(`${answered} question${answered > 1 ? 's' : ''} répondue${answered > 1 ? 's' : ''} sur ${total}`, `${answered} kesyon reponn sou ${total}`)}
+            </span>
+            <span className="qr-score__lead-sep" aria-hidden="true"> · </span>
+            <span className="qr-score__lead-sub">
+              {tx(`${firstTry} juste${firstTry > 1 ? 's' : ''} du premier coup`, `${firstTry} bon premye fwa`)}
+            </span>
+          </p>
+        ) : mode === 'quiz' ? (
           <>
             <p className="qr-score__figure">
               <span className="qr-score__num">{firstTry}</span>

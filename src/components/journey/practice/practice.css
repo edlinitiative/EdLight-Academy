@@ -104,8 +104,39 @@
 .pq-why__body { overflow-x: auto; }
 .pq-why--none { color: var(--text-600); font-style: italic; }
 @media (max-width: 600px) {
-  .pq-row { grid-template-columns: 1fr; gap: 0.1rem; }
+  /* Label and value side by side: a resolved miss keeps "Ta réponse" and
+     "Bonne réponse" without pushing "Question suivante" off a 390×844 screen. */
+  .pq-row { grid-template-columns: 7.5rem minmax(0, 1fr); gap: 0.5rem; }
+  .pq-correction { gap: 0.7rem; padding: 0.9rem 1rem; }
+  .pq-fold { min-height: 40px; }
 }
+
+/* Folded choices (right on the first try): one quiet text control under the
+   kept option. Same place before and after unfolding, so focus stays put. */
+.pq-fold {
+  justify-self: start;
+  align-self: start;
+  min-height: 44px;
+  padding: 0 0.25rem;
+  border: 0;
+  background: none;
+  color: var(--primary-600);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+}
+.pq-fold:hover { text-decoration: underline; }
+.pq-fold:focus-visible { outline: 2px solid var(--primary-500); outline-offset: 2px; border-radius: 6px; }
+[data-theme="dark"] .pq-fold { color: var(--primary-700); }
+/* Dark: --primary-600 is the azure FILL (3.4:1 as text on the card). Text
+   links take the light end, --accent-ink (#6FA8F5). */
+[data-theme="dark"] .pe__back,
+[data-theme="dark"] .pe-save a,
+[data-theme="dark"] .pe-save__link,
+[data-theme="dark"] .pe-actions__text,
+[data-theme="dark"] .pq-saved button { color: var(--accent-ink, #6FA8F5); }
 
 /* ── Entry confirmation (PracticeEntry) ───────────────────────────────── */
 .pe {
@@ -302,6 +333,81 @@
   .pe-actions__text { width: 100%; }
 }
 
+/* ── Phone / narrow confirmation (LJ audit #3) ───────────────────────────
+   Topic → mode (with the real count) → three rules → Commencer inside the
+   first 390×844 screen. Coverage, what is kept and the fourth rule sit in
+   one closed "Détails" below the action. No sticky bar: nothing overlays. */
+.pe.pe--compact {
+  gap: 0.9rem;
+  padding: 1.1rem 1.1rem 1rem;
+}
+/* Touch builds give links a 44px floor; centre the text in it and let the
+   target overlap the gaps instead of pushing the topic down. */
+.pe--compact .pe__back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin: -10px 0 -12px;
+}
+.pe--compact .pe__eyebrow { margin-bottom: 0.2rem; font-size: 0.875rem; }
+.pe--compact .pe__title { font-size: clamp(1.45rem, 1.2rem + 1.2vw, 1.75rem); }
+.pe--compact .pe__meta { margin-top: 0.3rem; font-size: 0.9375rem; }
+.pe--compact .pe-mode { gap: 0.6rem; }
+.pe--compact .pe-mode__label { font-size: 1rem; }
+.pe-mode__chips.pe-mode__chips--seg {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+.pe-mode__chips--seg button {
+  display: grid;
+  gap: 0.05rem;
+  justify-items: start;
+  min-height: 56px;
+  padding: 0.45rem 0.85rem;
+  border-radius: 14px;
+  text-align: left;
+}
+.pe-mode__name { font-size: 1rem; font-weight: 750; line-height: 1.25; }
+.pe-mode__sub {
+  color: var(--text-600);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+.pe-mode__chips--seg button.is-on .pe-mode__sub { color: inherit; }
+.pe--compact .pe-rules { gap: 0.4rem; margin: 0; }
+.pe--compact .pe-rules li { font-size: 0.9375rem; line-height: 1.45; }
+.pe--compact .pe-actions { gap: 0.25rem; }
+.pe--compact .pe-actions__start { width: 100%; min-width: 0; }
+.pe-more { display: grid; gap: 0.25rem; margin-top: -0.25rem; }
+.pe-more__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.25rem 0.15rem;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--text-700);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.pe-more__toggle strong { color: var(--text-900); font-weight: 750; }
+.pe-more__chev { flex: none; color: var(--text-500); transition: transform 0.18s ease; }
+.pe-more__toggle[aria-expanded="true"] .pe-more__chev { transform: rotate(180deg); }
+.pe-more__toggle:focus-visible { outline: 2px solid var(--primary-500); outline-offset: 2px; }
+.pe-more__panel:not([hidden]) { display: grid; gap: 0.75rem; padding: 0.15rem 0 0.5rem; }
+.pe-more__panel .pe-rules { margin: 0; }
+.pe--compact .pe-actions__text { justify-self: start; width: auto; padding: 0 0.15rem; text-align: left; }
+
 /* ── Inline confirmation (leaving a quiz) ─────────────────────────────── */
 .pq-leave {
   display: grid;
@@ -345,4 +451,5 @@
 @media (prefers-reduced-motion: reduce) {
   .pq-correction { animation: none; }
   .pe-mode__chips button { transition: none; }
+  .pe-more__chev { transition: none; }
 }

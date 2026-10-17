@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal } from '../components/icons';
 import DirectBankQuiz, { MAX_ATTEMPTS } from '../components/DirectBankQuiz';
@@ -321,6 +321,10 @@ const Quizzes = () => {
   const [canAdvance, setCanAdvance] = useState(false);
   const [quizFinished, setQuizFinished] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  // The student chose "Voir mon bilan maintenant": the summary says the quiz
+  // was interrupted, not finished (LJ audit #7). Scoring is unchanged.
+  const [quizEndedEarly, setQuizEndedEarly] = useState(false);
+  const nextRef = useRef<HTMLButtonElement>(null);
 
   // Practice: an open run, logged the same way so it can end on a summary.
   const [practiceDeck, setPracticeDeck] = useState<any[]>([]);
@@ -329,6 +333,17 @@ const Quizzes = () => {
   const bankDirectItem = practiceDeck.length && !practiceDone ? practiceDeck[practiceDeck.length - 1] : null;
 
   useEffect(() => { setCanAdvance(false); }, [quizIdx]);
+  // "Vérifier" leaves the layout once the question is resolved and
+  // "Question suivante" takes its place. Focus that was on the check button
+  // would otherwise fall to <body>; hand it to the action that replaced it.
+  // Focus anywhere else (an option, the fold control) is left alone.
+  useEffect(() => {
+    if (!canAdvance) return;
+    const active = typeof document !== 'undefined' ? document.activeElement : null;
+    const lost = !active || active === document.body
+      || (active instanceof HTMLElement && active.classList.contains('quiz-card__check'));
+    if (lost) nextRef.current?.focus({ preventScroll: true });
+  }, [canAdvance]);
 
   const inQuiz = !!quizDeck && !quizFinished;
   useFocusMode(!!bankDirectItem || inQuiz);
@@ -359,6 +374,7 @@ const Quizzes = () => {
     setQuizFinished(false);
     setCanAdvance(false);
     setConfirmLeave(false);
+    setQuizEndedEarly(false);
   };
   const resetPractice = () => {
     setPracticeDeck([]);
@@ -519,6 +535,10 @@ const Quizzes = () => {
   const sessionContext = session
     ? [session.subjectLabel, session.levelLabel, session.unitLabel].filter(Boolean).join(' · ')
     : '';
+  /** The page heading names this session, never the generic "Quiz du programme" (LJ audit #8). */
+  const sessionHeading = session
+    ? `${session.mode === 'quiz' ? tx('Quiz', 'Kwiz') : tx('Entraînement libre', 'Pratik lib')}${sessionContext ? ` · ${sessionContext}` : ''}`
+    : pageTitle;
   const reviewHrefFor = (s: Session | null) => {
     if (!s) return '/revision';
     const q = new URLSearchParams({ course: s.courseCode, from: 'result' });
@@ -627,7 +647,10 @@ const Quizzes = () => {
             deck={completedDeck}
             log={completedLog || []}
             mode={session.mode}
-            title={isQuiz ? tx('Quiz terminé', 'Kwiz fini') : tx('Entraînement terminé', 'Pratik fini')}
+            title={isQuiz
+              ? (quizEndedEarly ? tx('Quiz interrompu', 'Kwiz la kanpe anvan fen') : tx('Quiz terminé', 'Kwiz fini'))
+              : tx('Entraînement terminé', 'Pratik fini')}
+            interrupted={isQuiz && quizEndedEarly}
             context={sessionContext}
             tx={tx}
             signedIn={!!userId}
@@ -658,14 +681,17 @@ const Quizzes = () => {
     return (
       <section className="section qz qz--taking">
         <div className="container qz__container">
-          <h1 className="qz__sr-only">{pageTitle}</h1>
-
-          <div className="qz-top">
+          <div className="qz-top qz-top--session">
             <button type="button" onClick={requestLeaveQuiz} className="qz-top__quit" aria-expanded={confirmLeave} aria-controls="qz-leave">
               <ChevronLeft size={18} aria-hidden="true" />
               {tx('Quitter', 'Kite')}
             </button>
-            <span className="qz-top__where">{sessionContext}</span>
+            {/* The one quiet orientation line is also the page heading, so a
+                screen reader hears the same "Quiz · Chimie · NS I · …". */}
+            <h1 className="qz-top__where">
+              <span className="qz__sr-only">{tx('Quiz', 'Kwiz')} · </span>
+              {sessionContext || pageTitle}
+            </h1>
             <span className="qz-top__count">
               {tx(`Question ${quizIdx + 1} sur ${quizDeck.length}`, `Kesyon ${quizIdx + 1} sou ${quizDeck.length}`)}
             </span>
@@ -697,7 +723,7 @@ const Quizzes = () => {
                 <button type="button" className="button button--primary" onClick={() => setConfirmLeave(false)}>
                   {tx('Continuer le quiz', 'Kontinye kwiz la')}
                 </button>
-                <button type="button" className="button button--ghost" onClick={() => { setConfirmLeave(false); setQuizFinished(true); }}>
+                <button type="button" className="button button--ghost" onClick={() => { setConfirmLeave(false); setQuizEndedEarly(true); setQuizFinished(true); }}>
                   {tx('Voir mon bilan maintenant', 'Wè rezilta m kounye a')}
                 </button>
                 <button type="button" className="qr-actions__text" onClick={endSession}>
@@ -713,7 +739,7 @@ const Quizzes = () => {
 
           {canAdvance ? (
             <div className="qz-next">
-              <button type="button" onClick={goNextQuizQuestion} className="button button--primary button--lg qz-next__primary">
+              <button ref={nextRef} type="button" onClick={goNextQuizQuestion} className="button button--primary button--lg qz-next__primary">
                 {isLast ? tx('Voir mon bilan', 'Wè rezilta m') : t('quizzes.nextQuestion', 'Question suivante')}
               </button>
             </div>
@@ -736,7 +762,7 @@ const Quizzes = () => {
     return (
       <section className="section qz qz--taking">
         <div className="container qz__container">
-          <h1 className="qz__sr-only">{pageTitle}</h1>
+          <h1 className="qz__sr-only">{sessionHeading}</h1>
           <div className="qz-top">
             <button type="button" onClick={finishPractice} className="qz-top__quit">
               <ChevronLeft size={18} aria-hidden="true" />

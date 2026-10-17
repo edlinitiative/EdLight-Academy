@@ -4,8 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import {
   ChevronRight, ClipboardList, RotateCcw, PlayCircle,
 } from '../../components/icons';
-import { videoThumb, firstThumb } from '../../utils/videoThumb';
-import { courseCover } from '../../utils/courseCovers';
+import { firstThumb } from '../../utils/videoThumb';
+import { courseCover, courseCoverPosition } from '../../utils/courseCovers';
 import useStore from '../../contexts/store';
 import { listRecentExamAttempts } from '../../services/userActivity';
 import { loadReviewMap } from '../../services/reviewService';
@@ -20,6 +20,7 @@ import MySchoolCard from '../../components/MySchoolCard';
 import { useCourseMastery } from '../../hooks/useMastery';
 import HomeContinuation from '../../components/journey/home/HomeContinuation';
 import ProgressSummary, { type SummaryRow } from '../../components/journey/home/ProgressSummary';
+import PhoneGlance from '../../components/journey/home/PhoneGlance';
 import {
   resolveContinuation, summarizeCourse, readResumeSeconds, parseLessonPath,
 } from '../../components/journey/home/homeJourney';
@@ -265,14 +266,12 @@ export default function LearnWorkspace({
     return rows;
   }, [attempts, examByKey, best, isCreole, L, navigate]);
 
-  // Started: a frame of the next lesson. Not started: a frame a third of the
-  // way in — first lessons often open on a title card or an app screen.
-  const frameFor = (course: any, nextUnit: any, started: boolean) => {
+  // The course's curated cover (utils/courseCovers). It used to be a frame of
+  // the next lesson once the student had started, which is luck: the Maths
+  // card showed the iPad ink palette. A course without a curated cover (a new
+  // one) takes a frame a third of the way in.
+  const frameFor = (course: any) => {
     const all = (course?.modules || []).flatMap((m: any) => m?.lessons || []);
-    if (started) {
-      const next = nextUnit?.lessons?.find((l: any) => videoThumb(l?.videoUrl)) || null;
-      if (next) return videoThumb(next.videoUrl, 'hq');
-    }
     const chosen = courseCover(course?.id);
     if (chosen) return chosen;
     const from = Math.floor(all.length / 3);
@@ -345,6 +344,21 @@ export default function LearnWorkspace({
             L={L}
           />
 
+          {/* ── Phone only: review + progress before the catalogue (the
+                desktop sidebar holds them; on a phone it falls far below). ── */}
+          <PhoneGlance
+            due={weak === 'failed' ? 'failed' : dueCount}
+            dueFrom={[...new Set(weakList.map((w) => (w.code ? weakName(w.code) : L('Divers', 'Divès'))))].slice(0, 2)}
+            onRetryReview={() => setReviewTry((n) => n + 1)}
+            rows={summaryRows}
+            progressLoading={catalogLoading || (!catalogFailed && recordsLoading)}
+            progressFailed={catalogFailed}
+            subjectName={subjectName}
+            levelLabel={levelLabel}
+            courseLevel={courseLevel}
+            L={L}
+          />
+
           {/* ── Subjects: each opens on a frame of its next lesson ─────────── */}
           <section className="lws-section" aria-labelledby="lws-subjects">
             <div className="lws-section__head">
@@ -360,7 +374,7 @@ export default function LearnWorkspace({
             ) : (
             <div className="lws-subjects">
               {subjects.map(({ code, course, stats, nextUnit, unitsDone, unitsTotal }) => {
-                const frame = frameFor(course, nextUnit, stats.completed > 0);
+                const frame = frameFor(course);
                 const r = 20;
                 const circ = 2 * Math.PI * r;
                 const ev = summarizeCourse(course, progressByCourseId.get(course.id), mastery);
@@ -371,7 +385,7 @@ export default function LearnWorkspace({
                 return (
                   <Link key={code} to={`/courses/${course.id}`} className="lws-subj">
                     <span className="lws-subj__cover">
-                      {frame ? <img src={frame} alt="" loading="lazy" /> : <span className="lws-subj__blank"><SubjectTile code={code} size="lg" /></span>}
+                      {frame ? <img src={frame} alt="" loading="lazy" style={{ objectPosition: courseCoverPosition(course.id) }} /> : <span className="lws-subj__blank"><SubjectTile code={code} size="lg" /></span>}
                       <span className="lws-subj__level">{levelLabel(courseLevel(course))}</span>
                       <span className="lws-subj__play" aria-hidden="true"><PlayCircle size={26} /></span>
                     </span>
@@ -446,6 +460,7 @@ export default function LearnWorkspace({
         {/* ── Sidebar ────────────────────────────────────────────────────── */}
         <aside className="lws-side">
           <ProgressSummary
+            className="jh-desk-only"
             rows={summaryRows}
             loading={catalogLoading || (!catalogFailed && recordsLoading)}
             failed={catalogFailed}
@@ -459,7 +474,7 @@ export default function LearnWorkspace({
           <ExamCountdown />
 
           {/* Due review, explained as what it is: spacing, not a grade. */}
-          <section className="lws-card lws-weak jh-review" aria-labelledby="lws-weak">
+          <section className="lws-card lws-weak jh-review jh-desk-only" aria-labelledby="lws-weak">
             <div className="lws-section__head">
               <h3 id="lws-weak"><RotateCcw size={18} aria-hidden="true" /> {L('À revoir', 'Pou revize')}</h3>
             </div>

@@ -119,3 +119,32 @@ it('due questions in the chapter: review is the one primary action, with the top
   expect(link).toHaveAttribute('href', '/revision?course=CHEM-NSI&unit=U1&from=result');
   expect(document.querySelectorAll('.qr-actions .button--primary')).toHaveLength(1);
 });
+
+describe('an interrupted quiz', () => {
+  const early = [item('a'), item('b'), item('c'), item('d')];
+  const earlyLog: QuizLogEntry[] = [{ tries: 1, solved: true, answers: ['x'] }];
+  it('is headed as interrupted and leads with what was answered; the score keeps its meaning', () => {
+    render(
+      <MemoryRouter>
+        <QuizResult deck={early} log={earlyLog} title="Quiz interrompu" interrupted context="" tx={tx} signedIn={false}
+          onSignIn={jest.fn()} onReplay={jest.fn()} onChangeUnit={jest.fn()} examHref={null} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('heading', { level: 1, name: 'Quiz interrompu' })).toBeInTheDocument();
+    expect(screen.getByText('1 question répondue sur 4')).toBeInTheDocument();
+    expect(screen.getByText('1 juste du premier coup')).toBeInTheDocument();
+    // No big full-deck fraction leading the page.
+    expect(document.querySelector('.qr-score__figure')).toBeNull();
+    expect(screen.getByText('sans réponse', { selector: 'li', exact: false })).toHaveTextContent('3 sans réponse');
+  });
+  it('a completed quiz keeps the big score', () => {
+    render(
+      <MemoryRouter>
+        <QuizResult deck={[item('a')]} log={earlyLog} title="Quiz terminé" context="" tx={tx} signedIn={false}
+          onSignIn={jest.fn()} onReplay={jest.fn()} onChangeUnit={jest.fn()} examHref={null} />
+      </MemoryRouter>,
+    );
+    expect(document.querySelector('.qr-score__figure')).toHaveTextContent('1/ 1');
+    expect(screen.queryByText(/répondue sur/)).not.toBeInTheDocument();
+  });
+});
