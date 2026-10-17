@@ -212,7 +212,7 @@
    eyebrow, the night's flat surfaces, one coral primary, 14px floor. Scoped
    to .jz (the trivia page root) so the rules cannot leak. */
 .jz .sprint-card, .jz .sprint-panel {
-  border: 1px solid #365171; border-radius: 18px; background: #12223B; box-shadow: none;
+  border: 0; border-radius: 18px; background: #13243F; box-shadow: none;
 }
 .jz .sprint-card > .sprint-pill:first-child { display: none; }
 .jz .sprint-title { color: #F5F8FF; font-size: 1.375rem; font-weight: 750; }
@@ -220,12 +220,12 @@
 .jz .sprint-muted { color: #C1CFE4; font-size: 1rem; }
 .jz .sprint-pill { font-size: 0.875rem; letter-spacing: 0; background: #1B3152; color: #C1CFE4; }
 .jz .sprint-field > span { color: #C1CFE4; font-size: 0.9375rem; }
-.jz .sprint-chip { min-height: 44px; padding: 0 0.95rem; border-color: #365171; background: #12223B; color: #C1CFE4; font-size: 0.9375rem; }
+.jz .sprint-chip { min-height: 44px; padding: 0 0.95rem; border-color: transparent; background: #1A2D4D; color: #C1CFE4; font-size: 0.9375rem; }
 .jz .sprint-chip.is-on { border-color: #4A6890; background: #1B3152; color: #F5F8FF; box-shadow: inset 0 0 0 1px #4A6890; }
 .jz .sprint-btn { min-height: 44px; font-size: 1rem; font-weight: 750; transition: background 0.15s ease; }
 .jz .sprint-btn--primary { background: #FF6A45; color: #12213A; }
 .jz .sprint-btn--primary:hover:not(:disabled) { background: #FF7D5C; }
-.jz .sprint-btn--ghost { border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.07); color: #F5F8FF; }
+.jz .sprint-btn--ghost { border: 0; background: #1F3456; color: #F5F8FF; }
 .jz .sprint-btn--ghost:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); }
 .jz .sprint-btn--sm { min-height: 44px; font-size: 0.9375rem; }
 
@@ -233,9 +233,9 @@
 .jz .live-entry__banner { display: none; }
 .jz .live-entry__title { color: #F5F8FF; font-size: clamp(1.25rem, 1.1rem + 0.6vw, 1.5rem); font-weight: 750; letter-spacing: -0.015em; }
 .jz .live-entry__lede { color: #C1CFE4; font-size: 1rem; }
-.jz .live-entry__card { border: 1px solid #365171; border-radius: 18px; background: #12223B; color: #F5F8FF; }
+.jz .live-entry__card { border: 0; border-radius: 18px; background: #13243F; color: #F5F8FF; }
 .jz .live-entry__card h3 { color: #F5F8FF; font-size: 1.0625rem; }
 .jz .live-entry__icon, .jz .live-entry__icon--violet { background: #1B3152; color: #9DC4FF; }
 .jz .live-entry__pin { color: #C1CFE4; font-size: 0.9375rem; }
-.jz .live-entry__pin input { border-color: #365171; background: #091426; color: #F5F8FF; }
+.jz .live-entry__pin input { border-color: transparent; background: #091426; color: #F5F8FF; }
 .jz .live-entry__all { min-height: 44px; color: #9DC4FF; font-weight: 650; }

@@ -1608,3 +1608,27 @@ body.arena-night .mx-page .myschool__cta {
 }
 .mx-duelres__facts strong { color: #F5F8FF; font-size: 1rem; font-weight: 800; }
 .mx-duelres__hint { font-size: 0.875rem !important; }
+
+/* ── Solid surfaces (2026-10-17) ──────────────────────────────────────────
+   Ted: "i dont like the border w transparent fill — looks too AI". Tiles,
+   rows, the mode switch and the match/results panels lose their hairlines;
+   they separate from the night by TONE (opaque fills, one step lighter on
+   hover), never by an outline. */
+.jz { --jz-surface: #13243F; --jz-surface-2: #1C3254; --jz-border: transparent; }
+.mx-quiz, .mx-page, .mx-share { --mx-border: transparent; }
+.jz-theme:hover:not(:disabled), .jz-game:hover, .jz-daily:hover:not(:disabled) { border-color: transparent; }
+.jz-theme__glyph, .jz-game__glyph, .jz-daily__glyph { background: #1F3760; }
+.jz-modes { background: #0D1A30; }
+.jz-mode.is-on { background: #24395E; box-shadow: none; }
+.jz-more--end { border-top: 0; }
+.jz .jz-settings select, .jz .jz-duels .duel-hub__input { background: #0D1A30; }
+/* Answer states: solid tonal fills, no rings. The key chip's colour and the
+   mark's words still name the state, so colour is never the only cue. */
+.mx-opt { box-shadow: none; }
+@media (hover: hover) { .mx-opt:hover:not(:disabled) { box-shadow: none; } }
+.mx-opt.is-locked { background: #1D3D70; box-shadow: none; }
+.mx-opt.is-correct { background: #0E3A2C; box-shadow: none; }
+.mx-opt.is-wrong { background: #46192A; box-shadow: none; }
+.mx-opt.is-rest { background: var(--mx-rest); box-shadow: none; }
+body.arena-night .mx-page .myschool__cta { background: #1F3456 !important; box-shadow: none !important; }
+.mx-duelres__facts li { background: #1A2D4D; box-shadow: none; }

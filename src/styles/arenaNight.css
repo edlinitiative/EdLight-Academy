@@ -44,10 +44,10 @@ body.arena-night .navbar .nav-actions__signin:hover, body.arena-night .navbar .n
 .aph { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; margin: 0 0 clamp(1rem, 2.5vw, 1.5rem); }
 .aph__back {
   display: grid; place-items: center; flex-shrink: 0; width: 44px; height: 44px; border-radius: 14px;
-  background: rgba(255, 255, 255, 0.06); box-shadow: inset 0 0 0 1px rgba(160, 190, 255, 0.18);
-  color: #C8D6F5; text-decoration: none; transition: background 0.15s ease, color 0.15s ease;
+  background: #1A2D4D; box-shadow: none;
+  color: #DCE6F7; text-decoration: none; transition: background 0.15s ease, color 0.15s ease;
 }
-.aph__back:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+.aph__back:hover { background: #23395E; color: #fff; }
 .aph__title {
   flex: 1 1 auto; min-width: 0; margin: 0; font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif);
   font-size: clamp(2rem, 1.4rem + 1.8vw, 2.9rem); font-weight: 800; letter-spacing: -0.045em; line-height: 1.05;
@@ -60,10 +60,12 @@ body.arena-night .navbar .nav-actions__signin:hover, body.arena-night .navbar .n
 /* Night panel: a card with an optional gradient hairline edge. */
 .an-panel {
   position: relative; border-radius: 26px;
-  background: linear-gradient(180deg, rgba(18, 36, 84, 0.88), rgba(9, 19, 48, 0.92));
-  box-shadow: inset 0 0 0 1px rgba(160, 190, 255, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 40px 80px -40px rgba(0, 0, 0, 0.9);
+  background: #10203D;
+  box-shadow: 0 24px 48px -32px rgba(0, 0, 0, 0.8);
 }
 .an-panel--edge::before {
+  /* 2026-10-17: the gradient hairline edge read as generated; retired. */
+  display: none;
   content: ''; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; pointer-events: none;
   background: linear-gradient(140deg, rgba(255, 194, 74, 0.65), transparent 32%, transparent 70%, rgba(61, 139, 255, 0.5));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
@@ -81,10 +83,10 @@ body.arena-night .navbar .nav-actions__signin:hover, body.arena-night .navbar .n
 .an-go:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 .an-ghost {
   display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; min-height: 48px; padding: 0 1.2rem; border: 0; border-radius: 999px;
-  background: rgba(255, 255, 255, 0.07); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2); color: #fff !important;
+  background: #1F3456; box-shadow: none; color: #fff !important;
   font-family: var(--font-display, sans-serif); font-size: 0.95rem; font-weight: 800; text-decoration: none; cursor: pointer;
 }
-.an-ghost:hover { background: rgba(255, 255, 255, 0.13); }
+.an-ghost:hover { background: #284068; }
 .an-go:focus-visible, .an-ghost:focus-visible { outline: 3px solid #FFC24A; outline-offset: 3px; }
 
 /* The signed-out door (ArenaGate). */
@@ -163,14 +165,16 @@ body.arena-night :is(.ah-start, .aj-go, .an-go, .demo-go, .arc-btn--lg, .arc-btn
   box-shadow: none !important;
 }
 body.arena-night :is(.ah-start, .aj-go, .an-go, .demo-go, .arc-btn--lg, .arc-btn--go, .gx-btn:not(.gx-btn--ghost), .duel-pill--primary, .hs-go, .arena-national__cta, .trivia-daily__cta, .trivia-mix, .myschool__cta, main .button--primary) svg { color: currentColor; }
-/* Secondary: a flat, quiet fill with a hairline. */
+/* Secondary (2026-10-17): an OPAQUE marine fill, no hairline. Ted: the
+   outline-on-translucent look "looks too AI". Told apart from the coral
+   primary by colour alone, from the page by tone. */
 body.arena-night :is(.ah-ghost, .an-ghost, .gx-btn--ghost, .duel-pill--soft, .gx-duel, .ah-cta--btn, .hs-ghost, .myschool__ghost, main .button--ghost, main .button--secondary) {
-  background: rgba(255, 255, 255, 0.07) !important;
+  background: #1F3456 !important;
   color: #F5F8FF !important;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2) !important;
+  box-shadow: none !important;
 }
 body.arena-night :is(.ah-ghost, .an-ghost, .gx-btn--ghost, .duel-pill--soft, .gx-duel, .ah-cta--btn, .hs-ghost, .myschool__ghost, main .button--ghost, main .button--secondary):hover {
-  background: rgba(255, 255, 255, 0.12) !important;
+  background: #284068 !important;
   transform: none !important;
 }
 body.arena-night :is(.ah-start, .aj-go, .an-go, .demo-go, .arc-btn--lg, .arc-btn--go, .gx-btn, .duel-pill, .ah-cta, .ah-ghost, .an-ghost, .gx-duel):active {
