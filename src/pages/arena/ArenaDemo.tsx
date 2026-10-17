@@ -14,6 +14,7 @@ import PreShow from '../../broadcast/segments/PreShow';
 import PostGame from '../../broadcast/segments/PostGame';
 import HaitiMap from '../../components/arena/HaitiMap';
 import SchoolBuilding from '../../components/arena/SchoolBuilding';
+import Avatar from '../../arena-art/avatars/Avatar';
 import type { StageData, StageTournament } from '../../broadcast/sceneContract';
 import { BROADCAST_DIRECTOR_OPTIONS } from '../../broadcast/directorOptions';
 import '../../broadcast/stage.css';
@@ -431,6 +432,7 @@ export default function ArenaDemo() {
                 </span>
               ) : (
                 <span className="demo-play__team demo-play__team--solo">
+                  <Avatar seed="demo-viewer" size={40} mood={revealQ ? (picked === item.q.answer ? 'celebrating' : picked !== null ? 'recovering' : 'idle') : picked !== null ? 'ready' : 'focused'} still={reduceMotion} />
                   <span>{t('Joue avec la salle', 'Jwe ak sal la')}<small>{t(`Toi : ${tally.right} sur ${tally.answered}`, `Ou : ${tally.right} sou ${tally.answered}`)}</small></span>
                 </span>
               )}
@@ -470,6 +472,7 @@ export default function ArenaDemo() {
       {/* The viewer's own evening, once it is over. */}
       {isFinal && tally.answered > 0 && (
         <aside className="demo-yours" aria-live="polite">
+          <Avatar seed="demo-viewer" size={72} mood={tally.right * 2 >= TOTAL_QUESTIONS ? 'celebrating' : 'idle'} still={reduceMotion} />
           <p className="demo-yours__label">{t('Ta soirée', 'Swa ou')}</p>
           <p className="demo-yours__score"><b>{tally.right}</b> / {TOTAL_QUESTIONS}</p>
           <p className="demo-yours__line">

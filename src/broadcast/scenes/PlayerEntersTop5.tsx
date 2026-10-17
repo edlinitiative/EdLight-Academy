@@ -1,4 +1,5 @@
 import React from 'react';
+import PlayerFace from '../PlayerFace';
 import SceneFrame from '../SceneFrame';
 import type { SceneProps } from '../sceneContract';
 import { payloadOf } from '../sceneContract';
@@ -59,7 +60,8 @@ export default function PlayerEntersTop5({ scene, data, elapsed, reduceMotion, t
           {deltaLabel !== 0
             ? <span className="mv-chip mv-chip--quiet">{deltaLabel > 0 ? '+' : ''}{deltaLabel}</span>
             : null}
-          <div className="mv-lead__over">
+          <div className="mv-lead__over mv-card__who">
+            {player ? <PlayerFace uid={player.uid} schoolKey={player.schoolKey} schoolName={payload?.school.label} standings={data.standings} mood="ready" size={48} still={reduceMotion} /> : null}
             <span className="mv-name">{player?.displayName}</span>
             {' '}
             <span className="mv-short">{payload?.school.shortName || payload?.school.label}</span>
