@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { X, Check, Trophy, Flame, Megaphone, PartyPopper, Repeat, Trash2, Clock, BellRing } from './icons';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { X, Check, Trophy, Flame, Megaphone, Repeat, Trash2 } from './icons';
 import useStore from '../contexts/store';
-import { 
-  getUnreadNotifications, 
-  markNotificationRead, 
+import {
+  getRecentNotifications,
+  markNotificationRead,
   markAllNotificationsRead,
   getNotificationPreferences,
   updateNotificationPreferences,
@@ -19,355 +20,491 @@ import {
   subscribeToPush,
   sendSelfTestPush,
 } from '../services/pushNotificationService';
+import './NotificationCenter.css';
+
+/*
+ * The inbox drawer (design spec S17 / NOTIF-01–04).
+ *
+ * - "Toutes" keeps read items; "Non lues" filters. Marking read never removes
+ *   a row from Toutes, and a failed write puts the row back to unread.
+ * - Rows are grouped Aujourd'hui / Plus tôt, with a relative time whose exact
+ *   value is in the <time> element. The row's destination is a link; "marquer
+ *   comme lu" is a separate button beside it, never nested inside.
+ * - Achievement and streak items are written with English text by older
+ *   code; their typed fields (badge name, streak days) are enough to render
+ *   them in the student's language. Anything else shows its stored text.
+ * - A reminder is created only from an explicit form — time, repeat, the
+ *   device's time zone and a preview sentence — never by one silent click.
+ */
+
+type Tab = 'all' | 'unread' | 'reminders' | 'settings';
+
+/** Only same-site paths are followed; anything else falls back by type. */
+function safePath(url: unknown): string | null {
+  return typeof url === 'string' && url.startsWith('/') && !url.startsWith('//') ? url : null;
+}
+
+function createdMs(n: any): number | null {
+  const c = n?.createdAt;
+  if (!c) return null;
+  if (typeof c.toMillis === 'function') return c.toMillis();
+  if (typeof c.toDate === 'function') return c.toDate().getTime();
+  const ms = new Date(c).getTime();
+  return Number.isNaN(ms) ? null : ms;
+}
 
 export default function NotificationCenter({ onClose }) {
   const { user, language } = useStore();
   const isCreole = language === 'ht';
-  const t = (fr, ht) => (isCreole ? ht : fr);
-  const [activeTab, setActiveTab] = useState('notifications'); // 'notifications' or 'settings'
-  const [notifications, setNotifications] = useState([]);
-  const [reminders, setReminders] = useState([]);
-  const [preferences, setPreferences] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  const locale = isCreole ? 'fr-HT' : 'fr-FR';
+
+  const [tab, setTab] = useState<Tab>('all');
+  const [items, setItems] = useState<any[] | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reminders, setReminders] = useState<any[]>([]);
+  const [preferences, setPreferences] = useState<any>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [permission, setPermission] = useState(
-    () => (typeof window !== 'undefined' ? getPermission() : 'default')
+    () => (typeof window !== 'undefined' ? getPermission() : 'default'),
   );
+  const [pushNote, setPushNote] = useState<string | null>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  // Reminder form
+  const [formOpen, setFormOpen] = useState(false);
+  const [formTime, setFormTime] = useState('18:00');
+  const [formRepeat, setFormRepeat] = useState<'daily' | 'weekly' | 'once'>('daily');
+  const [formSaving, setFormSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const timeZone = useMemo(() => {
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch { return 'UTC'; }
+  }, []);
+
+  const load = async () => {
+    if (!user?.uid) return;
+    setLoadFailed(false);
+    const rows = await getRecentNotifications(user.uid);
+    if (rows === null) { setLoadFailed(true); setItems([]); return; }
+    setItems(rows);
+  };
 
   useEffect(() => {
-    if (user?.uid) {
-      loadNotifications();
-      loadReminders();
-      loadPreferences();
-    }
+    if (!user?.uid) return;
+    load();
+    getUserReminders(user.uid).then(setReminders);
+    getNotificationPreferences(user.uid).then((p) => {
+      setPreferences(p);
+      if (p?.reminderTime) setFormTime(p.reminderTime);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.uid]);
 
-  const loadNotifications = async () => {
-    if (!user?.uid) return;
-    const unread = await getUnreadNotifications(user.uid);
-    setNotifications(unread);
-    setLoading(false);
+  // A dialog: focus starts on Fermer, Escape closes.
+  useEffect(() => {
+    closeRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const unreadCount = (items || []).filter((n) => !n.read).length;
+
+  /** Title, body and destination in the student's language where the data allows. */
+  const present = (n: any) => {
+    if (n.type === 'achievement') {
+      const name = n.badgeName || String(n.message || '').match(/"([^"]+)"/)?.[1] || '';
+      return {
+        Icon: Trophy,
+        title: t('Nouveau succès', 'Nouvo siksè'),
+        body: name ? t(`Tu as gagné le badge «\u00A0${name}\u00A0».`, `Ou genyen badj «\u00A0${name}\u00A0».`) : (n.message || ''),
+        to: safePath(n.url) || '/profile',
+        action: t('Voir mes badges', 'Wè badj mwen yo'),
+      };
+    }
+    if (n.type === 'streak' && Number(n.streakDays) > 0) {
+      const d = Number(n.streakDays);
+      return {
+        Icon: Flame,
+        title: t(`Série de ${d} jours`, `Seri ${d} jou`),
+        body: t(`${d} jours d’étude d’affilée. Continue demain pour la garder.`, `${d} jou etid youn dèyè lòt. Kontinye demen pou kenbe l.`),
+        to: safePath(n.url) || '/dashboard',
+        action: t('Continuer', 'Kontinye'),
+      };
+    }
+    return {
+      Icon: Megaphone,
+      title: n.title || t('Notification', 'Notifikasyon'),
+      body: n.message || '',
+      to: safePath(n.url),
+      action: t('Ouvrir', 'Louvri'),
+    };
   };
 
-  const loadReminders = async () => {
-    if (!user?.uid) return;
-    const userReminders = await getUserReminders(user.uid);
-    setReminders(userReminders);
+  const relative = (ms: number | null) => {
+    if (ms === null) return t('À l’instant', 'Kounye a');
+    const diff = Date.now() - ms;
+    const min = Math.round(diff / 60000);
+    if (min < 1) return t('À l’instant', 'Kounye a');
+    if (min < 60) return t(`Il y a ${min} min`, `Sa gen ${min} min`);
+    const h = Math.round(min / 60);
+    if (h < 24) return t(`Il y a ${h} h`, `Sa gen ${h} è`);
+    const days = Math.round(h / 24);
+    if (days === 1) return t('Hier', 'Ayè');
+    if (days < 7) return t(`Il y a ${days} jours`, `Sa gen ${days} jou`);
+    return new Date(ms).toLocaleDateString(locale, { day: 'numeric', month: 'long' });
   };
 
-  const loadPreferences = async () => {
-    if (!user?.uid) return;
-    const prefs = await getNotificationPreferences(user.uid);
-    setPreferences(prefs);
-  };
+  const setRead = (id: string, read: boolean) =>
+    setItems((prev) => (prev || []).map((n) => (n.id === id ? { ...n, read } : n)));
 
-  const handleMarkRead = async (notificationId) => {
+  const handleMarkRead = async (id: string) => {
     if (!user?.uid) return;
-    await markNotificationRead(user.uid, notificationId);
-    setNotifications(prev => prev.filter(n => n.id !== notificationId));
+    setRead(id, true);
+    const ok = await markNotificationRead(user.uid, id);
+    if (!ok) {
+      setRead(id, false);
+      setNotice(t('Impossible de marquer comme lu. Réessaie.', 'Nou pa t ka make l kòm li. Eseye ankò.'));
+    }
   };
 
   const handleMarkAllRead = async () => {
     if (!user?.uid) return;
-    await markAllNotificationsRead(user.uid);
-    setNotifications([]);
+    setNotice(null);
+    const { failed } = await markAllNotificationsRead(user.uid);
+    await load();
+    if (failed !== 0) {
+      setNotice(failed < 0
+        ? t('Rien n’a pu être marqué comme lu. Vérifie ta connexion.', 'Anyen pa t ka make kòm li. Tcheke koneksyon ou.')
+        : t(`${failed} notification${failed > 1 ? 's' : ''} n’${failed > 1 ? 'ont' : 'a'} pas pu être marquée${failed > 1 ? 's' : ''} comme lue${failed > 1 ? 's' : ''}.`, `${failed} notifikasyon pa t ka make kòm li.`));
+    }
   };
 
-  const handleDeleteReminder = async (reminderId) => {
+  const handleDeleteReminder = async (id: string) => {
     if (!user?.uid) return;
-    await deleteReminder(user.uid, reminderId);
-    setReminders(prev => prev.filter(r => r.id !== reminderId));
+    const before = reminders;
+    setReminders((prev) => prev.filter((r) => r.id !== id));
+    const ok = await deleteReminder(user.uid, id);
+    if (ok === false) {
+      setReminders(before);
+      setNotice(t('Le rappel n’a pas pu être supprimé.', 'Nou pa t ka efase rapèl la.'));
+    }
   };
 
-  const handlePreferenceChange = async (key, value) => {
+  const handlePreferenceChange = async (key: string, value: any) => {
     if (!user?.uid) return;
     const updated = { ...preferences, [key]: value };
     setPreferences(updated);
     await updateNotificationPreferences(user.uid, updated);
   };
 
-  const handleCreateReminder = async () => {
+  /** First moment the chosen time happens, from now, on this device's clock. */
+  const firstRun = useMemo(() => {
+    const [h, m] = formTime.split(':').map(Number);
+    const d = new Date();
+    d.setHours(h || 0, m || 0, 0, 0);
+    if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
+    return d;
+  }, [formTime, formOpen]);
+
+  const preview = (() => {
+    const day = firstRun.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' });
+    const time = formTime;
+    if (formRepeat === 'daily') return t(`Chaque jour à ${time}, à partir du ${day} — ${timeZone}.`, `Chak jou a ${time}, apati ${day} — ${timeZone}.`);
+    if (formRepeat === 'weekly') {
+      const wd = firstRun.toLocaleDateString(locale, { weekday: 'long' });
+      return t(`Chaque ${wd} à ${time}, à partir du ${day} — ${timeZone}.`, `Chak ${wd} a ${time}, apati ${day} — ${timeZone}.`);
+    }
+    return t(`Une fois, le ${day} à ${time} — ${timeZone}.`, `Yon sèl fwa, ${day} a ${time} — ${timeZone}.`);
+  })();
+
+  const handleCreateReminder = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!user?.uid) return;
-    
-    // Simple reminder creation - in production, this would open a form
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(18, 0, 0, 0);
-    
-    await createStudyReminder(user.uid, {
-      title: t("Rappel d'étude quotidien", 'Rapèl etid chak jou'),
-      message: t('Continue ton apprentissage ✨', 'Kontinye aprann ✨'),
-      scheduledFor: tomorrow.toISOString(),
-      recurring: true,
-      recurringPattern: 'daily',
+    setFormSaving(true);
+    setFormError(null);
+    const id = await createStudyReminder(user.uid, {
+      title: t('Rappel d’étude', 'Rapèl etid'),
+      message: t('C’est l’heure de réviser.', 'Se lè pou revize.'),
+      scheduledFor: firstRun.toISOString(),
+      recurring: formRepeat !== 'once',
+      recurringPattern: formRepeat === 'once' ? null : formRepeat,
     });
-    
-    await loadReminders();
+    setFormSaving(false);
+    if (!id) {
+      // The form stays filled so nothing has to be re-entered.
+      setFormError(t('Le rappel n’a pas été enregistré. Réessaie.', 'Rapèl la pa t anrejistre. Eseye ankò.'));
+      return;
+    }
+    setFormOpen(false);
+    setReminders(await getUserReminders(user.uid));
   };
 
   const handleEnableNotifications = async () => {
     const result = await requestNotificationPermission();
     setPermission(result);
-    if (result === 'granted') {
-      if (user?.uid) {
-        try {
-          await subscribeToPush(user.uid);
-        } catch {
-          /* push optional */
-        }
+    setPushNote(null);
+    if (result === 'granted' && user?.uid) {
+      try {
+        await subscribeToPush(user.uid);
+      } catch {
+        // Browser permission is not a server subscription: say which one failed.
+        setPushNote(t(
+          'Autorisé dans le navigateur, mais l’abonnement aux notifications n’a pas abouti. Les rappels s’afficheront quand le site est ouvert.',
+          'Navigatè a otorize, men abònman notifikasyon an pa mache. Rapèl yo ap parèt lè sit la louvri.',
+        ));
       }
-      await showLocalNotification(t('Notifications activées ✅', 'Notifikasyon aktive ✅'), {
-        body: t('Tu recevras tes rappels et tes succès ici.', 'W ap resevwa rapèl ou yo ak siksè ou yo isit la.'),
-        tag: 'welcome',
-        url: '/dashboard',
-      });
     }
   };
 
   const handleTestNotification = async () => {
-    // Prefer the server path (this is what fires when the app is closed). If the
-    // backend isn't configured or reached no devices, fall back to a local one.
     const server = await sendSelfTestPush({
-      title: 'Test EdLight 🔔',
+      title: 'Test EdLight',
       body: t('Ceci est une notification de test.', 'Sa a se yon notifikasyon tès.'),
       url: '/dashboard',
     });
     if (server && server.delivered > 0) return;
-    await showLocalNotification('Test EdLight 🔔', {
+    await showLocalNotification('Test EdLight', {
       body: t('Ceci est une notification de test.', 'Sa a se yon notifikasyon tès.'),
       tag: 'test',
       url: '/dashboard',
     });
   };
 
-  if (loading) {
-    return (
-      <div className="notification-center">
-        <div className="notification-center__header">
-          <h3>{t('Notifications', 'Notifikasyon')}</h3>
-          <button className="button button--ghost button--sm" onClick={onClose}><X size={16} /></button>
-        </div>
-        <div className="notification-center__loading">
-          <div className="loading-spinner" />
-        </div>
-      </div>
-    );
-  }
+  // ── Inbox rows, grouped ──
+  const visible = (items || []).filter((n) => (tab === 'unread' ? !n.read : true));
+  const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+  const groups = [
+    { key: 'today', label: t('Aujourd’hui', 'Jodi a'), rows: visible.filter((n) => (createdMs(n) ?? Date.now()) >= startOfToday.getTime()) },
+    { key: 'earlier', label: t('Plus tôt', 'Pi bonè'), rows: visible.filter((n) => (createdMs(n) ?? Date.now()) < startOfToday.getTime()) },
+  ].filter((g) => g.rows.length > 0);
+
+  const tabs: { key: Tab; label: string }[] = [
+    { key: 'all', label: t('Toutes', 'Tout') },
+    { key: 'unread', label: unreadCount > 0 ? `${t('Non lues', 'Poko li')} · ${unreadCount}` : t('Non lues', 'Poko li') },
+    { key: 'reminders', label: t('Rappels', 'Rapèl') },
+    { key: 'settings', label: t('Réglages', 'Reglaj') },
+  ];
 
   return (
-    <div className="notification-center">
-      <div className="notification-center__header">
-        <h3>{t('Notifications et rappels', 'Notifikasyon ak rapèl')}</h3>
-        <button className="button button--ghost button--sm" onClick={onClose}><X size={16} /></button>
+    <div className="notification-center nc" role="dialog" aria-modal="true" aria-labelledby="nc-title">
+      <header className="nc-head">
+        <h2 id="nc-title" className="nc-head__title">{t('Notifications', 'Notifikasyon')}</h2>
+        <button ref={closeRef} type="button" className="nc-head__close" onClick={onClose}>
+          <X size={18} aria-hidden="true" />
+          <span className="nc-sr">{t('Fermer', 'Fèmen')}</span>
+        </button>
+      </header>
+
+      <div className="nc-tabs" role="tablist" aria-label={t('Sections', 'Seksyon')}>
+        {tabs.map((x) => (
+          <button
+            key={x.key}
+            type="button"
+            role="tab"
+            aria-selected={tab === x.key}
+            className={`nc-tab${tab === x.key ? ' is-on' : ''}`}
+            onClick={() => { setTab(x.key); setNotice(null); }}
+          >
+            {x.label}
+          </button>
+        ))}
       </div>
 
-      <div className="notification-center__tabs">
-        <button
-          className={`notification-center__tab ${activeTab === 'notifications' ? 'notification-center__tab--active' : ''}`}
-          onClick={() => setActiveTab('notifications')}
-        >
-          {t('Notifications', 'Notifikasyon')} {notifications.length > 0 && `(${notifications.length})`}
-        </button>
-        <button
-          className={`notification-center__tab ${activeTab === 'reminders' ? 'notification-center__tab--active' : ''}`}
-          onClick={() => setActiveTab('reminders')}
-        >
-          {t('Rappels', 'Rapèl')} {reminders.length > 0 && `(${reminders.length})`}
-        </button>
-        <button
-          className={`notification-center__tab ${activeTab === 'settings' ? 'notification-center__tab--active' : ''}`}
-          onClick={() => setActiveTab('settings')}
-        >
-          {t('Réglages', 'Reglaj')}
-        </button>
-      </div>
+      <div className="nc-body">
+        {notice && <p className="nc-notice" role="status">{notice}</p>}
 
-      <div className="notification-center__content">
-        {isNotificationSupported() && permission !== 'granted' && (
-          <div className="notification-permission">
-            <div className="notification-permission__icon"><BellRing size={20} /></div>
-            <div className="notification-permission__text">
-              <strong>{t('Activer les notifications', 'Aktive notifikasyon yo')}</strong>
-              <span>{t("Reçois tes rappels d'étude et tes succès, même quand l'app est en arrière-plan.", "Resevwa rapèl etid ou yo ak siksè ou yo, menm lè app la nan background.")}</span>
+        {(tab === 'all' || tab === 'unread') && (
+          items === null ? (
+            <div className="nc-loading" aria-busy="true"><div className="loading-spinner" /></div>
+          ) : loadFailed ? (
+            <div className="nc-empty">
+              <p>{t('Les notifications n’ont pas pu être chargées.', 'Notifikasyon yo pa t ka chaje.')}</p>
+              <button type="button" className="button button--ghost button--sm" onClick={load}>{t('Réessayer', 'Eseye ankò')}</button>
             </div>
-            {permission === 'denied' ? (
-              <span className="notification-permission__blocked">{t('Bloquées dans le navigateur', 'Bloke nan navigatè a')}</span>
-            ) : (
-              <button className="button button--primary button--sm" onClick={handleEnableNotifications}>
-                {t('Activer', 'Aktive')}
-              </button>
-            )}
-          </div>
+          ) : visible.length === 0 ? (
+            <div className="nc-empty">
+              {tab === 'unread' ? (
+                <>
+                  <p>{t('Tout est à jour.', 'Tout bagay ajou.')}</p>
+                  {(items || []).length > 0 && (
+                    <button type="button" className="nc-link" onClick={() => setTab('all')}>{t('Voir toutes les notifications', 'Wè tout notifikasyon yo')}</button>
+                  )}
+                </>
+              ) : (
+                <p>{t('Aucune notification pour le moment.', 'Pa gen notifikasyon pou kounye a.')}</p>
+              )}
+            </div>
+          ) : (
+            <>
+              {unreadCount > 0 && (
+                <div className="nc-bar">
+                  <button type="button" className="nc-link" onClick={handleMarkAllRead}>{t('Tout marquer comme lu', 'Make tout kòm li')}</button>
+                </div>
+              )}
+              {groups.map((g) => (
+                <section key={g.key} className="nc-group" aria-label={g.label}>
+                  <h3 className="nc-group__title">{g.label}</h3>
+                  <ul className="nc-list">
+                    {g.rows.map((n) => {
+                      const p = present(n);
+                      const ms = createdMs(n);
+                      const inner = (
+                        <>
+                          <span className={`nc-row__icon nc-row__icon--${n.type || 'info'}`} aria-hidden="true"><p.Icon size={18} /></span>
+                          <span className="nc-row__text">
+                            <span className="nc-row__title">
+                              {!n.read && <span className="nc-row__dot"><span className="nc-sr">{t('Non lue : ', 'Poko li : ')}</span></span>}
+                              {p.title}
+                            </span>
+                            {p.body && <span className="nc-row__body">{p.body}</span>}
+                            <time className="nc-row__time" dateTime={ms ? new Date(ms).toISOString() : undefined} title={ms ? new Date(ms).toLocaleString(locale) : undefined}>
+                              {relative(ms)}
+                            </time>
+                          </span>
+                        </>
+                      );
+                      return (
+                        <li key={n.id} className={`nc-row${n.read ? '' : ' is-unread'}`}>
+                          {p.to ? (
+                            <Link
+                              className="nc-row__main"
+                              to={p.to}
+                              onClick={() => { if (!n.read) handleMarkRead(n.id); onClose(); }}
+                            >
+                              {inner}
+                            </Link>
+                          ) : (
+                            <div className="nc-row__main">{inner}</div>
+                          )}
+                          {!n.read && (
+                            <button type="button" className="nc-row__read" onClick={() => handleMarkRead(n.id)}>
+                              <Check size={16} aria-hidden="true" />
+                              <span className="nc-sr">{t('Marquer comme lu', 'Make kòm li')}</span>
+                            </button>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              ))}
+            </>
+          )
         )}
 
-        {activeTab === 'notifications' && (
-          <div className="notification-list">
-            {notifications.length > 0 ? (
-              <>
-                <div className="notification-list__header">
-                  <button 
-                    className="button button--ghost button--sm"
-                    onClick={handleMarkAllRead}
-                  >
-                    {t('Tout marquer comme lu', 'Make tout kòm li')}
+        {tab === 'reminders' && (
+          <div className="nc-reminders">
+            {formOpen ? (
+              <form className="nc-form" onSubmit={handleCreateReminder}>
+                <h3 className="nc-form__title">{t('Nouveau rappel', 'Nouvo rapèl')}</h3>
+                <label className="nc-field">
+                  <span>{t('Heure', 'Lè')}</span>
+                  <input type="time" lang="fr" required value={formTime} onChange={(e) => setFormTime(e.target.value)} />
+                </label>
+                <fieldset className="nc-field nc-field--choice">
+                  <legend>{t('Répétition', 'Repetisyon')}</legend>
+                  {([
+                    ['daily', t('Chaque jour', 'Chak jou')],
+                    ['weekly', t('Chaque semaine', 'Chak semèn')],
+                    ['once', t('Une seule fois', 'Yon sèl fwa')],
+                  ] as const).map(([v, label]) => (
+                    <label key={v} className={`nc-choice${formRepeat === v ? ' is-on' : ''}`}>
+                      <input type="radio" name="nc-repeat" value={v} checked={formRepeat === v} onChange={() => setFormRepeat(v)} />
+                      {label}
+                    </label>
+                  ))}
+                </fieldset>
+                <p className="nc-preview">{preview}</p>
+                {formError && <p className="nc-notice" role="alert">{formError}</p>}
+                <div className="nc-form__actions">
+                  <button type="submit" className="button button--primary" disabled={formSaving}>
+                    {formSaving ? t('Enregistrement…', 'N ap anrejistre…') : t('Créer le rappel', 'Kreye rapèl la')}
+                  </button>
+                  <button type="button" className="button button--ghost" onClick={() => { setFormOpen(false); setFormError(null); }}>
+                    {t('Annuler', 'Anile')}
                   </button>
                 </div>
-                {notifications.map(notif => (
-                  <div key={notif.id} className="notification-item">
-                    <div className="notification-item__icon">
-                      {notif.type === 'achievement' ? <Trophy size={20} /> : 
-                       notif.type === 'streak' ? <Flame size={20} /> : <Megaphone size={20} />}
-                    </div>
-                    <div className="notification-item__content">
-                      <div className="notification-item__title">{notif.title}</div>
-                      <div className="notification-item__message">{notif.message}</div>
-                      <div className="notification-item__time">
-                        {notif.createdAt?.toDate ? new Date(notif.createdAt.toDate()).toLocaleString() : t('À l’instant', 'Kounye a')}
-                      </div>
-                    </div>
-                    <button
-                      className="notification-item__dismiss"
-                      onClick={() => handleMarkRead(notif.id)}
-                      title={t('Marquer comme lu', 'Make kòm li')}
-                    >
-                      <Check size={16} />
-                    </button>
-                  </div>
-                ))}
-              </>
+              </form>
             ) : (
-              <div className="notification-empty">
-                <p><PartyPopper size={18} /> {t('Tu es à jour !', 'Ou ajou !')}</p>
-                <p className="text-muted">{t('Aucune nouvelle notification', 'Pa gen nouvo notifikasyon')}</p>
+              <div className="nc-bar nc-bar--start">
+                <button type="button" className="button button--primary button--sm" onClick={() => setFormOpen(true)}>
+                  {t('Nouveau rappel', 'Nouvo rapèl')}
+                </button>
               </div>
             )}
-          </div>
-        )}
 
-        {activeTab === 'reminders' && (
-          <div className="reminder-list">
-            <div className="reminder-list__header">
-              <button 
-                className="button button--primary button--sm"
-                onClick={handleCreateReminder}
-              >
-                {t('+ Créer un rappel', '+ Kreye yon rapèl')}
-              </button>
-            </div>
             {reminders.length > 0 ? (
-              reminders.map(reminder => (
-                <div key={reminder.id} className="reminder-item">
-                  <div className="reminder-item__content">
-                    <div className="reminder-item__title">{reminder.title}</div>
-                    <div className="reminder-item__message">{reminder.message}</div>
-                    <div className="reminder-item__schedule">
-                      {reminder.recurring && <><Repeat size={12} /> {t('Récurrent', 'Repetitif')} • </>}
-                      {t('Prévu :', 'Previ :')} {new Date(reminder.scheduledFor).toLocaleString()}
+              <ul className="nc-list">
+                {reminders.map((r) => (
+                  <li key={r.id} className="nc-row">
+                    <div className="nc-row__main">
+                      <span className="nc-row__icon" aria-hidden="true"><Repeat size={18} /></span>
+                      <span className="nc-row__text">
+                        <span className="nc-row__title">{r.title}</span>
+                        <span className="nc-row__body">
+                          {r.recurring
+                            ? (r.recurringPattern === 'weekly' ? t('Chaque semaine', 'Chak semèn') : r.recurringPattern === 'monthly' ? t('Chaque mois', 'Chak mwa') : t('Chaque jour', 'Chak jou'))
+                            : t('Une fois', 'Yon fwa')}
+                          {' · '}
+                          {t('prochain', 'pwochen')} {new Date(r.scheduledFor).toLocaleString(locale, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </span>
                     </div>
-                  </div>
-                  <button
-                    className="reminder-item__delete"
-                    onClick={() => handleDeleteReminder(reminder.id)}
-                    title={t('Supprimer le rappel', 'Efase rapèl la')}
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))
-            ) : (
-              <div className="notification-empty">
-                <p><Clock size={18} /> {t('Aucun rappel actif', 'Pa gen rapèl aktif')}</p>
-                <p className="text-muted">{t('Crée un rappel pour rester régulier', 'Kreye yon rapèl pou ou rete regilye')}</p>
-              </div>
+                    <button type="button" className="nc-row__read" onClick={() => handleDeleteReminder(r.id)}>
+                      <Trash2 size={16} aria-hidden="true" />
+                      <span className="nc-sr">{t('Supprimer le rappel', 'Efase rapèl la')}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : !formOpen && (
+              <div className="nc-empty"><p>{t('Aucun rappel pour le moment.', 'Pa gen rapèl pou kounye a.')}</p></div>
             )}
           </div>
         )}
 
-        {activeTab === 'settings' && preferences && (
-          <div className="notification-settings">
-            <h4>{t('Préférences de notification', 'Preferans notifikasyon')}</h4>
-            
-            <div className="notification-setting">
-              <label className="notification-setting__label">
-                <input
-                  type="checkbox"
-                  checked={preferences.emailNotifications}
-                  onChange={(e) => handlePreferenceChange('emailNotifications', e.target.checked)}
-                />
-                <span>{t('Notifications par e-mail', 'Notifikasyon pa imèl')}</span>
-              </label>
-              <p className="text-muted">{t('Reçois les mises à jour importantes par e-mail', 'Resevwa mizajou enpòtan yo pa imèl')}</p>
-            </div>
-
-            <div className="notification-setting">
-              <label className="notification-setting__label">
-                <input
-                  type="checkbox"
-                  checked={preferences.studyReminders}
-                  onChange={(e) => handlePreferenceChange('studyReminders', e.target.checked)}
-                />
-                <span>{t("Rappels d'étude", 'Rapèl etid')}</span>
-              </label>
-              <p className="text-muted">{t("Reçois des rappels pour garder ta série d'apprentissage", 'Resevwa rapèl pou kenbe seri aprantisaj ou')}</p>
-            </div>
-
-            <div className="notification-setting">
-              <label className="notification-setting__label">
-                <input
-                  type="checkbox"
-                  checked={preferences.achievementNotifications}
-                  onChange={(e) => handlePreferenceChange('achievementNotifications', e.target.checked)}
-                />
-                <span>{t('Notifications de succès', 'Notifikasyon siksè')}</span>
-              </label>
-              <p className="text-muted">{t('Célèbre chaque nouveau badge gagné', 'Selebre chak nouvo badj ou genyen')}</p>
-            </div>
-
-            <div className="notification-setting">
-              <label className="notification-setting__label">
-                <input
-                  type="checkbox"
-                  checked={preferences.weeklyProgress}
-                  onChange={(e) => handlePreferenceChange('weeklyProgress', e.target.checked)}
-                />
-                <span>{t('Rapport de progrès hebdomadaire', 'Rapò pwogrè chak semèn')}</span>
-              </label>
-              <p className="text-muted">{t('Reçois un résumé de tes progrès de la semaine', 'Resevwa yon rezime pwogrè ou pou semèn nan')}</p>
-            </div>
-
-            <div className="notification-setting">
-              <label className="notification-setting__label">
-                <span>{t('Heure du rappel', 'Lè rapèl la')}</span>
-                <input
-                  type="time"
-                  value={preferences.reminderTime}
-                  onChange={(e) => handlePreferenceChange('reminderTime', e.target.value)}
-                  className="notification-setting__time-input"
-                />
-              </label>
-              <p className="text-muted">{t('Heure par défaut des rappels quotidiens', 'Lè pa defo pou rapèl chak jou yo')}</p>
-            </div>
-
-            <div className="notification-setting">
-              <div className="notification-setting__label">
-                <span>{t('Notifications sur cet appareil', 'Notifikasyon sou aparèy sa a')}</span>
-                {permission === 'granted' ? (
-                  <button className="button button--ghost button--sm" onClick={handleTestNotification}>
-                    {t('Tester', 'Teste')}
-                  </button>
-                ) : permission === 'denied' ? (
-                  <span className="text-muted">{t('Bloquées', 'Bloke')}</span>
-                ) : (
-                  <button className="button button--primary button--sm" onClick={handleEnableNotifications}>
-                    {t('Activer', 'Aktive')}
-                  </button>
-                )}
+        {tab === 'settings' && preferences && (
+          <div className="nc-settings">
+            <div className="nc-setting">
+              <div>
+                <strong>{t('Notifications sur cet appareil', 'Notifikasyon sou aparèy sa a')}</strong>
+                <p>
+                  {!isNotificationSupported()
+                    ? t('Ce navigateur ne prend pas en charge les notifications.', 'Navigatè sa a pa sipòte notifikasyon.')
+                    : permission === 'granted'
+                      ? t('Autorisées dans ce navigateur.', 'Otorize nan navigatè sa a.')
+                      : permission === 'denied'
+                        ? t('Bloquées. Pour les réactiver, ouvre les réglages du site dans ton navigateur (icône à gauche de l’adresse).', 'Bloke. Pou reaktive yo, louvri reglaj sit la nan navigatè ou (ikòn bò gòch adrès la).')
+                        : t('Pour recevoir tes rappels même quand le site est fermé.', 'Pou resevwa rapèl ou yo menm lè sit la fèmen.')}
+                </p>
+                {pushNote && <p className="nc-notice">{pushNote}</p>}
               </div>
-              <p className="text-muted">
-                {permission === 'granted'
-                  ? t('Activées — tu recevras rappels et succès sur cet appareil.', 'Aktive — w ap resevwa rapèl ak siksè sou aparèy sa a.')
-                  : t('Autorise les notifications pour recevoir tes rappels.', 'Otorize notifikasyon yo pou ou resevwa rapèl ou yo.')}
-              </p>
+              {isNotificationSupported() && permission === 'default' && (
+                <button type="button" className="button button--primary button--sm" onClick={handleEnableNotifications}>{t('Activer', 'Aktive')}</button>
+              )}
             </div>
+
+            {([
+              ['emailNotifications', t('E-mails', 'Imèl'), t('Les mises à jour importantes par e-mail.', 'Mizajou enpòtan yo pa imèl.')],
+              ['studyReminders', t('Rappels d’étude', 'Rapèl etid'), t('Tes rappels et les relances pour garder ta série.', 'Rapèl ou yo ak relans pou kenbe seri ou.')],
+              ['achievementNotifications', t('Succès', 'Siksè'), t('Quand tu gagnes un badge ou une série.', 'Lè ou genyen yon badj oswa yon seri.')],
+              ['weeklyProgress', t('Bilan de la semaine', 'Bilan semèn nan'), t('Un résumé de tes progrès chaque semaine.', 'Yon rezime pwogrè ou chak semèn.')],
+            ] as const).map(([key, label, help]) => (
+              <label key={key} className="nc-setting nc-setting--toggle">
+                <span>
+                  <strong>{label}</strong>
+                  <p>{help}</p>
+                </span>
+                <input type="checkbox" checked={!!preferences[key]} onChange={(e) => handlePreferenceChange(key, e.target.checked)} />
+              </label>
+            ))}
+
+            {permission === 'granted' && (
+              <button type="button" className="nc-link nc-link--quiet" onClick={handleTestNotification}>
+                {t('Envoyer une notification de test', 'Voye yon notifikasyon tès')}
+              </button>
+            )}
           </div>
         )}
       </div>

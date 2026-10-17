@@ -1,5 +1,5 @@
 import { auth, db } from './firebase';
-import { doc, setDoc, getDoc, collection, query, where, getDocs, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, query, where, getDocs, deleteDoc, serverTimestamp, orderBy, limit } from 'firebase/firestore';
 import { showLocalNotification, getPermission } from './pushNotificationService';
 
 /**
@@ -185,6 +185,8 @@ export async function notifyAchievement(userId, achievement) {
       title: 'New Achievement! 🎉',
       message: `You've earned the "${achievement.name}" badge!`,
       badgeId: achievement.badgeId,
+      // Typed parameter so the inbox can render this in the student's language.
+      badgeName: achievement.name,
       icon: achievement.icon,
       read: false,
       createdAt: serverTimestamp(),
@@ -259,6 +261,24 @@ export async function getUnreadNotifications(userId) {
 }
 
 /**
+ * The inbox: the most recent notifications, read and unread, newest first.
+ * Marking one read must not make it vanish (spec NOTIF-01), so the panel
+ * reads this rather than the unread-only query the bell uses for its badge.
+ * Returns null on failure so the panel can say so instead of "nothing here".
+ */
+export async function getRecentNotifications(userId: string, max = 50) {
+  try {
+    const notificationsRef = collection(db, 'users', userId, 'notifications');
+    const q = query(notificationsRef, orderBy('createdAt', 'desc'), limit(max));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
+  } catch (error) {
+    console.error('Error getting notifications:', error);
+    return null;
+  }
+}
+
+/**
  * Mark notification as read
  */
 export async function markNotificationRead(userId, notificationId) {
@@ -281,28 +301,22 @@ export async function markNotificationRead(userId, notificationId) {
 /**
  * Mark all notifications as read
  */
-export async function markAllNotificationsRead(userId) {
+export async function markAllNotificationsRead(userId): Promise<{ updated: number; failed: number }> {
   try {
     const notificationsRef = collection(db, 'users', userId, 'notifications');
     const q = query(notificationsRef, where('read', '==', false));
     const snapshot = await getDocs(q);
-    
-    const promises = snapshot.docs.map(doc =>
-      setDoc(
-        doc.ref,
-        {
-          read: true,
-          readAt: serverTimestamp(),
-        },
-        { merge: true }
-      )
-    );
-    
-    await Promise.all(promises);
-    return true;
+
+    // allSettled, not all: one refused write must not hide that the others
+    // went through — the panel reports a partial failure honestly.
+    const results = await Promise.allSettled(snapshot.docs.map((d) =>
+      setDoc(d.ref, { read: true, readAt: serverTimestamp() }, { merge: true }),
+    ));
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    return { updated: results.length - failed, failed };
   } catch (error) {
     console.error('Error marking all notifications as read:', error);
-    return false;
+    return { updated: 0, failed: -1 };
   }
 }
 
