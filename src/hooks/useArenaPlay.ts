@@ -41,6 +41,8 @@ import {
   type ArenaTournament,
   type QualificationState,
 } from '../utils/arenaPlay';
+import { connectionState, isNetworkFailure, type ConnectionState } from '../components/arena/trust/trustState';
+import { useOnline } from '../components/arena/trust/useOnline';
 
 /**
  * A ticking `Date.now()`. Every countdown is re-derived from server timestamps
@@ -60,13 +62,64 @@ export function useNow(intervalMs = 1000, active = true): number {
 
 /** `undefined` until the first snapshot, then the tournament or null. */
 export function useArenaTournament(tid: string | null | undefined): ArenaTournament | null | undefined {
+  return useArenaTournamentLive(tid).tournament;
+}
+
+/**
+ * The tournament, plus whether its listener has died.
+ *
+ * Firestore ENDS a listener on its first error, and the service then reports
+ * `null` — which, mid-night, would turn a dropped connection into
+ * "Championnat introuvable" for a student who is still in the room. So once a
+ * tournament has been seen, an error keeps the last known document on screen,
+ * says `lost`, and re-opens the listener: immediately when the browser comes
+ * back online, otherwise on a backoff (3s, 6s, 12s… capped at 30s). The fresh
+ * listener's first snapshot is the current phase — nothing is replayed.
+ *
+ * An error BEFORE the first snapshot still reads as null (absent): that is the
+ * rules saying no, not a connection dropping.
+ */
+export function useArenaTournamentLive(tid: string | null | undefined): {
+  tournament: ArenaTournament | null | undefined;
+  lost: boolean;
+} {
   const [t, setT] = useState<ArenaTournament | null | undefined>(undefined);
+  const [lost, setLost] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const seen = useRef<string | null>(null);
+
   useEffect(() => {
-    if (!tid) { setT(null); return undefined; }
-    setT(undefined);
-    return subscribeTournament(tid, setT);
-  }, [tid]);
-  return t;
+    if (!tid) { setT(null); setLost(false); return undefined; }
+    if (seen.current !== tid) setT(undefined);
+    let failed = false;
+    return subscribeTournament(
+      tid,
+      (v) => {
+        // The service reports null right after an error; keep what we had.
+        if (failed && seen.current === tid) return;
+        if (v) seen.current = tid;
+        setT(v);
+        setLost(false);
+      },
+      () => {
+        failed = true;
+        if (seen.current === tid) setLost(true);
+      },
+    );
+  }, [tid, attempt]);
+
+  useEffect(() => {
+    if (!lost) return undefined;
+    const reopen = () => setAttempt((a) => a + 1);
+    window.addEventListener('online', reopen);
+    const id = window.setTimeout(reopen, Math.min(30_000, 3_000 * 2 ** Math.min(attempt, 4)));
+    return () => {
+      window.removeEventListener('online', reopen);
+      window.clearTimeout(id);
+    };
+  }, [lost, attempt]);
+
+  return { tournament: t, lost };
 }
 
 /** Which edition to open when the URL names none. `undefined` while unknown. */
@@ -130,31 +183,102 @@ const PRESENCE_HEARTBEAT_MS = 45_000;
  * accepts on purpose. Returns the registered-vs-present split, which exists
  * only in the endpoint's response.
  */
-export function useArenaPresence(tid: string | null | undefined, state: string | null, enabled: boolean): ArenaSchoolCounts | null {
+export function useArenaPresence(tid: string | null | undefined, state: string | null, enabled: boolean): ArenaPresence {
   const uid = useStore((s) => s.user?.uid) as string | undefined;
   const [counts, setCounts] = useState<ArenaSchoolCounts | null>(null);
+  const [lastRoundTripFailed, setFailed] = useState<boolean | null>(null);
+  const [lastOkAt, setLastOkAt] = useState(0);
   const inFlight = useRef(false);
   const active = enabled && (state === 'doors' || state === 'live');
 
   useEffect(() => {
-    if (!active || !tid || !uid) return undefined;
+    if (!active || !tid || !uid) { setFailed(null); return undefined; }
     let alive = true;
     const announce = async () => {
       if (inFlight.current) return;
       inFlight.current = true;
       try {
         const res = await markPresent(tid);
-        if (alive && res.ok && res.counts) setCounts(res.counts);
+        if (!alive) return;
+        if (res.ok && res.counts) setCounts(res.counts);
+        // Any answer from the server — even a refusal — proves the line is up.
+        const down = !res.ok && isNetworkFailure(res.error);
+        setFailed(down);
+        if (!down) setLastOkAt(Date.now());
       } finally {
         inFlight.current = false;
       }
     };
     void announce();
     const id = window.setInterval(announce, PRESENCE_HEARTBEAT_MS);
-    return () => { alive = false; window.clearInterval(id); };
+    // Back online: say so now rather than up to 45s later — this is also the
+    // round trip that tells the connection pill the server is reachable again.
+    const onOnline = () => { void announce(); };
+    window.addEventListener('online', onOnline);
+    return () => {
+      alive = false;
+      window.clearInterval(id);
+      window.removeEventListener('online', onOnline);
+    };
   }, [active, tid, uid]);
 
-  return counts;
+  return { counts, lastRoundTripFailed, lastOkAt };
+}
+
+export interface ArenaPresence {
+  counts: ArenaSchoolCounts | null;
+  /** Last heartbeat failed at the NETWORK level. null before the first one / when inactive. */
+  lastRoundTripFailed: boolean | null;
+  /** When the server last answered a heartbeat (client ms), 0 if never. */
+  lastOkAt: number;
+}
+
+/**
+ * The connection pill's state, from every signal the page really has:
+ * `navigator.onLine`, the tournament listener's health, and the presence
+ * heartbeat's last round trip. Coming back online is "reconnecting" until the
+ * server answers (a heartbeat or a fresh snapshot) or, when no heartbeat runs
+ * (lobby, results), for a short settling window.
+ */
+export function useArenaConnection(input: {
+  hasSnapshot: boolean;
+  listenerLost: boolean;
+  presence: ArenaPresence;
+  tournament: ArenaTournament | null | undefined;
+}): ConnectionState {
+  const online = useOnline();
+  const [recoveringSince, setRecoveringSince] = useState(0);
+
+  // Stamped in the event itself, so any heartbeat answered after the return
+  // is provably later than it.
+  useEffect(() => {
+    const back = () => setRecoveringSince(Date.now());
+    window.addEventListener('online', back);
+    return () => window.removeEventListener('online', back);
+  }, []);
+
+  // Cleared by proof: a heartbeat answered, or a snapshot arrived, after the return.
+  useEffect(() => {
+    if (!recoveringSince) return;
+    if (input.presence.lastOkAt >= recoveringSince) setRecoveringSince(0);
+  }, [input.presence.lastOkAt, recoveringSince]);
+  useEffect(() => {
+    if (recoveringSince) setRecoveringSince(0);
+  }, [input.tournament]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!recoveringSince) return undefined;
+    const heartbeat = input.presence.lastRoundTripFailed !== null;
+    const id = window.setTimeout(() => setRecoveringSince(0), heartbeat ? 15_000 : 4_000);
+    return () => window.clearTimeout(id);
+  }, [recoveringSince, input.presence.lastRoundTripFailed]);
+
+  return connectionState({
+    online,
+    hasSnapshot: input.hasSnapshot,
+    listenerLost: input.listenerLost,
+    lastRoundTripFailed: input.presence.lastRoundTripFailed,
+    recovering: recoveringSince > 0,
+  });
 }
 
 /**
@@ -227,6 +351,8 @@ export interface ArenaPlayView {
   /** A question is open and the tournament will score a submission. */
   answerable: boolean;
   now: number;
+  /** What the connection pill says — derived, never optimistic. */
+  connection: ConnectionState;
 }
 
 /**
@@ -237,12 +363,19 @@ export interface ArenaPlayView {
  */
 export function useArenaPlay(tid: string | null | undefined, webPlay: boolean, registrationVersion = 0): ArenaPlayView {
   const uid = useStore((s) => s.user?.uid) as string | undefined;
-  const tournament = useArenaTournament(tid);
+  const { tournament, lost } = useArenaTournamentLive(tid);
   const registration = useArenaMyRegistration(tid, registrationVersion);
   const standings = useArenaStandings(tid);
   const index = tournament?.currentQuestion?.index ?? null;
   const question = useArenaLiveQuestion(tid, tournament?.state === 'live' ? index : null);
-  const counts = useArenaPresence(tid, tournament?.state ?? null, webPlay && !!registration);
+  const presence = useArenaPresence(tid, tournament?.state ?? null, webPlay && !!registration);
+  const counts = presence.counts;
+  const connection = useArenaConnection({
+    hasSnapshot: tournament !== undefined,
+    listenerLost: lost,
+    presence,
+    tournament,
+  });
 
   const open = question?.state === 'open';
   const now = useNow(open ? 100 : 1000);
@@ -286,5 +419,6 @@ export function useArenaPlay(tid: string | null | undefined, webPlay: boolean, r
     qualification,
     answerable,
     now,
+    connection,
   };
 }

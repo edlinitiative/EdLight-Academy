@@ -26,6 +26,7 @@ import {
 import {
   createChallenge, listMyChallenges, listReceivedChallenges, referralCodeForShare, type Challenge,
 } from '../../services/challengeWebService';
+import { DuelMintReceipt, RulesButton } from '../arena/trust';
 import './duels.css';
 
 export function categoryLabel(id: string, isCreole: boolean): string {
@@ -124,7 +125,7 @@ export function DuelShareSheet({ code, categoryId, score, total, isCreole, where
  * usually can't be (utils/duels.ts explains why), and then the honest offer
  * is a fresh duel round, not a duel over questions the friend will never see.
  */
-export function DuelPanel({ category, played, score, total, isAuthed, isCreole, onStartDuelRound, onPickDuel }: {
+export function DuelPanel({ category, played, score, total, isAuthed, isCreole, onStartDuelRound, onPickDuel, primary = true }: {
   category: string;
   played: DuelQuestion[];
   score: number;
@@ -133,8 +134,11 @@ export function DuelPanel({ category, played, score, total, isAuthed, isCreole, 
   isCreole: boolean;
   onStartDuelRound: (categoryId: string) => void;
   onPickDuel: () => void;
+  /** False when the results screen already has its one coral action (Rejouer). */
+  primary?: boolean;
 }) {
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  const pill = `duel-pill ${primary ? 'duel-pill--primary' : 'duel-pill--soft'}`;
   const toggleAuthModal = useStore((s) => s.toggleAuthModal);
   const setActiveTab = useStore((s) => s.setActiveTab);
   const singleTheme = !!category && category !== 'daily' && category !== 'mixed';
@@ -200,7 +204,7 @@ export function DuelPanel({ category, played, score, total, isAuthed, isCreole, 
         <DuelShareSheet code={created.code} categoryId={category} score={score} total={total} isCreole={isCreole} where="trivia-results" />
       ) : !isAuthed ? (
         <div className="duel-panel__actions">
-          <button type="button" className="duel-pill duel-pill--primary" onClick={signIn}>
+          <button type="button" className={pill} onClick={signIn}>
             <LogIn size={16} /> {t('Se connecter pour défier', 'Konekte pou defye')}
           </button>
         </div>
@@ -208,7 +212,7 @@ export function DuelPanel({ category, played, score, total, isAuthed, isCreole, 
         <p className="duel-panel__note" role="status">{t('Préparation du défi…', 'N ap prepare defi a…')}</p>
       ) : idxs ? (
         <div className="duel-panel__actions">
-          <button type="button" className="duel-pill duel-pill--primary" onClick={mint} disabled={state === 'busy'}>
+          <button type="button" className={pill} onClick={mint} disabled={state === 'busy'}>
             <Swords size={16} /> {state === 'busy' ? t('Création…', 'N ap kreye…') : t('Défier un ami', 'Defye yon zanmi')}
           </button>
         </div>
@@ -217,7 +221,7 @@ export function DuelPanel({ category, played, score, total, isAuthed, isCreole, 
           <p className="duel-panel__note">
             {t('Cette partie ne peut pas être rejouée à l’identique par un ami. Lance une manche défi sur ce thème, puis envoie-la.', 'Pati sa a pa ka rejwe egzakteman pa yon zanmi. Lanse yon pati defi sou tèm sa a, epi voye l.')}
           </p>
-          <button type="button" className="duel-pill duel-pill--primary" onClick={() => onStartDuelRound(category)}>
+          <button type="button" className={pill} onClick={() => onStartDuelRound(category)}>
             <Swords size={16} /> {t('Jouer une manche défi', 'Jwe yon pati defi')}
           </button>
         </div>
@@ -226,12 +230,13 @@ export function DuelPanel({ category, played, score, total, isAuthed, isCreole, 
           <p className="duel-panel__note">
             {t('Un défi se joue sur un seul thème.', 'Yon defi jwe sou yon sèl tèm.')}
           </p>
-          <button type="button" className="duel-pill duel-pill--primary" onClick={onPickDuel}>
+          <button type="button" className={pill} onClick={onPickDuel}>
             <Swords size={16} /> {t('Choisir un thème pour défier', 'Chwazi yon tèm pou defye')}
           </button>
         </div>
       )}
       {state === 'error' && error && <p className="duel-panel__error" role="alert">{error}</p>}
+      {created && <DuelMintReceipt isCreole={isCreole} />}
     </section>
   );
 }
@@ -362,6 +367,7 @@ export function MyDuels({ isCreole }: { isCreole: boolean }) {
           </ul>
         )}
       </div>
+      <div className="trust-row"><RulesButton variant="duel" isCreole={isCreole} /></div>
     </section>
   );
 }

@@ -130,3 +130,22 @@ it('handles a bad or unknown code', async () => {
   expect(await screen.findByRole('heading', { name: 'Défi introuvable' })).toBeInTheDocument();
   expect(mockGet).not.toHaveBeenCalled();
 });
+
+it('puts Revanche first after a lost duel, on the same theme', async () => {
+  useStore.setState({ user: { uid: 'me' } });
+  mockGet.mockResolvedValue({ challenge: open });
+  mockAccept.mockResolvedValue({ ok: true, result: 'lost', challengerScore: 1, opponentScore: 0, total: 2, xpAwarded: 0 });
+  renderAt();
+  const go = await screen.findByRole('button', { name: /Relever le défi/ });
+  await waitFor(() => expect(go).not.toBeDisabled());
+  fireEvent.click(go);
+  fireEvent.click(screen.getByRole('button', { name: /C2/ }));
+  fireEvent.click(screen.getByRole('button', { name: /Question suivante/ }));
+  fireEvent.click(screen.getByRole('button', { name: /A2/ }));
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Voir les résultats/ })); });
+  expect(await screen.findByRole('heading', { name: 'Perdu de peu…' })).toBeInTheDocument();
+  const rematch = screen.getByRole('link', { name: /Revanche/ });
+  expect(rematch).toHaveAttribute('href', '/jeux/trivia');
+  expect(rematch).toHaveClass('duel-pill--primary');
+  expect(screen.getByRole('button', { name: /Partager/ })).toBeInTheDocument();
+});

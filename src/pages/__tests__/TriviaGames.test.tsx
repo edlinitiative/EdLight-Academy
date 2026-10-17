@@ -64,6 +64,48 @@ it('starts directly from a topic, reviews errors without awarding again, and rep
   expect(screen.getByText(/Ta réponse/)).toBeInTheDocument();
   expect(screen.getByText(/Bonne réponse/)).toBeInTheDocument();
   expect(mockRecord).toHaveBeenCalledTimes(1);
-  fireEvent.click(screen.getByRole('button', { name: 'Rejouer avec de nouvelles questions' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Rejouer' }));
   expect(screen.getByRole('button', { name: /A [46]/ })).toBeEnabled();
+});
+
+it('reveals outcome, then points, then the running score — and skipping ahead leaves nothing stale', () => {
+  jest.useFakeTimers();
+  const { container } = render(<TriviaQuiz category="maths_eclair" count={2} questions={mockQuestions} onFinish={jest.fn()} onBack={jest.fn()} isCreole={false} timed={false} />);
+  fireEvent.click(screen.getByRole('button', { name: 'A 4' }));
+  const fb = () => container.querySelector('.mx-feedback');
+  // Beat 0: the pick is locked; the score has not moved yet.
+  expect(fb()).toHaveAttribute('data-beat', '0');
+  expect(screen.getByRole('button', { name: /A 4 Envoyée/ })).toBeDisabled();
+  expect(screen.getByLabelText('Score : 0')).toBeInTheDocument();
+  act(() => { jest.advanceTimersByTime(280); });
+  expect(fb()).toHaveAttribute('data-beat', '1');
+  expect(screen.getByRole('button', { name: /A 4 Juste/ })).toBeInTheDocument();
+  act(() => { jest.advanceTimersByTime(320); });
+  expect(fb()).toHaveAttribute('data-beat', '2');
+  expect(screen.getByLabelText('Score : 0')).toBeInTheDocument();
+  act(() => { jest.advanceTimersByTime(320); });
+  expect(fb()).toHaveAttribute('data-beat', '3');
+  expect(screen.getByLabelText('Score : 1')).toBeInTheDocument();
+
+  // Answer the next one and skip mid-reveal: the new question starts clean.
+  fireEvent.click(screen.getByRole('button', { name: 'Question suivante →' }));
+  fireEvent.click(screen.getByRole('button', { name: 'B 7' }));
+  act(() => { jest.advanceTimersByTime(100); });
+  expect(fb()).toHaveAttribute('data-beat', '0');
+  act(() => { jest.advanceTimersByTime(2000); });
+  expect(fb()).toHaveAttribute('data-beat', '3');
+  expect(screen.getByRole('button', { name: /B 7 Ta réponse/ })).toBeInTheDocument();
+});
+
+it('lands on the final beat at once with reduced motion', () => {
+  const mm = window.matchMedia;
+  window.matchMedia = ((q: string) => ({ matches: q.includes('reduce'), media: q, addEventListener: jest.fn(), removeEventListener: jest.fn(), addListener: jest.fn(), removeListener: jest.fn() })) as any;
+  try {
+    const { container } = render(<TriviaQuiz category="maths_eclair" count={2} questions={mockQuestions} onFinish={jest.fn()} onBack={jest.fn()} isCreole={false} timed={false} />);
+    fireEvent.click(screen.getByRole('button', { name: 'B 5' }));
+    expect(container.querySelector('.mx-feedback')).toHaveAttribute('data-beat', '3');
+    expect(screen.getByRole('button', { name: /A 4 Bonne réponse/ })).toBeInTheDocument();
+  } finally {
+    window.matchMedia = mm;
+  }
 });

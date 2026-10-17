@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import CategoryIcon from '../components/CategoryIcon';
 import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
-import { Trophy, X, Star, Check, RefreshCw, ThumbsUp, Dumbbell, Sparkles, Crown, CalendarCheck, Swords } from '../components/icons';
+import { X, Star, Check, RefreshCw, CalendarCheck, Swords, Lock, Clock, Flame } from '../components/icons';
 import useStore from '../contexts/store';
 import { useFocusMode } from '../hooks/useFocusMode';
 import { useTrivia } from '../hooks/useTrivia';
@@ -22,13 +22,23 @@ import './TriviaGames.css';
 import { trackTriviaEvent as trackEvent } from '../utils/triviaLearning';
 import { triviaOptions, triviaExplanation } from '../utils/triviaLearning';
 import { logAnswerEvent } from '../services/answerEventsService';
-import { DuelPanel, MyDuels } from '../components/games/Duels';
+import { MyDuels } from '../components/games/Duels';
 import { loadDuelBank } from '../utils/duelBank';
 import { DUEL_ROUND, drawIdxs, questionsAt, shuffleOptions, isDuelCode, normalizeDuelCode } from '../utils/duels';
 import SprintSolo from './trivia/SprintSolo';
 import LiveRoomEntry from './trivia/LiveRoomEntry';
 import './trivia/triviaModes.css';
 import ArenaPageHead from '../components/arena/ArenaPageHead';
+import { useReducedMotion, motionVars } from '../arena-art/motion/tokens';
+import { useMatchSound } from './trivia/useMatchSound';
+import { answerTicks, currentStreak, type RoundAnswer } from './trivia/matchStats';
+import MatchResults from './trivia/MatchResults';
+
+/** Seconds per question in a timed round (daily challenge, duels). */
+const ROUND_SECONDS = 15;
+/** When the reveal beats land after an answer, in ms (brief #12: separate,
+    readable beats ~250–400 ms apart). Reduced motion skips straight to the end. */
+const BEAT_MS = [280, 600, 920] as const;
 
 /* ─── The three ways to play trivia (Ted: "3 variations — combine the
    features"): the quick round, the solo sprint, and live rooms. This switch
@@ -198,22 +208,35 @@ export function TriviaQuiz({ timed = false, category, count, onFinish, onBack, i
   }, [drawRoundNow, questions.length]);
   const accent = accentColor || cat?.color || '#1B6FE0';
 
+  const reduced = useReducedMotion();
+  const sound = useMatchSound();
   const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected] = useState<number | null>(null);
   const [score, setScore] = useState(0);
   const [answered, setAnswered] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(15);
+  // The reveal after an answer, one readable beat at a time (brief #12):
+  // 0 accepted (locked) → 1 outcome → 2 points for this question → 3 running
+  // score/streak. Cosmetic only: every word is in the DOM from the moment of
+  // the answer, and "next" is never gated on it.
+  const [beat, setBeat] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(ROUND_SECONDS);
   const timerRef = useRef(null);
-  const answersRef = useRef([]);
+  const answersRef = useRef<RoundAnswer[]>([]);
   const lockedRef = useRef(false);
   const finishedRef = useRef(false);
   const startedAt = useRef(Date.now());
+  const shownAt = useRef(Date.now());
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const nextRef = useRef<HTMLButtonElement>(null);
 
   const q = questions[current];
   const options = q ? triviaOptions(q, isCreole) : [];
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
-  useEffect(() => { headingRef.current?.focus(); }, [current, questions.length]);
+  useEffect(() => {
+    shownAt.current = Date.now();
+    headingRef.current?.focus();
+  }, [current, questions.length]);
 
   const handleSelect = useCallback((idx) => {
     if (lockedRef.current || !q) return;
@@ -221,16 +244,37 @@ export function TriviaQuiz({ timed = false, category, count, onFinish, onBack, i
     clearInterval(timerRef.current);
     setSelected(idx);
     setAnswered(true);
+    setBeat(0);
     const correct = idx === q.answer;
-    answersRef.current.push({ question: q, selected: idx, correct });
+    answersRef.current.push({ question: q, selected: idx, correct, ms: Date.now() - shownAt.current });
     if (correct) setScore((s) => s + 1);
+    if (idx !== -1) sound('submitted');
     if (q.q) logAnswerEvent(q.q, correct);
     if (current === 0) trackEvent('trivia_first_answer', { category, timed, elapsedMs: Date.now() - startedAt.current, timedOut: idx === -1 });
-  }, [q, current, category, timed]);
+  }, [q, current, category, timed, sound]);
+
+  // The beats. Cleared on every question change, so skipping ahead mid-reveal
+  // never leaves a stale animation behind; reduced motion lands on the last
+  // beat at once.
+  useEffect(() => {
+    if (!answered) return undefined;
+    const last = answersRef.current[answersRef.current.length - 1];
+    const outcome = () => sound(last?.correct ? 'correct' : 'incorrect');
+    if (reduced) { setBeat(3); outcome(); return undefined; }
+    const timers = [
+      setTimeout(() => { setBeat(1); outcome(); }, BEAT_MS[0]),
+      setTimeout(() => setBeat(2), BEAT_MS[1]),
+      setTimeout(() => setBeat(3), BEAT_MS[2]),
+    ];
+    return () => timers.forEach(clearTimeout);
+  }, [answered, current, reduced, sound]);
+
+  // Keyboard players keep their place: once answered, "next" has the focus.
+  useEffect(() => { if (answered) nextRef.current?.focus({ preventScroll: true }); }, [answered]);
 
   useEffect(() => {
     if (!timed || !q || answered) return;
-    setTimeLeft(15);
+    setTimeLeft(ROUND_SECONDS);
     timerRef.current = setInterval(() => setTimeLeft((t) => Math.max(0, t - 1)), 1000);
     return () => clearInterval(timerRef.current);
   }, [current, timed, q, answered]);
@@ -250,7 +294,8 @@ export function TriviaQuiz({ timed = false, category, count, onFinish, onBack, i
     setCurrent((c) => c + 1);
     setSelected(null);
     setAnswered(false);
-    setTimeLeft(15);
+    setBeat(0);
+    setTimeLeft(ROUND_SECONDS);
   }, [current, questions.length, onFinish, score]);
 
   // Keyboard: 1–4 answer, Enter goes on. Ignored while typing in a field.
@@ -271,226 +316,174 @@ export function TriviaQuiz({ timed = false, category, count, onFinish, onBack, i
     return () => window.removeEventListener('keydown', onKey);
   }, [answered, options.length, handleSelect, handleNext]);
 
-  const optionClass = (idx) => {
-    const base = 'trivia-option';
-    if (!answered) return `${base}${selected === idx ? ` ${base}--selected` : ''}`;
-    if (idx === q.answer) return `${base} ${base}--correct`;
-    if (idx === selected) return `${base} ${base}--wrong`;
-    return `${base} ${base}--dimmed`;
-  };
+  const closeBtn = (
+    <button type="button" className="mx-close" onClick={onBack} aria-label={t('Quitter', 'Kite')}>
+      <X size={18} />
+    </button>
+  );
 
   // Guard: an empty/misconfigured category would leave `q` undefined and crash
   // on `q.flag` / `q.options.map`. Show a graceful message instead.
   if (!questions.length || !q) {
     return (
-      <div className="trivia-quiz" style={{ '--cat-color': accent } as React.CSSProperties}>
-        <div className="trivia-quiz__top-bar">
-          <button className="trivia-quiz__close" onClick={onBack} aria-label={isCreole ? 'Kite' : 'Quitter'}>
-            <X size={16} />
-          </button>
-        </div>
-        <div className="trivia-quiz__question-card">
-          <h2 className="trivia-quiz__question">
-            {isCreole
-              ? 'Pa gen kesyon pou kategori sa a pou kounye a.'
-              : 'Aucune question disponible pour cette catégorie pour le moment.'}
-          </h2>
-        </div>
-        <button className="trivia-next-btn" onClick={onBack}>
-          ← {isCreole ? 'Retounen' : 'Retour'}
+      <div className="mx-quiz" style={{ '--cat-color': accent } as React.CSSProperties}>
+        <div className="mx-bar">{closeBtn}</div>
+        <h2 className="mx-question">
+          {t('Aucune question disponible pour cette catégorie pour le moment.', 'Pa gen kesyon pou kategori sa a pou kounye a.')}
+        </h2>
+        <button type="button" className="an-ghost mx-next" onClick={onBack}>
+          ← {t('Retour', 'Retounen')}
         </button>
       </div>
     );
   }
 
+  const last = answered ? answersRef.current[answersRef.current.length - 1] : null;
+  const timedOut = answered && selected === -1;
+  const gotIt = answered && selected === q.answer;
+  // The running numbers move on the third beat, not before (brief #12).
+  const settled = !answered || beat >= 3;
+  const shownScore = settled ? score : score - (gotIt ? 1 : 0);
+  const done = answersRef.current;
+  const streakNow = currentStreak(settled ? done : done.slice(0, -1));
+  const streakFinal = currentStreak(done);
+  const ticks = answerTicks(settled ? done : done.slice(0, -1));
+  const total = questions.length;
+  const isLast = current + 1 >= total;
+
+  /* One state per option, each with its own icon and words — never colour
+     alone. Before the outcome beat, only "locked" is shown. */
+  const optionState = (idx: number): { cls: string; icon?: React.ReactNode; label?: string } => {
+    if (!answered) return { cls: '' };
+    const revealed = beat >= 1;
+    const mine = idx === selected;
+    if (!revealed) return mine ? { cls: 'is-locked', icon: <Lock size={16} />, label: t('Envoyée', 'Voye') } : { cls: 'is-rest' };
+    if (idx === q.answer) return { cls: 'is-correct', icon: <Check size={16} />, label: mine ? t('Juste', 'Bon') : t('Bonne réponse', 'Bon repons') };
+    if (mine) return { cls: 'is-wrong', icon: <X size={16} />, label: t('Ta réponse', 'Repons ou') };
+    return { cls: 'is-rest' };
+  };
+
+  const headline = gotIt
+    ? t('Exact !', 'Egzak !')
+    : timedOut
+      ? t('Temps écoulé. Voici la réponse.', 'Tan an fini. Men repons lan.')
+      : t('Pas cette fois — continue, tu apprends !', 'Se pa sa — kontinye, w ap aprann !');
+  const explanation = triviaExplanation(q, isCreole);
+  const urgent = timed && !answered && timeLeft <= 5;
+
   return (
-    <div className="trivia-quiz" style={{ '--cat-color': accent } as React.CSSProperties}>
-      <div className="trivia-quiz__top-bar">
-        <button className="trivia-quiz__close" onClick={onBack} aria-label={isCreole ? 'Kite' : 'Quitter'}>
-          <X size={16} />
-        </button>
-        <div className="trivia-quiz__progress-bar">
+    <div className="mx-quiz" style={{ '--cat-color': accent, ...motionVars } as React.CSSProperties} data-reduced={reduced ? 'true' : undefined}>
+      <div className="mx-bar">
+        {closeBtn}
+        <div className="mx-progress">
+          <p className="mx-progress__label">
+            <span>{t('Question', 'Kesyon')}</span>{' '}
+            <strong className="mx-num" translate="no">{current + 1}/{total}</strong>
+            {!timed && <span className="mx-progress__mode"> · {t('Sans chrono', 'San kwonomèt')}</span>}
+          </p>
+          {total <= 20 ? (
+            <ol className="mx-track" aria-hidden="true">
+              {questions.map((_, i) => (
+                <li key={i} className={`mx-track__seg${i < ticks.length ? ` is-${ticks[i]}` : i === current ? ' is-now' : ''}`} />
+              ))}
+            </ol>
+          ) : (
+            <div className="mx-track mx-track--bar" aria-hidden="true">
+              <span style={{ width: `${(ticks.length / total) * 100}%` }} />
+            </div>
+          )}
+        </div>
+        <p className="mx-score" aria-label={t(`Score : ${shownScore}`, `Pwen : ${shownScore}`)}>
+          <Star size={15} aria-hidden="true" /> <span className="mx-num" translate="no">{shownScore}</span>
+          {streakNow >= 2 && <span className="mx-score__streak"><Flame size={14} aria-hidden="true" />{t(`série ${streakNow}`, `seri ${streakNow}`)}</span>}
+        </p>
+        {timed && (
           <div
-            className="trivia-quiz__progress-fill"
-            style={{ width: `${((current + (answered ? 1 : 0)) / questions.length) * 100}%` }}
-          />
-          <span className="trivia-quiz__counter" translate="no">
-            {current + 1}/{questions.length}
-          </span>
-        </div>
-        <div className="trivia-quiz__score-badge">
-          <Star size={13} /> {score}
-        </div>
+            className={`mx-timer${urgent ? ' is-urgent' : ''}${timedOut ? ' is-out' : ''}`}
+            role="timer"
+            aria-label={t(`${timeLeft} secondes restantes`, `${timeLeft} segonn rete`)}
+          >
+            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+              <circle cx="12" cy="12" r="9.5" className="mx-timer__bg" />
+              <circle cx="12" cy="12" r="9.5" className="mx-timer__fill" pathLength={ROUND_SECONDS}
+                style={{ strokeDasharray: `${timeLeft} ${ROUND_SECONDS}` }} />
+            </svg>
+            <span className="mx-num" aria-hidden="true">{timeLeft} s</span>
+          </div>
+        )}
       </div>
+      {/* Spoken once, at five seconds: the visible count is not announced. */}
+      <span className="mx-sr" aria-live="polite">{urgent && timeLeft === 5 ? t('Plus que 5 secondes', 'Rete 5 segonn sèlman') : ''}</span>
 
-      {timed ? <div aria-label={isCreole ? `${timeLeft} segonn rete` : `${timeLeft} secondes restantes`} className="trivia-quiz__timer-ring" data-urgent={timeLeft <= 5 ? 'true' : undefined}>
-        <span>{timeLeft}</span>
-      </div> : <p className="trivia-mode-label">{isCreole ? 'San kwonomèt · Pran tan ou' : 'Sans chrono · Prends ton temps'}</p>}
-
-      <div className="trivia-quiz__question-card">
+      <div className="mx-stage">
         {q.flag && (
-          <div className="trivia-quiz__flag">
+          <div className="mx-flag">
             {q.flagIso ? (
               <img
                 src={`https://flagcdn.com/w320/${q.flagIso}.png`}
                 srcSet={`https://flagcdn.com/w640/${q.flagIso}.png 2x`}
                 alt=""
-                className="trivia-quiz__flag-img"
+                className="mx-flag__img"
                 loading="eager"
               />
             ) : (
-              <span className="trivia-quiz__flag-emoji" aria-hidden>{q.flag}</span>
+              <span className="mx-flag__emoji" aria-hidden>{q.flag}</span>
             )}
           </div>
         )}
-        <h2 ref={headingRef} tabIndex={-1} className="trivia-quiz__question">
+        <h2 ref={headingRef} tabIndex={-1} className="mx-question">
           {isCreole ? q.qHt || q.q : q.q}
         </h2>
       </div>
 
-      <div className="trivia-quiz__options">
-        {options.map((opt, idx) => (
-          <button
-            key={idx}
-            className={optionClass(idx)}
-            onClick={() => handleSelect(idx)}
-            disabled={answered}
-          >
-            {/* A/B/C/D is a pure UI scaffold, not content. Mark it non-translatable
-                so browser auto-translation (e.g. Google Translate on the French
-                page) can't turn a lone "A" into "HAS". */}
-            <span className="trivia-option__letter" translate="no">
-              {String.fromCharCode(65 + idx)}
-            </span>
-            <span className="trivia-option__text">{opt}</span>
-            {answered && idx === q.answer && (
-              <span className="trivia-option__icon"><Check size={16} /></span>
-            )}
-            {answered && idx === selected && idx !== q.answer && (
-              <span className="trivia-option__icon"><X size={16} /></span>
-            )}
-          </button>
-        ))}
+      <div className="mx-options" data-answered={answered ? 'true' : undefined}>
+        {options.map((opt, idx) => {
+          const st = optionState(idx);
+          return (
+            <button
+              key={idx}
+              type="button"
+              className={`mx-opt ${st.cls}`.trim()}
+              onClick={() => handleSelect(idx)}
+              disabled={answered}
+              aria-keyshortcuts={String(idx + 1)}
+            >
+              {/* A/B/C/D is a pure UI scaffold, not content. Mark it non-translatable
+                  so browser auto-translation (e.g. Google Translate on the French
+                  page) can't turn a lone "A" into "HAS". */}
+              <span className="mx-opt__key" translate="no">{String.fromCharCode(65 + idx)}</span>
+              <span className="mx-opt__text">{opt}</span>
+              {st.label && <span className="mx-opt__mark">{st.icon}<span>{st.label}</span></span>}
+            </button>
+          );
+        })}
       </div>
+      {!answered && <p className="mx-keys" aria-hidden="true">{t('Touches 1 à 4 pour répondre · Entrée pour continuer', 'Touch 1 a 4 pou reponn · Antre pou kontinye')}</p>}
 
-      {answered && <div className="trivia-feedback" role="status">
-        <strong>{selected === q.answer ? (isCreole ? 'Egzak !' : 'Exact !') : selected === -1 ? (isCreole ? 'Tan an fini. Men repons lan.' : 'Temps écoulé. Voici la réponse.') : (isCreole ? 'Kontinye, w ap aprann !' : 'Continue, tu apprends !')}</strong>
-        <p>{isCreole ? 'Bon repons :' : 'Bonne réponse :'} <strong>{options[q.answer]}</strong></p>
-        {triviaExplanation(q, isCreole) && <p>{triviaExplanation(q, isCreole)}</p>}
-      </div>}
       {answered && (
-        <button className="trivia-next-btn" onClick={handleNext}>
-          {current + 1 >= questions.length
-            ? (isCreole ? 'Wè rezilta' : 'Voir les résultats')
-            : (isCreole ? 'Pwochen kesyon →' : 'Question suivante →')}
-        </button>
-      )}
-    </div>
-  );
-}
-
-/* ─── Results Screen ─── */
-function TriviaResults({ answers, isAuthed, saving, saveError, onReview, category, score, total, onReplay, onHome, isCreole, reward = null, accentColor = null, categories = TRIVIA_CATEGORIES as any[], onStartDuelRound = (_c: string) => {}, onPickDuel = () => {} }) {
-  const { profile } = useTrivia();
-  const school: string | null = isAuthed ? profile?.leaderboard?.school || null : null;
-  const xp = reward && !reward.guest ? reward.xpEarned : 0;
-  // Stable across re-renders so the duel panel's bank lookup runs once.
-  const played = React.useMemo(() => answers.map((a) => a.question), [answers]);
-  const cat = categories.find((c) => c.id === category);
-  const accent = accentColor || cat?.color || '#1B6FE0';
-  const pct = total > 0 ? Math.round((score / total) * 100) : 0;
-
-  let IconCmp, message, messageHt;
-  if (pct >= 90) {
-    IconCmp = Trophy;
-    message = 'Excellent ! Vous êtes un champion !';
-    messageHt = 'Ekselan! Ou se yon chanpyon!';
-  } else if (pct >= 70) {
-    IconCmp = Star;
-    message = 'Très bien ! Continuez comme ça !';
-    messageHt = 'Trè byen! Kontinye konsa!';
-  } else if (pct >= 50) {
-    IconCmp = ThumbsUp;
-    message = 'Pas mal ! Vous pouvez vous améliorer.';
-    messageHt = 'Pa mal! Ou ka amelyore.';
-  } else {
-    IconCmp = Dumbbell;
-    message = 'Courage ! Réessayez pour progresser.';
-    messageHt = 'Kouraj! Eseye ankò pou pwogrese.';
-  }
-
-  return (
-    <div className="trivia-results" style={{ '--cat-color': accent } as React.CSSProperties}>
-      <div className="trivia-results__card">
-        <span className="trivia-results__emoji"><IconCmp size={48} /></span>
-        <div className="trivia-results__score-ring">
-          <svg viewBox="0 0 120 120" className="trivia-results__ring-svg">
-            <circle cx="60" cy="60" r="52" className="trivia-results__ring-bg" />
-            <circle
-              cx="60" cy="60" r="52"
-              className="trivia-results__ring-fill"
-              style={{
-                strokeDasharray: `${(pct / 100) * 327} 327`,
-              }}
-            />
-          </svg>
-          <span className="trivia-results__pct">{pct}%</span>
-        </div>
-        <p className="trivia-results__detail">
-          {score} / {total} {isCreole ? 'kòrèk' : 'correct'}
-        </p>
-        <p className="trivia-results__message">
-          {isCreole ? messageHt : message}
-        </p>
-        {reward && reward.xpEarned > 0 && (
-          <div className="trivia-reward">
-            <span className="trivia-reward__xp"><Sparkles size={16} /> +{reward.xpEarned} XP</span>
-            {reward.leveledUp && (
-              <span className="trivia-reward__levelup">
-                <Crown size={14} /> {isCreole ? `Nivo ${reward.newLevel} !` : `Niveau ${reward.newLevel} !`}
-              </span>
-            )}
-            {reward.guest && (
-              <span className="trivia-reward__guest">
-                {isCreole ? 'Aperçu XP — pati sa a pa anrejistre' : 'Aperçu XP — cette partie n’est pas sauvegardée'}
-              </span>
-            )}
+        <div className={`mx-feedback is-${gotIt ? 'correct' : timedOut ? 'timeout' : 'wrong'}`} role="status" data-beat={beat}>
+          <div className="mx-b1">
+            <p className="mx-feedback__head">
+              <span className="mx-feedback__icon" aria-hidden="true">{gotIt ? <Check size={18} /> : timedOut ? <Clock size={18} /> : <X size={18} />}</span>
+              <strong>{headline}</strong>
+              <span className={`mx-points mx-b2${gotIt ? ' is-plus' : ''}`}>{gotIt ? t('+1 point', '+1 pwen') : t('+0 point', '+0 pwen')}</span>
+            </p>
+            {!gotIt && <p>{t('Bonne réponse :', 'Bon repons :')} <strong>{options[q.answer]}</strong></p>}
+            {explanation && <p className="mx-feedback__why">{explanation}</p>}
           </div>
-        )}
-        <p role="status">{saving ? (isCreole ? 'N ap anrejistre pwogrè ou…' : 'Enregistrement de ta progression…') : saveError ? (isCreole ? 'Nou pa t ka anrejistre XP yo. Rezilta ou rete isit la.' : 'Les XP n’ont pas pu être enregistrés. Ton résultat reste disponible ici.') : ''}</p>
-        <div className="trivia-results__actions">
-          {answers.some((a) => !a.correct) && <button className="button button--primary" onClick={onReview}>{isCreole ? 'Revize erè mwen yo' : 'Revoir mes erreurs'}</button>}
-          <button className="button button--secondary" onClick={onReplay}>
-            <RefreshCw size={16} /> {isCreole ? 'Jwe ak nouvo kesyon' : 'Rejouer avec de nouvelles questions'}
-          </button>
-          <button className="button button--ghost" onClick={onHome}>
-            ← {isCreole ? 'Kategori yo' : 'Catégories'}
+          <p className="mx-feedback__run mx-b3">
+            {t('Score', 'Pwen')} <strong className="mx-num" translate="no">{score}/{current + 1}</strong>
+            {streakFinal >= 2 && <> · <Flame size={14} aria-hidden="true" /> {t(`${streakFinal} de suite`, `${streakFinal} youn apre lòt`)}</>}
+          </p>
+        </div>
+      )}
+      {answered && (
+        <div className="mx-next-wrap">
+          <button ref={nextRef} type="button" className="an-go mx-next" onClick={handleNext}>
+            {isLast ? t('Voir les résultats', 'Wè rezilta') : t('Question suivante →', 'Pwochen kesyon →')}
           </button>
         </div>
-        {!isAuthed && <div className="trivia-results__save">
-          <p>{isCreole ? 'Kontinye gratis. Kreye yon kont pou anrejistre pwogrè pwochen pati ou yo.' : 'Continue gratuitement. Crée un compte pour sauvegarder la progression de tes prochaines parties.'}</p>
-          <button className="button button--ghost" onClick={() => { useStore.getState().setActiveTab('signup'); useStore.getState().toggleAuthModal(); }}>
-            {isCreole ? 'Kreye yon kont' : 'Créer un compte'}
-          </button>
-        </div>}
-        {/* The peak of the game is the moment to bring someone in: the duel
-            is minted from this very round when a friend can replay it. */}
-        {school && xp > 0 && (
-          <p className="trivia-challenge__school">
-            {isCreole ? `+${xp} XP pou ${school}` : `+${xp} XP pour ${school}`}
-          </p>
-        )}
-        <DuelPanel
-          category={category}
-          played={played}
-          score={score}
-          total={total}
-          isAuthed={isAuthed}
-          isCreole={isCreole}
-          onStartDuelRound={onStartDuelRound}
-          onPickDuel={onPickDuel}
-        />
-      </div>
+      )}
     </div>
   );
 }
@@ -503,7 +496,12 @@ function TriviaClassic({ isCreole, onExitHub }) {
   const mode: TriviaMode = modeParam === 'sprint' || modeParam === 'live' ? modeParam : 'quick';
   const setMode = (m: TriviaMode) => navigate({ search: m === 'quick' ? '' : `?mode=${m}` }, { replace: true });
   const [sprintPlaying, setSprintPlaying] = useState(false);
-  const { recordResult, daily, isAuthed } = useTrivia();
+  const { recordResult, daily, isAuthed, profile } = useTrivia();
+  // The theme's stats as they stood BEFORE this round, for an honest "new
+  // record" on the results (the saved profile already includes the round).
+  const profileRef = useRef(profile);
+  profileRef.current = profile;
+  const [prevTheme, setPrevTheme] = useState<{ games?: number; bestPct?: number } | null>(null);
   const { categories, questions } = useTriviaContent();
   const [screen, setScreen] = useState('pick');
   const [category, setCategory] = useState(null);
@@ -574,6 +572,11 @@ function TriviaClassic({ isCreole, onExitHub }) {
       // A topic tapped on the /jeux hub starts that round directly.
       autoStartedRef.current = true;
       startRound(location.state.startCategory);
+    } else if (typeof location.state?.duelCategory === 'string') {
+      // "Revanche" from a duel result (/defi/:code): a fresh duel round on the
+      // same theme, which the student then sends back.
+      autoStartedRef.current = true;
+      startDuelRound(location.state.duelCategory);
     } else if (location.state?.duelPick) {
       // "Lance une partie, puis défie un ami" on the /jeux hub.
       autoStartedRef.current = true;
@@ -639,6 +642,7 @@ function TriviaClassic({ isCreole, onExitHub }) {
 
   const handleFinish = useCallback(async (score, total, roundAnswers) => {
     const version = roundVersion.current;
+    setPrevTheme(isAuthed ? profileRef.current?.byCategory?.[category || 'mixed'] || { games: 0, bestPct: 0 } : null);
     setFinalScore({ score, total });
     setAnswers(roundAnswers);
     setScreen('results');
@@ -652,7 +656,7 @@ function TriviaClassic({ isCreole, onExitHub }) {
     } finally {
       if (version === roundVersion.current) setSaving(false);
     }
-  }, [category, recordResult, timed]);
+  }, [category, recordResult, timed, isAuthed]);
 
   const handleReplay = () => {
     trackEvent('trivia_replay', { category });
@@ -664,6 +668,13 @@ function TriviaClassic({ isCreole, onExitHub }) {
     roundVersion.current += 1;
     setScreen('pick');
     setCategory(null);
+  };
+
+  const themeName = (id: string | null) => {
+    if (id === 'daily') return isCreole ? 'Tout tèm yo' : 'Tous les thèmes';
+    if (id === 'mixed' || !id) return isCreole ? 'Melanj tèm' : 'Mélange de thèmes';
+    const c: any = (categories as any[]).find((x) => x.id === id);
+    return c ? (isCreole ? c.nameHt || c.name : c.name) : id;
   };
 
   const head = (
@@ -715,29 +726,41 @@ function TriviaClassic({ isCreole, onExitHub }) {
       accentColor={category === 'daily' ? '#f59e0b' : null} onFinish={handleFinish}
       onBack={() => { trackEvent('trivia_exit', { category }); handleHome(); }}
       isCreole={isCreole} categories={categories} questionsMap={questions} />}
-    {screen === 'results' && <>
-      <h1 className="trivia-result-heading" tabIndex={-1} ref={resultHeading}>{isCreole ? 'Pati fini !' : 'Partie terminée !'}</h1>
-      <TriviaResults category={category} score={finalScore.score} total={finalScore.total} answers={answers}
-        reward={reward} saving={saving} saveError={saveError} isAuthed={isAuthed}
-        accentColor={category === 'daily' ? '#f59e0b' : null} onReplay={handleReplay} onHome={handleHome}
+    {screen === 'results' && <div className="mx-page">
+      <MatchResults category={category} categoryName={themeName(category)} score={finalScore.score} total={finalScore.total}
+        answers={answers} mode={category === 'daily' ? 'daily' : isDuelRound ? 'duel' : 'practice'}
+        reward={reward} saving={saving} saveError={saveError} isAuthed={isAuthed} isCreole={isCreole}
+        prevTheme={prevTheme} headingRef={resultHeading} onReplay={handleReplay} onHome={handleHome}
         onReview={() => { trackEvent('trivia_review', { category }); setScreen('review'); }}
-        isCreole={isCreole} categories={categories} onStartDuelRound={startDuelRound} onPickDuel={pickDuel} />
+        onStartDuelRound={startDuelRound} onPickDuel={pickDuel} />
       {isAuthed && !saving && <div className="trivia-standing"><MySchoolCard where="trivia-results" /></div>}
-    </>}
-    {screen === 'review' && <section className="trivia-review">
-      <button className="trivia-back-btn" onClick={() => setScreen('results')}>← {isCreole ? 'Rezilta' : 'Résultats'}</button>
-      <h1 ref={resultHeading} tabIndex={-1}>{isCreole ? 'Aprann nan erè ou yo' : 'Apprends de tes erreurs'}</h1>
-      {answers.filter((a) => !a.correct).map(({ question: q, selected }, index) => <article className="trivia-feedback" key={index}>
-        {/* A flag question reviewed without its flag asked nothing. */}
-        {q.flag && (q.flagIso
-          ? <img className="trivia-review__flag" src={`https://flagcdn.com/w160/${q.flagIso}.png`} srcSet={`https://flagcdn.com/w320/${q.flagIso}.png 2x`} alt="" loading="lazy" />
-          : <span className="trivia-review__flag trivia-review__flag--emoji" aria-hidden>{q.flag}</span>)}
-        <h2>{isCreole ? q.qHt || q.q : q.q}</h2>
-        <p>{isCreole ? 'Repons ou :' : 'Ta réponse :'} {selected === -1 ? (isCreole ? 'Tan an fini' : 'Temps écoulé') : triviaOptions(q, isCreole)[selected]}</p>
-        <p>{isCreole ? 'Bon repons :' : 'Bonne réponse :'} <strong>{triviaOptions(q, isCreole)[q.answer]}</strong></p>
-        {triviaExplanation(q, isCreole) && <p>{triviaExplanation(q, isCreole)}</p>}
-      </article>)}
-      <button className="button button--primary" onClick={handleReplay}>{isCreole ? 'Jwe ak nouvo kesyon' : 'Rejouer avec de nouvelles questions'}</button>
+    </div>}
+    {screen === 'review' && <section className="mx-page mx-review">
+      <button type="button" className="an-ghost mx-review__back" onClick={() => setScreen('results')}>← {isCreole ? 'Rezilta' : 'Résultats'}</button>
+      <h1 ref={resultHeading} tabIndex={-1} className="mx-review__title">{isCreole ? 'Aprann nan erè ou yo' : 'Apprends de tes erreurs'}</h1>
+      {answers.filter((a) => !a.correct).map(({ question: q, selected }, index) => {
+        const opts = triviaOptions(q, isCreole);
+        const why = triviaExplanation(q, isCreole);
+        return <article className="mx-miss" key={index}>
+          {/* A flag question reviewed without its flag asked nothing. */}
+          {q.flag && (q.flagIso
+            ? <img className="trivia-review__flag" src={`https://flagcdn.com/w160/${q.flagIso}.png`} srcSet={`https://flagcdn.com/w320/${q.flagIso}.png 2x`} alt="" loading="lazy" />
+            : <span className="trivia-review__flag trivia-review__flag--emoji" aria-hidden>{q.flag}</span>)}
+          <h2 className="mx-miss__q">{isCreole ? q.qHt || q.q : q.q}</h2>
+          <p className="mx-miss__row is-wrong">
+            {selected === -1 ? <Clock size={16} aria-hidden="true" /> : <X size={16} aria-hidden="true" />}
+            <span>{isCreole ? 'Repons ou :' : 'Ta réponse :'} {selected === -1 ? (isCreole ? 'Tan an fini' : 'Temps écoulé') : opts[selected]}</span>
+          </p>
+          <p className="mx-miss__row is-correct">
+            <Check size={16} aria-hidden="true" />
+            <span>{isCreole ? 'Bon repons :' : 'Bonne réponse :'} <strong>{opts[q.answer]}</strong></span>
+          </p>
+          {why && <p className="mx-miss__why">{why}</p>}
+        </article>;
+      })}
+      <div className="mx-review__actions">
+        <button type="button" className="an-go" onClick={handleReplay}><RefreshCw size={16} aria-hidden="true" /> {isCreole ? 'Rejwe' : 'Rejouer'}</button>
+      </div>
     </section>}
   </div>;
 }

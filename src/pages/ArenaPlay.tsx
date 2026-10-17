@@ -23,6 +23,18 @@ import {
   type ArenaStandings,
   type QualificationState,
 } from '../utils/arenaPlay';
+import {
+  AnswerReceipt,
+  ConnectionPill,
+  ReportProblem,
+  ResultStatus,
+  RulesButton,
+  answerReceiptView,
+  formatClock,
+  useOnline,
+  ARENA_RULES,
+  type ConnectionState,
+} from '../components/arena/trust';
 import './Arena.css';
 import './ArenaPlay.css';
 
@@ -226,12 +238,23 @@ function ArenaRoom({ tid }: { tid: string }) {
       break;
     case 'result':
     default:
-      body = <Result tid={tid} view={view} t={t} />;
+      body = <Result tid={tid} view={view} t={t} isCreole={isCreole} />;
       break;
   }
 
   return (
     <Shell>
+      <TrustBar
+        connection={view.connection}
+        liveWord={screen === 'doors' || screen === 'live' ? 'live' : 'connected'}
+        tid={tid}
+        uid={user?.uid ?? null}
+        questionIndex={screen === 'live' ? tournament?.currentQuestion?.index ?? null : null}
+        teamSize={tournament?.teamSize}
+        minPlayers={tournament?.minPlayers}
+        t={t}
+        isCreole={isCreole}
+      />
       {title && screen !== 'live' ? (
         <header className="arena-play__head">
           <span className="arena-pill arena-pill--eyebrow">
@@ -246,6 +269,39 @@ function ArenaRoom({ tid }: { tid: string }) {
 }
 
 // ── Frame and small parts ───────────────────────────────────────────────────
+
+/**
+ * The trust bar, on every screen of the room: is the connection up, what are
+ * the rules, where to report a problem. The pill is derived in useArenaPlay
+ * from navigator.onLine, the tournament listener and the presence heartbeat —
+ * it never says "En direct" on the strength of a cached document alone.
+ */
+function TrustBar({ connection, liveWord, tid, uid, questionIndex, teamSize, minPlayers, t, isCreole }: {
+  connection: ConnectionState;
+  liveWord: 'live' | 'connected';
+  tid: string;
+  uid: string | null;
+  questionIndex: number | null;
+  teamSize?: number;
+  minPlayers?: number;
+  t: T;
+  isCreole: boolean;
+}) {
+  return (
+    <div className="trust-bar arena-play__trust">
+      <ConnectionPill
+        state={connection}
+        isCreole={isCreole}
+        liveWord={liveWord}
+        detail={connection === 'reconnecting' ? t('les données affichées peuvent dater', 'done yo ka an reta') : null}
+      />
+      <div className="trust-row">
+        <RulesButton variant="arena" isCreole={isCreole} teamSize={teamSize} minPlayers={minPlayers} />
+        <ReportProblem context={{ kind: 'arena', ref: tid, questionIndex, uid }} isCreole={isCreole} />
+      </div>
+    </div>
+  );
+}
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
@@ -462,13 +518,15 @@ function Doors({ view, t }: { view: ReturnType<typeof useArenaPlay>; t: T }) {
 
 /** How a question scores — stated before the first one, not explained after. */
 function ScoringCard({ t }: { t: T }) {
+  const full = ARENA_RULES.fullMs / 1000;
+  const half = ARENA_RULES.halfMs / 1000;
   return (
     <div className="arena-play__card">
       <p className="arena-play__overline">{t('Comment on marque', 'Kijan ou fè pwen')}</p>
       <ul className="arena-play__rules">
-        <li><strong>1000</strong> {t('bonne réponse en moins de 12 secondes', 'bon repons anvan 12 segonn')}</li>
-        <li><strong>500</strong> {t('bonne réponse entre 12 et 20 secondes', 'bon repons ant 12 ak 20 segonn')}</li>
-        <li><strong>0</strong> {t('après 20 secondes, ou mauvaise réponse', 'apre 20 segonn, oswa move repons')}</li>
+        <li><strong>{ARENA_RULES.pointsFull}</strong> {t(`bonne réponse en ${full} secondes ou moins`, `bon repons nan ${full} segonn oswa mwens`)}</li>
+        <li><strong>{ARENA_RULES.pointsHalf}</strong> {t(`bonne réponse entre ${full} et ${half} secondes`, `bon repons ant ${full} ak ${half} segonn`)}</li>
+        <li><strong>0</strong> {t(`après ${half} secondes, ou mauvaise réponse`, `apre ${half} segonn, oswa move repons`)}</li>
       </ul>
     </div>
   );
@@ -499,6 +557,38 @@ function useArrivals(standings: ArenaStandings | null): string[] {
 
 // ── Live ────────────────────────────────────────────────────────────────────
 
+/**
+ * A committed tap, kept for this tab session so a reload or a dropped tab
+ * comes back to the SAME locked answer instead of offering a second tap the
+ * server would ignore (the composite answer id keeps the first). Pending taps
+ * are resent; confirmed ones keep their receipt. sessionStorage only: it is
+ * a per-tab convenience, never a record — the server's `answers/*` is.
+ */
+interface StoredTap {
+  choice: number;
+  shownAt: number;
+  focusLosses: number;
+  confirmed: boolean;
+  ackClock: string | null;
+  duplicate: boolean;
+  /** The server kept an earlier tap from elsewhere; this one was not graded. */
+  foreign?: boolean;
+}
+const tapKey = (tid: string, index: number) => `edlight.arena.tap.${tid}.${index}`;
+function readTap(tid: string, index: number): StoredTap | null {
+  try {
+    const raw = window.sessionStorage.getItem(tapKey(tid, index));
+    if (!raw) return null;
+    const v = JSON.parse(raw);
+    return v && typeof v.choice === 'number' ? (v as StoredTap) : null;
+  } catch {
+    return null;
+  }
+}
+function writeTap(tid: string, index: number, tap: StoredTap): void {
+  try { window.sessionStorage.setItem(tapKey(tid, index), JSON.stringify(tap)); } catch { /* storage blocked */ }
+}
+
 function Live({ tid, view, t, isCreole }: {
   tid: string;
   view: ReturnType<typeof useArenaPlay>;
@@ -507,36 +597,102 @@ function Live({ tid, view, t, isCreole }: {
 }) {
   const { tournament, question, answerable, now, me, mySchool, inFive } = view;
   const answer = useArenaAnswer(tid);
+  const online = useOnline();
 
   const qIndex = question?.index ?? null;
+  const opensAt = question?.opensAt ?? 0;
   const [choice, setChoice] = useState<number | null>(null);
   const [locked, setLocked] = useState(false);
   const [receipt, setReceipt] = useState<AnswerReceiptStatus | null>(null);
+  const [receiptError, setReceiptError] = useState<string | null>(null);
+  const [ackClock, setAckClock] = useState<string | null>(null);
+  const [duplicate, setDuplicate] = useState(false);
+  // The choice on screen came from THIS tab's tap (or its stored copy). A
+  // duplicate receipt for a choice that did not means the server holds an
+  // earlier tap we cannot see — so the verdict must not judge this one.
+  const [ownChoice, setOwnChoice] = useState(true);
   // When THIS browser painted the question. The server clamps it; see
   // effectiveShownAt for why the ring reads the clamped value too.
   const shownAt = useRef<number>(Date.now());
   const focusReading = useRef<{ focusLosses: number } | null>(null);
+  const currentQ = useRef<number | null>(qIndex);
+  // Sends made for the tap on screen; 0 again for a new question or a restored tap.
+  const attempts = useRef(0);
+  const restored = useRef(false);
+  const opensAtRef = useRef(opensAt);
+  opensAtRef.current = opensAt;
   const takeFocusReading = useFocusLossCounter(answerable);
-
-  useEffect(() => {
-    if (qIndex == null) return;
-    setChoice(null);
-    setLocked(false);
-    setReceipt(null);
-    focusReading.current = null;
-    shownAt.current = Date.now();
-  }, [qIndex]);
 
   const send = useCallback((i: number) => {
     if (qIndex == null) return;
+    const sentFor = qIndex;
+    attempts.current += 1;
+    const firstFresh = attempts.current === 1 && !restored.current;
     setReceipt('sending');
+    setReceiptError(null);
     void answer({
-      questionIndex: qIndex,
+      questionIndex: sentFor,
       choice: i,
       clientShownAt: shownAt.current,
       focusLosses: focusReading.current?.focusLosses ?? 0,
-    }).then((res) => setReceipt(classifyAnswerResult(res)));
-  }, [answer, qIndex]);
+    }).then((res) => {
+      // A reply for a question that is no longer on screen says nothing about this one.
+      if (currentQ.current !== sentFor) return;
+      const status = classifyAnswerResult(res);
+      setReceipt(status);
+      setReceiptError(res.ok ? null : res.error ?? null);
+      if (status === 'accepted') {
+        // The clock when the confirmation came BACK: the server received it
+        // at or before this moment, so the time shown never flatters.
+        const clock = formatClock(Date.now() - effectiveShownAt(shownAt.current, opensAtRef.current));
+        setAckClock(clock);
+        setDuplicate(!!res.duplicate);
+        // A duplicate on the very first send of a fresh tap: the server already
+        // held a tap from another device or an earlier visit, and kept it.
+        const foreign = !!res.duplicate && firstFresh;
+        if (foreign) setOwnChoice(false);
+        writeTap(tid, sentFor, {
+          foreign: foreign || undefined,
+          choice: i,
+          shownAt: shownAt.current,
+          focusLosses: focusReading.current?.focusLosses ?? 0,
+          confirmed: true,
+          ackClock: clock,
+          duplicate: !!res.duplicate,
+        });
+      }
+    });
+  }, [answer, qIndex, tid]);
+
+  useEffect(() => {
+    currentQ.current = qIndex;
+    if (qIndex == null) return;
+    const stored = readTap(tid, qIndex);
+    attempts.current = 0;
+    restored.current = !!stored;
+    setReceiptError(null);
+    setDuplicate(false);
+    setOwnChoice(true);
+    if (stored) {
+      // Reconnected to a question already answered here: same lock, same
+      // receipt, no second tap. Nothing is replayed.
+      setChoice(stored.choice);
+      setLocked(true);
+      shownAt.current = stored.shownAt;
+      focusReading.current = { focusLosses: stored.focusLosses };
+      setAckClock(stored.ackClock);
+      setDuplicate(stored.duplicate);
+      setOwnChoice(!stored.foreign);
+      setReceipt(stored.confirmed ? 'accepted' : 'retryable');
+      return;
+    }
+    setChoice(null);
+    setLocked(false);
+    setReceipt(null);
+    setAckClock(null);
+    focusReading.current = null;
+    shownAt.current = Date.now();
+  }, [qIndex, tid]);
 
   /*
    * One click commits. Local state locks BEFORE the request is in flight — a
@@ -550,13 +706,29 @@ function Live({ tid, view, t, isCreole }: {
     // Captured once per commit — reading resets the counter, so a retry must
     // reuse this reading rather than take a fresh (zeroed) one.
     focusReading.current = takeFocusReading();
+    writeTap(tid, qIndex, {
+      choice: i, shownAt: shownAt.current, focusLosses: focusReading.current.focusLosses,
+      confirmed: false, ackClock: null, duplicate: false,
+    });
     send(i);
-  }, [locked, answerable, qIndex, takeFocusReading, send]);
+  }, [locked, answerable, qIndex, takeFocusReading, send, tid]);
 
-  const retry = () => {
-    if (receipt !== 'retryable' || choice == null) return;
+  const retry = useCallback(() => {
+    if (receipt !== 'retryable' || choice == null || !answerable) return;
     send(choice);
-  };
+  }, [receipt, choice, answerable, send]);
+
+  // A tap restored after a reload, or held while offline: resend it once the
+  // line is back (once per reconnect). Idempotent server-side.
+  const resendOnce = useRef<number | null>(null);
+  useEffect(() => {
+    if (receipt !== 'retryable' || choice == null || !answerable || !online) return;
+    if (resendOnce.current === qIndex) return;
+    resendOnce.current = qIndex;
+    send(choice);
+  }, [receipt, choice, answerable, online, qIndex, send]);
+  // Each return of the network earns one more automatic resend.
+  useEffect(() => { if (!online) resendOnce.current = null; }, [online]);
 
   const options = question
     ? (isCreole && question.optionsHt.length ? question.optionsHt : question.options)
@@ -606,6 +778,14 @@ function Live({ tid, view, t, isCreole }: {
   const ring = tierRing(elapsed);
   const prompt = isCreole && question.promptHt ? question.promptHt : question.prompt;
   const timeUp = question.state === 'open' && !answerable;
+  const receiptKind = answerReceiptView({
+    choice,
+    status: locked ? receipt : null,
+    error: receiptError,
+    online,
+    questionOpen: answerable,
+  });
+  const confirmed = receiptKind === 'received';
 
   return (
     <div className="arena-play__live">
@@ -661,65 +841,38 @@ function Live({ tid, view, t, isCreole }: {
         })}
       </div>
 
-      <div className="arena-play__below" aria-live="polite">
+      <div className="arena-play__below">
         {revealed != null ? (
-          <p className={`arena-play__verdict${choice === revealed ? ' is-ok' : choice != null ? ' is-bad' : ''}`}>
+          <p className={`arena-play__verdict${confirmed && ownChoice && choice === revealed ? ' is-ok' : choice != null ? ' is-bad' : ''}`} aria-live="polite">
             {choice == null
               ? t('Pas de réponse pour cette question.', 'Pa gen repons pou kesyon sa a.')
-              : choice === revealed
-                ? t('Bonne réponse.', 'Bon repons.')
-                : t('Pas cette fois.', 'Pa fwa sa a.')}
+              : !ownChoice
+                ? t('Ta première réponse reçue est celle qui compte — ton score suivra le classement.', 'Premye repons ou ki rive a se li ki konte — nòt ou ap swiv klasman an.')
+                : !confirmed
+                  ? (choice === revealed
+                    ? t('C’était la bonne réponse — mais elle n’a pas été confirmée.', 'Se te bon repons lan — men li pa t konfime.')
+                    : t('Pas cette fois.', 'Pa fwa sa a.'))
+                  : choice === revealed
+                    ? t('Bonne réponse.', 'Bon repons.')
+                    : t('Pas cette fois.', 'Pa fwa sa a.')}
           </p>
-        ) : locked ? (
-          <ReceiptLine receipt={receipt} onRetry={retry} t={t} />
-        ) : timeUp ? (
-          <p className="arena-play__muted">{t('Temps écoulé — la réponse arrive.', 'Tan an fini — repons lan ap vini.')}</p>
-        ) : (
-          <p className="arena-play__muted">
-            <Keyboard size={16} aria-hidden="true" /> {t('Touches 1 à 4 pour répondre', 'Touch 1 rive 4 pou reponn')}
-          </p>
-        )}
+        ) : null}
+        {revealed == null || (choice != null && !confirmed) ? (
+          <AnswerReceipt
+            kind={receiptKind}
+            choiceLabel={choice != null ? LETTERS[choice] ?? String(choice + 1) : null}
+            ackClock={ackClock}
+            duplicate={duplicate}
+            onRetry={retry}
+            isCreole={isCreole}
+          />
+        ) : null}
       </div>
 
       {/* Between questions: your school and your five. Nothing else. */}
       {question.state !== 'open' || timeUp ? (
         <SchoolPosition school={mySchool} inFive={inFive} teamSize={tournament.teamSize} t={t} />
       ) : null}
-    </div>
-  );
-}
-
-/** Four honest states instead of one reassuring one. */
-function ReceiptLine({ receipt, onRetry, t }: { receipt: AnswerReceiptStatus | null; onRetry: () => void; t: T }) {
-  if (receipt === 'sending' || receipt === null) {
-    return (
-      <p className="arena-play__muted">
-        <span className="arena-page__spinner arena-play__spin-sm" aria-hidden="true" /> {t('Envoi en cours…', 'N ap voye li…')}
-      </p>
-    );
-  }
-  if (receipt === 'accepted') {
-    return (
-      <p className="arena-play__receipt">
-        <Check size={18} aria-hidden="true" /> {t('Réponse enregistrée. Pas de retour en arrière.', 'Repons ou anrejistre. Pa gen retounen.')}
-      </p>
-    );
-  }
-  if (receipt === 'rejected') {
-    return (
-      <p className="arena-play__verdict is-bad">
-        {t('Cette question est fermée — ta réponse n’a pas été comptée.', 'Kesyon sa a fèmen — repons ou pa konte.')}
-      </p>
-    );
-  }
-  return (
-    <div className="arena-play__retry">
-      <p className="arena-play__verdict is-bad">
-        {t('Ta réponse n’est pas passée. Vérifie ta connexion.', 'Repons ou pa pase. Tcheke koneksyon ou.')}
-      </p>
-      <button type="button" className="button button--primary" onClick={onRetry}>
-        {t('Réessayer', 'Eseye ankò')}
-      </button>
     </div>
   );
 }
@@ -797,7 +950,7 @@ function SchoolPosition({ school, inFive, teamSize, t }: {
 
 // ── Result ──────────────────────────────────────────────────────────────────
 
-function Result({ tid, view, t }: { tid: string; view: ReturnType<typeof useArenaPlay>; t: T }) {
+function Result({ tid, view, t, isCreole }: { tid: string; view: ReturnType<typeof useArenaPlay>; t: T; isCreole: boolean }) {
   const { tournament, me, mySchool, registration } = view;
   const prizeCents = useMemo(() => {
     if (!me || !tournament) return 0;
@@ -841,7 +994,7 @@ function Result({ tid, view, t }: { tid: string; view: ReturnType<typeof useAren
         <ResultNumbers me={me} total={total} t={t} />
       ) : registration ? (
         <p className="arena-play__muted arena-play__center">
-          {t('Tes réponses sont enregistrées. Ton score apparaîtra ici.', 'Repons ou yo anrejistre. Nòt ou ap parèt isit la.')}
+          {t('Ton score s’affiche ici quand il figure dans le classement publié.', 'Nòt ou parèt isit la lè l nan klasman ki pibliye a.')}
         </p>
       ) : null}
 
@@ -863,17 +1016,21 @@ function Result({ tid, view, t }: { tid: string; view: ReturnType<typeof useAren
         </div>
       ) : null}
 
-      {provisional ? (
-        <div className="arena-play__card">
-          <strong>{t('Résultats provisoires', 'Rezilta pwovizwa')}</strong>
-          <p className="arena-play__muted">
-            {t(
-              'Les prix sont confirmés après vérification. Les gagnants seront contactés.',
-              'Nou konfime pri yo apre verifikasyon. N ap kontakte moun ki genyen yo.',
-            )}
-          </p>
-        </div>
-      ) : null}
+      {/* Straight off the tournament state: provisional until the review
+          gate releases it, final after. Disputes are invited only while the
+          result can still move. */}
+      <ResultStatus final={!provisional} isCreole={isCreole}>
+        <RulesButton
+          variant="arena"
+          isCreole={isCreole}
+          teamSize={tournament.teamSize}
+          minPlayers={tournament.minPlayers}
+          label={t('Comment le classement est calculé', 'Kijan nou kalkile klasman an')}
+        />
+        {provisional ? (
+          <ReportProblem context={{ kind: 'arena', ref: tid, uid: me?.uid ?? registration?.uid ?? null, reason: 'dispute' }} isCreole={isCreole} />
+        ) : null}
+      </ResultStatus>
 
       <div className="arena-play__actions arena-play__center">
         <Link to="/arena" className="button button--primary">

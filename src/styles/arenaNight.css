@@ -128,7 +128,7 @@ body.arena-night .navbar .nav-actions__signin:hover, body.arena-night .navbar .n
      · tabs, segmented switches and choice chips stay pills.
    This file loads before the lazy page CSS, hence body.arena-night and
    !important on the properties those files also set. */
-body.arena-night :is(.ah-start, .aj-go, .an-go, .demo-go, .arc-btn--lg, .arc-btn--go, .gx-btn:not(.gx-btn--ghost), .duel-pill--primary, .ah-game--story .ah-cta, .hs-go, .arena-national__cta, .trivia-daily__cta, .trivia-mix, .myschool__cta, main .button--primary),
+body.arena-night :is(.ah-start, .aj-go, .an-go, .demo-go, .arc-btn--lg, .arc-btn--go, .gx-btn:not(.gx-btn--ghost), .duel-pill--primary, .hs-go, .arena-national__cta, .trivia-daily__cta, .trivia-mix, .myschool__cta, main .button--primary),
 body.arena-night :is(.ah-ghost, .an-ghost, .gx-btn--ghost, .duel-pill--soft, .gx-duel, .ah-cta--btn, .hs-ghost, .myschool__ghost, main .button--ghost, main .button--secondary) {
   display: inline-flex;
   align-items: center;
@@ -150,19 +150,19 @@ body.arena-night :is(.ah-ghost, .an-ghost, .gx-btn--ghost, .duel-pill--soft, .gx
    slab became a gradient with a coral glow — it read as the same raised,
    lit key. Now: one solid fill, no gradient, no glow, no lift on hover. Text
    is dark marine, the spec's pairing: white on this coral is under 3:1. */
-body.arena-night :is(.ah-start, .aj-go, .an-go, .demo-go, .arc-btn--lg, .arc-btn--go, .gx-btn:not(.gx-btn--ghost), .duel-pill--primary, .ah-game--story .ah-cta, .hs-go, .arena-national__cta, .trivia-daily__cta, .trivia-mix, .myschool__cta, main .button--primary) {
+body.arena-night :is(.ah-start, .aj-go, .an-go, .demo-go, .arc-btn--lg, .arc-btn--go, .gx-btn:not(.gx-btn--ghost), .duel-pill--primary, .hs-go, .arena-national__cta, .trivia-daily__cta, .trivia-mix, .myschool__cta, main .button--primary) {
   background: #FF6A45 !important;
   color: #12213A !important;
   box-shadow: none !important;
   text-shadow: none !important;
 }
-body.arena-night :is(.ah-start, .aj-go, .an-go, .demo-go, .arc-btn--lg, .arc-btn--go, .gx-btn:not(.gx-btn--ghost), .duel-pill--primary, .ah-game--story .ah-cta, .hs-go, .arena-national__cta, .trivia-daily__cta, .trivia-mix, .myschool__cta, main .button--primary):hover {
+body.arena-night :is(.ah-start, .aj-go, .an-go, .demo-go, .arc-btn--lg, .arc-btn--go, .gx-btn:not(.gx-btn--ghost), .duel-pill--primary, .hs-go, .arena-national__cta, .trivia-daily__cta, .trivia-mix, .myschool__cta, main .button--primary):hover {
   background: #FF7D5C !important;
   filter: none;
   transform: none !important;
   box-shadow: none !important;
 }
-body.arena-night :is(.ah-start, .aj-go, .an-go, .demo-go, .arc-btn--lg, .arc-btn--go, .gx-btn:not(.gx-btn--ghost), .duel-pill--primary, .ah-game--story .ah-cta, .hs-go, .arena-national__cta, .trivia-daily__cta, .trivia-mix, .myschool__cta, main .button--primary) svg { color: currentColor; }
+body.arena-night :is(.ah-start, .aj-go, .an-go, .demo-go, .arc-btn--lg, .arc-btn--go, .gx-btn:not(.gx-btn--ghost), .duel-pill--primary, .hs-go, .arena-national__cta, .trivia-daily__cta, .trivia-mix, .myschool__cta, main .button--primary) svg { color: currentColor; }
 /* Secondary: a flat, quiet fill with a hairline. */
 body.arena-night :is(.ah-ghost, .an-ghost, .gx-btn--ghost, .duel-pill--soft, .gx-duel, .ah-cta--btn, .hs-ghost, .myschool__ghost, main .button--ghost, main .button--secondary) {
   background: rgba(255, 255, 255, 0.07) !important;

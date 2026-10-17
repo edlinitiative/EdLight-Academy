@@ -1,0 +1,131 @@
+/* ═══ The personal lobby (2026-10-17) ═══════════════════════════════════════
+   The strip leads the city: identity, real standings, ONE coral Play, the
+   rival. Then the three lanes. Night palette from .ah (ArenaHome.css); type
+   floor 14px; no left-edge stripes; buttons are the flat Arène buttons. */
+
+.ah-hero__inner.lb-hero { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; align-items: stretch; }
+.lb-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 0.5rem 1.5rem; }
+.ah-hero .ah-title.lb-title { margin: 0; font-size: clamp(2.5rem, 1.6rem + 2.6vw, 4rem); line-height: 0.95; }
+.lb-tagline { margin: 0.35rem 0 0; font-family: var(--font-display, sans-serif); font-size: clamp(1.05rem, 0.95rem + 0.4vw, 1.3rem); font-weight: 750; letter-spacing: -0.01em; color: #FFE2A6; }
+.ah-chip.lb-chip { margin: 0; text-decoration: none; letter-spacing: 0.02em; text-transform: none; font-size: 0.95rem; }
+.ah-chip.lb-chip:hover { background: rgba(255, 255, 255, 0.12); }
+
+/* the strip */
+.lb {
+  display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 1px; overflow: hidden;
+  border-radius: 24px; background: rgba(170, 200, 255, 0.14);
+  box-shadow: 0 30px 70px -34px rgba(0, 0, 0, 0.85);
+}
+.lb > * { background: rgba(9, 20, 54, 0.88); backdrop-filter: blur(12px); }
+.lb-main {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: 'card stats' 'hint hint' 'play play';
+  align-items: center; gap: 1rem 1.75rem; padding: 1.25rem 1.4rem;
+}
+.lb-main > .pcard { grid-area: card; }
+.lb-main .pcard > div > div:first-child { font-size: 1.35rem; letter-spacing: -0.01em; }
+.lb-stats { grid-area: stats; margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+.lb-stats > div { min-width: 0; padding: 0.7rem 0.9rem; border-radius: 14px; background: rgba(255, 255, 255, 0.05); box-shadow: inset 0 0 0 1px rgba(170, 200, 255, 0.1); }
+.lb-stats dt { margin: 0 0 0.2rem; font-size: 0.875rem; font-weight: 700; color: #A3B5DC; }
+.lb-stats dd { margin: 0; font-size: 1rem; line-height: 1.35; color: #EAF0FF; }
+.lb-stats dd strong { font-family: var(--font-display, sans-serif); font-size: 1.25rem; color: #FFC24A; }
+.lb-hint { grid-area: hint; margin: -0.25rem 0 0; font-size: 0.95rem; color: #A3B5DC; }
+.lb-link { color: #9CC2FF; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.lb-link:hover { color: #fff; }
+.lb-playbox { grid-area: play; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.1rem; }
+body.arena-night .ah .lb-play, .ah .lb-play { min-height: 56px !important; padding: 0 2rem !important; font-size: 1.125rem !important; }
+.lb-play__meta { margin: 0; font-size: 0.95rem; color: #A3B5DC; }
+
+.lb-side { display: grid; align-content: center; gap: 0.75rem; padding: 1.25rem 1.4rem; }
+.lb-label { margin: 0; font-size: 0.95rem; font-weight: 700; color: #C1CFE4; }
+.lb-rival__who, .lb-school { display: flex; align-items: center; gap: 0.8rem; min-width: 0; }
+.lb-rival__who > div, .lb-school > div { display: grid; min-width: 0; }
+.lb-rival__who strong, .lb-school strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-display, sans-serif); font-size: 1.15rem; font-weight: 800; color: #fff; }
+.lb-rival__who span, .lb-school span { font-size: 0.95rem; color: #A3B5DC; font-variant-numeric: tabular-nums; }
+.lb-rival__none { margin: 0; font-size: 1rem; line-height: 1.5; color: #C8D6F5; }
+.lb-defy { justify-self: start; max-width: 100%; }
+.lb-defy { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* guest */
+.lb--guest .lb-main { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'play' 'quiet'; }
+.lb--guest .lb-playbox { grid-area: play; }
+.lb-quiet {
+  grid-area: quiet; justify-self: start; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0; border: 0; background: none; cursor: pointer;
+  color: #C1CFE4; font: inherit; font-size: 1rem; font-weight: 700; text-decoration: underline; text-decoration-color: rgba(193, 207, 228, 0.4); text-underline-offset: 4px;
+}
+.lb-quiet:hover { color: #fff; }
+.lb-quiet:focus-visible { outline: 3px solid #FFC24A; outline-offset: 3px; border-radius: 6px; }
+
+/* the hero is shorter now: the strip, then the street */
+.ah-hero:has(.lb-hero) { min-height: 0; padding-top: clamp(1rem, 3vh, 2rem); }
+.ah-hero:has(.lb-hero) .ah-street { padding-top: 1rem; }
+.ah-hero:has(.lb-hero) .ah-moon { top: 3%; left: 62%; width: clamp(56px, 6vw, 92px); }
+
+/* ═══ The three lanes ══════════════════════════════════════════════════════ */
+.lb-lanes { padding: clamp(1.5rem, 3vw, 2.25rem) 0 0; background: var(--ah-ink, #040A1C); }
+.lb-lanes__title { margin: 0 0 1rem; font-family: var(--font-display, sans-serif); font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2.2rem); font-weight: 800; letter-spacing: -0.03em; color: #fff; }
+.lb-lanes__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.lb-lane {
+  display: flex; flex-direction: column; gap: 0.7rem; padding: 1.25rem; border-radius: 22px; min-width: 0;
+  background: linear-gradient(180deg, #102252, #0A1638); box-shadow: inset 0 0 0 1px rgba(160, 190, 255, 0.14);
+}
+.lb-lane.is-open { background: radial-gradient(420px 200px at 100% 0%, rgba(255, 194, 74, 0.16), transparent 70%), linear-gradient(180deg, #102252, #0A1638); }
+.lb-lane__over { display: flex; align-items: center; gap: 0.45rem; margin: 0; font-size: 0.975rem; font-weight: 700; color: #C1CFE4; }
+.lb-lane__over svg { color: #FFC24A; }
+.lb-lane h3 { margin: 0; font-family: var(--font-display, sans-serif); font-size: clamp(1.35rem, 1.1rem + 0.6vw, 1.65rem); font-weight: 800; letter-spacing: -0.025em; line-height: 1.1; color: #fff; }
+.lb-facts { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.4rem; }
+.lb-facts li { display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.975rem; line-height: 1.4; color: #DCE6FA; }
+.lb-facts svg { flex-shrink: 0; margin-top: 0.15rem; color: #7FB0FF; }
+.lb-lane__text { margin: 0; font-size: 0.975rem; line-height: 1.5; color: #A3B5DC; }
+.lb-ladder { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.3rem; }
+.lb-ladder li { display: grid; grid-template-columns: 1.6rem minmax(0, 1fr) auto; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; border-radius: 10px; background: rgba(255, 255, 255, 0.04); font-size: 0.975rem; }
+.lb-ladder li.is-me { background: rgba(255, 194, 74, 0.14); box-shadow: inset 0 0 0 1px rgba(255, 194, 74, 0.55); }
+.lb-ladder__n { font-family: var(--font-display, sans-serif); font-weight: 800; color: #FFC24A; }
+.lb-ladder__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #fff; font-weight: 700; }
+.lb-ladder__xp { color: #A3B5DC; font-variant-numeric: tabular-nums; }
+.lb-lane__school { display: flex; align-items: center; gap: 0.6rem; font-size: 0.975rem; color: #C8D6F5; }
+.lb-lane__school strong { color: #fff; }
+.lb-lane__go { margin-top: auto; align-self: flex-start; }
+
+/* supporting modes: three cards in one row */
+@media (min-width: 1081px) {
+  .ah-bento.lb-bento { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: auto; }
+  .ah-bento.lb-bento > .ah-game { grid-column: auto; grid-row: auto; }
+  .ah-bento.lb-bento .ah-game--story .ah-game__art,
+  .ah-bento.lb-bento .ah-game--room .ah-game__art { height: 170px; }
+  .ah-bento.lb-bento .ah-game--story .ah-art-map svg { max-height: 150px; }
+  .ah-bento.lb-bento .ah-game--mini { flex-direction: column; }
+}
+@media (max-width: 1080px) {
+  .ah-bento.lb-bento .ah-game--room { grid-column: span 1; }
+  .ah-bento.lb-bento .ah-game--story { grid-column: span 2; }
+}
+
+/* ── phone ── */
+@media (max-width: 900px) {
+  .lb { grid-template-columns: minmax(0, 1fr); }
+  .lb-lanes__grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .ah-bento.lb-bento .ah-game--story, .ah-bento.lb-bento .ah-game--room { grid-column: auto; }
+  .lb-main { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'card' 'stats' 'hint' 'play'; gap: 0.85rem; padding: 1rem; }
+  .lb-side { padding: 1rem; }
+  .lb-stats { gap: 0.5rem; }
+  .lb-stats > div { padding: 0.55rem 0.7rem; }
+  .lb-playbox { display: grid; }
+  .lb-play { width: 100%; }
+  .lb-head { align-items: flex-start; flex-direction: column; }
+  .ah-hero:has(.lb-hero) .ah-moon { top: 1.5%; left: auto; right: 6%; width: 52px; }
+  .ah-hero:has(.lb-hero) .ah-tower .school-building { zoom: 0.7; }
+  .ah-hero:has(.lb-hero) .ah-far { bottom: 80px; }
+}
+
+/* the shared world behind the strip (src/arena-art/environment/ArenaWorld) */
+.lb-world { position: absolute; inset: 0; z-index: -2; overflow: hidden; pointer-events: none; }
+.lb-world svg { position: absolute; left: 50%; bottom: 0; width: 100%; height: 100%; transform: translateX(-50%); object-fit: cover; }
+.lb-world::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(4, 10, 28, 0.35) 0%, rgba(4, 10, 28, 0.15) 45%, rgba(4, 10, 28, 0.55) 100%); }
+.lb-world__tall { display: none; }
+.ah-hero:has(.lb-world) .ah-far, .ah-hero:has(.lb-world) .ah-mornes, .ah-hero:has(.lb-world) .ah-moon { display: none; }
+@media (max-width: 700px) {
+  .lb-world__wide { display: none; }
+  .lb-world__tall { display: block; }
+}

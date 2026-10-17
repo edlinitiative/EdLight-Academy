@@ -22,6 +22,9 @@ import { loadDuelBank } from '../utils/duelBank';
 import { acceptErrorMessage, duelState, isDuelCode, normalizeDuelCode, outcomeFor, questionsAt, shuffleOptions, type DuelQuestion } from '../utils/duels';
 import { acceptChallenge, getChallenge, rememberReceived, type AcceptResult, type Challenge } from '../services/challengeWebService';
 import { trackEvent } from '../utils/telemetry';
+import { DuelSubmitStatus, DuelTrustNote, useDuelSubmission } from '../components/arena/trust';
+import { fastestCorrect, formatSeconds, longestStreak, type RoundAnswer } from './trivia/matchStats';
+import ResultShare from './trivia/ResultShare';
 import '../components/games/duels.css';
 import './TriviaGames.css';
 
@@ -59,6 +62,7 @@ export default function Defi() {
   const [bankMiss, setBankMiss] = useState(false);
   const [outcome, setOutcome] = useState<AcceptResult | null>(null);
   const [myScore, setMyScore] = useState<number | null>(null);
+  const [myAnswers, setMyAnswers] = useState<RoundAnswer[]>([]);
   const [reloadNonce, setReloadNonce] = useState(0);
   useFocusMode(phase === 'playing');
 
@@ -94,14 +98,17 @@ export default function Defi() {
     return () => { live = false; };
   }, [challenge]);
 
-  const finish = useCallback(async (score: number) => {
+  // Posts the one attempt; a retry after a lost reply recovers the recorded score.
+  const submitDuel = useDuelSubmission(code, uid);
+  const finish = useCallback(async (score: number, _total?: number, answers?: RoundAnswer[]) => {
     setMyScore(score);
+    setMyAnswers(Array.isArray(answers) ? answers : []);
     setPhase('sending');
-    const r = await acceptChallenge({ code, score });
+    const r = await submitDuel(score);
     setOutcome(r);
     setPhase('done');
     trackEvent('duel_played', { ok: r.ok, result: r.result ?? r.error });
-  }, [code]);
+  }, [submitDuel]);
 
   const label = challenge ? categoryLabel(challenge.categoryId, isCreole) : '';
   const challengerName = challenge?.challengerName || t('Ton ami', 'Zanmi ou');
@@ -134,7 +141,7 @@ export default function Defi() {
           count={questions.length}
           questions={questions}
           isCreole={isCreole}
-          onFinish={(score) => finish(score)}
+          onFinish={(score, total, answers) => finish(score, total, answers)}
           onBack={() => setPhase('card')}
         />
       </div>
@@ -190,38 +197,79 @@ export default function Defi() {
       return <div className="defi__card" role="status"><p className="defi__text">{t('Chargement du défi…', 'N ap chaje defi a…')}</p></div>;
     }
 
-    // Just played — the result as the server recorded it.
+    // Just played — the result as the server recorded it (roadmap #17):
+    // the verdict, the head-to-head, the moments the answers prove, the XP,
+    // then "Revanche" as the one primary action when the student did not win.
     if (phase === 'sending' || phase === 'done') {
       const ok = outcome?.ok;
+      const result = ok ? outcome.result : null;
       const title = phase === 'sending'
         ? t('Envoi de ton score…', 'N ap voye nòt ou…')
         : ok
-          ? outcome.result === 'won'
+          ? result === 'won'
             ? t('Tu as gagné !', 'Ou genyen !')
-            : outcome.result === 'tie'
+            : result === 'tie'
               ? t('Égalité !', 'Egalite !')
               : t('Perdu de peu…', 'Ou pèdi tou piti…')
           : t('Score non enregistré', 'Nòt la pa anrejistre');
+      const mine = ok ? outcome.opponentScore : myScore;
+      const theirs = ok ? outcome.challengerScore : challenge.challengerScore;
+      const streak = longestStreak(myAnswers);
+      const fastest = fastestCorrect(myAnswers);
+      const facts = [
+        streak && streak.length >= 2 ? { k: 'streak', label: t('Plus longue série', 'Pi long seri'), value: t(`${streak.length} de suite`, `${streak.length} youn apre lòt`) } : null,
+        fastest ? { k: 'fast', label: t('Réponse juste la plus rapide', 'Bon repons ki pi rapid'), value: formatSeconds(fastest.ms, isCreole) } : null,
+      ].filter(Boolean) as { k: string; label: string; value: string }[];
+      const revanche = phase === 'done' && !!ok && result !== 'won';
       return (
-        <div className="defi__card" aria-live="polite">
+        <div className="defi__card mx-duelres" aria-live="polite">
           <span className="defi__eyebrow"><Swords size={14} aria-hidden="true" /> {label}</span>
           <h1 className="defi__title">{title}</h1>
           <DuelScoreboard
             leftName={challengerName}
-            leftScore={ok ? outcome.challengerScore : challenge.challengerScore}
+            leftScore={theirs}
             rightName={t('Toi', 'Ou menm')}
-            rightScore={ok ? outcome.opponentScore : myScore}
+            rightScore={mine}
             total={challenge.total}
             isCreole={isCreole}
           />
           {ok && outcome.xpAwarded > 0 && <span className="defi__xp"><Trophy size={15} /> +{outcome.xpAwarded} XP</span>}
-          {phase === 'done' && !ok && <p className="defi__error" role="alert">{acceptErrorMessage(outcome?.error, isCreole)}</p>}
-          <div className="defi__actions">
-            <Link to="/jeux/trivia" state={{ duelPick: true }} className="duel-pill duel-pill--primary">
-              <Swords size={16} /> {t('Défier quelqu’un à mon tour', 'Defye yon moun tou')}
-            </Link>
-            <Link to="/jeux" className="duel-pill duel-pill--soft">{t('Mes défis', 'Defi mwen yo')}</Link>
-          </div>
+          {phase === 'done' && facts.length > 0 && (
+            <ul className="mx-duelres__facts" aria-label={t('Moments forts', 'Moman fò')}>
+              {facts.map((f) => <li key={f.k}><span>{f.label}</span> <strong className="mx-num">{f.value}</strong></li>)}
+            </ul>
+          )}
+          <DuelSubmitStatus pending={phase === 'sending'} outcome={outcome} onRetry={() => { if (myScore != null) void finish(myScore, challenge.total, myAnswers); }} challengerName={challengerName} isCreole={isCreole} />
+          {phase === 'done' && <DuelTrustNote challenge={challenge} uid={uid} isCreole={isCreole} showFacts={false} />}
+          {phase === 'done' && (
+            <div className="defi__actions">
+              <Link to="/jeux/trivia" state={{ duelCategory: challenge.categoryId }} className="duel-pill duel-pill--primary"
+                onClick={() => trackEvent('duel_rematch', { result: result ?? 'unsaved', category: challenge.categoryId })}>
+                <Swords size={16} /> {revanche ? t('Revanche', 'Revanj') : t('Défier quelqu’un à mon tour', 'Defye yon moun tou')}
+              </Link>
+              {ok && mine != null && (
+                <ResultShare
+                  className="duel-pill duel-pill--soft"
+                  where="defi-result"
+                  card={{
+                    isCreole,
+                    eyebrow: `${label} · ${t('Défi d’un ami', 'Defi yon zanmi')}`,
+                    score: `${mine} – ${theirs}`,
+                    scoreCaption: t('toi – ton adversaire', 'ou menm – advèsè ou'),
+                    headline: result === 'won' ? t('Défi gagné !', 'Defi genyen !') : result === 'tie' ? t('Égalité !', 'Egalite !') : t('Revanche à venir', 'Revanj ap vini'),
+                    ticks: myAnswers.length ? myAnswers.map((a) => (a.correct ? 'correct' : a.selected === -1 ? 'timeout' : 'wrong')) : undefined,
+                    facts: facts.map((f) => `${f.label} : ${f.value}`),
+                  }}
+                />
+              )}
+              <Link to="/jeux" className="duel-pill duel-pill--soft">{t('Mes défis', 'Defi mwen yo')}</Link>
+            </div>
+          )}
+          {revanche && (
+            <p className="defi__text mx-duelres__hint">
+              {t('Revanche : une nouvelle manche de 10 questions sur ce thème, que tu renvoies ensuite.', 'Revanj : yon nouvo pati 10 kesyon sou tèm sa a, epi ou voye l ba li.')}
+            </p>
+          )}
         </div>
       );
     }
@@ -244,6 +292,7 @@ export default function Defi() {
                 : t('En attente de ton ami', 'N ap tann zanmi ou')}
           </h1>
           {facts}
+          <DuelTrustNote challenge={challenge} uid={uid} isCreole={isCreole} />
           <DuelScoreboard
             leftName={t('Toi', 'Ou menm')}
             leftScore={challenge.challengerScore}
@@ -259,9 +308,15 @@ export default function Defi() {
             </>
           )}
           <div className="defi__actions">
-            <Link to="/jeux/trivia" state={{ duelPick: true }} className="duel-pill duel-pill--soft">
-              <Swords size={16} /> {state === 'played' && res === 'lost' ? t('Prendre ma revanche', 'Pran revanj mwen') : t('Nouveau défi', 'Nouvo defi')}
-            </Link>
+            {state === 'played' && res !== 'won' ? (
+              <Link to="/jeux/trivia" state={{ duelCategory: challenge.categoryId }} className="duel-pill duel-pill--primary">
+                <Swords size={16} /> {t('Prendre ma revanche', 'Pran revanj mwen')}
+              </Link>
+            ) : (
+              <Link to="/jeux/trivia" state={{ duelPick: true }} className="duel-pill duel-pill--soft">
+                <Swords size={16} /> {t('Nouveau défi', 'Nouvo defi')}
+              </Link>
+            )}
           </div>
         </div>
       );
@@ -311,6 +366,7 @@ export default function Defi() {
           {t(`${challengerName} a fait ${challenge.challengerScore}/${challenge.total}. À toi !`, `${challengerName} fè ${challenge.challengerScore}/${challenge.total}. Se tou pa w !`)}
         </h1>
         {facts}
+        <DuelTrustNote challenge={challenge} uid={uid} isCreole={isCreole} />
         <p className="defi__text">
           {t('Les mêmes questions que ton ami. Fais mieux pour gagner +20 XP ; en cas d’égalité, +10 XP chacun.', 'Menm kesyon ak zanmi ou. Fè pi byen pou genyen +20 XP ; si se egalite, +10 XP chak.')}
         </p>

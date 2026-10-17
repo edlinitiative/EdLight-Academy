@@ -1,0 +1,11 @@
+.aw-show { display: grid; gap: 1.25rem; }
+.aw-show__toggle { display: inline-flex; align-items: center; gap: 0.55rem; justify-self: start; padding: 0.45rem 0.9rem; border-radius: 999px; background: #1B3152; color: #F5F8FF; font-weight: 650; cursor: pointer; }
+.aw-show__toggle input { width: 1.05rem; height: 1.05rem; accent-color: #FF6A45; }
+.aw-show__h { margin: 0.75rem 0 0; color: #F5F8FF; font-size: 1.1rem; font-weight: 750; }
+.aw-show__wide { display: grid; gap: 2rem; }
+.aw-show__tall { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+.aw-show__fig { margin: 0; }
+.aw-show__fig .aw { border-radius: 16px; }
+.aw-show__fig--tall { width: 320px; max-width: 100%; }
+.aw-show__fig figcaption { display: grid; gap: 0.15rem; margin-top: 0.6rem; color: #A7BAD5; font-size: 0.95rem; line-height: 1.4; }
+.aw-show__fig figcaption strong { color: #F5F8FF; font-size: 1rem; }

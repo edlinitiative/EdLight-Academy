@@ -1,0 +1,8 @@
+/* School crests — scoped to .crest-* */
+.crest { display: inline-block; flex: none; vertical-align: middle; overflow: visible; }
+.crest-mono {
+  font-family: var(--font-display, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+.crest-mono--banner { letter-spacing: 0.1em; }

@@ -1,11 +1,10 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import {
-  Swords, Zap, Users, Trophy, Crown, Star, ChevronRight, Lock, Sparkles, Plus, Play,
-} from '../../components/icons';
+import { Users, Crown, Star, ChevronRight, Lock, Sparkles } from '../../components/icons';
 import useStore from '../../contexts/store';
 import { useTrivia } from '../../hooks/useTrivia';
-import { useCollectives } from '../../hooks/useLeaderboard';
+import { useCollectives, useLeaderboard } from '../../hooks/useLeaderboard';
+import { useSchoolRace } from '../../hooks/useSchoolRace';
 import { useOpenArena } from '../../hooks/useOpenArena';
 import { useStoryProgress } from '../../hooks/useStoryProgress';
 import { normalizeName, rankTeams, teamStandingFor, TEAM_SIZE, type TeamStanding } from '../../../shared/leaderboardAgg';
@@ -13,8 +12,12 @@ import { STORY_CHAPTERS, MAX_STARS, nextStage, totalStars, chapterCleared, isUnl
 import { DEMO_SCHOOLS } from '../../../shared/arena/demo';
 import { departmentPath, departmentCentroid, MAPPED_DEPARTMENTS, MAP_WIDTH, MAP_HEIGHT } from '../../data/haitiMapGeometry';
 import SchoolBuilding from '../../components/arena/SchoolBuilding';
-import UserAvatar from '../../components/UserAvatar';
 import ArenaJoin from '../../components/arena/ArenaJoin';
+import ArenaWorld from '../../arena-art/environment/ArenaWorld';
+import LobbyStrip, { DUEL_STATE, type LobbySchool } from '../../components/arena/lobby/LobbyStrip';
+import LobbyLanes from '../../components/arena/lobby/LobbyLanes';
+import { pickRival, schoolLadder, type WeeklyEntry } from '../../components/arena/lobby/rival';
+import '../../components/arena/lobby/lobby.css';
 import './ArenaArcade.css';
 import './ArenaHome.css';
 
@@ -26,11 +29,15 @@ import './ArenaHome.css';
  * One continuous night, top to bottom — the page never drops back into a
  * light dashboard:
  *
+ *   lobby     (2026-10-17, roadmap #1/#6/#8/#10) the student's strip leads
+ *             the city: player card, real weekly place, the school's place in
+ *             the race, ONE "Jouer une partie" (a real round, no account
+ *             needed) and the rival (lobby/rival.ts — never invented)
  *   city      a deep sky, a far skyline, the mornes, and the real schools of
  *             the all-time board as lit pixel buildings on a street; a
  *             scoreboard ticker of the real standings runs under it
- *   select    six game cards, each with its own illustration (the real map of
- *             Haiti, a VS face-off, a PIN board, a stadium…) — keys 1–6
+ *   lanes     Défier un ami · Dans mon école · Représenter mon école — keys 1–3
+ *   select    the supporting modes: Histoire, Tournoi privé, Mini-jeux — 4–6
  *   podium    the top three schools on podium blocks, the rest as a list
  *
  * Every number is read from the board or the student's own progress.
@@ -62,6 +69,8 @@ function farSkyline(seed = 7) {
   return blocks;
 }
 const FAR = farSkyline();
+/** Weekly entries the lobby reads (the rival rule needs to know the page size). */
+const BOARD_PAGE = 50;
 const ISLAND = MAPPED_DEPARTMENTS.map((d) => departmentPath(d) || '').join('');
 const CHAPTER_AT = STORY_CHAPTERS.map((c) => departmentCentroid(c.dept) || { x: 0, y: 0 });
 
@@ -82,7 +91,7 @@ export default function ArenaArcade() {
   const [params] = useSearchParams();
   const demo = params.get('demo') === '1';
 
-  const { profile } = useTrivia();
+  const { profile, level } = useTrivia();
   const { groups } = useCollectives('school', 'all');
   const standings = useMemo(() => (demo ? demoStandings() : rankTeams(groups)), [groups, demo]);
   const mySchool: string | null = signedIn ? profile?.leaderboard?.school || null : null;
@@ -93,6 +102,26 @@ export default function ArenaArcade() {
   const storyNext = nextStage(progress);
   const storyStars = totalStars(progress);
   const nf = (n: number) => new Intl.NumberFormat('fr-FR').format(Math.round(n || 0));
+
+  // ── The lobby: the student's real week, their school's real place, and
+  //    the rival rule of lobby/rival.ts. Nothing here is invented. ──
+  const { entries, myEntry, myRank } = useLeaderboard(BOARD_PAGE);
+  const { race } = useSchoolRace();
+  const weekly = entries as WeeklyEntry[];
+  const myRace = mySchool ? race.find((r) => r.key === normalizeName(mySchool)) || null : null;
+  const lobbySchool: LobbySchool | null = mySchool ? {
+    name: myRace?.label || mySchool,
+    place: myRace ? myRace.place : null,
+    total: race.length,
+    qualified: !!myRace?.qualified,
+    needed: myRace ? myRace.needed : TEAM_SIZE,
+  } : null;
+  const rival = useMemo(() => pickRival({
+    entries: weekly, uid: user?.uid || null, myXp: Number(myEntry?.xp) || 0, myRank: myRank ?? null, school: mySchool, pageSize: BOARD_PAGE,
+  }), [weekly, user?.uid, myEntry?.xp, myRank, mySchool]);
+  const ladder = useMemo(() => schoolLadder(weekly, mySchool), [weekly, mySchool]);
+  const raceLeader = race[0] ? { name: race[0].label, qualified: race[0].qualified, teamXp: race[0].teamXp, members: race[0].members } : null;
+  const pseudo = (profile?.leaderboard?.displayName || myEntry?.displayName || '').trim() || null;
 
   // The skyline: the top schools by team score, tallest in the middle so the
   // city reads as a podium. Your school joins it even when it is not top 7.
@@ -109,7 +138,6 @@ export default function ArenaArcade() {
   // The join card stays until the school's team counts on the board.
   const teamIncomplete = !mySchool || !myTeam?.qualified;
   const showJoin = !demo && teamIncomplete;
-  const seats = Array.from({ length: TEAM_SIZE }, (_, i) => mine?.topMembers?.[i] || null);
   const storyChapter = storyNext ? STORY_CHAPTERS[storyNext.chapter] : null;
   const ranked = standings.filter((s) => s.qualified);
   const board = (ranked.length >= 3 ? ranked : standings).slice(0, 8);
@@ -123,15 +151,16 @@ export default function ArenaArcade() {
         : t('Inscriptions ouvertes.', 'Enskripsyon ouvè.'))
     : t('Une soirée par mois, toutes les écoles en direct. La prochaine finale sera annoncée ici.', 'Yon swa chak mwa, tout lekòl yo an dirèk. N ap anonse pwochen final la isit la.');
 
-  // ── Arcade keys: 1–6 pick a game ──
+  // ── Arcade keys: 1–3 the three lanes, 4–6 the supporting modes ──
+  const champTo = open?.state === 'doors' ? '/arena/jouer' : '/arena/championnat';
   const modes = useMemo(() => ([
+    { key: 'duel', to: '/jeux/trivia', state: DUEL_STATE as Record<string, unknown> },
+    { key: 'school', to: '/classement' },
+    { key: 'champ', to: champTo },
     { key: 'story', to: '/arena/histoire' },
-    { key: 'champ', to: open?.state === 'doors' ? '/arena/jouer' : '/arena/championnat' },
-    { key: 'quick', to: '/jeux/trivia' },
-    { key: 'duel', to: '/jeux/trivia', state: { duelPick: true } },
     { key: 'room', to: '/tournois/nouveau' },
     { key: 'mini', to: '/jeux#arcade' },
-  ]), [open]);
+  ] as { key: string; to: string; state?: Record<string, unknown> }[]), [champTo]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -174,6 +203,12 @@ export default function ArenaArcade() {
           <span className="ah-moon" />
           <span className="ah-horizon" />
         </div>
+        {/* The shared Arène world as the setting (everyday; championship dress
+            only while an official event is open). It sits behind the strip. */}
+        <div className="lb-world" aria-hidden="true">
+          <ArenaWorld occasion={open ? 'championship' : 'everyday'} layout="wide" className="lb-world__wide" />
+          <ArenaWorld occasion={open ? 'championship' : 'everyday'} layout="tall" className="lb-world__tall" />
+        </div>
         <svg className="ah-far" viewBox="0 0 1600 220" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
           {FAR.map((b, i) => <rect key={i} x={b.x} y={220 - b.h} width={b.w} height={b.h} />)}
           {FAR.flatMap((b) => b.lit).map((w, i) => <rect key={`w${i}`} className="ah-far__lit" x={w.x} y={w.y} width="4" height="5" />)}
@@ -182,77 +217,33 @@ export default function ArenaArcade() {
           <path d="M0 200 L0 120 C120 70 210 60 320 104 C420 140 470 64 600 52 C720 40 790 120 900 112 C1010 104 1060 34 1190 40 C1310 46 1370 118 1480 100 C1540 92 1580 80 1600 84 L1600 200 Z" />
         </svg>
 
-        <div className="container ah-hero__inner">
-          <div className="ah-hero__copy">
-            <p className="ah-chip">
-              {open
-                ? <><span className="ah-live" aria-hidden="true" />{t('Championnat · inscriptions ouvertes', 'Chanpyona · enskripsyon ouvè')}</>
-                : t('Ton école contre tout le pays', 'Lekòl ou kont tout peyi a')}
-            </p>
-            <h1 id="ah-title" className="ah-title">{t('L’Arène', 'Arèn nan')}</h1>
-            <p className="ah-lede">
-              {t(
-                'Chaque bonne réponse fait monter ton école dans la ville. Joue seul, défie un ami, monte un tournoi avec ta classe — et une fois par mois, la finale nationale en direct.',
-                'Chak bon repons fè lekòl ou monte nan vil la. Jwe pou kont ou, defye yon zanmi, fè yon tounwa ak klas ou — epi yon fwa pa mwa, gran final nasyonal la an dirèk.',
-              )}
-            </p>
-            <div className="ah-actions">
-              <Link to={storyNext ? '/arena/histoire' : '/jeux/trivia'} className="ah-start">
-                <Play size={20} aria-hidden="true" /> {t('Appuie sur Start', 'Peze Start')}
-              </Link>
-              <a href="#ah-select" className="ah-ghost">{t('Tous les jeux', 'Tout jwèt yo')} <ChevronRight size={18} aria-hidden="true" /></a>
+        <div className="container ah-hero__inner lb-hero">
+          <header className="lb-head">
+            <div>
+              <h1 id="ah-title" className="ah-title lb-title">{t('L’Arène', 'Arèn nan')}</h1>
+              <p className="lb-tagline">{t('Ton école. Ton rival. Ta prochaine victoire.', 'Lekòl ou. Rival ou. Pwochen viktwa ou.')}</p>
             </div>
-          </div>
-
-          <aside className="ah-player" aria-label={t('Ton équipe', 'Ekip ou')}>
-            {mySchool ? (
-              <>
-                <p className="ah-player__label">{t('Ton école', 'Lekòl ou')}</p>
-                <div className="ah-player__school">
-                  <SchoolBuilding name={mySchool} cell={5} night />
-                  <div>
-                    <h2>{mySchool}</h2>
-                    <p className="ah-player__rank">
-                      {myTeam?.qualified
-                        ? <><strong>#{myTeam.rank}</strong> · {nf(myTeam.teamXp)} XP {t('d’équipe', 'ekip')}</>
-                        : myTeam
-                          ? t(`Encore ${myTeam.needed} joueur${myTeam.needed > 1 ? 's' : ''} pour entrer au classement`, `Ankò ${myTeam.needed} jwè pou antre nan klasman`)
-                          : t('Joue une partie pour poser ta première pierre', 'Jwe yon pati pou poze premye wòch ou')}
-                    </p>
-                  </div>
-                </div>
-                <ol className="ah-seats" aria-label={t(`Les ${TEAM_SIZE} qui comptent`, `${TEAM_SIZE} ki konte yo`)}>
-                  {seats.map((m, i) => (
-                    <li key={i} className={`ah-seat${m ? '' : ' is-empty'}${m?.uid && m.uid === user?.uid ? ' is-me' : ''}`}>
-                      {m ? (
-                        <>
-                          <UserAvatar seed={m.uid} name={m.displayName} size={40} radius={10} />
-                          <span className="ah-seat__name">{m.displayName}</span>
-                          <span className="ah-seat__xp">{nf(m.xp)}</span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="ah-seat__empty"><Plus size={18} aria-hidden="true" /></span>
-                          <span className="ah-seat__name">{t('Libre', 'Lib')}</span>
-                        </>
-                      )}
-                    </li>
-                  ))}
-                </ol>
-              </>
-            ) : (
-              <div className="ah-player__empty">
-                <SchoolBuilding name="EdLight" cell={6} night />
-                <div>
-                  <h2>{t('Mets ton école sur la carte', 'Mete lekòl ou sou kat la')}</h2>
-                  <p>{t('Chaque point que tu gagnes ajoute un étage à son bâtiment.', 'Chak pwen ou genyen ajoute yon etaj nan batiman li.')}</p>
-                  <a href="#ah-team" className="ah-start ah-start--sm">
-                    {signedIn ? t('Choisir mon école', 'Chwazi lekòl mwen') : t('Commencer en 3 étapes', 'Kòmanse an 3 etap')}
-                  </a>
-                </div>
-              </div>
+            {open && (
+              <Link to={champTo} className="ah-chip lb-chip">
+                <span className="ah-live" aria-hidden="true" />
+                {open.state === 'doors' ? t('Championnat · portes ouvertes', 'Chanpyona · pòt yo louvri') : t('Championnat · inscriptions ouvertes', 'Chanpyona · enskripsyon ouvè')}
+              </Link>
             )}
-          </aside>
+          </header>
+          <LobbyStrip
+            isCreole={isCreole}
+            signedIn={signedIn}
+            uid={user?.uid || null}
+            name={pseudo}
+            level={level?.level || 1}
+            totalXp={level?.xp || 0}
+            weeklyRank={signedIn ? myRank ?? null : null}
+            weeklyXp={Number(myEntry?.xp) || 0}
+            school={lobbySchool}
+            rival={rival}
+            leader={raceLeader}
+            onSignIn={toggleAuthModal}
+          />
         </div>
 
         <div className="ah-street">
@@ -289,19 +280,29 @@ export default function ArenaArcade() {
         {demo && <p className="ah-demo-flag">{t('Aperçu avec des écoles fictives', 'Apèsi ak lekòl fiktif')}</p>}
       </section>
 
-      {/* ═══ Game select ════════════════════════════════════════════════════ */}
+      {/* ═══ The three lanes ═════════════════════════════════════════════════ */}
+      <LobbyLanes
+        isCreole={isCreole}
+        uid={user?.uid || null}
+        school={lobbySchool}
+        ladder={ladder}
+        open={open}
+        champLine={champLine}
+        targets={{ duel: modes[0], school: modes[1], champ: modes[2] }}
+      />
+
+      {/* ═══ Supporting modes ═══════════════════════════════════════════════ */}
       <section id="ah-select" className="ah-select" aria-labelledby="ah-select-title">
         <div className="container">
           <header className="ah-select__head">
             <div>
-              <p className="ah-over">{t('Sélection du jeu', 'Chwazi jwèt la')}</p>
-              <h2 id="ah-select-title" className="ah-h2">{t('À quoi on joue ?', 'Ak kisa n ap jwe ?')}</h2>
+              <h2 id="ah-select-title" className="ah-h2">{t('Pour t’entraîner', 'Pou antrene')}</h2>
             </div>
             <p className="ah-keys-hint">{t('Touches', 'Touch')} <kbd className="ah-key">1</kbd>–<kbd className="ah-key">6</kbd></p>
           </header>
 
-          <div className="ah-bento">
-            {/* 1 · Mode Histoire — the real map, lit by the student's progress */}
+          <div className="ah-bento lb-bento">
+            {/* 4 · Mode Histoire — the real map, lit by the student's progress */}
             <Link to="/arena/histoire" className="ah-game ah-game--story">
               <div className="ah-game__art ah-art-map" aria-hidden="true">
                 <svg viewBox={`-20 -20 ${MAP_WIDTH + 40} ${MAP_HEIGHT + 40}`}>
@@ -324,7 +325,7 @@ export default function ArenaArcade() {
                 </svg>
               </div>
               <div className="ah-game__body">
-                <p className="ah-game__over"><Key n={1} /> {t('Mode Histoire', 'Mòd Istwa')}</p>
+                <p className="ah-game__over"><Key n={4} /> {t('Mode Histoire', 'Mòd Istwa')}</p>
                 <h3>{t('Le tour d’Ayiti', 'Tou Ayiti a')}</h3>
                 <p>
                   {storyChapter
@@ -335,61 +336,6 @@ export default function ArenaArcade() {
                   <span className="ah-stars-count"><Star size={18} aria-hidden="true" /> {storyStars}<small>/{MAX_STARS}</small></span>
                   <span className="ah-cta">{storyStars > 0 ? t('Continuer', 'Kontinye') : t('Commencer', 'Kòmanse')} <ChevronRight size={18} aria-hidden="true" /></span>
                 </div>
-              </div>
-            </Link>
-
-            {/* 2 · Championnat — stadium lights on the trophy */}
-            <div className="ah-game ah-game--champ">
-              <div className="ah-game__art ah-art-stadium" aria-hidden="true">
-                <span className="ah-beam ah-beam--l" />
-                <span className="ah-beam ah-beam--r" />
-                <span className="ah-trophy"><Trophy size={64} weight="fill" /></span>
-                <span className="ah-crowd" />
-              </div>
-              <div className="ah-game__body">
-                <p className="ah-game__over"><Key n={2} /> {open ? <><span className="ah-live" aria-hidden="true" />{t('En direct · national', 'An dirèk · nasyonal')}</> : t('National · en direct', 'Nasyonal · an dirèk')}</p>
-                <h3>{t('Championnat des écoles', 'Chanpyona lekòl yo')}</h3>
-                <p>{champLine}</p>
-                <div className="ah-game__foot">
-                  {open?.state === 'doors' ? (
-                    <Link to="/arena/jouer" className="ah-cta ah-cta--btn">{t('Entrer dans la salle', 'Antre nan sal la')} <ChevronRight size={18} aria-hidden="true" /></Link>
-                  ) : (
-                    <Link to="/arena/championnat" className="ah-cta ah-cta--btn">
-                      {open ? t('Inscrire mon école', 'Enskri lekòl mwen') : t('Le championnat', 'Chanpyona a')} <ChevronRight size={18} aria-hidden="true" />
-                    </Link>
-                  )}
-                  <Link to="/arena/demo" className="ah-cta ah-cta--quiet"><Play size={16} aria-hidden="true" /> {t('Voir la démo', 'Gade demo a')}</Link>
-                </div>
-              </div>
-            </div>
-
-            {/* 3 · Partie rapide — a question card and its clock */}
-            <Link to="/jeux/trivia" className="ah-game ah-game--quick">
-              <div className="ah-game__art ah-art-quiz" aria-hidden="true">
-                <span className="ah-clock"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" /><circle className="ah-clock__arc" cx="18" cy="18" r="15" /></svg><b>15</b></span>
-                <span className="ah-qcard"><i /><i /></span>
-                <span className="ah-opts"><i /><i className="is-right" /><i /><i /></span>
-              </div>
-              <div className="ah-game__body">
-                <p className="ah-game__over"><Key n={3} /> Solo</p>
-                <h3>{t('Partie rapide', 'Pati rapid')}</h3>
-                <p>{t('Dix questions, un thème, quinze secondes chacune.', 'Dis kesyon, yon tèm, kenz segonn chak.')}</p>
-                <span className="ah-cta">{t('Jouer', 'Jwe')} <Zap size={16} aria-hidden="true" /></span>
-              </div>
-            </Link>
-
-            {/* 4 · Défi — two players face off */}
-            <Link to="/jeux/trivia" state={{ duelPick: true }} className="ah-game ah-game--duel">
-              <div className="ah-game__art ah-art-vs" aria-hidden="true">
-                <span className="ah-vs__p ah-vs__p--l"><UserAvatar seed={user?.uid || 'toi'} size={64} radius={16} /></span>
-                <span className="ah-vs__bolt">VS</span>
-                <span className="ah-vs__p ah-vs__p--r"><UserAvatar seed="ton-ami" size={64} radius={16} /></span>
-              </div>
-              <div className="ah-game__body">
-                <p className="ah-game__over"><Key n={4} /> {t('1 contre 1', '1 kont 1')}</p>
-                <h3>{t('Défi d’un ami', 'Defi yon zanmi')}</h3>
-                <p>{t('Les mêmes questions, un seul essai chacun. Le meilleur gagne.', 'Menm kesyon yo, yon sèl chans chak. Pi bon an genyen.')}</p>
-                <span className="ah-cta">{t('Défier', 'Defye')} <Swords size={16} aria-hidden="true" /></span>
               </div>
             </Link>
 

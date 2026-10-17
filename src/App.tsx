@@ -29,6 +29,7 @@ const Direct = lazyWithRetry(() => import('./pages/Direct'));
 const Arena = lazyWithRetry(() => import('./pages/Arena'));
 const ArenaArcade = lazyWithRetry(() => import('./pages/arena/ArenaArcade'));
 const ArenaStory = lazyWithRetry(() => import('./pages/arena/ArenaStory'));
+const ArenaStudio = lazyWithRetry(() => import('./pages/arena/ArenaStudio'));
 const ArenaDemo = lazyWithRetry(() => import('./pages/arena/ArenaDemo'));
 const ArenaPlay = lazyWithRetry(() => import('./pages/ArenaPlay'));
 const ArenaClaim = lazyWithRetry(() => import('./pages/ArenaClaim'));
@@ -171,6 +172,7 @@ export default function App() {
                     The championship registration page moved under it. */}
                 <Route path="arena" element={<ArenaArcade />} />
                 <Route path="arena/histoire" element={<ArenaStory />} />
+                <Route path="arena/studio" element={<ArenaStudio />} />
                 <Route path="arena/championnat" element={<Arena />} />
                 {/* The play room (ARENA_WEB_PLAY, shared/arena/webPlay.ts) —
                     Ted, 2026-10-10: "let people play on laptops as well".

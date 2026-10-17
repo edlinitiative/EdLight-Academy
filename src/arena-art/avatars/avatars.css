@@ -1,0 +1,94 @@
+/* Arène avatars — all rules scoped under .av (component) and .av-show (showcase). */
+
+.av { display: inline-block; flex: none; overflow: visible; vertical-align: middle; }
+
+/* Pose groups: transitions between moods (180–300ms). */
+.av .av-pose { transform-origin: 50px 100px; transition: transform 260ms cubic-bezier(.3, .7, .3, 1); }
+.av .av-hpose { transform-origin: 50px 68px; transition: transform 240ms cubic-bezier(.3, .7, .3, 1); }
+.av .av-body, .av .av-hanim { transform-origin: 50px 68px; }
+.av .av-eyes { transform-origin: 50px 46px; animation: av-blink 5.6s ease-in-out var(--av-blink, 0s) infinite; }
+.av .av-face { animation: av-face-in 200ms ease-out; }
+
+.av--ready .av-pose { transform: translateY(2px) scale(1.06); }
+.av--focused .av-hpose { transform: rotate(-3deg) translateY(.8px); }
+.av--celebrating .av-hpose { transform: rotate(2.5deg) translateY(-.6px); }
+.av--recovering .av-hpose { transform: rotate(-1.5deg); }
+
+/* idle — gentle breathe + blink */
+.av--idle .av-body, .av--focused .av-body { animation: av-breathe 4.2s ease-in-out infinite; }
+/* ready — a quick set/nod, then steady breathing */
+.av--ready .av-hanim { animation: av-set 420ms cubic-bezier(.3, .7, .3, 1); }
+.av--ready .av-body { animation: av-breathe 3.4s ease-in-out .45s infinite; }
+/* focused — slower blinks, very still */
+.av--focused .av-eyes { animation-duration: 7.4s; }
+/* celebrating — one bounce, confetti once */
+.av--celebrating .av-body { animation: av-bounce 720ms cubic-bezier(.3, .7, .3, 1) 1; }
+.av--celebrating .av-eyes { animation: none; }
+/* recovering — shake it off, then breathe */
+.av--recovering .av-hanim { animation: av-shake 640ms ease-in-out 1; }
+.av--recovering .av-body { animation: av-breathe 4.2s ease-in-out .7s infinite; }
+
+.av--small .av-body { animation: none !important; }
+
+.av-confetti > * {
+  transform-box: fill-box; transform-origin: center;
+  opacity: 0;
+  animation: av-pop 900ms cubic-bezier(.2, .8, .3, 1) forwards;
+}
+
+@keyframes av-breathe { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-.8px); } }
+@keyframes av-blink { 0%, 93%, 100% { transform: scaleY(1); } 95.5% { transform: scaleY(.08); } }
+@keyframes av-face-in { from { opacity: .25; } to { opacity: 1; } }
+@keyframes av-set { 0% { transform: none; } 45% { transform: translateY(1.6px) rotate(-1deg); } 100% { transform: none; } }
+@keyframes av-bounce {
+  0% { transform: translateY(0); } 30% { transform: translateY(-6px); }
+  58% { transform: translateY(0); } 78% { transform: translateY(-1.8px); } 100% { transform: translateY(0); }
+}
+@keyframes av-shake {
+  0% { transform: rotate(0); } 18% { transform: rotate(-5deg); } 38% { transform: rotate(4deg); }
+  58% { transform: rotate(-2.4deg); } 78% { transform: rotate(1deg); } 100% { transform: rotate(0); }
+}
+@keyframes av-pop {
+  0% { opacity: 0; transform: translate(0, 0) scale(.4); }
+  12% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(1); }
+}
+
+/* Reduced motion / still: no travel, no bounce, no burst — immediate pose swap, gentle face fade. */
+.av--still, .av--still * { animation: none !important; transition: none !important; }
+.av--still .av-face { animation: av-face-in 180ms ease-out !important; }
+@media (prefers-reduced-motion: reduce) {
+  .av, .av * { animation: none !important; transition: none !important; }
+  .av .av-face { animation: av-face-in 180ms ease-out !important; }
+  .av .av-confetti { display: none; }
+}
+
+/* ── Showcase ───────────────────────────────────────────── */
+.av-show { color: #F5F8FF; display: grid; gap: 28px; }
+.av-show__label { margin: 0 0 10px; font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #C1CFE4; }
+.av-show__note { margin: 6px 0 0; font-size: .9rem; color: #C1CFE4; line-height: 1.45; }
+.av-show__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 14px; }
+.av-show__cell { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 8px 12px; border-radius: 18px; background: rgba(255, 255, 255, .04); }
+.av-show__cell small { font-size: .78rem; color: #C1CFE4; text-align: center; }
+.av-show__stage { display: grid; grid-template-columns: auto 1fr; gap: 28px; align-items: center; padding: 24px; border-radius: 22px; background: radial-gradient(120% 90% at 30% 20%, rgba(91, 192, 235, .1), rgba(255, 255, 255, .03)); }
+.av-show__moodname { margin: 0 0 4px; font-size: 1.35rem; font-weight: 800; }
+.av-show__moods { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.av-show__btn {
+  min-height: 44px; min-width: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(193, 207, 228, .35);
+  background: transparent; color: #F5F8FF; font: inherit; font-weight: 700; cursor: pointer;
+}
+.av-show__btn:hover { background: rgba(255, 255, 255, .08); }
+.av-show__btn:focus-visible { outline: 3px solid #5BC0EB; outline-offset: 2px; }
+.av-show__btn[aria-pressed="true"] { background: #F5F8FF; color: #091426; border-color: #F5F8FF; }
+.av-show__row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.av-show__toggle { display: inline-flex; align-items: center; gap: 10px; }
+@media (max-width: 640px) {
+  .av-show__stage { grid-template-columns: 1fr; justify-items: center; text-align: center; padding: 18px 14px; }
+  .av-show__moods { justify-content: center; }
+  .av-show__grid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
+}
+.av .av-spark { opacity: 0; animation: av-spark 2.4s ease-out .5s forwards; }
+@keyframes av-spark { 0% { opacity: 0; } 20% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: .6; } }
+.av--still .av-spark { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .av .av-spark { opacity: 1; } }

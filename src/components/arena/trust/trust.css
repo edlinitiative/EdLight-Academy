@@ -1,0 +1,300 @@
+/* Arène trust kit — connection pill, answer receipt, rules sheet, report link.
+   ───────────────────────────────────────────────────────────────────────────
+   Always the night palette: every surface this kit sits on (/arena, /defi,
+   /jeux) is under body.arena-night. Colours are tokens here so a state never
+   depends on hue alone — each one also has its own word and icon.
+   Nothing under 14px. No coloured left-border stripes (Ted's rule): state is
+   a wash, an icon and a word. */
+
+.trust-pill,
+.trust-receipt,
+.trust-sheet,
+.trust-result,
+.trust-note,
+.trust-link,
+.trust-btn {
+  --trust-surface: #12223B;
+  --trust-surface-2: #0E1B30;
+  --trust-border: #365171;
+  --trust-text: #F5F8FF;
+  --trust-text-2: #C1CFE4;
+  --trust-ok: #A4ECC7;
+  --trust-warn: #FFDA91;
+  --trust-bad: #FFB7C0;
+  --trust-accent: #8DB8FF;
+}
+
+/* ── Pill ─────────────────────────────────────────────────────────────── */
+
+.trust-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 32px;
+  padding: 0.3rem 0.8rem;
+  border: 1px solid var(--trust-border);
+  border-radius: 999px;
+  background: var(--trust-surface);
+  color: var(--trust-text);
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.trust-pill.is-live { color: var(--trust-ok); }
+.trust-pill.is-reconnecting { color: var(--trust-warn); border-color: rgba(255, 218, 145, 0.45); }
+.trust-pill__label { color: inherit; }
+.trust-pill__detail {
+  color: var(--trust-text-2);
+  font-weight: 600;
+  white-space: normal;
+}
+.trust-pill__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 0 rgba(164, 236, 199, 0.55);
+  animation: trust-pulse 2.4s ease-out infinite;
+}
+@keyframes trust-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(164, 236, 199, 0.5); }
+  70%, 100% { box-shadow: 0 0 0 7px rgba(164, 236, 199, 0); }
+}
+
+.trust-spin {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: trust-rot 0.9s linear infinite;
+}
+@keyframes trust-rot { to { transform: rotate(360deg); } }
+
+/* ── Receipt line ─────────────────────────────────────────────────────── */
+
+.trust-receipt {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  margin: 0;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--trust-border);
+  border-radius: 14px;
+  background: var(--trust-surface);
+  color: var(--trust-text);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  text-align: left;
+}
+.trust-receipt__icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--trust-text-2);
+}
+.trust-receipt__text { display: flex; flex: 1; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.trust-receipt__text strong { color: var(--trust-text); font-size: 1rem; font-weight: 800; }
+.trust-receipt__text span { color: var(--trust-text-2); font-size: 0.875rem; }
+
+.trust-receipt.is-ok { background: rgba(164, 236, 199, 0.09); border-color: rgba(164, 236, 199, 0.4); }
+.trust-receipt.is-ok .trust-receipt__icon { background: rgba(164, 236, 199, 0.16); color: var(--trust-ok); }
+.trust-receipt.is-ok strong { color: var(--trust-ok); }
+.trust-receipt.is-wait .trust-receipt__icon { color: var(--trust-accent); }
+.trust-receipt.is-warn { background: rgba(255, 218, 145, 0.08); border-color: rgba(255, 218, 145, 0.4); }
+.trust-receipt.is-warn .trust-receipt__icon { background: rgba(255, 218, 145, 0.16); color: var(--trust-warn); }
+.trust-receipt.is-warn strong { color: var(--trust-warn); }
+.trust-receipt.is-bad { background: rgba(255, 183, 192, 0.08); border-color: rgba(255, 183, 192, 0.4); }
+.trust-receipt.is-bad .trust-receipt__icon { background: rgba(255, 183, 192, 0.16); color: var(--trust-bad); }
+.trust-receipt.is-bad strong { color: var(--trust-bad); }
+
+/* ── Buttons and links ────────────────────────────────────────────────── */
+
+.trust-btn {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  padding: 0.5rem 1rem;
+  border: 1px solid rgba(255, 218, 145, 0.5);
+  border-radius: 999px;
+  background: var(--trust-warn);
+  color: #1A1405;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.trust-btn:focus-visible,
+.trust-link:focus-visible,
+.trust-iconbtn:focus-visible {
+  outline: 3px solid var(--trust-accent);
+  outline-offset: 2px;
+}
+
+.trust-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 36px;
+  padding: 0.25rem 0.15rem;
+  border: 0;
+  background: none;
+  color: var(--trust-text-2);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: rgba(193, 207, 228, 0.45);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.trust-link:hover { color: var(--trust-text); text-decoration-color: currentColor; }
+
+.trust-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 1rem;
+}
+
+/* The bar a page mounts: pill on the left, rules + report on the right. */
+.trust-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 1rem;
+}
+
+/* ── Result status ────────────────────────────────────────────────────── */
+
+.trust-result {
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--trust-border);
+  border-radius: 16px;
+  background: var(--trust-surface);
+  color: var(--trust-text-2);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+.trust-result p { margin: 0 0 0.5rem; }
+.trust-result__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.9375rem;
+}
+.trust-result.is-provisional .trust-result__badge { background: rgba(255, 218, 145, 0.14); color: var(--trust-warn); }
+.trust-result.is-final .trust-result__badge { background: rgba(164, 236, 199, 0.14); color: var(--trust-ok); }
+
+/* ── Duel note ────────────────────────────────────────────────────────── */
+
+.trust-note { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.75rem; text-align: left; }
+.trust-note__facts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--trust-text-2);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+.trust-note__facts li { display: flex; align-items: flex-start; gap: 0.4rem; }
+.trust-note__facts .icon { flex: none; margin-top: 0.1rem; }
+
+/* ── Rules sheet ──────────────────────────────────────────────────────── */
+
+.trust-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(2, 6, 18, 0.72);
+}
+.trust-sheet__panel {
+  display: flex;
+  flex-direction: column;
+  width: min(640px, 100%);
+  max-height: min(86vh, 760px);
+  border: 1px solid var(--trust-border);
+  border-radius: 20px;
+  background: var(--trust-surface);
+  color: var(--trust-text);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  animation: trust-rise 0.22s ease-out;
+}
+@keyframes trust-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.trust-sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1rem 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--trust-border);
+}
+.trust-sheet__head h2 {
+  margin: 0;
+  color: var(--trust-text);
+  font-family: var(--font-heading, inherit);
+  font-size: 1.25rem;
+  line-height: 1.25;
+}
+.trust-iconbtn {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--trust-border);
+  border-radius: 50%;
+  background: var(--trust-surface-2);
+  color: var(--trust-text);
+  cursor: pointer;
+}
+.trust-sheet__body {
+  overflow-y: auto;
+  padding: 0.75rem 1.25rem 1.25rem;
+  color: var(--trust-text-2);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+.trust-sheet__body section + section { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(54, 81, 113, 0.6); }
+.trust-sheet__body h3 { margin: 0 0 0.45rem; color: var(--trust-text); font-size: 1rem; font-weight: 800; }
+.trust-sheet__body p { margin: 0 0 0.5rem; }
+.trust-sheet__body ul,
+.trust-sheet__body ol { margin: 0 0 0.5rem; padding-left: 1.25rem; }
+.trust-sheet__body li { margin-bottom: 0.3rem; }
+.trust-sheet__body strong { color: var(--trust-text); }
+
+@media (max-width: 560px) {
+  .trust-sheet { align-items: flex-end; padding: 0; }
+  .trust-sheet__panel { width: 100%; max-height: 88vh; border-radius: 20px 20px 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .trust-receipt { flex-wrap: wrap; }
+  .trust-receipt .trust-btn { margin-left: calc(28px + 0.7rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trust-pill__dot,
+  .trust-sheet__panel { animation: none; }
+  /* A spinner that does not spin still reads "working" next to its word. */
+  .trust-spin { animation: none; border-right-color: currentColor; border-style: dotted; }
+}

@@ -1,0 +1,44 @@
+/* Arène world — scoped under .aw / .aw- */
+
+.aw { display: block; width: 100%; height: auto; background: #060E22; }
+.aw--wide { aspect-ratio: 16 / 7; }
+.aw--tall { aspect-ratio: 9 / 14; }
+
+/* gingerbread / cottage symbol colours, set per <use> via custom properties */
+.aw-b { fill: var(--b, #0B1A42); }
+.aw-r { fill: var(--r, #081433); }
+.aw-t { fill: var(--t, #1F3A7A); }
+.aw-ts { fill: none; stroke: var(--t, #1F3A7A); }
+.aw-w { fill: var(--w, #FFE6A8); }
+.aw-x { fill: #081230; }
+
+/* ---------- ambient motion: sparse, slow, subordinate ---------- */
+
+.aw .aw-cloud { animation: aw-drift 140s ease-in-out infinite alternate; }
+@keyframes aw-drift { from { transform: translateX(-40px); } to { transform: translateX(60px); } }
+
+.aw .aw-tw { animation: aw-twinkle 9s ease-in-out infinite; }
+@keyframes aw-twinkle { 0%, 80%, 100% { opacity: 0.85; } 88% { opacity: 0.2; } }
+
+/* a window light that very occasionally stutters */
+.aw .aw-flick { animation: aw-flick 15s steps(1, end) infinite; }
+@keyframes aw-flick { 0%, 90%, 100% { opacity: 0.9; } 91% { opacity: 0.25; } 92% { opacity: 0.85; } 93.5% { opacity: 0.35; } 95% { opacity: 0.9; } }
+
+/* championship floodlight sweep: beams pivot at their source */
+.aw-beam { transform-origin: 0 0; animation: aw-sweep 11s ease-in-out infinite alternate; }
+.aw-beam1 { animation-delay: -5.5s; }
+.aw-beam2 { animation-duration: 13s; animation-delay: -3s; }
+.aw-beam3 { animation-duration: 13s; animation-delay: -9s; }
+@keyframes aw-sweep { from { transform: rotate(-9deg); } to { transform: rotate(9deg); } }
+
+.aw .aw-glow { animation: aw-glow 7s ease-in-out infinite alternate; }
+@keyframes aw-glow { from { opacity: 0.78; } to { opacity: 1; } }
+
+/* off-screen: stop the compositor work */
+.aw--paused, .aw--paused * { animation-play-state: paused !important; }
+
+/* still: a complete, designed frame with no motion */
+.aw--still, .aw--still * { animation: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .aw, .aw * { animation: none !important; }
+}
