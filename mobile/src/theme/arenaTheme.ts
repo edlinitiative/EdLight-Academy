@@ -148,6 +148,7 @@ export const arenaPalette: Palette = {
   success: arenaColors.success,
   successSoft: arenaColors.successSoft,
   successFill: '#13845A',
+  azureInk: arenaColors.signal,
 };
 
 /** Hook form, for symmetry with `useColors()`. The night does not change with the OS theme. */

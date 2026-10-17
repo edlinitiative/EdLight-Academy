@@ -431,7 +431,7 @@ export default function DashboardScreen() {
             (memory: no-hero-bands — no greeting, no stat band). */}
         <View className="px-5 pt-5 flex-row items-center justify-between">
           <Text style={[displayScale.xl, { color: colors.ink, flex: 1, paddingRight: 12 }]} numberOfLines={1} accessibilityRole="header">
-            {t('Accueil', 'Lakay')}
+            {t('Accueil', 'Akèy')}
           </Text>
           <TouchableOpacity
             onPress={() => { tapLight(); navigation.getParent()?.navigate('Search'); }}

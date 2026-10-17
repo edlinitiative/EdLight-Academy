@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { ChevronDown, ChevronUp, BookOpen } from 'lucide-react-native';
 import useStore from '../contexts/store';
-import { useColors, useTheme, typeScale } from '../theme/theme';
+import { useColors, useTheme, typeScale, fonts } from '../theme/theme';
 
 /**
  * "I- Compétence Linguistique" → { numeral: 'I', name: 'Compétence Linguistique' }
@@ -153,7 +153,7 @@ export default function ExamSectionContext({
               accessibilityState={{ expanded }}
               accessibilityLabel={t('Consignes', 'Konsiy')}
             >
-              <Text style={[typeScale.label, { color: colors.azure, fontFamily: 'Satoshi-Bold' }]}>{t('Consignes', 'Konsiy')}</Text>
+              <Text style={[typeScale.label, { color: colors.azure, fontFamily: fonts.headingBold }]}>{t('Consignes', 'Konsiy')}</Text>
               {expanded ? <ChevronUp color={colors.azure} size={14} /> : <ChevronDown color={colors.azure} size={14} />}
             </TouchableOpacity>
           ) : null}
@@ -178,7 +178,7 @@ export default function ExamSectionContext({
     <View style={{ marginBottom: 14 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <View style={{ flex: 1, backgroundColor: colors.azureSoft, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, alignSelf: 'flex-start' }}>
-          <Text style={[typeScale.micro, { color: colors.azure, fontFamily: 'Satoshi-Bold' }]} numberOfLines={1}>
+          <Text style={[typeScale.micro, { color: colors.azure, fontFamily: fonts.headingBold }]} numberOfLines={1}>
             {displayTitle}
           </Text>
         </View>

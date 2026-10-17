@@ -4,7 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ArrowLeft, Clock, Award, ListChecks, Layers, Play } from 'lucide-react-native';
 import { normalizeExamTitle } from '../utils/examUtils';
 import useStore from '../contexts/store';
-import { useColors, useTheme, typeScale } from '../theme/theme';
+import { useColors, useTheme, typeScale, fonts } from '../theme/theme';
 import Button from './ui/Button';
 
 function StatItem({ icon, value, label }: { icon: React.ReactNode; value: string; label: string }) {
@@ -117,7 +117,7 @@ export default function ExamOverview({
                 }}
               >
                 <View style={{ width: 28, height: 28, borderRadius: 999, backgroundColor: colors.azureSoft, alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={[typeScale.caption, { color: colors.azure, fontFamily: 'Satoshi-Bold' }]}>{i + 1}</Text>
+                  <Text style={[typeScale.caption, { color: colors.azure, fontFamily: fonts.headingBold }]}>{i + 1}</Text>
                 </View>
                 <Text style={[typeScale.bodyMd, { flex: 1, color: colors.ink }]} numberOfLines={2}>
                   {sec.title}

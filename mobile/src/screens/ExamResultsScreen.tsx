@@ -10,7 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { fetchSingleExam } from '../utils/examCatalog';
 import { flattenQuestions } from '../utils/examUtils';
 import useStore from '../contexts/store';
-import { useColors, useTheme, typeScale } from '../theme/theme';
+import { useColors, useTheme, typeScale, fonts } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import Button from '../components/ui/Button';
@@ -140,7 +140,7 @@ function QuestionReviewItem({ question, index, answer, result }: { question: any
           : isCorrect
             ? <CheckCircle2 color={colors.success} size={20} />
             : <XCircle color={colors.danger} size={20} />}
-        <Text style={[typeScale.caption, { width: 24, color: colors.muted, fontFamily: 'Satoshi-Bold' }]}>Q{index + 1}</Text>
+        <Text style={[typeScale.caption, { width: 24, color: colors.muted, fontFamily: fonts.headingBold }]}>Q{index + 1}</Text>
         <Text style={[typeScale.bodyMd, { flex: 1, color: colors.ink }]} numberOfLines={expanded ? undefined : 2}>
           {questionText}
         </Text>
@@ -152,15 +152,15 @@ function QuestionReviewItem({ question, index, answer, result }: { question: any
         <View className="px-4 pb-3 gap-2">
           <View style={{ height: 1, backgroundColor: colors.border, marginBottom: 4 }} />
           <View className="flex-row gap-2">
-            <Text style={[typeScale.caption, { width: 80, color: colors.faint, fontFamily: 'Satoshi-Bold' }]}>{t('Votre réponse', 'Repons ou')}</Text>
-            <Text style={[typeScale.caption, { flex: 1, fontFamily: 'Satoshi-Medium', color: isUnanswered ? colors.faint : isCorrect ? colors.success : colors.danger }]}>
+            <Text style={[typeScale.caption, { width: 80, color: colors.faint, fontFamily: fonts.headingBold }]}>{t('Votre réponse', 'Repons ou')}</Text>
+            <Text style={[typeScale.caption, { flex: 1, fontFamily: fonts.medium, color: isUnanswered ? colors.faint : isCorrect ? colors.success : colors.danger }]}>
               {isUnanswered ? t('Sans réponse', 'San repons') : String(given)}
             </Text>
           </View>
           {!isCorrect && correctAnswer != null && (
             <View className="flex-row gap-2">
-              <Text style={[typeScale.caption, { width: 80, color: colors.faint, fontFamily: 'Satoshi-Bold' }]}>{t('Bonne réponse', 'Bon repons')}</Text>
-              <Text style={[typeScale.caption, { flex: 1, color: colors.success, fontFamily: 'Satoshi-Medium' }]}>{String(correctAnswer)}</Text>
+              <Text style={[typeScale.caption, { width: 80, color: colors.faint, fontFamily: fonts.headingBold }]}>{t('Bonne réponse', 'Bon repons')}</Text>
+              <Text style={[typeScale.caption, { flex: 1, color: colors.success, fontFamily: fonts.medium }]}>{String(correctAnswer)}</Text>
             </View>
           )}
           {question.explanation && (
@@ -198,7 +198,7 @@ function MasteryBar({ section, pct, correct, total }: { section: string; pct: nu
     <View style={{ marginBottom: 12 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
         <Text style={[typeScale.label, { flex: 1, color: colors.muted }]} numberOfLines={1}>{section === 'Général' ? t('Général', 'Jeneral') : section}</Text>
-        <Text style={[typeScale.caption, { marginLeft: 8, color, fontFamily: 'Satoshi-Bold' }]}>{pct}%</Text>
+        <Text style={[typeScale.caption, { marginLeft: 8, color, fontFamily: fonts.headingBold }]}>{pct}%</Text>
       </View>
       <View style={{ height: 6, backgroundColor: colors.hairline, borderRadius: 99, overflow: 'hidden' }}>
         <View style={{ width: `${pct}%` as any, height: 6, backgroundColor: color, borderRadius: 99 }} />
@@ -464,7 +464,7 @@ export default function ExamResultsScreen() {
                   className={`flex-1 py-2 rounded-lg items-center`}
                   style={reviewFilter === val ? { backgroundColor: colors.surface, ...shadow.sm } : {}}
                 >
-                  <Text style={[typeScale.label, { color: reviewFilter === val ? colors.ink : colors.muted, fontFamily: 'Satoshi-Bold' }]}>{label}</Text>
+                  <Text style={[typeScale.label, { color: reviewFilter === val ? colors.ink : colors.muted, fontFamily: fonts.headingBold }]}>{label}</Text>
                 </PressableScale>
               ))}
             </View>

@@ -23,32 +23,39 @@ export type Palette = {
   danger: string; dangerSoft: string; warn: string; warnSoft: string; success: string; successSoft: string;
   /** Ground for filled SUCCESS buttons with white text (`success` is only 2.28:1). */
   successFill: string;
+  /** Azure for TEXT that must read at body size: numerals, links, "Voir tout".
+   *  `azure` itself is 4.53:1 on the light page ground — a hair over AA — so
+   *  anything small or important uses this deeper step (6.4:1 on `bg`). */
+  azureInk: string;
 };
 
 export const lightColors: Palette = {
   // Brand
   azure: '#1B6FE0',
   azureDeep: '#0857A6',
-  azureSoft: '#EFF5FE', // tinted icon backgrounds / chips
+  azureSoft: '#EAF2FE', // opaque tonal wash: current row, secondary buttons (was #EFF5FE)
   azureBorder: '#D3E3FA',
   azureFill: '#1B6FE0', // white label = 4.78:1
   coral: '#E0532F',
   coralSoft: '#fdeae4',
-  // Surfaces — Estil Klè: the page ground IS white. Cards separate from the
-  // page with a hairline border, not a grey ground + shadow.
-  bg: '#ffffff',
+  // Surfaces — matched to the web (measured 2026-10-17): a cool off-white page
+  // ground so white cards read as cards, the web's #E3EAF4 card ring, and the
+  // #EEF2F7 grey of its switch tracks and secondary buttons.
+  // (was bg #ffffff, surfaceAlt #F6F7F9, border #E7EBF0, hairline #EEF1F5)
+  bg: '#F7F9FC',
   surface: '#ffffff',
-  surfaceAlt: '#F6F7F9', // subtly raised inner surfaces (thumb fallbacks, inputs)
-  border: '#E7EBF0',
-  hairline: '#EEF1F5',
+  surfaceAlt: '#EEF2F7', // switch tracks, grey secondary buttons, image placeholders
+  border: '#E3EAF4',
+  hairline: '#EEF2F7',
   // Text — both greys carry real content (durations, descriptions, form
   // placeholders), so both must clear WCAG AA. The old pair was muted #64748b
   // (4.76:1 on white) over faint #94a3b8, and #94a3b8 was only 2.56:1 on white /
   // 2.37:1 on `bg` — failing everywhere it was used. Each token moved one step
   // darker to keep the two-level hierarchy while lifting contrast.
-  ink: '#14171F',
-  muted: '#5F6B7A', // 5.32:1 on white
-  faint: '#64748b', // 4.76:1 on white
+  // Web marine ink. (was ink #14171F, muted #5F6B7A, faint #64748b)
+  ink: '#0F1E38',  // 15.8:1 on bg
+  muted: '#46587A', // 6.8:1 on bg
+  faint: '#5F6B7A', // 5.1:1 on bg, 4.8:1 on surfaceAlt
   // Status
   danger: '#ef4444',
   dangerSoft: '#fef2f2',
@@ -57,35 +64,39 @@ export const lightColors: Palette = {
   success: '#22c55e',
   successSoft: '#ecfdf5',
   successFill: '#15803d', // white label = 5.02:1
+  azureInk: '#1558B8', // 6.4:1 on bg, 6.7:1 on white
 };
 
 export const darkColors: Palette = {
   // Brand — lift the azure a touch so it stays vivid on a dark ground
   azure: '#4C9AF5',
   azureDeep: '#2E86F0',
-  azureSoft: 'rgba(76,154,245,0.16)',
-  azureBorder: 'rgba(76,154,245,0.35)',
+  // Every tint is OPAQUE, precomposited over `surface` #131c2e: a translucent
+  // fill plus a hairline is the look the founder rejected. (was rgba 0.16/0.35)
+  azureSoft: '#1C304E',
+  azureBorder: '#2A4A78',
   azureFill: '#1B6FE0', // deep on purpose: white label = 4.78:1 (on #4C9AF5 it's 2.90:1)
   coral: '#FF7043',
-  coralSoft: 'rgba(224,83,47,0.18)',
+  coralSoft: '#38262E', // was rgba(224,83,47,0.18)
   // Surfaces — deep navy, not pure black
   bg: '#0b1220',
   surface: '#131c2e',
-  surfaceAlt: '#1a2436',
-  border: 'rgba(148,163,184,0.16)',
-  hairline: 'rgba(148,163,184,0.12)',
+  surfaceAlt: '#1A2436',
+  border: '#1E2940',   // was rgba(148,163,184,0.16)
+  hairline: '#1A2436', // was rgba(148,163,184,0.12)
   // Text — faint was #6b7a94: only 3.92:1 on `surface` #131c2e. Lifted to clear AA.
   ink: '#eef2f8',
   muted: '#9aa8c0',
   faint: '#8494ad', // 6.08:1 on bg, 5.53:1 on surface
   // Status
   danger: '#f87171',
-  dangerSoft: 'rgba(248,113,113,0.16)',
+  dangerSoft: '#382A39',  // was rgba(248,113,113,0.16)
   warn: '#fbbf24',
-  warnSoft: 'rgba(251,191,36,0.16)',
+  warnSoft: '#38362C',    // was rgba(251,191,36,0.16)
   success: '#34d399',
-  successSoft: 'rgba(52,211,153,0.16)',
+  successSoft: '#18393F', // was rgba(52,211,153,0.16)
   successFill: '#15803d', // white label = 5.02:1
+  azureInk: '#7DB4F8',    // 7.9:1 on surface
 };
 
 /**
@@ -98,15 +109,20 @@ export const colors = lightColors;
 export const radius = {
   chip: 999,
   pill: 999, // explicit alias for fully-rounded
-  control: 10, // buttons, inputs
-  tile: 10, // icon tiles inside cards
-  card: 12, // the standard card corner
-  hero: 16, // large hero surfaces
+  // Web radii (2026-10-17). was control 10, tile 10, card 12, hero 16.
+  control: 12, // buttons, inputs
+  tile: 14, // inner tiles, chapter-row stills
+  card: 18, // the standard (list) card corner
+  hero: 24, // the one feature card per page
 } as const;
 
 /** Loaded via expo-font in App.tsx. Per-weight files, so fontFamily carries the
  *  weight (don't also set fontWeight). Falls back to system until fonts load. */
 export const fonts = {
+  /** Headings, page titles, numerals — Plus Jakarta Sans 800, like the web. */
+  heading: 'PlusJakartaSans-ExtraBold',
+  /** Plus Jakarta Sans 700 — badges, small numerals, emphasised labels. */
+  headingBold: 'PlusJakartaSans-Bold',
   regular: 'SourceSans3-Regular',
   medium: 'SourceSans3-SemiBold',
   bold: 'SourceSans3-Bold',
@@ -114,27 +130,25 @@ export const fonts = {
   // hierarchy is carried by size and space, not maximum boldness.
   black: 'SourceSans3-Bold',
   /**
-   * Display face. One characterful serif alongside the UI sans is the single
-   * biggest lever on whether the app reads as considered or as a default
-   * template: a lone sans doing headings, body, numbers and labels is what
-   * makes a screen look like every other React Native app. Reserved for
-   * moments that deserve weight — a question, a name, a score — never for UI
-   * chrome, which stays in Source Sans.
+   * The Instrument Serif display voice is RETIRED (2026-10-17): nothing on the
+   * web is serif. Both names now resolve to the heading face so existing
+   * callers keep compiling and pick up the web's voice automatically.
    */
-  display: 'InstrumentSerif-Regular',
-  displayItalic: 'InstrumentSerif-Italic',
+  display: 'PlusJakartaSans-ExtraBold',
+  displayItalic: 'PlusJakartaSans-Bold',
 } as const;
 
 /**
- * Display ramp — the serif voice. Optical sizes, not a linear scale: big serif
- * type needs tighter tracking and looser leading than the UI ramp allows.
+ * Display ramp — kept for its callers, now in the heading face (Plus Jakarta
+ * Sans) instead of the retired serif. Tighter tracking: a heavy geometric sans
+ * at size needs negative letter-spacing, as on the web.
  */
 export const displayScale = {
-  hero:     { fontFamily: fonts.display, fontSize: 40, lineHeight: 44, letterSpacing: -0.8 },
-  xl:       { fontFamily: fonts.display, fontSize: 32, lineHeight: 37, letterSpacing: -0.4 },
-  lg:       { fontFamily: fonts.display, fontSize: 26, lineHeight: 31, letterSpacing: -0.3 },
-  md:       { fontFamily: fonts.display, fontSize: 21, lineHeight: 26, letterSpacing: -0.1 },
-  quiet:    { fontFamily: fonts.displayItalic, fontSize: 18, lineHeight: 24, letterSpacing: 0 },
+  hero:     { fontFamily: fonts.heading, fontSize: 40, lineHeight: 44, letterSpacing: -1.4 },
+  xl:       { fontFamily: fonts.heading, fontSize: 32, lineHeight: 36, letterSpacing: -1.2 },
+  lg:       { fontFamily: fonts.heading, fontSize: 26, lineHeight: 31, letterSpacing: -0.8 },
+  md:       { fontFamily: fonts.heading, fontSize: 21, lineHeight: 26, letterSpacing: -0.5 },
+  quiet:    { fontFamily: fonts.headingBold, fontSize: 18, lineHeight: 24, letterSpacing: -0.2 },
 } as const;
 
 /**
@@ -143,18 +157,35 @@ export const displayScale = {
  * Premium type = contrast between weights + optical tracking, not max boldness.
  */
 export const typeScale = {
-  display:  { fontFamily: fonts.black,   fontSize: 24, lineHeight: 29, letterSpacing: -0.2 },
-  num:      { fontFamily: fonts.black,   fontSize: 30, lineHeight: 34, letterSpacing: -0.7 },
-  h1:       { fontFamily: fonts.bold,    fontSize: 22, lineHeight: 27, letterSpacing: -0.3 },
-  h2:       { fontFamily: fonts.bold,    fontSize: 18, lineHeight: 23, letterSpacing: -0.2 },
-  title:    { fontFamily: fonts.bold,    fontSize: 16, lineHeight: 21, letterSpacing: -0.1 },
-  titleSm:  { fontFamily: fonts.bold,    fontSize: 15, lineHeight: 20, letterSpacing: -0.1 },
-  bodyMd:   { fontFamily: fonts.medium,  fontSize: 14, lineHeight: 20 },
-  body:     { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 },
-  label:    { fontFamily: fonts.medium,  fontSize: 13, lineHeight: 17 },
-  caption:  { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16 },
-  micro:    { fontFamily: fonts.medium,  fontSize: 11, lineHeight: 14 },
-  overline: { fontFamily: fonts.bold,    fontSize: 11, lineHeight: 14, letterSpacing: 0.6, textTransform: 'uppercase' },
+  // ── The web ramp (2026-10-17). 14pt floor for anything a student reads. ──
+  /** Page title: one per screen, top-left. PJS 800 32. */
+  pageTitle: { fontFamily: fonts.heading, fontSize: 32, lineHeight: 36, letterSpacing: -1.2 },
+  /** Section heading ("Tes matières"). PJS 800 22. */
+  section:   { fontFamily: fonts.heading, fontSize: 22, lineHeight: 27, letterSpacing: -0.6 },
+  /** Card title. PJS 800 19. */
+  cardTitle: { fontFamily: fonts.heading, fontSize: 19, lineHeight: 24, letterSpacing: -0.4 },
+  /** The hero number ("67" sujets, "2/19"). PJS 800 34, tabular. */
+  numeral:   { fontFamily: fonts.heading, fontSize: 34, lineHeight: 38, letterSpacing: -1.0, fontVariant: ['tabular-nums'] as ['tabular-nums'] },
+  /** Durations, counts, subtitles. */
+  meta:      { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21 },
+
+  // Legacy keys — aliases so 200+ call sites keep compiling; values moved up.
+  // was display SS 24 · h1 SS 22 · h2 SS 18 · title SS 16 · num SS 30
+  display:  { fontFamily: fonts.heading, fontSize: 32, lineHeight: 36, letterSpacing: -1.2 },
+  num:      { fontFamily: fonts.heading, fontSize: 30, lineHeight: 34, letterSpacing: -0.9 },
+  h1:       { fontFamily: fonts.heading, fontSize: 22, lineHeight: 27, letterSpacing: -0.6 },
+  h2:       { fontFamily: fonts.heading, fontSize: 19, lineHeight: 24, letterSpacing: -0.4 },
+  title:    { fontFamily: fonts.heading, fontSize: 19, lineHeight: 24, letterSpacing: -0.4 },
+  titleSm:  { fontFamily: fonts.bold,    fontSize: 16, lineHeight: 21, letterSpacing: -0.1 }, // was 15
+  bodyMd:   { fontFamily: fonts.medium,  fontSize: 16, lineHeight: 23 }, // was 14/20
+  body:     { fontFamily: fonts.regular, fontSize: 16, lineHeight: 23 }, // was 14/20
+  label:    { fontFamily: fonts.medium,  fontSize: 14, lineHeight: 19 }, // was 13
+  caption:  { fontFamily: fonts.regular, fontSize: 14, lineHeight: 19 }, // was 12
+  micro:    { fontFamily: fonts.medium,  fontSize: 14, lineHeight: 18 }, // was 11 — the floor
+  // RETIRED as an uppercase eyebrow (lead decision 2026-10-17: sentence case
+  // everywhere, 14pt floor). The name stays for its callers; it now renders
+  // as a sentence-case meta label. was SS Bold 11, tracking 0.6, UPPERCASE.
+  overline: { fontFamily: fonts.medium,  fontSize: 14, lineHeight: 19, letterSpacing: 0 },
 
   /*
    * ── Semantic roles for ESSENTIAL text (audit #15, 2026-10-17) ────────────
@@ -257,14 +288,38 @@ export const lift = {
   },
 } as const;
 
-/** The canonical card surface — replaces the recipe copy-pasted across screens. */
-export const cardSurface = {
-  backgroundColor: colors.surface,
-  borderRadius: radius.card,
-  borderWidth: 1,
-  borderColor: colors.border,
-  ...shadow.sm,
-} as const;
+/**
+ * Elevation — the web's deep soft card drop (`0 24px 48px -38px rgba(11,41,107,.45)`).
+ * RN has no negative spread, so it is approximated with a low-opacity wide blur.
+ */
+export function elevationFor(scheme: ColorScheme) {
+  return {
+    card: scheme === 'dark'
+      ? { shadowColor: '#000000', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.35, shadowRadius: 24, elevation: 4 }
+      : { shadowColor: '#0B296B', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.08, shadowRadius: 24, elevation: 4 },
+    /** Small controls that sit on a track: the Segmented thumb, a switch knob. */
+    thumb: { shadowColor: '#0F1E38', shadowOffset: { width: 0, height: 1 }, shadowOpacity: scheme === 'dark' ? 0.4 : 0.12, shadowRadius: 3, elevation: 2 },
+  } as const;
+}
+export const elevation = elevationFor('light');
+
+/**
+ * The canonical card surface: opaque `surface`, radius 18, NO ring in either
+ * theme (lead decision 2026-10-17, from the Stitch renders: hairlines read
+ * cheap). Separation is the deep soft drop in light; in dark it is the tonal
+ * step (surface over bg) plus a black shadow. borderWidth stays explicit (0)
+ * so a state outline can be added by a caller without a layout shift.
+ */
+export function cardSurfaceFor(scheme: ColorScheme) {
+  const c = scheme === 'dark' ? darkColors : lightColors;
+  const e = elevationFor(scheme);
+  return { backgroundColor: c.surface, borderRadius: radius.card, borderWidth: 0, borderColor: 'transparent', ...e.card };
+}
+
+/** The canonical card surface (light, static) — prefer useTheme().cardSurface. */
+export const cardSurface = cardSurfaceFor('light');
+/** The one hero/feature card per page: cardSurface at radius 24. */
+export const featureSurface = { ...cardSurface, borderRadius: radius.hero };
 
 export const spacing = {
   xs: 4,
@@ -338,13 +393,9 @@ export function useTheme() {
       gradients,
       shadow: sh,
       lift,
-      cardSurface: {
-        backgroundColor: c.surface,
-        borderRadius: radius.card,
-        borderWidth: 1,
-        borderColor: c.border,
-        ...sh.sm,
-      } as const,
+      elevation: elevationFor(scheme),
+      cardSurface: cardSurfaceFor(scheme),
+      featureSurface: { ...cardSurfaceFor(scheme), borderRadius: radius.hero },
     };
   }, [scheme]);
 }

@@ -89,7 +89,7 @@ export default function MissionCard({ onStart }: { onStart: () => void }) {
         </Text>
         <Text style={[typeScale.caption, { color: colors.faint, marginTop: 1 }]}>
           {streakCount > 0
-            ? t(`Quiz éclair · 2 min · protège ta série 🔥${streakCount}`, `Quiz rapid · 2 min · pwoteje seri ou 🔥${streakCount}`)
+            ? t(`Quiz éclair · 2 min · protège ta série de ${streakCount} j`, `Quiz rapid · 2 min · pwoteje seri ${streakCount} jou ou`)
             : t('Quiz éclair · 2 min · commence ta série', 'Quiz rapid · 2 min · kòmanse seri ou')}
         </Text>
       </View>

@@ -18,7 +18,7 @@ import { loadAllExamResultSummaries } from '../services/examResults';
 import useStore from '../contexts/store';
 import { gradeProfile } from '../config/trackConfig';
 import { deriveSignals, selectAdaptiveItems } from '../services/adaptiveEngine';
-import { useColors, useTheme } from '../theme/theme';
+import { useColors, useTheme, fonts } from '../theme/theme';
 import { ErrorState, EmptyState, Skeleton } from '../components/StateViews';
 import PressableScale from '../components/ui/PressableScale';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
@@ -179,7 +179,7 @@ function ExamCard({
                   backgroundColor: (pct >= 50 ? colors.successFill : colors.warn) + '1f',
                 }}
               >
-                <Text style={[typeScale.micro, { color: pct >= 50 ? colors.successFill : colors.warn, fontFamily: 'Satoshi-Bold' }]}>
+                <Text style={[typeScale.micro, { color: pct >= 50 ? colors.successFill : colors.warn, fontFamily: fonts.headingBold }]}>
                   {pct}%
                 </Text>
               </View>
@@ -511,7 +511,7 @@ export default function ExamBrowserScreen() {
           >
             <GraduationCap color={colors.azure} size={17} />
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={[typeScale.label, { color: colors.azure, fontFamily: 'Satoshi-Bold' }]} numberOfLines={1}>
+              <Text style={[typeScale.label, { color: colors.azure, fontFamily: fonts.headingBold }]} numberOfLines={1}>
                 {curatedChipLabel}
               </Text>
               <Text style={[typeScale.micro, { color: colors.muted }]} numberOfLines={1}>
@@ -531,7 +531,7 @@ export default function ExamBrowserScreen() {
               }
               style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}
             >
-              <Text style={[typeScale.micro, { color: colors.azure, fontFamily: 'Satoshi-Bold' }]}>
+              <Text style={[typeScale.micro, { color: colors.azure, fontFamily: fonts.headingBold }]}>
                 {activeLevel === curatedLevel ? t('Tous les niveaux', 'Tout nivo') : t('Mon niveau', 'Nivo mwen')}
               </Text>
             </TouchableOpacity>
@@ -624,7 +624,7 @@ export default function ExamBrowserScreen() {
               <Text style={[typeScale.caption, { color: colors.faint }]}>{displayed.length} {t('résultat', 'rezilta')}{displayed.length > 1 ? t('s', '') : ''}</Text>
               {adaptiveActive && (
                 <Text style={[typeScale.caption, { color: colors.faint, marginTop: 2 }]}>
-                  ✨ {t('Trié pour ton niveau', 'Klase pou nivo ou')}
+                  {t('Trié pour ton niveau', 'Klase pou nivo ou')}
                 </Text>
               )}
             </View>
