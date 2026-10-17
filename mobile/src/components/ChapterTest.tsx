@@ -1,17 +1,16 @@
-import React, { useMemo, useState } from 'react';
-import { Modal, View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Modal, View, Text, ScrollView } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { X, Check, ArrowRight, Target } from 'lucide-react-native';
+import { X, Check, ArrowRight, Flag } from 'lucide-react-native';
 import { useAppData } from '../hooks/useData';
 import useStore from '../contexts/store';
-import { useColors, typeScale } from '../theme/theme';
+import { useTheme } from '../theme/theme';
 import { selectCards, buildChapterTest, chapterTestVerdicts, toInt, type PracticeCard } from '../utils/practiceCards';
 import { lessonMastery, masteryLabel, type MasteryLevel } from '../utils/mastery';
-import QuizResultHero, { HeroButton, glass, DEEP } from './quiz/QuizResultHero';
-import { mixHex, darkenUntilReadable, lightenUntilReadable } from '../utils/contrast';
+import { success as hapticSuccess } from '../utils/haptics';
+import { useReduceMotion, modalAnimation } from '../utils/motion';
 import PressableScale from './ui/PressableScale';
-import MasteryArc from './MasteryArc';
+import Button from './ui/Button';
 
 const QUESTION_COUNT = 12;
 
@@ -35,18 +34,20 @@ type Outcome = {
 /**
  * The chapter test — the only route to "maîtrisé".
  *
- * It differs from the practice sheet in the two ways that make it a test rather
- * than a drill: questions are drawn round-robin across the WHOLE unit (so
- * knowing one lesson well can't carry you), and nothing is graded until the end
- * (no per-question reveal to learn from mid-run). A lesson is promoted only when
+ * It differs from practice in the two ways that make it a test rather than a
+ * drill: questions are drawn round-robin across the WHOLE unit (so knowing one
+ * lesson well can't carry you), and nothing is graded until the end (no
+ * per-question reveal to learn from mid-run). A lesson is promoted only when
  * every question drawn from it came back right.
  *
- * It runs on the aurora ground and finishes on the shared QuizResultHero, so
- * passing a chapter feels like the other victories in the app rather than like
- * a form submission.
+ * Visual language (DIRECTION §0 + §6): the learning world — page ground, opaque
+ * white cards, no rings, no glass, no gradient ground; one solid azure button
+ * per state; correction marked with opaque washes (correct #E7F6EE-family
+ * successSoft, wrong dangerSoft), never a coloured edge. The score is the one
+ * earned number, so it is the only gold on screen.
  */
 export default function ChapterTest({
-  visible, onClose, subjectCode, unitNo, unitTitle, lessons, isCreole = false, tint,
+  visible, onClose, subjectCode, unitNo, unitTitle, lessons, isCreole = false,
 }: {
   visible: boolean;
   onClose: () => void;
@@ -56,27 +57,16 @@ export default function ChapterTest({
   /** The unit's lessons, so questions can be attributed back to a lesson id. */
   lessons: any[];
   isCreole?: boolean;
+  /** Kept for callers; the test no longer tints its ground by subject. */
   tint?: string;
 }) {
-  const colors = useColors();
+  const { colors, typeScale, fonts, cardSurface, featureSurface, isDark } = useTheme();
+  const reduce = useReduceMotion();
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const { data } = useAppData();
   const progress = useStore((s) => s.progress);
   const applyChapterTest = useStore((s) => s.applyChapterTest);
   const recordReviewOutcome = useStore((s) => s.recordReviewOutcome);
-  const accent = tint ?? colors.azure;
-
-  // Driven to AA against white text — the tint is course data, not a token.
-  const ground = useMemo(
-    () => [
-      darkenUntilReadable(mixHex(accent, DEEP, 0.16), DEEP, 8),
-      mixHex(accent, DEEP, 0.62),
-      DEEP,
-    ] as const,
-    [accent],
-  );
-  const arcFrom = useMemo(() => mixHex(accent, '#ffffff', 0.55), [accent]);
-  const arcTo = useMemo(() => lightenUntilReadable(accent, ground[0], 4.5), [accent, ground]);
 
   const [attempt, setAttempt] = useState(0);
   const [phase, setPhase] = useState<'intro' | 'running' | 'done'>('intro');
@@ -132,306 +122,244 @@ export default function ChapterTest({
     setPhase('done');
   }
 
+  const promoted = outcome
+    ? Object.keys(outcome.verdicts).filter((id) => lessonMastery(progress[id]) !== outcome.before[id])
+    : [];
+  useEffect(() => {
+    if (phase === 'done' && promoted.length > 0) hapticSuccess();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
+  const header = (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, minHeight: 56, backgroundColor: colors.surface }}>
+      <PressableScale
+        onPress={close}
+        haptic={false}
+        accessibilityRole="button"
+        accessibilityLabel={t('Fermer', 'Fèmen')}
+        style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+      >
+        <X color={colors.ink} size={24} strokeWidth={2.2} />
+      </PressableScale>
+      <Text numberOfLines={1} style={{ flex: 1, fontFamily: fonts.bold, fontSize: 16, lineHeight: 21, color: colors.ink }}>
+        {t('Test du chapitre', 'Tès chapit la')}{unitTitle ? ` · ${unitTitle}` : ''}
+      </Text>
+    </View>
+  );
+
+  const shell = (children: React.ReactNode, footer?: React.ReactNode) => (
+    <Modal visible={visible} animationType={modalAnimation(reduce, 'slide')} onRequestClose={close}>
+      <SafeAreaProvider>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top', 'bottom']}>
+          {header}
+          {children}
+          {footer ? (
+            <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12, backgroundColor: colors.surface }}>{footer}</View>
+          ) : null}
+        </SafeAreaView>
+      </SafeAreaProvider>
+    </Modal>
+  );
+
   // ── Results ────────────────────────────────────────────────────────────────
   if (phase === 'done' && outcome) {
-    const promoted = Object.keys(outcome.verdicts).filter(
-      (lessonId) => lessonMastery(progress[lessonId]) !== outcome.before[lessonId],
-    );
-    const title = promoted.length > 0
-      ? (isCreole
-        ? `${promoted.length} leson monte nivo`
-        : `${promoted.length} leçon${promoted.length > 1 ? 's' : ''} a${promoted.length > 1 ? 'ont' : ''} progressé`)
-      : t('Presque !', 'Prèske !');
-
-    return (
-      <Modal visible={visible} animationType="slide" onRequestClose={close}>
-        <SafeAreaProvider>
-          <View style={{ flex: 1, backgroundColor: ground[0] }}>
-            <QuizResultHero
-              score={outcome.score}
-              total={outcome.cards.length}
-              isCreole={isCreole}
-              title={title}
-              accent={accent}
-              celebrateHaptic
-              showConfetti={promoted.length > 0}
-              footer={(
-                <View style={{ gap: 10 }}>
-                  <HeroButton
-                    label={t('Terminer', 'Fini')}
-                    onPress={close}
-                    variant="solid"
-                    color={accent}
-                  />
-                  <HeroButton
-                    label={t('Refaire le test', 'Refè tès la')}
-                    onPress={() => { setAttempt((a) => a + 1); reset(); }}
-                    variant="ghost"
-                  />
-                </View>
-              )}
-            >
-              {promoted.length > 0 ? (
-                <View style={{ width: '100%', marginTop: 22 }}>
-                  <Text style={[typeScale.overline, { color: 'rgba(255,255,255,0.84)', marginBottom: 10 }]}>
-                    {t('Tu as progressé', 'Ou avanse')}
-                  </Text>
-                  {promoted.map((lessonId) => {
-                    const lesson = (lessons ?? []).find((l: any) => l.id === lessonId);
-                    const after = lessonMastery(progress[lessonId]);
-                    return (
-                      <View
-                        key={lessonId}
-                        style={[{ borderRadius: 16, padding: 14, marginBottom: 8 }, glass]}
-                      >
-                        <Text style={[typeScale.bodyMd, { color: '#fff' }]} numberOfLines={2}>
-                          {lesson?.title ?? t('Leçon', 'Leson')}
-                        </Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 7 }}>
-                          <Text style={[typeScale.micro, { color: 'rgba(255,255,255,0.8)' }]}>
-                            {masteryLabel(outcome.before[lessonId], isCreole)}
-                          </Text>
-                          <ArrowRight color="rgba(255,255,255,0.5)" size={12} />
-                          <Text style={[typeScale.micro, { color: arcFrom }]}>
-                            {masteryLabel(after, isCreole)}
-                          </Text>
-                        </View>
-                      </View>
-                    );
-                  })}
-                </View>
-              ) : (
-                <Text style={[typeScale.body, {
-                  color: 'rgba(255,255,255,0.88)', marginTop: 18, textAlign: 'center', lineHeight: 21,
-                }]}>
-                  {t(
-                    "Aucune leçon n'a changé de niveau. Reprends les exercices des leçons manquées, puis retente.",
-                    'Okenn leson pa chanje nivo. Repran egzèsis leson ou rate yo, epi eseye ankò.',
-                  )}
-                </Text>
-              )}
-
-              {/* Corrections come after the test, all at once — that's the review. */}
-              <View style={{ width: '100%', marginTop: 26 }}>
-                <Text style={[typeScale.overline, { color: 'rgba(255,255,255,0.84)', marginBottom: 10 }]}>
-                  {t('Correction', 'Koreksyon')}
-                </Text>
-                {outcome.cards.map((c, i) => {
-                  const given = outcome.answers[c.id];
-                  const ok = given === c.correctIndex;
-                  return (
-                    <View key={c.id} style={[{ borderRadius: 16, padding: 14, marginBottom: 8 }, glass]}>
-                      <View style={{ flexDirection: 'row', gap: 10 }}>
-                        <Text style={[typeScale.micro, {
-                          color: ok ? '#D1FAE5' : '#FEE2E2', width: 18,
-                        }]}>
-                          {i + 1}
-                        </Text>
-                        <View style={{ flex: 1 }}>
-                          <Text style={[typeScale.bodyMd, { color: '#fff' }]}>{c.question}</Text>
-                          <Text style={[typeScale.caption, { color: '#D1FAE5', marginTop: 6 }]}>
-                            {c.answer}
-                          </Text>
-                          {!ok && given != null ? (
-                            <Text style={[typeScale.caption, { color: '#FEE2E2', marginTop: 2 }]}>
-                              {t('Ta réponse', 'Repons ou')} : {c.options[given]}
-                            </Text>
-                          ) : null}
-                          {!ok && c.explanation ? (
-                            <Text style={[typeScale.caption, {
-                              color: 'rgba(255,255,255,0.86)', marginTop: 6, lineHeight: 17,
-                            }]}>
-                              {c.explanation}
-                            </Text>
-                          ) : null}
-                        </View>
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-            </QuizResultHero>
-
-            <TouchableOpacity
-              onPress={close}
-              hitSlop={12}
-              style={{ position: 'absolute', top: 58, right: 20 }}
-              accessibilityRole="button"
-              accessibilityLabel={t('Fermer', 'Fèmen')}
-            >
-              <X color="rgba(255,255,255,0.8)" size={22} />
-            </TouchableOpacity>
+    const total = outcome.cards.length;
+    const pct = total > 0 ? Math.round((outcome.score / total) * 100) : 0;
+    return shell(
+      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 32, gap: 16 }}>
+        <View style={[featureSurface, { padding: 24 }]} accessible accessibilityLabel={`${t('Score', 'Nòt')} ${outcome.score} ${t('sur', 'sou')} ${total}`}>
+          <Text style={[typeScale.meta, { color: colors.muted }]}>{t('Score', 'Nòt')}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
+            <Text style={{ fontFamily: fonts.heading, fontSize: 56, lineHeight: 60, letterSpacing: -2, color: isDark ? '#FFB92E' : '#B7791F' }}>{outcome.score}</Text>
+            <Text style={{ fontFamily: fonts.headingBold, fontSize: 22, lineHeight: 28, color: colors.muted }}>/ {total}</Text>
           </View>
-        </SafeAreaProvider>
-      </Modal>
+          <View style={{ alignSelf: 'flex-start', marginTop: 12, backgroundColor: colors.azureSoft, borderRadius: 999, paddingVertical: 5, paddingHorizontal: 12 }}>
+            <Text style={{ fontFamily: fonts.bold, fontSize: 14, lineHeight: 19, color: colors.azureInk }}>
+              {pct} % · {promoted.length > 0
+                ? (isCreole ? `${promoted.length} leson monte nivo` : `${promoted.length} leçon${promoted.length > 1 ? 's ont' : ' a'} progressé`)
+                : t('Presque !', 'Prèske !')}
+            </Text>
+          </View>
+          <View style={{ height: 8, borderRadius: 4, backgroundColor: colors.surfaceAlt, marginTop: 14, overflow: 'hidden' }}>
+            <View style={{ width: `${Math.max(pct, 3)}%`, height: 8, borderRadius: 4, backgroundColor: colors.azure }} />
+          </View>
+          {promoted.length === 0 ? (
+            <Text style={[typeScale.body, { color: colors.muted, marginTop: 14 }]}>
+              {t(
+                "Aucune leçon n'a changé de niveau. Reprends les exercices des leçons manquées, puis retente.",
+                'Okenn leson pa chanje nivo. Repran egzèsis leson ou rate yo, epi eseye ankò.',
+              )}
+            </Text>
+          ) : null}
+        </View>
+
+        {promoted.length > 0 ? (
+          <View style={[cardSurface, { padding: 20, gap: 14 }]}>
+            <Text accessibilityRole="header" style={[typeScale.cardTitle, { color: colors.ink }]}>{t('Tu as progressé', 'Ou avanse')}</Text>
+            {promoted.map((lessonId) => {
+              const lesson = (lessons ?? []).find((l: any) => l.id === lessonId);
+              const after = lessonMastery(progress[lessonId]);
+              return (
+                <View key={lessonId} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: colors.successSoft, alignItems: 'center', justifyContent: 'center' }}>
+                    <Check color={colors.success} size={16} strokeWidth={3} />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={[typeScale.bodyMd, { color: colors.ink }]} numberOfLines={2}>{lesson?.title ?? t('Leçon', 'Leson')}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                      <Text style={[typeScale.caption, { color: colors.muted }]}>{masteryLabel(outcome.before[lessonId], isCreole)}</Text>
+                      <ArrowRight color={colors.faint} size={14} />
+                      <Text style={{ fontFamily: fonts.bold, fontSize: 14, lineHeight: 19, color: colors.azureInk }}>{masteryLabel(after, isCreole)}</Text>
+                    </View>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
+
+        {/* Corrections come after the test, all at once — that's the review. */}
+        <View style={[cardSurface, { padding: 20, gap: 12 }]}>
+          <Text accessibilityRole="header" style={[typeScale.cardTitle, { color: colors.ink }]}>{t('Correction', 'Koreksyon')}</Text>
+          {outcome.cards.map((c, i) => {
+            const given = outcome.answers[c.id];
+            const ok = given === c.correctIndex;
+            return (
+              <View
+                key={c.id}
+                accessible
+                accessibilityLabel={`${t('Question', 'Kesyon')} ${i + 1}, ${ok ? t('juste', 'bon') : t('fausse', 'pa bon')}. ${c.question}`}
+                style={{ borderRadius: 14, padding: 14, backgroundColor: ok ? colors.successSoft : colors.dangerSoft }}
+              >
+                <Text style={{ fontFamily: fonts.bold, fontSize: 14, lineHeight: 19, color: colors.muted }}>
+                  {t('Question', 'Kesyon')} {i + 1} · {ok ? t('Bonne réponse', 'Bon repons') : t('À revoir', 'Pou revize')}
+                </Text>
+                <Text style={[typeScale.bodyMd, { color: colors.ink, marginTop: 4 }]}>{c.question}</Text>
+                <Text style={[typeScale.body, { color: colors.ink, marginTop: 6 }]}>
+                  <Text style={{ fontFamily: fonts.bold }}>{t('Bonne réponse : ', 'Bon repons : ')}</Text>{c.answer}
+                </Text>
+                {!ok && given != null ? (
+                  <Text style={[typeScale.body, { color: colors.ink, marginTop: 2 }]}>
+                    <Text style={{ fontFamily: fonts.bold }}>{t('Ta réponse : ', 'Repons ou : ')}</Text>{c.options[given]}
+                  </Text>
+                ) : null}
+                {!ok && c.explanation ? (
+                  <Text style={[typeScale.meta, { color: colors.muted, marginTop: 6 }]}>{c.explanation}</Text>
+                ) : null}
+              </View>
+            );
+          })}
+        </View>
+      </ScrollView>,
+      <View style={{ gap: 4 }}>
+        <Button label={t('Terminer', 'Fini')} size="lg" fullWidth onPress={close} />
+        <Button label={t('Refaire le test', 'Refè tès la')} variant="ghost" fullWidth onPress={() => { setAttempt((a) => a + 1); reset(); }} />
+      </View>,
     );
   }
 
-  // ── Intro + running (aurora ground) ────────────────────────────────────────
-  const card = cards[idx];
+  if (pool.length === 0) {
+    return shell(
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+        <Text style={[typeScale.body, { color: colors.muted, textAlign: 'center' }]}>
+          {t("Ce chapitre n'a pas encore assez de questions pour un test.", 'Chapit sa a poko gen ase kesyon pou yon tès.')}
+        </Text>
+      </View>,
+    );
+  }
 
-  const body = () => {
-    if (pool.length === 0) {
-      return (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
-          <Text style={[typeScale.body, { color: 'rgba(255,255,255,0.88)', textAlign: 'center' }]}>
-            {t(
-              "Ce chapitre n'a pas encore assez de questions pour un test.",
-              'Chapit sa a poko gen ase kesyon pou yon tès.',
-            )}
-          </Text>
-        </View>
-      );
-    }
-
-    // Intro: state the stakes. A test that opens like a drill feels like one.
-    if (phase === 'intro') {
-      return (
-        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}>
-          <View style={{ alignItems: 'center', marginBottom: 26 }}>
-            <MasteryArc
-              level="none"
-              points={0}
-              label={undefined}
-              caption={t('Vise la maîtrise', 'Vize metriz la')}
-              from={arcFrom}
-              to={arcTo}
-              size={150}
-            />
+  // Intro: state the stakes. A test that opens like a drill feels like one.
+  if (phase === 'intro') {
+    return shell(
+      <ScrollView contentContainerStyle={{ padding: 20 }}>
+        <View style={[featureSurface, { padding: 24 }]}>
+          <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: colors.azureSoft, alignItems: 'center', justifyContent: 'center' }}>
+            <Flag color={colors.azureInk} size={22} strokeWidth={2.2} />
           </View>
-          <Text style={[typeScale.display, { color: '#fff', textAlign: 'center' }]}>
+          <Text accessibilityRole="header" style={{ fontFamily: fonts.heading, fontSize: 26, lineHeight: 31, letterSpacing: -0.8, color: colors.ink, marginTop: 16 }}>
             {t('Test du chapitre', 'Tès chapit la')}
           </Text>
-          {unitTitle ? (
-            <Text style={[typeScale.body, { color: 'rgba(255,255,255,0.84)', marginTop: 5, textAlign: 'center' }]}>
-              {unitTitle}
-            </Text>
-          ) : null}
-
-          <View style={[{ borderRadius: 20, padding: 18, marginTop: 26, gap: 13 }, glass]}>
+          {unitTitle ? <Text style={[typeScale.meta, { color: colors.muted, marginTop: 6 }]}>{unitTitle}</Text> : null}
+          <View style={{ marginTop: 20, gap: 12, backgroundColor: isDark ? colors.surfaceAlt : '#F2F5FA', borderRadius: 18, padding: 16 }}>
             {[
               t(`${cards.length} questions tirées de tout le chapitre.`, `${cards.length} kesyon soti nan tout chapit la.`),
               t('Aucune correction avant la fin.', 'Pa gen koreksyon anvan lafen.'),
               t('Une leçon devient « maîtrisée » si toutes ses questions sont justes.', 'Yon leson vin « metrize » si tout kesyon li yo jis.'),
             ].map((line, i) => (
-              <View key={i} style={{ flexDirection: 'row', gap: 11 }}>
-                <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: arcFrom, marginTop: 8 }} />
-                <Text style={[typeScale.body, { color: 'rgba(255,255,255,0.85)', flex: 1, lineHeight: 20 }]}>
-                  {line}
-                </Text>
+              <View key={i} style={{ flexDirection: 'row', gap: 12 }}>
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.azure, marginTop: 9 }} />
+                <Text style={[typeScale.body, { color: colors.ink, flex: 1 }]}>{line}</Text>
               </View>
             ))}
           </View>
-
-          <HeroButton
-            label={t('Commencer', 'Kòmanse')}
-            onPress={() => setPhase('running')}
-            variant="solid"
-            color={accent}
-            icon={<Target color="#fff" size={17} />}
-            style={{ marginTop: 26 }}
-          />
-        </ScrollView>
-      );
-    }
-
-    // Running
-    if (!card) return null;
-    const selected = answers[card.id];
-    const isLast = idx + 1 >= cards.length;
-    return (
-      <View style={{ flex: 1 }}>
-        <View style={{ paddingHorizontal: 20, paddingTop: 6 }}>
-          <View style={{ flexDirection: 'row', gap: 3 }}>
-            {cards.map((c, i) => (
-              <View
-                key={c.id}
-                style={{
-                  flex: 1, height: 3, borderRadius: 3,
-                  backgroundColor: i < idx
-                    ? arcFrom
-                    : i === idx ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.16)',
-                }}
-              />
-            ))}
-          </View>
-          <Text style={[typeScale.micro, { color: 'rgba(255,255,255,0.8)', marginTop: 10 }]}>
-            {idx + 1} / {cards.length}
-          </Text>
         </View>
+      </ScrollView>,
+      <Button label={t('Commencer le test', 'Kòmanse tès la')} size="lg" fullWidth onPress={() => setPhase('running')} />,
+    );
+  }
 
-        <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 12 }}>
-          <Text style={[typeScale.h2, { color: '#fff', lineHeight: 26 }]}>{card.question}</Text>
-          <View style={{ gap: 10, marginTop: 22 }}>
-            {card.options.map((opt, i) => {
-              const isSel = selected === i;
-              return (
-                <PressableScale
-                  key={i}
-                  onPress={() => setAnswers((a) => ({ ...a, [card.id]: i }))}
-                  pressedScale={0.985}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: isSel }}
-                  style={[{
-                    flexDirection: 'row', alignItems: 'center', gap: 12,
-                    borderRadius: 16, padding: 15,
-                  }, glass, isSel ? {
-                    backgroundColor: '#2B4470',
-                    borderColor: 'rgba(255,255,255,0.8)',
-                  } : null]}
-                >
-                  <View style={{
-                    width: 25, height: 25, borderRadius: 999,
-                    backgroundColor: isSel ? '#fff' : 'rgba(255,255,255,0.16)',
-                    alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    {isSel
-                      ? <Check color={accent} size={14} strokeWidth={3} />
-                      : <Text style={[typeScale.micro, { color: 'rgba(255,255,255,0.8)' }]}>{String.fromCharCode(65 + i)}</Text>}
-                  </View>
-                  <Text style={[typeScale.body, { flex: 1, color: '#fff', lineHeight: 20 }]}>{opt}</Text>
-                </PressableScale>
-              );
-            })}
-          </View>
-        </ScrollView>
-
-        <View style={{ padding: 16 }}>
-          <HeroButton
-            label={isLast ? t('Terminer le test', 'Fini tès la') : t('Suivant', 'Swivan')}
-            onPress={() => { if (isLast) finish(answers); else setIdx((i) => i + 1); }}
-            variant={selected == null ? 'glass' : 'solid'}
-            color={accent}
-            style={selected == null ? { opacity: 0.45 } : undefined}
-          />
+  // Running
+  const card = cards[idx];
+  if (!card) return null;
+  const selected = answers[card.id];
+  const isLast = idx + 1 >= cards.length;
+  const pct = Math.round(((idx + 1) / cards.length) * 100);
+  return shell(
+    <View style={{ flex: 1 }}>
+      <View style={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 14, backgroundColor: colors.surface }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+          <Text style={[typeScale.meta, { color: colors.ink }]}>
+            {t(`Question ${idx + 1} sur ${cards.length}`, `Kesyon ${idx + 1} sou ${cards.length}`)}
+          </Text>
+          <Text style={{ fontFamily: fonts.bold, fontSize: 15, lineHeight: 21, color: colors.azureInk }}>{pct}%</Text>
+        </View>
+        <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.surfaceAlt, marginTop: 8, overflow: 'hidden' }}>
+          <View style={{ width: `${pct}%`, height: 6, borderRadius: 3, backgroundColor: colors.azure }} />
         </View>
       </View>
-    );
-  };
 
-  return (
-    <Modal visible={visible} animationType="slide" onRequestClose={close}>
-      <SafeAreaProvider>
-        <LinearGradient colors={ground} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} style={{ flex: 1 }}>
-          {/* Aurora glows — same depth cue as the course hero. */}
-          <View pointerEvents="none" style={{ position: 'absolute', top: -50, left: -40, width: 210, height: 210, borderRadius: 105, backgroundColor: accent, opacity: 0.28 }} />
-          <View pointerEvents="none" style={{ position: 'absolute', bottom: -40, right: -30, width: 210, height: 210, borderRadius: 105, backgroundColor: arcFrom, opacity: 0.18 }} />
-          <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-            <View style={{
-              flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-              paddingHorizontal: 18, paddingVertical: 12,
-            }}>
-              <Text style={[typeScale.label, { color: 'rgba(255,255,255,0.86)' }]}>
-                {t('Test du chapitre', 'Tès chapit la')}
-              </Text>
-              <TouchableOpacity onPress={close} hitSlop={12} accessibilityRole="button" accessibilityLabel={t('Fermer', 'Fèmen')}>
-                <X color="rgba(255,255,255,0.8)" size={22} />
-              </TouchableOpacity>
-            </View>
-            {body()}
-          </SafeAreaView>
-        </LinearGradient>
-      </SafeAreaProvider>
-    </Modal>
+      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 12 }}>
+        <View style={[cardSurface, { padding: 20 }]}>
+          <Text style={{ fontFamily: fonts.medium, fontSize: 20, lineHeight: 28, color: colors.ink }}>{card.question}</Text>
+        </View>
+        <View style={{ gap: 12, marginTop: 16 }} accessibilityRole="radiogroup">
+          {card.options.map((opt, i) => {
+            const isSel = selected === i;
+            return (
+              <PressableScale
+                key={i}
+                onPress={() => setAnswers((a) => ({ ...a, [card.id]: i }))}
+                pressedScale={0.985}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: isSel }}
+                accessibilityLabel={`${String.fromCharCode(65 + i)}. ${opt}`}
+                style={[cardSurface, {
+                  borderRadius: 16, minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14,
+                  backgroundColor: isSel ? colors.azureSoft : colors.surface,
+                }]}
+              >
+                <View style={{
+                  width: 36, height: 36, borderRadius: 18,
+                  backgroundColor: isSel ? colors.azureFill : colors.surfaceAlt,
+                  alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {isSel
+                    ? <Check color="#ffffff" size={18} strokeWidth={3} />
+                    : <Text style={{ fontFamily: fonts.bold, fontSize: 15, lineHeight: 20, color: colors.ink }}>{String.fromCharCode(65 + i)}</Text>}
+                </View>
+                <Text style={{ flex: 1, fontFamily: fonts.regular, fontSize: 18, lineHeight: 24, color: colors.ink }}>{opt}</Text>
+              </PressableScale>
+            );
+          })}
+        </View>
+      </ScrollView>
+    </View>,
+    <Button
+      label={isLast ? t('Terminer le test', 'Fini tès la') : t('Question suivante', 'Pwochen kesyon')}
+      size="lg"
+      fullWidth
+      disabled={selected == null}
+      onPress={() => { if (isLast) finish(answers); else setIdx((i) => i + 1); }}
+    />,
   );
 }

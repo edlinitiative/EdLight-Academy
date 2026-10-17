@@ -14,7 +14,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text, ScrollView, Alert, BackHandler, TouchableOpacity } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { X } from 'lucide-react-native';
-import { useTheme, typeScale, displayScale, radius } from '../../../theme/theme';
+import { useTheme, typeScale, fonts } from '../../../theme/theme';
 import { useReduceMotion } from '../../../utils/motion';
 import { select, tapMedium, success, warn } from '../../../utils/haptics';
 import Button from '../../ui/Button';
@@ -33,8 +33,8 @@ function ProgressBar({ pct }: { pct: number }) {
   }, [pct, reduce, w]);
   const style = useAnimatedStyle(() => ({ width: `${w.value}%` }));
   return (
-    <View style={{ height: 6, borderRadius: 999, overflow: 'hidden', backgroundColor: colors.border }}>
-      <Animated.View style={[style, { height: 6, borderRadius: 999, backgroundColor: colors.azure }]} />
+    <View style={{ height: 6, borderRadius: 999, overflow: 'hidden', backgroundColor: colors.surfaceAlt }}>
+      <Animated.View style={[style, { height: 6, borderRadius: 999, backgroundColor: colors.azureFill }]} />
     </View>
   );
 }
@@ -68,7 +68,7 @@ export default function PracticeRunner({
    */
   chrome?: 'full' | 'minimal';
 }) {
-  const { colors } = useTheme();
+  const { colors, cardSurface, isDark } = useTheme();
   const [idx, setIdx] = useState(0);
   const [log, setLog] = useState<Array<LogEntry | null>>(() => items.map(() => null));
   const [pending, setPending] = useState<number | null>(null);
@@ -128,44 +128,58 @@ export default function PracticeRunner({
   const position = mode === 'quiz'
     ? t(`Question ${idx + 1} sur ${items.length}`, `Kesyon ${idx + 1} sou ${items.length}`)
     : t(`Question ${idx + 1} · ${questionsLabel(items.length, t)} dans ce chapitre`, `Kesyon ${idx + 1} · ${items.length} kesyon nan chapit sa a`);
+  const pct = Math.round(((idx + (checked ? 1 : 0)) / Math.max(1, items.length)) * 100);
+  const headerTitle = title
+    ? `${mode === 'quiz' ? t('Quiz', 'Kwiz') : t('Pratique', 'Pratik')} · ${title}`
+    : '';
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      {/* Header: exit · title · position (· Terminer in open practice) */}
-      <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12, gap: 10, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.surface }}>
-        {chrome === 'full' ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+      {/* Header: a white strip, no rule under it — a 0.04 drop only. */}
+      <View
+        style={{
+          paddingHorizontal: 20, paddingTop: chrome === 'full' ? 6 : 12, paddingBottom: 14, gap: 12,
+          backgroundColor: colors.surface, zIndex: 1,
+          shadowColor: '#0B296B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: isDark ? 0 : 0.04, shadowRadius: 8, elevation: 2,
+        }}
+      >
+        {chrome === 'full' ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 }}>
           <TouchableOpacity
             onPress={requestExit}
             hitSlop={10}
             accessibilityRole="button"
             accessibilityLabel={mode === 'quiz' ? t('Quitter le quiz', 'Kite kwiz la') : t('Quitter', 'Kite')}
-            style={{ padding: 4 }}
+            style={{ width: 44, height: 44, marginLeft: -10, alignItems: 'center', justifyContent: 'center' }}
           >
-            <X color={colors.muted} size={22} />
+            <X color={colors.ink} size={24} strokeWidth={2.2} />
           </TouchableOpacity>
-          <View style={{ flex: 1 }}>
-            <Text numberOfLines={1} style={[typeScale.title, { color: colors.ink }]}>{title}</Text>
-            {context ? <Text numberOfLines={1} style={[typeScale.body, { color: colors.muted }]}>{context}</Text> : null}
-          </View>
+          <Text numberOfLines={1} accessibilityRole="header" style={{ flex: 1, fontFamily: fonts.headingBold, fontSize: 16, lineHeight: 21, color: colors.ink }}>
+            {headerTitle}
+          </Text>
           {mode === 'practice' && answeredAny ? (
-            <TouchableOpacity
-              onPress={() => finish('stopped')}
-              hitSlop={8}
-              accessibilityRole="button"
+            <Button
+              label={t('Terminer', 'Fini')}
               accessibilityLabel={t('Terminer et voir mon bilan', 'Fini epi wè rezilta m')}
-              style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.control, borderWidth: 1, borderColor: colors.border }}
-            >
-              <Text style={[typeScale.bodyMd, { color: colors.ink }]}>{t('Terminer', 'Fini')}</Text>
-            </TouchableOpacity>
+              onPress={() => finish('stopped')}
+              variant="secondary"
+              size="sm"
+            />
           ) : null}
         </View> : null}
-        <Text accessibilityRole="text" style={[typeScale.bodyMd, { color: colors.ink }]}>{position}</Text>
-        {mode === 'quiz' ? <ProgressBar pct={((idx + (checked ? 1 : 0)) / Math.max(1, items.length)) * 100} /> : null}
+        <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
+          <Text accessibilityRole="text" style={[typeScale.meta, { color: colors.muted, flex: 1 }]}>{position}</Text>
+          {mode === 'quiz' ? (
+            <Text style={{ fontFamily: fonts.headingBold, fontSize: 15, lineHeight: 20, color: colors.azureInk, fontVariant: ['tabular-nums'] }}>{`${pct}%`}</Text>
+          ) : null}
+        </View>
+        {mode === 'quiz' ? <ProgressBar pct={pct} /> : null}
       </View>
 
-      <ScrollView ref={scrollRef} contentContainerStyle={{ padding: 16, paddingBottom: 28 }} keyboardShouldPersistTaps="handled">
-        <View style={{ marginBottom: 16 }} accessibilityRole="header">
-          <Rich text={item.question} style={[displayScale.md, { color: colors.ink, lineHeight: 29 }]} />
+      <ScrollView ref={scrollRef} contentContainerStyle={{ padding: 20, paddingBottom: 28 }} keyboardShouldPersistTaps="handled">
+        {/* The question: its own card, context as a sentence-case meta line. */}
+        <View style={{ ...cardSurface, padding: 20, marginBottom: 18, gap: 10 }} accessibilityRole="header">
+          {context ? <Text numberOfLines={2} style={[typeScale.meta, { color: colors.azureInk }]}>{context}</Text> : null}
+          <Rich text={item.question} style={{ fontFamily: fonts.headingBold, fontSize: 20, lineHeight: 28, color: colors.ink }} />
         </View>
 
         <View accessibilityRole="radiogroup">
@@ -184,13 +198,19 @@ export default function PracticeRunner({
         </View>
 
         {checked ? (
-          <View style={{ marginTop: 8 }} accessibilityLiveRegion="polite">
+          <View style={{ ...cardSurface, padding: 20, marginTop: 8 }} accessibilityLiveRegion="polite">
             <Correction item={item} entry={entry} t={t} />
           </View>
         ) : null}
       </ScrollView>
 
-      <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface }}>
+      {/* Pinned action on a white strip. */}
+      <View
+        style={{
+          paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12, backgroundColor: colors.surface,
+          shadowColor: '#0B296B', shadowOffset: { width: 0, height: -4 }, shadowOpacity: isDark ? 0 : 0.05, shadowRadius: 10, elevation: 6,
+        }}
+      >
         {!checked ? (
           <Button
             label={t('Vérifier ma réponse', 'Verifye repons mwen')}

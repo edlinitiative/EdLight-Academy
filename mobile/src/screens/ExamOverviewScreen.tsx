@@ -14,14 +14,14 @@ import { useNavigation, useRoute, useFocusEffect, RouteProp } from '@react-navig
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  ArrowLeft, Clock, FileText, Layers, Award, CheckCircle2, Play, RotateCcw, BarChart3, Lightbulb,
+  ChevronLeft, ChevronRight, Clock, FileText, Award, CheckCircle2, ArrowRight, RotateCcw, Lightbulb, Play,
 } from 'lucide-react-native';
 import useStore from '../contexts/store';
-import { useTheme, typeScale, displayScale } from '../theme/theme';
-import PressableScale from '../components/ui/PressableScale';
+import { useTheme, typeScale, fonts } from '../theme/theme';
+import Button from '../components/ui/Button';
 import { ListSkeleton, ErrorState } from '../components/StateViews';
 import { fetchCatalogIndex, fetchSingleExam } from '../utils/examCatalog';
-import { subjectColor, QUESTION_TYPE_META, normalizeExamTitle, normalizeSubject, subjectDisplayName, autoGradableCount, isEssayExam } from '../utils/examUtils';
+import { QUESTION_TYPE_META, normalizeExamTitle, normalizeSubject, normalizeLevel, normalizeYear, subjectDisplayName, autoGradableCount, isEssayExam } from '../utils/examUtils';
 import { loadExamResult } from '../services/examResults';
 import { loadExamAttemptDraft } from '../services/examAttempts';
 import type { ExamsParamList } from '../navigation/ExamsNavigator';
@@ -50,7 +50,7 @@ export default function ExamOverviewScreen() {
   const { user, language } = useStore();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
-  const { colors, cardSurface } = useTheme();
+  const { colors, cardSurface, isDark } = useTheme();
   const insets = useSafeAreaInsets();
 
   const [slim, setSlim] = useState<any | null>(null);
@@ -130,13 +130,36 @@ export default function ExamOverviewScreen() {
     [full, slim, isCreole],
   );
   const subject = slim?.subject ? normalizeSubject(slim.subject) : (full?.subject ? normalizeSubject(full.subject) : '');
-  const accent = subjectColor(slim?.subject || full?.subject || '');
 
   const sections: any[] = full?.sections || [];
-  const sectionRows = sections.map((s, i) => ({
-    title: s.section_title || `${t('Section', 'Seksyon')} ${i + 1}`,
+  // Section titles arrive SHOUTED from the PDFs ("PREMIÈRE PARTIE"): sentence-case them.
+  const sentence = (x: string) => {
+    const str = String(x || '').trim();
+    if (!str || str !== str.toUpperCase()) return str;
+    const low = str.toLocaleLowerCase('fr');
+    return low.charAt(0).toLocaleUpperCase('fr') + low.slice(1);
+  };
+  // "PARTIE A.- Recopier et compléter…" → name "Partie A", detail "Recopier…".
+  const splitSection = (raw: string, i: number) => {
+    const str = sentence(raw);
+    const m = str.match(/^(partie|section|exercice|probl[eè]me)\s+([a-z0-9]{1,4})\s*[.:)\-–—]*\s*(.*)$/i);
+    if (m) {
+      const word = m[1].charAt(0).toLocaleUpperCase('fr') + m[1].slice(1).toLocaleLowerCase('fr');
+      return { name: `${word} ${m[2].toUpperCase()}`, detail: m[3].trim() };
+    }
+    return { name: str || `${t('Partie', 'Pati')} ${i + 1}`, detail: '' };
+  };
+  const rawRows = sections.map((s, i) => ({
+    ...splitSection(s.section_title, i),
     count: (s.questions || []).length,
+    points: (s.questions || []).reduce((n: number, q: any) => n + (Number(q?.points) || 0), 0),
   }));
+  // Optional exercises ("traiter trois des cinq") make the per-part sums
+  // exceed the paper's total: then the per-part points would mislead — hide them.
+  const totalPts = Number(slim?.total_points || full?.total_points) || 0;
+  const sumPts = rawRows.reduce((n, r) => n + r.points, 0);
+  const pointsHonest = totalPts > 0 && sumPts > 0 && sumPts <= totalPts;
+  const sectionRows = rawRows.map((r) => ({ ...r, points: pointsHonest ? r.points : 0 }));
 
   const qCount = slim?._questionCount
     || sections.reduce((n, s) => n + (s.questions || []).length, 0)
@@ -148,13 +171,15 @@ export default function ExamOverviewScreen() {
   const essayExam = isEssayExam(slim);
   const diff = slim?.difficulty ? DIFFICULTY_META[slim.difficulty] : null;
   const langLabel = slim?.language ? (LANG_LABEL[slim.language] || String(slim.language).toUpperCase()) : null;
-  const topics: string[] = Array.isArray(slim?.topics) ? slim.topics.slice(0, 6) : [];
+  // Catalog topics are noisy (section headers mixed in): keep real theme names.
+  const topics: string[] = Array.isArray(slim?.topics)
+    ? slim.topics.filter((x: any) => typeof x === 'string' && x.length >= 2 && x.length <= 40 && !/^[A-Z0-9IVX]+\s*[-–.)]/.test(x) && !/\d\s*$/.test(x)).slice(0, 8)
+    : [];
   const tracks: string[] = (slim?.tracks || []).filter((x: string) => x && x !== 'ALL');
   const typeEntries = Object.entries(slim?._typeCounts || {})
     .sort((a: any, b: any) => Number(b[1]) - Number(a[1]));
 
-  const pct = best?.percentage ?? null;
-  const bestTone = pct == null ? colors.muted : pct >= 60 ? colors.success : pct >= 40 ? colors.warn : colors.danger;
+  const pct = best?.percentage != null ? Math.round(best.percentage) : null;
   const bestDate = best?.submittedAtMs
     ? new Date(best.submittedAtMs).toLocaleDateString(isCreole ? 'fr-HT' : 'fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
     : null;
@@ -165,27 +190,33 @@ export default function ExamOverviewScreen() {
     : best
       ? t("Refaire l'examen", 'Refè egzamen an')
       : t("Commencer l'examen", 'Kòmanse egzamen an');
-  const CtaIcon = hasDraft ? Play : best ? RotateCcw : Play;
 
   const start = () => {
     tapMedium();
     navigation.navigate('ExamTake', { level, examId, autostart: true });
   };
 
+  const levelLabel = normalizeLevel(String(slim?.level ?? full?.level ?? ''));
+  const { year: yearNum, session } = normalizeYear(slim?.year ?? full?.year);
+  const identity = [
+    levelLabel,
+    subjectDisplayName(subject),
+    session || (yearNum ? String(yearNum) : ''),
+    langLabel && slim?.language !== 'fr' ? langLabel : '',
+  ].filter(Boolean).join(' · ');
+
   const header = (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingTop: 4, paddingBottom: 4 }}>
       <TouchableOpacity
         onPress={() => { tapLight(); navigation.goBack(); }}
-        style={{ padding: 4 }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         accessibilityRole="button"
         accessibilityLabel={t('Retour', 'Retounen')}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 2, minHeight: 44, paddingRight: 12 }}
       >
-        <ArrowLeft color={colors.ink} size={22} />
+        <ChevronLeft color={colors.azureInk} size={26} />
+        <Text style={{ fontFamily: fonts.bold, fontSize: 17, lineHeight: 22, color: colors.azureInk }}>{t('Examens', 'Egzamen yo')}</Text>
       </TouchableOpacity>
-      <Text style={[typeScale.titleSm, { color: colors.muted, flex: 1 }]} numberOfLines={1}>
-        {subjectDisplayName(subject) || t('Examen', 'Egzamen')}
-      </Text>
     </View>
   );
 
@@ -210,59 +241,50 @@ export default function ExamOverviewScreen() {
     );
   }
 
-  const Chip = ({ label }: { label: string }) => (
-    <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: colors.surfaceAlt ?? colors.surface, borderWidth: 1, borderColor: colors.border }}>
-      <Text style={[typeScale.micro, { color: colors.muted, fontWeight: '700' }]}>{label}</Text>
-    </View>
-  );
+  const Chip = ({ label, tone = 'grey' }: { label: string; tone?: 'grey' | 'warn' | 'white' }) => {
+    const bg = tone === 'warn' ? colors.warnSoft : tone === 'white' ? colors.surface : colors.surfaceAlt;
+    const fg = tone === 'warn' ? (isDark ? colors.warn : '#9A5B00') : colors.ink;
+    return (
+      <View style={[{ minHeight: 36, paddingHorizontal: 14, borderRadius: 999, backgroundColor: bg, justifyContent: 'center' }, tone === 'white' && !isDark ? { shadowColor: '#0B296B', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 1 } : null]}>
+        <Text style={{ fontFamily: fonts.bold, fontSize: 14, lineHeight: 19, color: fg }}>{label}</Text>
+      </View>
+    );
+  };
 
-  const Stat = ({ value, label }: { value: string | number; label: string }) => (
-    <View style={{ flex: 1, alignItems: 'center', paddingVertical: 12 }}>
-      <Text style={[typeScale.num, { color: colors.ink }]} maxFontSizeMultiplier={1.2}>{value}</Text>
-      <Text style={[typeScale.micro, { color: colors.muted, marginTop: 2 }]}>{label}</Text>
-    </View>
+  const durationValue = duration > 0
+    ? (duration % 60 === 0 ? `${duration / 60} h` : duration > 60 ? `${Math.floor(duration / 60)} h ${duration % 60}` : `${duration} min`)
+    : t('Libre', 'Lib');
+  const facts: { Icon: any; value: string; label: string }[] = [
+    { Icon: Clock, value: durationValue, label: t('Durée', 'Dire') },
+    { Icon: FileText, value: String(qCount || '—'), label: t(qCount > 1 ? 'questions' : 'question', 'kesyon') },
+    points > 0
+      ? { Icon: Award, value: String(points), label: t('points', 'pwen') }
+      : { Icon: Award, value: String(sectionRows.length || '—'), label: t('parties', 'pati') },
+  ];
+
+  const Section = ({ title: st }: { title: string }) => (
+    <Text accessibilityRole="header" style={[typeScale.cardTitle, { color: colors.ink, marginBottom: 12 }]}>{st}</Text>
   );
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
       {header}
-      <ScrollView contentContainerStyle={{ paddingHorizontal: GUTTER, paddingBottom: 120 + tabBarSpace(insets.bottom) }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: GUTTER, paddingTop: 8, paddingBottom: 120 + tabBarSpace(insets.bottom) }}>
         {/* Identity */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: accent }} />
-          <Text style={[typeScale.overline, { color: colors.faint }]}>
-            {[slim?.year, langLabel].filter(Boolean).join(' · ') || t('EXAMEN OFFICIEL', 'EGZAMEN OFISYÈL')}
-          </Text>
-        </View>
-        {/* Back to the UI face. The serif suits a greeting ("Bonjour, Ted");
-            on a taxonomic title like "Culture Générale · Connaissances
-            Générales · 2026" it reads like a newspaper masthead, which is what
-            prompted "why this style?". Display type earns its place on short,
-            human lines — not on catalogue strings. */}
-        <Text style={[typeScale.display, { color: colors.ink }]}>{title}</Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-          {diff ? <Chip label={t(diff.fr, diff.ht)} /> : null}
-          {tracks.map((code) => <Chip key={code} label={code} />)}
-        </View>
-
-        {/* Best score banner */}
-        {best && (
-          <View style={{ ...cardSurface, marginTop: 16, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <Award size={18} color={bestTone} />
-            <Text style={[typeScale.caption, { color: colors.ink, flex: 1 }]}>
-              {pct != null
-                ? t(`Meilleur score : ${pct}%`, `Pi bon nòt : ${pct}%`)
-                : t('Déjà tenté', 'Ou deja eseye l')}
-              {bestDate ? `  ·  ${bestDate}` : ''}
-            </Text>
+        <Text accessibilityRole="header" style={{ fontFamily: fonts.heading, fontSize: 30, lineHeight: 35, letterSpacing: -1, color: colors.ink }}>{title}</Text>
+        {identity ? <Text style={[typeScale.meta, { color: colors.muted, marginTop: 6 }]}>{identity}</Text> : null}
+        {diff || tracks.length > 0 ? (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 }}>
+            {diff ? <Chip label={t(diff.fr, diff.ht)} tone="warn" /> : null}
+            {tracks.map((code) => <Chip key={code} label={code} />)}
           </View>
-        )}
+        ) : null}
 
-        {/* In-progress banner */}
+        {/* In-progress — say what is saved before the button says "Reprendre". */}
         {hasDraft && (
-          <View style={{ ...cardSurface, marginTop: 10, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, borderColor: colors.azureBorder }}>
-            <Play size={16} color={colors.azure} />
-            <Text style={[typeScale.caption, { color: colors.ink, flex: 1 }]}>
+          <View style={{ marginTop: 16, padding: 14, borderRadius: 16, backgroundColor: colors.azureSoft, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Play size={16} color={colors.azureInk} />
+            <Text style={[typeScale.bodyMd, { color: colors.ink, flex: 1 }]}>
               {t(
                 `Examen en cours : ${draftAnswered} réponse${(draftAnswered || 0) > 1 ? 's' : ''} enregistrée${(draftAnswered || 0) > 1 ? 's' : ''}.`,
                 `Egzamen an ap kontinye : ${draftAnswered} repons anrejistre.`,
@@ -271,18 +293,26 @@ export default function ExamOverviewScreen() {
           </View>
         )}
 
-        {/* Stat tiles */}
-        <View style={{ ...cardSurface, marginTop: 16, flexDirection: 'row', paddingHorizontal: 4 }}>
-          <Stat value={qCount} label={t('questions', 'kesyon')} />
-          {duration > 0 ? <Stat value={duration} label={t('minutes', 'minit')} /> : null}
-          {points > 0 ? <Stat value={points} label={t('points', 'pwen')} /> : null}
-          <Stat value={sectionRows.length || '—'} label={t('sections', 'seksyon')} />
+        {/* Three fact tiles — numbers first. */}
+        <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
+          {facts.map((f) => (
+            <View
+              key={f.label}
+              accessible
+              accessibilityLabel={`${f.value} ${f.label}`}
+              style={{ ...cardSurface, flex: 1, alignItems: 'center', paddingVertical: 16, paddingHorizontal: 6, gap: 6 }}
+            >
+              <f.Icon color={colors.azureInk} size={20} strokeWidth={2.2} />
+              <Text maxFontSizeMultiplier={1.3} numberOfLines={1} adjustsFontSizeToFit style={{ fontFamily: fonts.heading, fontSize: 24, lineHeight: 28, letterSpacing: -0.6, color: colors.ink, fontVariant: ['tabular-nums'] }}>{f.value}</Text>
+              <Text numberOfLines={1} style={[typeScale.label, { color: colors.muted }]}>{f.label}</Text>
+            </View>
+          ))}
         </View>
 
         {autoGradable > 0 && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 }}>
-            <CheckCircle2 size={14} color={colors.success} />
-            <Text style={[typeScale.micro, { color: colors.muted }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14 }}>
+            <CheckCircle2 size={16} color={isDark ? colors.success : colors.successFill} />
+            <Text style={[typeScale.meta, { color: colors.muted, flex: 1 }]}>
               {isCreole
                 ? `${autoGradable} kesyon korije otomatikman`
                 : `${autoGradable} question${autoGradable > 1 ? 's' : ''} corrigée${autoGradable > 1 ? 's' : ''} automatiquement`}
@@ -290,24 +320,17 @@ export default function ExamOverviewScreen() {
           </View>
         )}
 
-        {/* Essay papers grade nothing by themselves, so the overview used to
-            offer a student who wants to LEARN nothing but a 120-minute timer.
-            Say plainly what the paper does carry: a guided plan per subject,
-            on-demand hints, and a model answer to compare against. */}
+        {/* Essay papers grade nothing by themselves: say plainly what the
+            paper does carry — a guided plan, hints, and a model answer. */}
         {essayExam && (
-          <View
-            style={{
-              ...cardSurface, marginTop: 12, padding: 14, gap: 8,
-              backgroundColor: colors.azureSoft, borderColor: colors.azureSoft,
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Lightbulb size={15} color={colors.azure} />
-              <Text style={[typeScale.label, { color: colors.azure }]}>
+          <View style={{ marginTop: 16, padding: 16, gap: 8, borderRadius: 18, backgroundColor: colors.azureSoft }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Lightbulb size={17} color={colors.azureInk} />
+              <Text style={{ fontFamily: fonts.bold, fontSize: 16, lineHeight: 21, color: colors.azureInk }}>
                 {t('Épreuve de rédaction', 'Egzamen redaksyon')}
               </Text>
             </View>
-            <Text style={[typeScale.caption, { color: colors.ink, lineHeight: 20 }]}>
+            <Text style={[typeScale.body, { color: colors.ink }]}>
               {t(
                 "Pas de correction automatique ici : tu écris, puis tu compares. Chaque sujet vient avec un plan guidé, des indices si tu bloques, et un corrigé modèle.",
                 "Pa gen koreksyon otomatik la a : ou ekri, apre ou konpare. Chak sijè gen yon plan gide, endis si ou bloke, ak yon modèl repons.",
@@ -316,26 +339,45 @@ export default function ExamOverviewScreen() {
           </View>
         )}
 
-        {/* Structure */}
-        {sectionRows.length > 0 && (
-          <View style={{ marginTop: 24 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-              <Layers size={14} color={colors.faint} />
-              <Text style={[typeScale.overline, { color: colors.faint }]}>{t('STRUCTURE', 'ESTRIKTI')}</Text>
+        {/* Thèmes abordés */}
+        {topics.length > 0 && (
+          <View style={{ marginTop: 28 }}>
+            <Section title={t('Thèmes abordés', 'Tèm yo')} />
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {topics.map((topic) => <Chip key={topic} label={topic} tone="white" />)}
             </View>
-            <View style={{ ...cardSurface, paddingVertical: 4 }}>
-              {sectionRows.map((s, i) => (
+          </View>
+        )}
+
+        {/* Structure — a letter per part, its size, its weight. */}
+        {sectionRows.length > 0 && (
+          <View style={{ ...cardSurface, borderRadius: 24, padding: 18, marginTop: 28 }}>
+            <Section title={t('Structure', 'Estrikti')} />
+            <View style={{ gap: 10 }}>
+              {sectionRows.map((row, i) => (
                 <View
                   key={i}
                   style={{
-                    flexDirection: 'row', alignItems: 'center', gap: 10,
-                    paddingHorizontal: 14, paddingVertical: 11,
-                    borderTopWidth: i === 0 ? 0 : 1, borderTopColor: colors.hairline ?? colors.border,
+                    flexDirection: 'row', alignItems: 'center', gap: 12,
+                    paddingHorizontal: 14, paddingVertical: 12, borderRadius: 16,
+                    backgroundColor: isDark ? colors.surfaceAlt : colors.bg,
                   }}
                 >
-                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: accent }} />
-                  <Text style={[typeScale.body, { color: colors.ink, flex: 1 }]} numberOfLines={2}>{s.title}</Text>
-                  <Text style={[typeScale.caption, { color: colors.muted }]}>{s.count}</Text>
+                  <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontFamily: fonts.headingBold, fontSize: 16, lineHeight: 20, color: colors.azureInk }}>{/^(Partie|Section) ([A-Z])$/.test(row.name) ? row.name.slice(-1) : String.fromCharCode(65 + (i % 26))}</Text>
+                  </View>
+                  <View style={{ flex: 1, gap: 1 }}>
+                    <Text numberOfLines={1} style={{ fontFamily: fonts.headingBold, fontSize: 16, lineHeight: 21, color: colors.ink }}>{row.name}</Text>
+                    {row.detail ? <Text numberOfLines={2} style={[typeScale.meta, { color: colors.muted }]}>{row.detail}</Text> : null}
+                    <Text style={[typeScale.meta, { color: colors.muted }]}>
+                      {t(`${row.count} question${row.count > 1 ? 's' : ''}`, `${row.count} kesyon`)}
+                    </Text>
+                  </View>
+                  {row.points > 0 ? (
+                    <Text style={{ fontFamily: fonts.headingBold, fontSize: 15, lineHeight: 20, color: colors.muted, fontVariant: ['tabular-nums'] }}>
+                      {`${row.points} ${t('pts', 'pwen')}`}
+                    </Text>
+                  ) : null}
                 </View>
               ))}
             </View>
@@ -344,84 +386,71 @@ export default function ExamOverviewScreen() {
 
         {/* Question types */}
         {typeEntries.length > 0 && (
-          <View style={{ marginTop: 24 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-              <FileText size={14} color={colors.faint} />
-              <Text style={[typeScale.overline, { color: colors.faint }]}>{t('TYPES DE QUESTIONS', 'KALITE KESYON')}</Text>
-            </View>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+          <View style={{ marginTop: 28 }}>
+            <Section title={t('Types de questions', 'Kalite kesyon')} />
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {typeEntries.map(([type, count]) => {
                 const meta = (QUESTION_TYPE_META as Record<string, any>)[type] || (QUESTION_TYPE_META as any).unknown;
-                return <Chip key={type} label={`${meta.label} ${count}`} />;
+                return <Chip key={type} label={`${meta.label} · ${count}`} />;
               })}
             </View>
           </View>
         )}
 
-        {/* Topics */}
-        {topics.length > 0 && (
-          <View style={{ marginTop: 24 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-              <BarChart3 size={14} color={colors.faint} />
-              <Text style={[typeScale.overline, { color: colors.faint }]}>{t('AU PROGRAMME', 'SA K LADAN L')}</Text>
+        {/* Ta dernière tentative */}
+        {best && (
+          <View style={{ ...cardSurface, borderRadius: 24, padding: 18, marginTop: 28, gap: 6 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
+              <Text style={[typeScale.cardTitle, { color: colors.ink, flexShrink: 1 }]}>{t('Ta dernière tentative', 'Dènye tantativ ou')}</Text>
+              {bestDate ? <Text style={[typeScale.meta, { color: colors.muted }]}>{bestDate}</Text> : null}
             </View>
-            <View style={{ gap: 6 }}>
-              {topics.map((topic, i) => (
-                <View key={i} style={{ flexDirection: 'row', gap: 8 }}>
-                  <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: colors.border, marginTop: 7 }} />
-                  <Text style={[typeScale.caption, { color: colors.muted, flex: 1 }]} numberOfLines={2}>{topic}</Text>
-                </View>
-              ))}
-            </View>
+            {pct != null ? (
+              <Text accessibilityLabel={t(`${pct} sur 100`, `${pct} sou 100`)} style={{ fontFamily: fonts.heading, fontSize: 40, lineHeight: 46, letterSpacing: -1.4, color: colors.ink, fontVariant: ['tabular-nums'] }}>
+                {pct}
+                <Text style={{ fontFamily: fonts.headingBold, fontSize: 20, letterSpacing: 0, color: colors.muted }}>/100</Text>
+              </Text>
+            ) : (
+              <Text style={[typeScale.body, { color: colors.muted }]}>{t('Déjà tenté', 'Ou deja eseye l')}</Text>
+            )}
+            <TouchableOpacity
+              onPress={() => { tapLight(); navigation.navigate('ExamResults', { level, examId }); }}
+              accessibilityRole="link"
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-start', minHeight: 40 }}
+            >
+              <Text style={[typeScale.bodyMd, { fontFamily: fonts.bold, color: colors.azureInk }]}>{t('Voir la correction', 'Wè koreksyon an')}</Text>
+              <ChevronRight color={colors.azureInk} size={18} />
+            </TouchableOpacity>
           </View>
         )}
 
         {/* Duration hint when the catalog has none */}
         {duration === 0 && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 20 }}>
-            <Clock size={13} color={colors.faint} />
-            <Text style={[typeScale.micro, { color: colors.faint }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 20 }}>
+            <Clock size={16} color={colors.muted} />
+            <Text style={[typeScale.meta, { color: colors.muted }]}>
               {t('Sans limite de temps, à votre rythme.', 'San limit tan, nan ritm pa ou.')}
             </Text>
           </View>
         )}
       </ScrollView>
 
-      {/* Sticky CTA */}
+      {/* Pinned CTA — clears the floating tab bar (TestFlight 2026-09-04). */}
       <View
         style={{
           position: 'absolute', left: 0, right: 0, bottom: 0,
-          paddingHorizontal: GUTTER, paddingTop: 10,
-          // Clear the floating tab bar — a flat 28 left "Commencer l'examen"
-          // sitting behind it (TestFlight 2026-09-04).
+          paddingHorizontal: GUTTER, paddingTop: 12,
           paddingBottom: tabBarSpace(insets.bottom),
-          backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: colors.hairline ?? colors.border,
-          gap: 10,
+          backgroundColor: colors.bg,
         }}
       >
-        <PressableScale
+        <Button
+          label={ctaLabel}
           onPress={start}
-          accessibilityRole="button"
-          style={{
-            backgroundColor: colors.azureFill, borderRadius: 999, paddingVertical: 14,
-            flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-          }}
-        >
-          <CtaIcon size={17} color="#ffffff" />
-          <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 15 }}>{ctaLabel}</Text>
-        </PressableScale>
-        {best && (
-          <TouchableOpacity
-            onPress={() => { tapLight(); navigation.navigate('ExamResults', { level, examId }); }}
-            activeOpacity={0.75}
-            accessibilityRole="button"
-            style={{ alignItems: 'center', paddingVertical: 6 }}
-          >
-            <Text style={{ color: colors.azure, fontWeight: '700', fontSize: 14 }}>
-              {t('Revoir mes résultats', 'Gade rezilta mwen yo')}
-            </Text>
-          </TouchableOpacity>
-        )}
+          size="lg"
+          fullWidth
+          icon={best && !hasDraft ? <RotateCcw size={18} color="#ffffff" /> : undefined}
+          trailingIcon={!best || hasDraft ? <ArrowRight size={18} color="#ffffff" strokeWidth={2.4} /> : undefined}
+        />
       </View>
     </SafeAreaView>
   );

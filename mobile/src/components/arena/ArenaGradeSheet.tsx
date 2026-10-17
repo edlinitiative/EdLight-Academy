@@ -81,8 +81,6 @@ export default function ArenaGradeSheet({
                   flexDirection: 'row', alignItems: 'center', gap: 10,
                   padding: 14, borderRadius: radius.card,
                   backgroundColor: picked ? colors.azureSoft : colors.surface,
-                  borderWidth: 1,
-                  borderColor: picked ? colors.azureBorder : colors.border,
                 }}
               >
                 <View style={{ flex: 1, gap: 2 }}>

@@ -1,20 +1,23 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Swords, ChevronRight, Clock } from 'lucide-react-native';
+import { Clock, Swords } from 'lucide-react-native';
 import useStore from '../../contexts/store';
-import Avatar from '../ui/Avatar';
-import PressableScale from '../ui/PressableScale';
-import { radius, useTheme, typeScale } from '../../theme/theme';
+import { Avatar } from '../arena/art';
+import { ArenaButton } from '../arena/ArenaKit';
+import { arenaColors as C, arenaType } from '../../theme/arenaTheme';
 import { tapLight } from '../../utils/haptics';
 import type { Challenge } from '../../services/challengeService';
+import { nightType } from './night';
 
 /**
- * ChallengeCard — the "défi reçu" presentation for a duel link. Pure
- * presentation: the host screen fetches the challenge (useChallenge) and
+ * ChallengeCard — the "défi reçu" presentation for a duel link, on the night.
+ * Pure presentation: the host screen fetches the challenge (useChallenge) and
  * decides what accepting does (launch the same question draw, then post the
- * score). States: open (Relever CTA) · already played (result recap) ·
- * expired (quiet notice).
+ * score). States: open (one coral "Relever le défi") · already played (result
+ * recap) · expired (quiet notice).
+ *
+ * Faces are generated from the uid (the student's arena avatar) — the
+ * challenger is a real named student, never an initial disc.
  */
 export default function ChallengeCard({
   challenge,
@@ -28,110 +31,92 @@ export default function ChallengeCard({
   onAccept: () => void;
   busy?: boolean;
 }) {
-  const { shadow } = useTheme();
   const language = useStore((s) => s.language);
+  const me = useStore((s) => s.user);
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
 
-  const name = challenge.challengerName || t('Un(e) élève', 'Yon elèv');
+  const name = challenge.challengerName || t('Un élève', 'Yon elèv');
   const expired = challenge.status === 'open' && challenge.expiresAt > 0 && Date.now() > challenge.expiresAt;
   const played = challenge.status === 'played' && !!challenge.opponent;
   const daysLeft = Math.max(0, Math.ceil((challenge.expiresAt - Date.now()) / 86_400_000));
+  const mine = played ? challenge.opponent!.score : null;
 
   return (
-    <View style={{ borderRadius: radius.card, overflow: 'hidden', ...shadow.lg, shadowColor: '#0857A6' }}>
-      <LinearGradient colors={['#2E86F0', '#1B6FE0', '#0857A6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ padding: 16 }}>
-        {/* Eyebrow */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 10 }}>
-          <Swords color="#fde68a" size={13} />
-          <Text style={[typeScale.overline, { color: 'rgba(255,255,255,0.9)' }]}>
-            {t('Défi reçu', 'Defi ou resevwa')}
+    <View style={{ gap: 16 }}>
+      <View style={{ padding: 24, gap: 18, borderRadius: 24, backgroundColor: C.surfaceRaised }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Swords color={C.coral} size={18} />
+          <Text style={[nightType.meta, { color: C.muted, flex: 1 }]}>
+            {categoryLabel} · {challenge.total} {t('questions', 'kesyon')}
           </Text>
-          {!played && !expired && (
-            <View style={{ marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-              <Clock color="rgba(255,255,255,0.7)" size={11} />
-              <Text style={[typeScale.micro, { color: 'rgba(255,255,255,0.7)' }]}>
+          {!played && !expired ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Clock color={C.muted} size={16} />
+              <Text style={[arenaType.status, { color: C.muted }]}>
                 {t(`${daysLeft} j restants`, `${daysLeft} jou ki rete`)}
               </Text>
             </View>
+          ) : null}
+        </View>
+
+        <Text style={[nightType.feature, { color: C.ink }]} numberOfLines={2}>
+          {t(`${name} te défie`, `${name} ap defye w`)}
+        </Text>
+
+        {/* The stakes: their score against yours (or "?" until you play). */}
+        <View
+          accessible
+          accessibilityLabel={t(
+            `${name} : ${challenge.challengerScore} sur ${challenge.total}. Toi : ${mine ?? 'pas encore joué'}`,
+            `${name} : ${challenge.challengerScore} sou ${challenge.total}. Ou menm : ${mine ?? 'poko jwe'}`,
           )}
-        </View>
-
-        {/* Challenger + stakes */}
-        <View style={{ alignItems: 'center' }}>
-          <Avatar name={name} seed={challenge.challengerUid} size={46} />
-          <Text style={[typeScale.titleSm, { color: '#ffffff', marginTop: 6 }]} numberOfLines={1}>
-            {t(`${name} te défie`, `${name} ap defye w`)}
-          </Text>
-          <Text style={[typeScale.caption, { color: 'rgba(255,255,255,0.85)', marginTop: 2 }]} numberOfLines={1}>
-            {categoryLabel} · {challenge.total} {t('questions', 'kesyon')}
-          </Text>
-
-          <View
-            accessible
-            accessibilityLabel={t(
-              `Son score : ${challenge.challengerScore} sur ${challenge.total}`,
-              `Nòt li : ${challenge.challengerScore} sou ${challenge.total}`,
-            )}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 12 }}
-          >
-            <View style={{ alignItems: 'center' }}>
-              <Text style={{ color: '#ffffff', fontSize: 22, fontWeight: '900' }} maxFontSizeMultiplier={1.3}>
-                {challenge.challengerScore}/{challenge.total}
-              </Text>
-              <Text style={[typeScale.micro, { color: 'rgba(255,255,255,0.75)' }]}>{t('son score', 'nòt li')}</Text>
+          style={{ flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 20, backgroundColor: C.surface }}
+        >
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Avatar seed={challenge.challengerUid || name} size={48} />
+            <View style={{ flexShrink: 1 }}>
+              <Text numberOfLines={1} style={[arenaType.status, { color: C.muted }]}>{name}</Text>
+              <Text style={[arenaType.num, { fontSize: 20, lineHeight: 24, color: C.ink }]}>{challenge.challengerScore}/{challenge.total}</Text>
             </View>
-            <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 18, fontWeight: '900' }}>vs</Text>
-            <View style={{ alignItems: 'center' }}>
-              <Text style={{ color: '#fde68a', fontSize: 22, fontWeight: '900' }} maxFontSizeMultiplier={1.3}>
-                {played ? `${challenge.opponent!.score}/${challenge.total}` : '?'}
-              </Text>
-              <Text style={[typeScale.micro, { color: 'rgba(255,255,255,0.75)' }]}>{t('toi', 'ou menm')}</Text>
+          </View>
+          <View style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: C.secondary }}>
+            <Text style={[arenaType.status, { fontWeight: '700', color: C.inkSoft }]}>VS</Text>
+          </View>
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 10 }}>
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={[arenaType.status, { color: C.muted }]}>{t('Toi', 'Ou')}</Text>
+              <Text style={[arenaType.num, { fontSize: 20, lineHeight: 24, color: C.ink }]}>{mine != null ? `${mine}/${challenge.total}` : '?'}</Text>
             </View>
+            <Avatar seed={me?.uid || 'toi'} size={48} />
           </View>
         </View>
 
-        {/* State footer */}
         {played ? (
-          <View style={{ marginTop: 14, alignItems: 'center' }}>
-            <Text style={[typeScale.bodyMd, { color: '#ffffff' }]}>
-              {challenge.opponent!.score > challenge.challengerScore
-                ? t('Défi relevé, victoire !', 'Defi fèt, viktwa !')
-                : challenge.opponent!.score === challenge.challengerScore
-                  ? t('Égalité !', 'Egalite !')
-                  : t('Défi relevé, bien essayé !', 'Defi fèt, bèl efò !')}
-            </Text>
-          </View>
+          <Text style={[arenaType.body, { color: C.inkSoft }]}>
+            {challenge.opponent!.score > challenge.challengerScore
+              ? t('Défi relevé : victoire.', 'Defi fèt : viktwa.')
+              : challenge.opponent!.score === challenge.challengerScore
+                ? t('Défi relevé : égalité.', 'Defi fèt : egalite.')
+                : t('Défi relevé. Bien essayé.', 'Defi fèt. Bèl efò.')}
+          </Text>
         ) : expired ? (
-          <View style={{ marginTop: 14, alignItems: 'center' }}>
-            <Text style={[typeScale.caption, { color: 'rgba(255,255,255,0.85)' }]}>
-              {t('Ce défi a expiré.', 'Defi sa a ekspire.')}
-            </Text>
-          </View>
+          <Text style={[arenaType.body, { color: C.muted }]}>{t('Ce défi a expiré.', 'Defi sa a ekspire.')}</Text>
         ) : (
-          <>
-            <PressableScale
-              onPress={() => { tapLight(); onAccept(); }}
-              accessibilityRole="button"
-              accessibilityLabel={t('Relever le défi', 'Reponn defi a')}
-              style={{
-                marginTop: 14, alignSelf: 'center',
-                flexDirection: 'row', alignItems: 'center', gap: 2,
-                backgroundColor: '#ffffff', borderRadius: radius.chip,
-                paddingLeft: 18, paddingRight: 12, paddingVertical: 10,
-                opacity: busy ? 0.6 : 1,
-              }}
-            >
-              <Text style={[typeScale.bodyMd, { color: '#1B6FE0' }]}>
-                {busy ? t('Chargement…', 'Ap chaje…') : t('Relever le défi', 'Reponn defi a')}
-              </Text>
-              {!busy && <ChevronRight color="#1B6FE0" size={16} />}
-            </PressableScale>
-            <Text style={[typeScale.micro, { color: 'rgba(255,255,255,0.7)', textAlign: 'center', marginTop: 8 }]}>
-              {t('Mêmes questions · une seule tentative · +20 XP au gagnant', 'Menm kesyon yo · yon sèl tantativ · +20 XP pou moun ki genyen')}
-            </Text>
-          </>
+          <ArenaButton
+            label={t('Relever le défi', 'Reponn defi a')}
+            busy={busy}
+            onPress={() => { tapLight(); onAccept(); }}
+          />
         )}
-      </LinearGradient>
+      </View>
+      {!played && !expired ? (
+        <Text style={[arenaType.status, { color: C.muted, textAlign: 'center', paddingHorizontal: 12 }]}>
+          {t(
+            'Mêmes questions · une seule tentative · +20 XP au gagnant',
+            'Menm kesyon yo · yon sèl tantativ · +20 XP pou moun ki genyen',
+          )}
+        </Text>
+      ) : null}
     </View>
   );
 }

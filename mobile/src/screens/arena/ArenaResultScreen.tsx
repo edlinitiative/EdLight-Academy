@@ -217,6 +217,7 @@ export default function ArenaResultScreen() {
         name: summary.tier === 'championConfirmed' ? school : (me?.displayName || school),
         scope: summary.tier === 'championConfirmed' ? t('École championne', 'Lekòl chanpyon') : t('Classement individuel', 'Klasman endividyèl'),
         period: tournament?.title,
+        isSchool: summary.tier === 'championConfirmed',
       });
     } else if (me && tournament) {
       void shareRef.current?.share({ mode: 'score', subject: tournament.title || t('Championnat EdLight', 'Chanpyona EdLight'), score: me.correct, total: tournament.questionCount });

@@ -14,8 +14,10 @@ import React, { useEffect, useState } from 'react';
 import {
   Modal, View, Text, TouchableOpacity, Share, Linking, ActivityIndicator,
 } from 'react-native';
-import { X, Gift, Share2, Copy, MessageCircle, RefreshCw } from 'lucide-react-native';
+import { X, Share2, Copy, MessageCircle, RefreshCw } from 'lucide-react-native';
 import { useTheme } from '../theme/theme';
+import Button from './ui/Button';
+import { useReduceMotion } from '../utils/motion';
 import { getReferralCode, inviteMessage, type ReferralCode } from '../services/referralService';
 import * as haptics from '../utils/haptics';
 
@@ -26,7 +28,8 @@ interface InviteSheetProps {
 }
 
 export default function InviteSheet({ visible, onClose, lang }: InviteSheetProps) {
-  const { colors, radius, shadow, typeScale } = useTheme();
+  const { colors, radius, shadow, typeScale, cardSurface, featureSurface, isDark } = useTheme();
+  const reduce = useReduceMotion();
   const t = (fr: string, ht: string) => (lang === 'ht' ? ht : fr);
 
   const [data, setData] = useState<ReferralCode | null>(null);
@@ -77,7 +80,7 @@ export default function InviteSheet({ visible, onClose, lang }: InviteSheetProps
   }
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType={reduce ? 'none' : 'slide'} onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.55)', justifyContent: 'flex-end' }}>
         <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} accessibilityLabel={t('Fermer', 'Fèmen')} />
         <View
@@ -96,81 +99,87 @@ export default function InviteSheet({ visible, onClose, lang }: InviteSheetProps
           <View
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
-            style={{ alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, marginBottom: 14 }}
+            style={{ alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: colors.surfaceAlt, marginBottom: 14 }}
           />
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-            <View style={{ width: 40, height: 40, borderRadius: radius.tile, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.azureSoft }}>
-              <Gift color={colors.azure} size={20} />
-            </View>
-            <Text style={[typeScale.h2, { flex: 1, color: colors.ink }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            <Text accessibilityRole="header" style={[typeScale.section, { flex: 1, color: colors.ink }]}>
               {t('Inviter des amis', 'Envite zanmi')}
             </Text>
-            <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityRole="button" accessibilityLabel={t('Fermer', 'Fèmen')}>
-              <X color={colors.faint} size={22} />
+            <TouchableOpacity
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel={t('Fermer', 'Fèmen')}
+              style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceAlt }}
+            >
+              <X color={colors.muted} size={20} />
             </TouchableOpacity>
           </View>
 
-          <Text style={[typeScale.body, { color: colors.muted, marginBottom: 16 }]}>
+          <Text style={[typeScale.body, { color: colors.muted, marginBottom: 18 }]}>
             {t(
-              'Vous et votre ami gagnez un bonus quand il s’inscrit avec votre code : +1 gel de série et des XP chacun.',
+              'Ton ami et toi gagnez un bonus quand il s’inscrit avec ton code : +1 gel de série et des XP chacun.',
               'Ou menm ak zanmi ou chak ap genyen yon bonus lè li enskri ak kòd ou : +1 jèl seri ak XP pou chak.',
             )}
           </Text>
 
           {loading ? (
-            <View style={{ height: 92, borderRadius: radius.card, backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}>
+            <View style={[cardSurface, { height: 120, alignItems: 'center', justifyContent: 'center' }]}>
               <ActivityIndicator color={colors.azure} />
             </View>
           ) : failed || !data ? (
-            <TouchableOpacity
-              onPress={load}
-              activeOpacity={0.85}
-              style={{ height: 92, borderRadius: radius.card, backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', gap: 8, flexDirection: 'row' }}
-            >
-              <RefreshCw color={colors.azure} size={16} />
-              <Text style={[typeScale.titleSm, { color: colors.azure }]}>
-                {t('Réessayer', 'Eseye ankò')}
+            <View style={[cardSurface, { padding: 20, alignItems: 'center', gap: 14 }]}>
+              <Text style={[typeScale.body, { color: colors.ink, textAlign: 'center' }]}>
+                {t('Ton code n’a pas pu être chargé.', 'Nou pa t ka chaje kòd ou.')}
               </Text>
-            </TouchableOpacity>
+              <Button
+                size="sm"
+                variant="secondary"
+                label={t('Réessayer', 'Eseye ankò')}
+                icon={<RefreshCw color={isDark ? colors.ink : colors.azureInk} size={16} />}
+                onPress={load}
+              />
+            </View>
           ) : (
             <>
               {/* Code card */}
               <TouchableOpacity
                 onPress={copyCode}
-                activeOpacity={0.8}
-                style={{ borderRadius: radius.card, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.azureBorder, paddingVertical: 16, paddingHorizontal: 16, alignItems: 'center', ...shadow.sm }}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel={`${t('Ton code', 'Kòd ou')} ${data.code}. ${t('Touche pour partager le code', 'Touche pou pataje kòd la')}`}
+                style={[featureSurface, { paddingVertical: 20, paddingHorizontal: 16, alignItems: 'center' }]}
               >
-                <Text style={[typeScale.overline, { color: colors.muted, marginBottom: 6 }]}>
-                  {t('Votre code', 'Kòd ou')}
+                <Text style={[typeScale.meta, { color: colors.muted, marginBottom: 4 }]}>
+                  {t('Ton code', 'Kòd ou')}
                 </Text>
-                <Text maxFontSizeMultiplier={1.3} style={[typeScale.num, { color: colors.azure, letterSpacing: 4 }]}>
+                <Text maxFontSizeMultiplier={1.3} style={[typeScale.numeral, { color: colors.azureInk, letterSpacing: 4 }]}>
                   {data.code}
                 </Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 }}>
-                  <Copy color={colors.faint} size={13} />
-                  <Text style={[typeScale.body, { color: colors.muted }]}>{t('Appuyez pour partager le code', 'Peze pou pataje kòd la')}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
+                  <Copy color={colors.muted} size={16} />
+                  <Text style={[typeScale.meta, { color: colors.muted }]}>{t('Touche pour partager le code', 'Touche pou pataje kòd la')}</Text>
                 </View>
               </TouchableOpacity>
 
-              {/* Actions */}
-              <TouchableOpacity
+              {/* Actions — one primary. (WhatsApp green under white text was 2:1.) */}
+              <Button
+                size="lg"
+                fullWidth
+                label={t('Partager sur WhatsApp', 'Pataje sou WhatsApp')}
+                icon={<MessageCircle color="#ffffff" size={20} />}
                 onPress={shareWhatsApp}
-                activeOpacity={0.9}
-                style={{ marginTop: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: '#25D366', borderRadius: radius.control, paddingVertical: 15 }}
-              >
-                <MessageCircle color="#fff" size={18} />
-                <Text style={[typeScale.titleSm, { color: '#fff' }]}>{t('Partager sur WhatsApp', 'Pataje sou WhatsApp')}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
+                style={{ marginTop: 16 }}
+              />
+              <Button
+                size="lg"
+                fullWidth
+                variant="secondary"
+                label={t('Autres applis', 'Lòt aplikasyon')}
+                icon={<Share2 color={isDark ? colors.ink : colors.azureInk} size={20} />}
                 onPress={shareNative}
-                activeOpacity={0.9}
-                style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.control, paddingVertical: 14 }}
-              >
-                <Share2 color={colors.azure} size={18} />
-                <Text style={[typeScale.titleSm, { color: colors.ink }]}>{t('Partager', 'Pataje')}</Text>
-              </TouchableOpacity>
+                style={{ marginTop: 10 }}
+              />
             </>
           )}
         </View>

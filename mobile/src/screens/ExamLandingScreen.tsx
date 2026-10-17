@@ -1,22 +1,23 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useScrollToTop, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import {
-  GraduationCap, ChevronRight, BookOpen, Landmark, Check, PlayCircle, X,
-  Calculator, Atom, FlaskConical, Leaf, PenLine, Globe, Brain, HeartPulse, Lightbulb,
-  History,
-} from 'lucide-react-native';
+import { ChevronRight, ArrowRight, X, History } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { gradeProfile, TRACKS as ALL_TRACKS, TRACK_LEVEL } from '../config/trackConfig';
-import { useColors, useTheme, radius } from '../theme/theme';
+import { useTheme, fonts } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
+import PageTitle from '../components/ui/PageTitle';
+import Segmented from '../components/ui/Segmented';
+import StatNumeral from '../components/ui/StatNumeral';
+import Button from '../components/ui/Button';
+import { Skeleton } from '../components/StateViews';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import { tapLight } from '../utils/haptics';
 import { fetchCatalogIndex } from '../utils/examCatalog';
-import { normalizeSubject, normalizeLevel, normalizeYear, normalizeExamTitle } from '../utils/examUtils';
+import { normalizeSubject, normalizeLevel, normalizeYear, normalizeExamTitle, subjectDisplayName } from '../utils/examUtils';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
 import type { LastActivity } from '../contexts/store';
 
@@ -30,67 +31,13 @@ type Nav = NativeStackNavigationProp<ExamsParamList, 'ExamLanding'>;
 // PREFAC is excluded — these chips sit under the Terminale (Bac) card.
 const TRACKS = ALL_TRACKS.filter((tr) => TRACK_LEVEL[tr.code] === 'baccalaureat');
 
+// The three exam worlds, as the web's switch: Bac | 9ᵉ AF | Université.
 const LEVELS = [
-  {
-    id: 'terminale',
-    label: 'Terminale (Bac)',
-    labelHt: 'Tèminal (Bak)',
-    sublabel: 'Examens officiels du Baccalauréat',
-    sublabelHt: 'Egzamen ofisyèl Bakaloreya a',
-    description: 'Révise les sujets des 5 dernières années.',
-    descriptionHt: 'Revize sijè 5 dènye ane yo.',
-    Icon: GraduationCap,
-  },
-  {
-    id: '9e',
-    label: '9ème Année',
-    labelHt: '9yèm Ane',
-    sublabel: 'Examens du cycle fondamental',
-    sublabelHt: 'Egzamen sik fondamantal la',
-    description: 'Prépare les épreuves nationales de 9ème.',
-    descriptionHt: 'Prepare eprèv nasyonal 9yèm yo.',
-    Icon: BookOpen,
-  },
-  {
-    id: 'university',
-    label: 'Université',
-    labelHt: 'Inivèsite',
-    sublabel: "Examens d'entrée et concours",
-    sublabelHt: 'Egzamen antre ak konkou',
-    description: 'Accès aux études supérieures.',
-    descriptionHt: 'Aksè nan etid siperyè.',
-    Icon: Landmark,
-  },
-];
-
-// Subject quick-links per level — a Préfac student gets the concours pool
-// (Culture Générale, Philo, Santé…), not the Bac subject list.
-const SUBJECTS_BY_LEVEL: Record<string, Array<{ code: string; Icon: any }>> = {
-  terminale: [
-    { code: 'Mathématiques', Icon: Calculator },
-    { code: 'Physique', Icon: Atom },
-    { code: 'Chimie', Icon: FlaskConical },
-    { code: 'SVT', Icon: Leaf },
-    { code: 'Français', Icon: PenLine },
-    { code: 'Anglais', Icon: Globe },
-  ],
-  '9e': [
-    { code: 'Mathématiques', Icon: Calculator },
-    { code: 'Physique', Icon: Atom },
-    { code: 'Chimie', Icon: FlaskConical },
-    { code: 'SVT', Icon: Leaf },
-    { code: 'Français', Icon: PenLine },
-    { code: 'Anglais', Icon: Globe },
-  ],
-  university: [
-    { code: 'Mathématiques', Icon: Calculator },
-    { code: 'Culture Générale', Icon: Lightbulb },
-    { code: 'Français', Icon: PenLine },
-    { code: 'Philosophie', Icon: Brain },
-    { code: 'Santé', Icon: HeartPulse },
-    { code: 'Anglais', Icon: Globe },
-  ],
-};
+  { id: 'terminale', label: 'Bac', labelHt: 'Bak', long: 'Baccalauréat', longHt: 'Bakaloreya' },
+  { id: '9e', label: '9ᵉ AF', labelHt: '9yèm AF', long: '9ᵉ année fondamentale', longHt: '9yèm ane fondamantal' },
+  { id: 'university', label: 'Université', labelHt: 'Inivèsite', long: 'Université', longHt: 'Inivèsite' },
+] as const;
+type LevelId = typeof LEVELS[number]['id'];
 
 // ─── "Continuer" (unfinished exam) ──────────────────────────────────────────
 //
@@ -140,6 +87,8 @@ type ResumableExam = {
   /** "Bac · Juillet 2022" — enough to recognise which exam this is. */
   context: string;
   answered: number;
+  /** Questions in the paper, from the catalog index (0 = unknown). */
+  total: number;
   updatedAt: number;
 };
 
@@ -210,11 +159,13 @@ async function findResumableExam(
   let title = '';
   let context = '';
   let level = fallbackLevel;
+  let total = 0;
   try {
     const entry = (await fetchCatalogIndex()).find(
       (e: any) => String(e?.exam_id ?? e?.id ?? '') === best!.examId,
     );
     if (entry) {
+      total = Number(entry._questionCount) || 0;
       title = normalizeSubject(entry.subject ?? '') || normalizeExamTitle(entry) || '';
       const rawLevel = String(entry.level ?? entry.niveau ?? '');
       const { session, year } = normalizeYear(entry.year);
@@ -233,14 +184,30 @@ async function findResumableExam(
     if (lastActivity.level) level = lastActivity.level;
   }
 
-  return { ...best, level, title: title || 'Examen', context };
+  return { ...best, level, total, title: title || 'Examen', context };
+}
+
+type SubjectStat = { subject: string; count: number; minYear: number; maxYear: number };
+type RecentPaper = { examId: string; subject: string; year: number; session: string; minutes: number; questions: number };
+
+function levelOf(entry: any): LevelId | null {
+  const lvl = String(entry?.level ?? entry?.niveau ?? '').toLowerCase();
+  const match = Object.entries(LEVEL_FILTER_MAP).find(([, needles]) => needles.some((n) => lvl.includes(n)));
+  return (match?.[0] as LevelId) ?? null;
+}
+
+function durationLabel(min: number, t: (fr: string, ht: string) => string): string {
+  if (!min) return '';
+  if (min % 60 === 0) return `${min / 60} h`;
+  if (min > 60) return `${Math.floor(min / 60)} h ${min % 60}`;
+  return t(`${min} min`, `${min} min`);
 }
 
 export default function ExamLandingScreen() {
   const navigation = useNavigation<Nav>();
-  const colors = useColors();
-  const { cardSurface, typeScale, shadow } = useTheme();
-  const centerColumn = useContentContainerStyle('readable', { fill: true }); // iPad: center short hub content vertically
+  const { colors, cardSurface, typeScale } = useTheme();
+  const { width } = useWindowDimensions();
+  const centerColumn = useContentContainerStyle('readable');
   // Tapping the active tab scrolls this screen back to the top.
   const scrollRef = React.useRef<any>(null);
   useScrollToTop(scrollRef);
@@ -248,20 +215,62 @@ export default function ExamLandingScreen() {
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
-  // The student's own exam level leads the page as a hero ("surround them with
-  // THEIR content", per TestFlight feedback) — the other levels drop to a
-  // compact secondary list instead of an undifferentiated stack of three.
-  const EXAM_LEVEL_TO_ID: Record<string, string> = { baccalaureat: 'terminale', universite: 'university', '9eme_af': '9e' };
-  const myLevelId = EXAM_LEVEL_TO_ID[gradeProfile(grade).examLevel ?? ''] ?? null;
-  const myLevel = LEVELS.find((l) => l.id === myLevelId) ?? null;
-  const otherLevels = myLevel ? LEVELS.filter((l) => l.id !== myLevel.id) : LEVELS;
-  const subjectLevelId = myLevelId ?? 'terminale';
-  const subjects = SUBJECTS_BY_LEVEL[subjectLevelId] ?? SUBJECTS_BY_LEVEL.terminale;
+  // The student's own exam level is preselected on the switch.
+  const EXAM_LEVEL_TO_ID: Record<string, LevelId> = { baccalaureat: 'terminale', universite: 'university', '9eme_af': '9e' };
+  // gradeProfile(null) falls through to Bac — only trust it when a grade is set.
+  const myLevelId: LevelId | null = grade ? (EXAM_LEVEL_TO_ID[gradeProfile(grade).examLevel ?? ''] ?? null) : null;
+  const [level, setLevel] = React.useState<LevelId>(myLevelId ?? 'terminale');
+  const levelTouched = React.useRef(false);
+  React.useEffect(() => {
+    if (!levelTouched.current && myLevelId) setLevel(myLevelId);
+  }, [myLevelId]);
+
+  // ── The catalog: counts and newest papers come from the real index ────────
+  const [catalog, setCatalog] = React.useState<any[] | null>(null);
+  React.useEffect(() => {
+    let active = true;
+    fetchCatalogIndex()
+      .then((c) => { if (active) setCatalog(Array.isArray(c) ? c : []); })
+      .catch(() => { if (active) setCatalog([]); });
+    return () => { active = false; };
+  }, []);
+
+  const { subjects, total, recent } = React.useMemo(() => {
+    const bySubject = new Map<string, SubjectStat>();
+    const newest = new Map<string, RecentPaper>();
+    let n = 0;
+    for (const e of catalog ?? []) {
+      if (levelOf(e) !== level) continue;
+      const subject = normalizeSubject(e?.subject ?? '');
+      if (!subject || subject === 'Autre') continue;
+      n += 1;
+      const { year, session } = normalizeYear(e?.year);
+      const cur = bySubject.get(subject) ?? { subject, count: 0, minYear: 0, maxYear: 0 };
+      cur.count += 1;
+      if (year) {
+        cur.minYear = cur.minYear ? Math.min(cur.minYear, year) : year;
+        cur.maxYear = Math.max(cur.maxYear, year);
+      }
+      bySubject.set(subject, cur);
+      const examId = String(e?.exam_id ?? e?.id ?? '');
+      const prev = newest.get(subject);
+      if (examId && year && (!prev || year > prev.year)) {
+        newest.set(subject, {
+          examId, subject, year, session,
+          minutes: Number(e?.duration_minutes) || 0,
+          questions: Number(e?._questionCount) || 0,
+        });
+      }
+    }
+    const list = Array.from(bySubject.values()).sort((a, b) => b.count - a.count || a.subject.localeCompare(b.subject, 'fr'));
+    const papers = Array.from(newest.values()).sort((a, b) => b.year - a.year || a.subject.localeCompare(b.subject, 'fr'));
+    return { subjects: list, total: n, recent: papers.slice(0, 6) };
+  }, [catalog, level]);
 
   function pickTrack(code: string) {
+    tapLight();
     setTrack(code);
     setOnboardingCompleted(true);
-    navigation.navigate('ExamBrowser', { level: 'terminale' });
   }
 
   // Unfinished exam → the "Continuer" card. `null` covers both "still looking"
@@ -275,34 +284,31 @@ export default function ExamLandingScreen() {
   useFocusEffect(
     React.useCallback(() => {
       let active = true;
-      findResumableExam(subjectLevelId, lastActivity)
+      findResumableExam(myLevelId ?? 'terminale', lastActivity)
         .then((r) => { if (active) setResume(r); })
         .catch(() => { /* keep whatever is on screen */ });
       return () => { active = false; };
-    }, [subjectLevelId, lastActivity]),
+    }, [myLevelId, lastActivity]),
   );
 
   function continueExam(target: ResumableExam) {
     tapLight();
     // Plain in-stack push: ExamLanding IS the root of ExamsNavigator, so back
-    // pops to this screen. (`initial: false` is only needed when entering the
-    // Exams stack from ANOTHER tab — see DashboardScreen / ResumeBanner — where
-    // it keeps the stack root mounted underneath instead of exiting the tab.)
-    // autostart: the student is resuming — no need to re-read the intro page.
+    // pops to this screen. autostart: the student is resuming — no need to
+    // re-read the intro page.
     navigation.navigate('ExamTake', { level: target.level, examId: target.examId, autostart: true });
   }
 
-  // "Bac · Juillet 2022 · 3 réponses · il y a 2 h" — recognisable at a glance.
+  // "3 réponses · il y a 2 h" — recognisable at a glance.
   const resumeMeta = React.useMemo(() => {
     if (!resume) return '';
     const answered = resume.answered > 0
-      ? t(
-        `${resume.answered} réponse${resume.answered > 1 ? 's' : ''}`,
-        `${resume.answered} repons`,
-      )
+      ? (resume.total > 0
+        ? t(`${resume.answered} réponse${resume.answered > 1 ? 's' : ''} sur ${resume.total}`, `${resume.answered} repons sou ${resume.total}`)
+        : t(`${resume.answered} réponse${resume.answered > 1 ? 's' : ''}`, `${resume.answered} repons`))
       : '';
-    return [resume.context, answered, relativeWhen(resume.updatedAt, isCreole)].filter(Boolean).join(' · ');
-  }, [resume, isCreole]);
+    return [answered, relativeWhen(resume.updatedAt, isCreole)].filter(Boolean).join(' · ');
+  }, [resume, isCreole]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function dismissResume(target: ResumableExam) {
     tapLight();
@@ -313,282 +319,234 @@ export default function ExamLandingScreen() {
     setResume(null);
   }
 
-  // Track (filière) chips — under the Terminale card/hero only.
-  const trackChips = (onHero: boolean) => (
-    <View style={{ paddingTop: onHero ? 14 : 2, paddingBottom: onHero ? 0 : 14, paddingHorizontal: onHero ? 0 : 16 }}>
-      <Text style={[typeScale.overline, { color: colors.faint, marginBottom: 8 }]}>
-        {t('Ma filière', 'Seri mwen')}
-      </Text>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        {TRACKS.map((tr) => {
-          const active = track === tr.code;
-          return (
-            <TouchableOpacity
-              key={tr.code}
-              onPress={() => pickTrack(tr.code)}
-              activeOpacity={0.75}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 4,
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                borderRadius: 99,
-                borderWidth: 1,
-                borderColor: active ? colors.azure : colors.border,
-                backgroundColor: active ? colors.azureSoft : colors.surface,
-              }}
-            >
-              {active && <Check color={colors.azure} size={12} />}
-              <Text style={[typeScale.label, {
-                color: active ? colors.azure : colors.muted,
-              }]}>
-                {tr.shortLabel}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-    </View>
-  );
+  const openSubject = (subject: string) => {
+    tapLight();
+    navigation.navigate('ExamBrowser', { level, subject, explicit: true });
+  };
+  const openAll = () => {
+    tapLight();
+    navigation.navigate('ExamBrowser', { level, explicit: true });
+  };
+
+  // Two tiles per row on a phone, three on a wide iPad column.
+  const cols = width >= 700 ? 3 : 2;
+  const tileBasis = `${(100 / cols) - 2}%` as const;
+  const resumePct = resume && resume.total > 0 ? Math.min(100, Math.round((resume.answered / resume.total) * 100)) : null;
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
-      <ScrollView ref={scrollRef} className="flex-1" contentContainerStyle={[{ paddingBottom: 100 }, centerColumn]} showsVerticalScrollIndicator={false}>
-
-        {/* Header */}
-        <View className="px-5 pt-6 pb-5">
-          <Text style={[typeScale.display, { color: colors.ink }]}>
-            {t('Examens', 'Egzamen yo')}
-          </Text>
-          <Text style={[typeScale.body, { color: colors.muted, marginTop: 4 }]}>
-            {t('Entraîne-toi avec des sujets officiels réels.', 'Pratike ak vrè sijè ofisyèl.')}
-          </Text>
-        </View>
-
-        {/* Continuer — an exam started but never submitted. Sits ABOVE the
-            "Ma préparation" hero: it's the one thing on this page the student
-            already committed to, and burying it under a full-bleed gradient is
-            how it got lost in the first place. Coral (not azure) so it reads as
-            "unfinished" instead of competing with the hero. Renders nothing at
-            all when there's no draft. */}
-        {resume && (
-          <View className="px-5 pb-4">
-            <View style={[cardSurface, { overflow: 'hidden' }]}>
-              <PressableScale
-                onPress={() => continueExam(resume)}
-                pressedScale={0.98}
-                accessibilityRole="button"
-                accessibilityLabel={t(
-                  `Continuer l'examen en cours : ${resume.title}`,
-                  `Kontinye egzamen an kou a: ${resume.title}`,
-                )}
-                accessibilityHint={t('Reprend là où tu t\'es arrêté.', 'Repran kote ou te rete.')}
-                style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12, minHeight: 72 }}
-              >
-                <View
-                  style={{
-                    width: 44, height: 44, borderRadius: radius.tile,
-                    backgroundColor: colors.coralSoft,
-                    alignItems: 'center', justifyContent: 'center',
-                  }}
-                >
-                  <PlayCircle color={colors.coral} size={22} />
-                </View>
-                <View style={{ flex: 1, paddingRight: 28 }}>
-                  <Text style={[typeScale.overline, { color: colors.coral }]}>
-                    {t('Examen en cours', 'Egzamen an kou')}
-                  </Text>
-                  <Text style={[typeScale.title, { color: colors.ink, marginTop: 3 }]} numberOfLines={1}>
-                    {resume.title}
-                  </Text>
-                  {!!resumeMeta && (
-                    <Text style={[typeScale.caption, { color: colors.muted, marginTop: 1 }]} numberOfLines={1}>
-                      {resumeMeta}
-                    </Text>
-                  )}
-                  <View
-                    style={{
-                      marginTop: 10, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 3,
-                      backgroundColor: colors.azureSoft, borderRadius: radius.pill,
-                      paddingHorizontal: 14, paddingVertical: 7,
-                    }}
-                  >
-                    <Text style={[typeScale.label, { color: colors.azure }]}>
-                      {t('Continuer', 'Kontinye')}
-                    </Text>
-                    <ChevronRight color={colors.azure} size={14} />
-                  </View>
-                </View>
-              </PressableScale>
-
-              {/* Dismiss — rendered after the card body so it wins the touch in
-                  its own corner. 44×44 target, clear of the Continuer pill. */}
-              <PressableScale
-                onPress={() => dismissResume(resume)}
-                pressedScale={0.9}
-                accessibilityRole="button"
-                accessibilityLabel={t('Ignorer cet examen en cours', 'Inyore egzamen an kou a')}
-                style={{
-                  position: 'absolute', top: 0, right: 0, width: 44, height: 44,
-                  alignItems: 'center', justifyContent: 'center',
-                }}
-              >
-                <X color={colors.faint} size={16} />
-              </PressableScale>
-            </View>
-          </View>
-        )}
-
-        {/* My level — the hero, when we know who the student is */}
-        {myLevel && (
-          <View className="px-5">
-            <PressableScale
-              onPress={() => { tapLight(); navigation.navigate('ExamBrowser', { level: myLevel.id }); }}
-              pressedScale={0.98}
-              accessibilityRole="button"
-              accessibilityLabel={t(myLevel.label, myLevel.labelHt)}
-            >
-              {/* Estil Klè: the "my level" hero is a white hairline card — the
-                  one filled element is the azure CTA pill. */}
-              <View
-                style={{
-                  borderRadius: radius.card, padding: 18,
-                  backgroundColor: colors.surface,
-                  borderWidth: 1, borderColor: colors.border,
-                }}
-              >
-                <Text style={[typeScale.overline, { color: colors.azure }]}>
-                  {t('Ma préparation', 'Preparasyon mwen')}
-                </Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10 }}>
-                  <View
-                    style={{
-                      width: 52, height: 52, borderRadius: 14,
-                      backgroundColor: colors.azureSoft,
-                      alignItems: 'center', justifyContent: 'center',
-                    }}
-                  >
-                    <myLevel.Icon color={colors.azure} size={26} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[typeScale.h2, { color: colors.ink }]}>{t(myLevel.label, myLevel.labelHt)}</Text>
-                    <Text style={[typeScale.caption, { color: colors.muted, marginTop: 2 }]} numberOfLines={2}>
-                      {t(myLevel.description, myLevel.descriptionHt)}
-                    </Text>
-                  </View>
-                </View>
-
-                {myLevel.id === 'terminale' && trackChips(true)}
-
-                <View
-                  style={{
-                    marginTop: 16, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4,
-                    backgroundColor: colors.azureFill, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 9,
-                  }}
-                >
-                  <Text style={[typeScale.titleSm, { color: '#ffffff' }]}>
-                    {t('Explorer mes sujets', 'Gade sijè mwen yo')}
-                  </Text>
-                  <ChevronRight color="#ffffff" size={16} />
-                </View>
-              </View>
-            </PressableScale>
-          </View>
-        )}
-
-        {/* Subject quick-links — scoped to the student's level */}
-        <View className="px-5 mt-6">
-          <Text style={[typeScale.title, { color: colors.ink, marginBottom: 12 }]}>
-            {t('Par matière', 'Pa matyè')}
-          </Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {subjects.map((subj) => (
-              <PressableScale
-                key={subj.code}
-                onPress={() => navigation.navigate('ExamBrowser', { level: subjectLevelId, subject: subj.code })}
-                accessibilityRole="button"
-                accessibilityLabel={subj.code}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 6,
-                  paddingHorizontal: 12,
-                  paddingVertical: 8,
-                  backgroundColor: colors.surface,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  borderRadius: 99,
-                  ...shadow.sm,
-                }}
-              >
-                <View style={{ width: 22, height: 22, borderRadius: 6, backgroundColor: colors.azureSoft, alignItems: 'center', justifyContent: 'center' }}>
-                  <subj.Icon color={colors.azure} size={13} />
-                </View>
-                <Text style={[typeScale.label, { color: colors.muted }]}>{subj.code}</Text>
-              </PressableScale>
-            ))}
-          </View>
-        </View>
-
-        {/* Other levels — compact secondary rows (the full stack when no grade) */}
-        <View className="px-5 mt-6 gap-3">
-          {myLevel && (
-            <Text style={[typeScale.overline, { color: colors.faint }]}>
-              {t('Autres niveaux', 'Lòt nivo yo')}
-            </Text>
-          )}
-          {otherLevels.map((level) => (
-            <View
-              key={level.id}
-              style={[cardSurface, { overflow: 'hidden' }]}
-            >
-              <PressableScale
-                onPress={() => navigation.navigate('ExamBrowser', { level: level.id })}
-                pressedScale={0.98}
-                accessibilityRole="button"
-                accessibilityLabel={t(level.label, level.labelHt)}
-                style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 }}
-              >
-                {/* A bare glyph, not a tinted tile. Three identical pale-blue
-                    squares stacked down the page was the "2014" look Ted keeps
-                    rejecting ("i don't like these icons as well… something we
-                    can borrow from coursera"); Coursera's list rows let the
-                    title carry the row and keep the mark quiet. */}
-                <level.Icon color={colors.muted} size={20} strokeWidth={1.75} />
-                <View style={{ flex: 1 }}>
-                  <Text style={[typeScale.title, { color: colors.ink }]}>{t(level.label, level.labelHt)}</Text>
-                  <Text style={[typeScale.caption, { color: colors.muted, marginTop: 1 }]} numberOfLines={1}>
-                    {t(level.sublabel, level.sublabelHt)}
-                  </Text>
-                </View>
-                <ChevronRight color={colors.faint} size={20} />
-              </PressableScale>
-
-              {/* Track (filière) chips — only when Terminale renders as a plain card (no grade chosen) */}
-              {!myLevel && level.id === 'terminale' && trackChips(false)}
-            </View>
-          ))}
-
-          {/* Mes résultats — quiet entry to the full submitted-exams history. */}
-          <View style={[cardSurface, { overflow: 'hidden', marginTop: 4 }]}>
+      <ScrollView ref={scrollRef} className="flex-1" contentContainerStyle={[{ paddingBottom: 110 }, centerColumn]} showsVerticalScrollIndicator={false}>
+        <PageTitle
+          title={t('Examens', 'Egzamen yo')}
+          subtitle={t('Les vrais sujets d’examen, en conditions réelles.', 'Vrè sijè egzamen yo, nan kondisyon reyèl.')}
+          right={(
             <PressableScale
               onPress={() => { tapLight(); navigation.navigate('ExamHistory'); }}
-              pressedScale={0.98}
-              accessibilityRole="button"
+              haptic={false}
+              pressedScale={0.96}
+              accessibilityRole="link"
               accessibilityLabel={t('Mes résultats', 'Rezilta mwen yo')}
-              style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44 }}
             >
-              <History color={colors.muted} size={20} strokeWidth={1.75} />
-              <View style={{ flex: 1 }}>
-                <Text style={[typeScale.title, { color: colors.ink }]}>{t('Mes résultats', 'Rezilta mwen yo')}</Text>
-                <Text style={[typeScale.caption, { color: colors.muted, marginTop: 1 }]} numberOfLines={1}>
-                  {t('Tous vos examens terminés', 'Tout egzamen ou fini yo')}
-                </Text>
-              </View>
-              <ChevronRight color={colors.faint} size={20} />
+              <History color={colors.azureInk} size={18} strokeWidth={2.2} />
+              <Text style={{ fontFamily: fonts.bold, fontSize: 16, lineHeight: 21, color: colors.azureInk }}>
+                {t('Mes résultats', 'Rezilta mwen yo')}
+              </Text>
             </PressableScale>
+          )}
+        />
+
+        <View style={{ paddingHorizontal: 20 }}>
+          {/* Examen en cours — the one thing the student already committed to.
+              The page's only solid button. Renders nothing without a draft. */}
+          {resume && (
+            <View style={{ ...cardSurface, borderRadius: 24, padding: 20, marginTop: 20, gap: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingRight: 32 }}>
+                <View style={{ backgroundColor: colors.azureSoft, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4 }}>
+                  <Text style={{ fontFamily: fonts.bold, fontSize: 14, lineHeight: 19, color: colors.azureInk }}>
+                    {t('En cours', 'An kou')}
+                  </Text>
+                </View>
+                {resume.context ? (
+                  <Text numberOfLines={1} style={[typeScale.meta, { color: colors.muted, flex: 1 }]}>{resume.context}</Text>
+                ) : null}
+              </View>
+              <View style={{ gap: 2 }}>
+                <Text numberOfLines={2} style={[typeScale.cardTitle, { fontSize: 20, lineHeight: 25, color: colors.ink }]}>{resume.title}</Text>
+                {resumeMeta ? <Text style={[typeScale.meta, { color: colors.muted }]}>{resumeMeta}</Text> : null}
+              </View>
+              {resumePct != null ? (
+                <View style={{ gap: 6 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={[typeScale.meta, { color: colors.muted }]}>{t('Progression', 'Pwogresyon')}</Text>
+                    <Text style={{ fontFamily: fonts.headingBold, fontSize: 15, lineHeight: 20, color: colors.ink, fontVariant: ['tabular-nums'] }}>
+                      {`${resumePct} %`}
+                    </Text>
+                  </View>
+                  <View style={{ height: 6, borderRadius: 999, backgroundColor: colors.surfaceAlt, overflow: 'hidden' }}>
+                    <View style={{ width: `${resumePct}%`, height: 6, borderRadius: 999, backgroundColor: colors.azureFill }} />
+                  </View>
+                </View>
+              ) : null}
+              <Button
+                label={t('Continuer', 'Kontinye')}
+                accessibilityLabel={t(`Continuer l'examen en cours : ${resume.title}`, `Kontinye egzamen an kou a: ${resume.title}`)}
+                onPress={() => continueExam(resume)}
+                size="lg"
+                fullWidth
+                trailingIcon={<ArrowRight color="#ffffff" size={18} strokeWidth={2.4} />}
+                style={{ marginTop: 4 }}
+              />
+              {/* Dismiss — its own 44×44 corner. */}
+              <TouchableOpacity
+                onPress={() => dismissResume(resume)}
+                accessibilityRole="button"
+                accessibilityLabel={t('Ignorer cet examen en cours', 'Inyore egzamen an kou a')}
+                style={{ position: 'absolute', top: 8, right: 8, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+              >
+                <X color={colors.muted} size={18} />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Level switch — the student's own level preselected. */}
+          <Segmented<LevelId>
+            options={LEVELS.map((l) => ({ key: l.id, label: t(l.label, l.labelHt), accessibilityLabel: t(l.long, l.longHt) }))}
+            value={level}
+            onChange={(k) => { levelTouched.current = true; setLevel(k); }}
+            style={{ marginTop: 20 }}
+          />
+
+          {/* Filière (Bac only) — the web's subject-chip style. */}
+          {level === 'terminale' ? (
+            <View style={{ marginTop: 16, gap: 8 }}>
+              <Text style={[typeScale.meta, { color: colors.muted }]}>{t('Ma filière', 'Seri mwen')}</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                {TRACKS.map((tr) => {
+                  const on = track === tr.code;
+                  return (
+                    <TouchableOpacity
+                      key={tr.code}
+                      onPress={() => pickTrack(tr.code)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: on }}
+                      accessibilityLabel={tr.shortLabel}
+                      style={{
+                        minHeight: 40, paddingHorizontal: 16, borderRadius: 999, justifyContent: 'center',
+                        backgroundColor: on ? colors.ink : colors.surfaceAlt,
+                      }}
+                    >
+                      <Text style={{ fontFamily: fonts.bold, fontSize: 15, lineHeight: 20, color: on ? colors.bg : colors.ink }}>{tr.shortLabel}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          ) : null}
+
+          {/* Choisis une matière — numbers lead every tile, no icons. */}
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginTop: 32, marginBottom: 14 }}>
+            <Text accessibilityRole="header" style={[typeScale.section, { color: colors.ink, flexShrink: 1 }]}>
+              {t('Choisis une matière', 'Chwazi yon matyè')}
+            </Text>
+            {total > 0 ? (
+              <Text style={[typeScale.meta, { color: colors.muted }]}>
+                {t(`${total} sujet${total > 1 ? 's' : ''}`, `${total} sijè`)}
+              </Text>
+            ) : null}
           </View>
+
+          {catalog == null ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <View key={i} style={{ ...cardSurface, flexBasis: tileBasis, flexGrow: 1, minHeight: 156, padding: 16, gap: 10 }}>
+                  <Skeleton width={56} height={30} radius={8} />
+                  <Skeleton width="70%" height={18} />
+                  <Skeleton width="50%" height={14} />
+                </View>
+              ))}
+            </View>
+          ) : subjects.length === 0 ? (
+            <Text style={[typeScale.body, { color: colors.muted }]}>
+              {t('Aucun sujet disponible pour ce niveau pour le moment.', 'Pa gen sijè pou nivo sa a pou kounye a.')}
+            </Text>
+          ) : (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+              {subjects.map((s) => {
+                const name = subjectDisplayName(s.subject);
+                const years = s.minYear && s.maxYear
+                  ? (s.minYear === s.maxYear ? String(s.maxYear) : `${s.minYear} – ${s.maxYear}`)
+                  : '';
+                return (
+                  <PressableScale
+                    key={s.subject}
+                    onPress={() => openSubject(s.subject)}
+                    pressedScale={0.97}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${name}, ${t(`${s.count} sujets`, `${s.count} sijè`)}${years ? `, ${years}` : ''}`}
+                    style={{ ...cardSurface, flexBasis: tileBasis, flexGrow: 1, minHeight: 156, padding: 16, justifyContent: 'space-between' }}
+                  >
+                    <View style={{ gap: 6 }}>
+                      <StatNumeral value={s.count} unit={t(s.count > 1 ? 'sujets' : 'sujet', 'sijè')} size={30} />
+                      <Text numberOfLines={2} style={[typeScale.cardTitle, { fontSize: 18, lineHeight: 23, color: colors.ink }]}>{name}</Text>
+                      {years ? <Text style={[typeScale.meta, { color: colors.muted }]}>{years}</Text> : null}
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 12 }}>
+                      <Text style={{ fontFamily: fonts.bold, fontSize: 16, lineHeight: 21, color: colors.azureInk }}>{t('Commencer', 'Kòmanse')}</Text>
+                      <ChevronRight color={colors.azureInk} size={16} strokeWidth={2.4} />
+                    </View>
+                  </PressableScale>
+                );
+              })}
+            </View>
+          )}
+
+          {/* Sujets récents — the newest paper per subject. */}
+          {recent.length > 0 ? (
+            <>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginTop: 32, marginBottom: 14 }}>
+                <Text accessibilityRole="header" style={[typeScale.section, { color: colors.ink, flexShrink: 1 }]}>
+                  {t('Sujets récents', 'Sijè resan yo')}
+                </Text>
+                <TouchableOpacity onPress={openAll} accessibilityRole="link" hitSlop={10} style={{ flexDirection: 'row', alignItems: 'center', gap: 2, minHeight: 32 }}>
+                  <Text style={[typeScale.bodyMd, { color: colors.azureInk }]}>{t('Tout voir', 'Wè tout')}</Text>
+                  <ChevronRight color={colors.azureInk} size={16} strokeWidth={2.4} />
+                </TouchableOpacity>
+              </View>
+              <View style={{ gap: 12 }}>
+                {recent.map((p) => {
+                  const name = subjectDisplayName(p.subject);
+                  const meta = [
+                    p.session && p.session !== String(p.year) ? p.session : '',
+                    p.minutes ? durationLabel(p.minutes, t) : '',
+                    p.questions ? t(`${p.questions} questions`, `${p.questions} kesyon`) : '',
+                  ].filter(Boolean).join(' · ');
+                  return (
+                    <PressableScale
+                      key={p.examId}
+                      onPress={() => { tapLight(); navigation.navigate('ExamOverview', { level, examId: p.examId }); }}
+                      pressedScale={0.98}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${name} ${p.year}${meta ? `, ${meta}` : ''}`}
+                      style={{ ...cardSurface, flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, minHeight: 84 }}
+                    >
+                      <View style={{ width: 56, height: 56, borderRadius: 14, backgroundColor: colors.azureSoft, alignItems: 'center', justifyContent: 'center' }}>
+                        <Text style={{ fontFamily: fonts.heading, fontSize: 16, lineHeight: 20, color: colors.azureInk, fontVariant: ['tabular-nums'] }}>{p.year}</Text>
+                      </View>
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <Text numberOfLines={1} style={{ fontFamily: fonts.headingBold, fontSize: 17, lineHeight: 22, color: colors.ink }}>
+                          {level === 'terminale' ? `${t('Bac', 'Bak')} ${name} ${p.year}` : `${name} ${p.year}`}
+                        </Text>
+                        {meta ? <Text numberOfLines={1} style={[typeScale.meta, { color: colors.muted }]}>{meta}</Text> : null}
+                      </View>
+                      <ChevronRight color={colors.faint} size={20} />
+                    </PressableScale>
+                  );
+                })}
+              </View>
+            </>
+          ) : null}
         </View>
       </ScrollView>
     </SafeAreaView>

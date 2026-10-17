@@ -19,7 +19,8 @@ const IG_USERNAME = 'edlightacademy';
 const IG_APP = `instagram://user?username=${IG_USERNAME}`;
 const IG_WEB = `https://instagram.com/${IG_USERNAME}`;
 // Instagram's signature magenta — reads on both light and dark grounds, used
-// only for the glyph + a soft tint tile so the row stays secondary, not loud.
+// only for the glyph so the row stays secondary, not loud. The tile behind it
+// is the OPAQUE grey surface (a translucent magenta wash was a tint-on-tint).
 const IG_MAGENTA = '#E1306C';
 // Deeper brand purple for FILLED buttons: white on IG_MAGENTA is only 4.34:1,
 // under the 4.5:1 AA floor for label-size text; this is 5.11:1.
@@ -42,21 +43,23 @@ export async function openInstagram() {
  * an ignored banner that reappears forever reads as spam, not community.
  */
 export function FollowInstagramPrompt() {
-  const { colors, cardSurface } = useTheme();
+  const { colors, cardSurface, isDark } = useTheme();
   const { language, igPromptSeen, setIgPromptSeen } = useStore();
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
   if (igPromptSeen) return null;
 
   return (
-    <View style={{ ...cardSurface, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-      <View style={{ width: 42, height: 42, borderRadius: radius.tile, alignItems: 'center', justifyContent: 'center', backgroundColor: IG_MAGENTA + '1A' }}>
-        <Instagram color={IG_MAGENTA} size={20} />
-      </View>
+    // Home's one solid colour is the next-step button, so this nudge is
+    // tonal (opaque grey + brand text) and leads with no icon tile.
+    <View style={{ ...cardSurface, padding: 20, flexDirection: 'row', alignItems: 'flex-start', gap: 14 }}>
       <View style={{ flex: 1 }}>
-        <Text style={[typeScale.titleSm, { color: colors.ink }]}>
-          {t('Tu progresses bien', 'W ap pwogrese byen')}
-        </Text>
-        <Text style={[typeScale.caption, { color: colors.muted, marginTop: 1 }]} numberOfLines={2}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Instagram color={IG_MAGENTA} size={18} />
+          <Text style={[typeScale.titleSm, { color: colors.ink }]}>
+            {t('Tu progresses bien', 'W ap pwogrese byen')}
+          </Text>
+        </View>
+        <Text style={[typeScale.meta, { color: colors.muted, marginTop: 4 }]} numberOfLines={3}>
           {t('Rejoins la communauté EdLight sur Instagram : astuces et annonces.',
              'Antre nan kominote EdLight sou Instagram : konsèy ak anons.')}
         </Text>
@@ -65,18 +68,18 @@ export function FollowInstagramPrompt() {
           accessibilityRole="button"
           accessibilityLabel={t('Suivre @edlightacademy', 'Swiv @edlightacademy')}
           style={{
-            alignSelf: 'flex-start', marginTop: 8, borderRadius: 999,
-            backgroundColor: IG_FILL, paddingHorizontal: 14, paddingVertical: 7,
+            alignSelf: 'flex-start', marginTop: 10, borderRadius: radius.control,
+            backgroundColor: colors.surfaceAlt, paddingHorizontal: 16, minHeight: 44, justifyContent: 'center',
           }}
         >
-          <Text style={[typeScale.label, { color: '#ffffff' }]}>
+          <Text style={[typeScale.action, { color: isDark ? IG_MAGENTA : IG_FILL }]}>
             {t('Suivre @edlightacademy', 'Swiv @edlightacademy')}
           </Text>
         </PressableScale>
       </View>
       <TouchableOpacity
         onPress={() => { tapLight(); setIgPromptSeen(true); }}
-        hitSlop={10}
+        hitSlop={14}
         accessibilityRole="button"
         accessibilityLabel={t('Fermer', 'Fèmen')}
         style={{ alignSelf: 'flex-start' }}
@@ -96,14 +99,14 @@ export default function FollowInstagram() {
     <PressableScale
       onPress={openInstagram}
       accessibilityRole="button"
-      accessibilityLabel={t('Suivez-nous sur Instagram, @edlightacademy', 'Swiv nou sou Instagram, @edlightacademy')}
-      style={{ ...cardSurface, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+      accessibilityLabel={t('Suis-nous sur Instagram, @edlightacademy', 'Swiv nou sou Instagram, @edlightacademy')}
+      style={{ ...cardSurface, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 }}
     >
-      <View style={{ width: 42, height: 42, borderRadius: radius.tile, alignItems: 'center', justifyContent: 'center', backgroundColor: IG_MAGENTA + '1A' }}>
+      <View style={{ width: 42, height: 42, borderRadius: radius.tile, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceAlt }}>
         <Instagram color={IG_MAGENTA} size={20} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={[typeScale.titleSm, { color: colors.ink }]}>{t('Suivez-nous sur Instagram', 'Swiv nou sou Instagram')}</Text>
+        <Text style={[typeScale.titleSm, { color: colors.ink }]}>{t('Suis-nous sur Instagram', 'Swiv nou sou Instagram')}</Text>
         <Text style={[typeScale.caption, { color: colors.muted, marginTop: 1 }]} numberOfLines={1}>@edlightacademy</Text>
       </View>
       <ChevronRight color={colors.faint} size={18} />

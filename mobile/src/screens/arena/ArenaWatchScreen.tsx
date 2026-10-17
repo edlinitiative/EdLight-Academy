@@ -2,18 +2,20 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ChevronLeft, Eye } from 'lucide-react-native';
+import { ChevronLeft, Eye, X, Check, Smile } from 'lucide-react-native';
 import useStore from '../../contexts/store';
-import MathText from '../../components/MathText';
+import MathText, { HAS_MATH } from '../../components/MathText';
 import PressableScale from '../../components/ui/PressableScale';
-import { ArenaScreen, ArenaPanel, ArenaButton, ArenaStateView, StatusPill, StaleBanner, type StatusLabel } from '../../components/arena/ArenaKit';
+import { ArenaScreen, ArenaPanel, ArenaButton, ArenaStateView, StaleBanner, statusLabelText, type StatusLabel } from '../../components/arena/ArenaKit';
+import Avatar from '../../components/arena/art/avatars/Avatar';
+import { NightLink } from '../../components/games/night';
 import SchoolCrest from '../../components/arena/art/crest/SchoolCrest';
 import { phaseLine } from '../../components/arena/arenaPhaseCopy';
 import arenaHaptics from '../../components/arena/arenaHaptics';
 import { useArenaWatch } from '../../hooks/useArena';
 import { boardRows, recordPlayAlong, tallyPlayAlong, type PlayAlongAnswers } from '../../utils/arenaWatch';
-import { arenaColors as C, arenaType, arenaRadius } from '../../theme/arenaTheme';
-import { useColors } from '../../theme/theme';
+import { arenaColors as C, arenaType } from '../../theme/arenaTheme';
+import { useColors, fonts } from '../../theme/theme';
 
 const LETTERS = ['A', 'B', 'C', 'D'];
 const FOLLOW_KEY = 'arena.watch.follow';
@@ -144,51 +146,107 @@ export default function ArenaWatchScreen() {
   const prompt = question ? (isCreole && question.promptHt ? question.promptHt : question.prompt) : '';
   const myPick = question ? answers[question.index] : undefined;
 
+  const liveTone = livePill === 'live' ? C.coral : livePill === 'final' ? C.gold : livePill === 'reconnecting' ? C.warn : C.signal;
+  const showMath = HAS_MATH.test(prompt);
+
   return (
     <ArenaScreen occasion={state === 'final' ? 'championship' : 'match'}>
-      {header}
-
-      {/* ── Persistent header: event, phase, followed school's score ── */}
-      <View
-        accessible
-        accessibilityLiveRegion="polite"
-        style={{
-          marginHorizontal: 16, padding: 14, gap: 8, borderRadius: arenaRadius.card,
-          backgroundColor: C.surface,
-        }}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <StatusPill kind={livePill} t={t} />
-          <Text numberOfLines={1} style={[arenaType.name, { color: C.ink, flex: 1 }]}>
-            {tournament?.title || t('Championnat EdLight', 'Chanpyona EdLight')}
-          </Text>
-        </View>
-        <Text style={[arenaType.status, { color: C.inkSoft }]}>
-          {phaseLine({
-            phase, state, questionNumber: qNum, questionCount: tournament?.questionCount ?? 0,
-            secondsLeft, revealed: revealIdx != null, t,
-          })}
-        </Text>
-        {followed ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <SchoolCrest name={followed.label || followed.shortName} size={28} />
-            <Text numberOfLines={1} style={[arenaType.name, { color: C.ink, flex: 1 }]}>{followed.shortName || followed.label}</Text>
-            <Text style={[arenaType.num, { color: C.ink }]}>
-              {followed.rank > 0 ? `${followed.rank}${followed.rank === 1 ? t('er', 'yèm') : t('e', 'yèm')}` : t('non classée', 'pa klase')}
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, gap: 16, paddingBottom: 48 }} showsVerticalScrollIndicator={false}>
+        {/* ── Event header: state, title, where we are, close ── */}
+        <View accessible accessibilityLiveRegion="polite" style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+          <View style={{ flex: 1, gap: 4 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: liveTone }} />
+              <Text style={[arenaType.name, { fontSize: 15, color: liveTone }]}>{statusLabelText(livePill, t)}</Text>
+            </View>
+            <Text accessibilityRole="header" numberOfLines={2} style={{ fontFamily: fonts.heading, fontSize: 26, lineHeight: 31, letterSpacing: -0.6, color: C.ink }}>
+              {tournament?.title || t('Championnat EdLight', 'Chanpyona EdLight')}
             </Text>
-            <Text style={[arenaType.num, { color: C.muted }]}>{Math.round(followed.teamAvg)}</Text>
+            <Text style={[arenaType.body, { color: C.muted }]}>
+              {phaseLine({
+                phase, state, questionNumber: qNum, questionCount: tournament?.questionCount ?? 0,
+                secondsLeft, revealed: revealIdx != null, t,
+              })}
+            </Text>
           </View>
-        ) : (
-          <Text style={[arenaType.status, { color: C.muted }]}>
-            {t('Suis une école dans le classement ci-dessous.', 'Swiv yon lekòl nan klasman ki anba a.')}
-          </Text>
-        )}
-      </View>
+          <PressableScale
+            onPress={back}
+            accessibilityRole="button"
+            accessibilityLabel={t('Quitter le direct', 'Kite dirèk la')}
+            pressedScale={0.92}
+            style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surface }}
+          >
+            <X color={C.ink} size={20} />
+          </PressableScale>
+        </View>
 
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 48 }} showsVerticalScrollIndicator={false}>
         {stale ? <StaleBanner t={t} onRetry={w.retry} /> : null}
 
-        {/* ── The question, and the answer-along ─────────────────────── */}
+        {/* ── The followed school, and the board around it ── */}
+        <View style={{ padding: 20, gap: 16, borderRadius: 24, backgroundColor: C.surfaceRaised }}>
+          {followed ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              <SchoolCrest name={followed.label || followed.shortName} size={56} />
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text numberOfLines={2} style={{ fontFamily: fonts.heading, fontSize: 20, lineHeight: 25, color: C.ink }}>{followed.label || followed.shortName}</Text>
+                <Text style={[arenaType.status, { color: C.muted }]}>{t('Tu suis cette école', 'W ap swiv lekòl sa a')}</Text>
+              </View>
+              <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, backgroundColor: C.surface }}>
+                  <Text style={[arenaType.status, { fontFamily: fonts.bold, color: C.ink }]}>
+                    {followed.rank > 0 ? `${followed.rank}${followed.rank === 1 ? t('er', 'yèm') : t('e', 'yèm')}` : t('non classée', 'pa klase')}
+                  </Text>
+                </View>
+                <Text style={{ fontFamily: fonts.heading, fontSize: 28, lineHeight: 32, color: C.ink, fontVariant: ['tabular-nums'] }}>
+                  {Math.round(followed.teamAvg)}<Text style={[arenaType.status, { color: C.muted }]}> {t('moy.', 'mwa.')}</Text>
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <Text style={[arenaType.body, { color: C.inkSoft }]}>
+              {t('Touche une école ci-dessous pour la suivre.', 'Touche yon lekòl anba a pou w swiv li.')}
+            </Text>
+          )}
+
+          <View style={{ padding: 8, gap: 4, borderRadius: 18, backgroundColor: C.surface }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingTop: 6, paddingBottom: 4 }}>
+              <Text style={[arenaType.name, { fontSize: 15, color: C.ink, flex: 1 }]}>{t('Classement des écoles', 'Klasman lekòl yo')}</Text>
+              {state === 'live' ? <Text style={[arenaType.status, { color: C.muted }]}>{t('après chaque question', 'apre chak kesyon')}</Text> : null}
+            </View>
+            {rows.length === 0 ? (
+              <Text style={[arenaType.status, { color: C.muted, padding: 10 }]}>
+                {t('Aucune école classée pour l’instant.', 'Poko gen lekòl ki klase.')}
+              </Text>
+            ) : rows.map(({ school, followed: isFollowed, pinned }) => (
+              <PressableScale
+                key={school.key}
+                onPress={() => toggleFollow(school.key)}
+                pressedScale={0.98}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isFollowed }}
+                accessibilityLabel={[
+                  school.rank > 0 ? `${school.rank}` : t('non classée', 'pa klase'),
+                  school.label || school.shortName,
+                  `${t('moyenne', 'mwayèn')} ${Math.round(school.teamAvg)}`,
+                  isFollowed ? t('suivie, toucher pour ne plus suivre', 'w ap swiv li, touche pou w sispann') : t('toucher pour suivre', 'touche pou swiv'),
+                ].filter(Boolean).join(', ')}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48,
+                  paddingHorizontal: 10, borderRadius: 14,
+                  backgroundColor: isFollowed ? C.surfaceRaised : 'transparent',
+                  marginTop: pinned ? 6 : 0,
+                }}
+              >
+                <Text style={[arenaType.num, { color: isFollowed ? C.coral : C.muted, width: 22 }]}>{school.rank > 0 ? school.rank : '–'}</Text>
+                <SchoolCrest name={school.label || school.shortName} size={24} />
+                <Text numberOfLines={1} style={[arenaType.name, { fontSize: 15, color: C.ink, flex: 1 }]}>{school.shortName || school.label}</Text>
+                <Text style={[arenaType.num, { color: C.ink }]}>{Math.round(school.teamAvg)}</Text>
+              </PressableScale>
+            ))}
+          </View>
+        </View>
+
+        {/* ── The question, and the answer-along (local only) ── */}
         {!w.signedIn && (phase === 'question' || phase === 'interval' || phase === 'questionLoading') ? (
           <ArenaPanel>
             <Text style={[arenaType.status, { color: C.inkSoft }]}>
@@ -196,110 +254,87 @@ export default function ArenaWatchScreen() {
             </Text>
           </ArenaPanel>
         ) : question && (phase === 'question' || phase === 'interval') ? (
-          <ArenaPanel>
-            <StatusPill kind="local" t={t} />
-            {/* The question sits on the calm reading surface (theme tokens),
-                so math and long text stay as legible as in a lesson. */}
-            <View style={{ padding: 14, borderRadius: arenaRadius.tile, backgroundColor: calm.surface }}>
-              <MathText text={prompt} style={{ fontSize: 16, lineHeight: 23 }} />
+          <View style={{ padding: 20, gap: 14, borderRadius: 24, backgroundColor: C.surface }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={[arenaType.status, { color: C.muted, flex: 1 }]}>{t('Question en cours', 'Kesyon k ap jwe a')}</Text>
+              {secondsLeft != null ? (
+                <Text accessibilityRole="timer" style={[arenaType.status, { color: secondsLeft <= 5 ? C.danger : C.muted }]}>
+                  {t(`Temps restant : ${secondsLeft} s`, `Tan ki rete : ${secondsLeft} s`)}
+                </Text>
+              ) : null}
             </View>
-            <View style={{ gap: 8 }}>
+            {showMath ? (
+              // KaTeX reads on the calm reading surface, like in a lesson.
+              <View style={{ padding: 14, borderRadius: 14, backgroundColor: calm.surface }}>
+                <MathText text={prompt} style={{ fontSize: 16, lineHeight: 23 }} />
+              </View>
+            ) : (
+              <Text style={{ fontFamily: fonts.headingBold, fontSize: 20, lineHeight: 27, color: C.ink }}>{prompt}</Text>
+            )}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
               {options.map((opt, i) => {
                 const mine = myPick === i;
                 const right = revealIdx === i;
                 const wrongPick = revealIdx != null && mine && !right;
+                // Before the reveal your pick is the coral chip; after it the
+                // truth takes over (success / danger washes).
+                const bg = right ? C.successSoft : wrongPick ? C.dangerSoft : mine ? C.coral : C.surfaceRaised;
+                const ink = mine && revealIdx == null ? C.onCoral : right ? C.success : wrongPick ? C.danger : C.ink;
                 return (
                   <PressableScale
                     key={i}
                     onPress={() => pick(i)}
                     disabled={!open || myPick != null}
-                    pressedScale={0.98}
+                    pressedScale={0.97}
                     accessibilityRole="button"
                     accessibilityState={{ selected: mine, disabled: !open || myPick != null }}
                     accessibilityLabel={`${LETTERS[i] ?? i + 1}. ${opt}${right ? t(', bonne réponse', ', bon repons') : ''}${mine ? t(', ton choix', ', chwa ou') : ''}`}
                     style={{
-                      flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 50, paddingHorizontal: 12,
-                      borderRadius: arenaRadius.tile, borderWidth: 1.5,
-                      borderColor: right ? C.success : wrongPick ? C.danger : mine ? C.coral : C.border,
-                      backgroundColor: right ? C.successSoft : wrongPick ? C.dangerSoft : C.surfaceAlt,
+                      flexBasis: '47%', flexGrow: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
+                      minHeight: 56, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 14, backgroundColor: bg,
                     }}
                   >
-                    <Text style={[arenaType.num, { color: C.muted, width: 20 }]}>{LETTERS[i] ?? i + 1}</Text>
-                    <Text style={[arenaType.body, { color: C.ink, flex: 1, paddingVertical: 10 }]}>{opt}</Text>
-                    {right ? <Text style={[arenaType.status, { color: C.success }]}>{t('Bonne réponse', 'Bon repons')}</Text> : null}
-                    {mine && !right ? <Text style={[arenaType.status, { color: wrongPick ? C.danger : C.coral }]}>{t('Ton choix', 'Chwa ou')}</Text> : null}
+                    <Text style={[arenaType.body, { fontFamily: fonts.bold, color: ink, flex: 1 }]}>{opt}</Text>
+                    {right ? <Check color={C.success} size={18} /> : mine ? <Check color={revealIdx == null ? C.onCoral : C.danger} size={18} /> : null}
                   </PressableScale>
                 );
               })}
             </View>
-            <Text style={[arenaType.status, { color: C.muted }]}>
-              {tally.answered > 0
-                ? t(
-                  `Toi en tribune : ${tally.correct} sur ${tally.answered}. Ça ne compte pour aucun classement.`,
-                  `Ou nan tribin nan : ${tally.correct} sou ${tally.answered}. Sa pa konte nan okenn klasman.`,
-                )
-                : t(
-                  'Réponds en même temps que les joueurs. Ton choix reste sur ton téléphone et ne compte pas.',
-                  'Reponn an menm tan ak jwè yo. Chwa ou rete sou telefòn ou e li pa konte.',
-                )}
-            </Text>
-          </ArenaPanel>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Smile color={C.muted} size={18} />
+              <Text style={[arenaType.status, { color: C.muted, flex: 1 }]}>
+                {tally.answered > 0
+                  ? t(
+                    `Pour le plaisir : ${tally.correct} sur ${tally.answered}. Ça ne compte pour aucun classement.`,
+                    `Pou plezi : ${tally.correct} sou ${tally.answered}. Sa pa konte nan okenn klasman.`,
+                  )
+                  : t(
+                    'Réponds aussi, pour le plaisir. Ton choix reste sur ton téléphone et ne compte pas.',
+                    'Reponn tou, pou plezi. Chwa ou rete sou telefòn ou e li pa konte.',
+                  )}
+              </Text>
+            </View>
+          </View>
         ) : null}
 
-        {/* ── The board ──────────────────────────────────────────────── */}
-        <ArenaPanel>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <Text style={[arenaType.name, { color: C.ink, flex: 1 }]}>{t('Classement des écoles', 'Klasman lekòl yo')}</Text>
-            {state === 'live' ? <StatusPill kind="delayed" t={t} /> : null}
-          </View>
-          {state === 'live' ? (
-            <Text style={[arenaType.status, { color: C.muted }]}>
-              {t('Mis à jour à la fin de chaque question.', 'Li mete ajou nan fen chak kesyon.')}
-            </Text>
-          ) : null}
-          {rows.length === 0 ? (
-            <Text style={[arenaType.status, { color: C.muted }]}>
-              {t('Aucune école classée pour l’instant.', 'Poko gen lekòl ki klase.')}
-            </Text>
-          ) : rows.map(({ school, followed: isFollowed, pinned }) => (
-            <View
-              key={school.key}
-              accessible
-              accessibilityLabel={[
-                school.rank > 0 ? `${school.rank}` : t('non classée', 'pa klase'),
-                school.label || school.shortName,
-                `${t('moyenne', 'mwayèn')} ${Math.round(school.teamAvg)}`,
-                isFollowed ? t('suivie', 'w ap swiv li') : null,
-              ].filter(Boolean).join(', ')}
-              style={{
-                flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48,
-                paddingHorizontal: 10, borderRadius: arenaRadius.tile,
-                backgroundColor: isFollowed ? C.signalSoft : 'transparent',
-                marginTop: pinned ? 6 : 0,
-              }}
-            >
-              <Text style={[arenaType.num, { color: C.muted, width: 26 }]}>{school.rank > 0 ? school.rank : '–'}</Text>
-              <SchoolCrest name={school.label || school.shortName} size={26} />
-              <Text numberOfLines={1} style={[arenaType.name, { color: C.ink, flex: 1 }]}>{school.shortName || school.label}</Text>
-              <Text style={[arenaType.num, { color: C.inkSoft }]}>{Math.round(school.teamAvg)}</Text>
-              <PressableScale
-                onPress={() => toggleFollow(school.key)}
-                accessibilityRole="button"
-                accessibilityLabel={isFollowed ? t('Ne plus suivre', 'Pa swiv ankò') : t('Suivre cette école', 'Swiv lekòl sa a')}
-                pressedScale={0.95}
-                hitSlop={6}
-                style={{
-                  paddingHorizontal: 10, minHeight: 34, justifyContent: 'center', borderRadius: 999,
-                  borderWidth: 1, borderColor: isFollowed ? C.signal : C.border,
-                }}
-              >
-                <Text style={[arenaType.status, { color: isFollowed ? C.signal : C.muted }]}>
-                  {isFollowed ? t('Suivie', 'Swiv') : t('Suivre', 'Swiv')}
-                </Text>
-              </PressableScale>
+        {/* ── Who is playing for the followed school (the real five) ── */}
+        {followed && followed.top5.length > 0 ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 20, backgroundColor: C.surface }}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={[arenaType.name, { fontSize: 15, color: C.ink }]}>{t('Ceux qui comptent pour l’école', 'Sa yo ki konte pou lekòl la')}</Text>
+              <Text style={[arenaType.status, { color: C.success }]}>
+                {t(`${followed.counted} sur ${followed.members} joueurs`, `${followed.counted} sou ${followed.members} jwè`)}
+              </Text>
             </View>
-          ))}
-        </ArenaPanel>
+            <View style={{ flexDirection: 'row' }}>
+              {followed.top5.slice(0, 5).map((uid, i) => (
+                <View key={uid} style={{ marginLeft: i === 0 ? 0 : -10, borderRadius: 18, backgroundColor: C.surface, padding: 2 }}>
+                  <Avatar seed={uid} size={32} />
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
 
         {phase === 'ended' && tournament ? (
           <ArenaButton
@@ -307,6 +342,8 @@ export default function ArenaWatchScreen() {
             onPress={() => navigation.navigate('ArenaResult', { tournamentId: tournament.id })}
           />
         ) : null}
+
+        <NightLink label={t('Quitter le direct', 'Kite dirèk la')} onPress={back} />
       </ScrollView>
     </ArenaScreen>
   );

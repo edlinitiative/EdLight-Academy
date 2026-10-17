@@ -7,6 +7,7 @@ import { navigateToTab } from '../navigation/AppNavigator';
 import { GAMES } from '../data/games';
 import { weeklyGameId } from '../utils/weeklyGame';
 import PressableScale from './ui/PressableScale';
+import { arenaColors as N } from '../theme/arenaTheme';
 import { useTheme, typeScale } from '../theme/theme';
 import { tapLight } from '../utils/haptics';
 
@@ -21,7 +22,7 @@ import { tapLight } from '../utils/haptics';
  * Self-hides when today's défi is already done, unless `showWeeklyWhenDone`
  * flips it to a quieter "essaie le Jeu de la semaine (×2 XP)" row.
  *
- * `variant="glass"` restyles it for dark hero surfaces (QuizResultHero);
+ * `variant="glass"` restyles it for dark hero surfaces (opaque night step);
  * `compact` trims it for tight surfaces like the lesson panel.
  */
 export default function DefiHandoffCard({
@@ -42,14 +43,15 @@ export default function DefiHandoffCard({
   const dailyDone = daily.completedToday;
   if (dailyDone && !showWeeklyWhenDone) return null;
 
-  // Colors per surface: the glass variant sits on the dark result hero, so it
-  // paints its own translucent ground and white ink.
+  // Colors per surface: the dark variant sits on a dark hero, so it paints its
+  // own OPAQUE ground (the Arène's tonal step) — no translucent fill, no ring.
+  // It follows a result that already has its primary, so its "Jouer" is tonal.
   const ground = glassLook
-    ? { backgroundColor: 'rgba(255,255,255,0.14)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)', borderRadius: 14 }
-    : { ...cardSurface, borderWidth: 1.5, borderColor: colors.azureBorder };
-  const ink = glassLook ? '#ffffff' : colors.ink;
-  const sub = glassLook ? 'rgba(255,255,255,0.75)' : colors.muted;
-  const accent = glassLook ? '#fde68a' : colors.azure;
+    ? { backgroundColor: N.surface, borderRadius: 16 }
+    : { ...cardSurface, borderWidth: 0 };
+  const ink = glassLook ? N.ink : colors.ink;
+  const sub = glassLook ? N.muted : colors.muted;
+  const accent = glassLook ? N.ink : colors.azure;
 
   if (dailyDone) {
     // Quieter follow-up: today's défi is banked — point at the ×2 weekly game.
@@ -65,7 +67,7 @@ export default function DefiHandoffCard({
         )}
         style={{ ...ground, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 14 }}
       >
-        <Check color={glassLook ? '#4ade80' : colors.success} size={16} />
+        <Check color={glassLook ? N.success : colors.success} size={16} />
         <Text style={[typeScale.caption, { color: sub, flex: 1 }]} numberOfLines={2}>
           {t('Défi du jour fait. Essaie ', 'Defi jodi a fini. Eseye ')}
           <Text style={{ color: ink, fontFamily: typeScale.label.fontFamily }}>{gameName}</Text>
@@ -100,7 +102,7 @@ export default function DefiHandoffCard({
           borderRadius: radius.tile,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: glassLook ? 'rgba(255,255,255,0.16)' : colors.azureSoft,
+          backgroundColor: glassLook ? N.surfaceRaised : colors.azureSoft,
         }}
       >
         <Zap color={accent} size={compact ? 16 : 19} />
@@ -122,13 +124,13 @@ export default function DefiHandoffCard({
           paddingLeft: 12,
           paddingRight: 8,
           paddingVertical: 7,
-          backgroundColor: glassLook ? '#ffffff' : colors.azure,
+          backgroundColor: glassLook ? N.secondary : colors.azureSoft,
         }}
       >
-        <Text style={[typeScale.label, { color: glassLook ? '#1B6FE0' : '#ffffff' }]}>
+        <Text style={[typeScale.label, { color: glassLook ? N.ink : colors.azure }]}>
           {t('Jouer', 'Jwe')}
         </Text>
-        <ChevronRight color={glassLook ? '#1B6FE0' : '#ffffff'} size={14} />
+        <ChevronRight color={glassLook ? N.ink : colors.azure} size={16} />
       </View>
     </PressableScale>
   );

@@ -7,6 +7,7 @@ import { useColors, typeScale } from '../../theme/theme';
 import PressableScale from '../ui/PressableScale';
 import { tapMedium } from '../../utils/haptics';
 import useStore from '../../contexts/store';
+import { arenaColors as N } from '../../theme/arenaTheme';
 
 /**
  * "Défie un ami de battre ton score" — the duel prompt, offered at the moment a
@@ -21,7 +22,8 @@ import useStore from '../../contexts/store';
  * Two buttons rather than one: WhatsApp is where Haitian students actually talk,
  * so it leads; the native sheet is the fallback for everyone else.
  *
- * `variant="glass"` sits on the dark result hero; "surface" is for light cards.
+ * `variant="night"` sits on the Jeux night (opaque tonal, no outline);
+ * "surface" is for light cards. ("glass" is the retired name for night.)
  */
 export default function BeatMyScoreCard({
   title,
@@ -36,7 +38,7 @@ export default function BeatMyScoreCard({
   score: number;
   total?: number;
   asPercent?: boolean;
-  variant?: 'glass' | 'surface';
+  variant?: 'night' | 'glass' | 'surface';
   /** Which surface the challenge came from, for funnel measurement. */
   source?: 'quiz' | 'exam' | 'game' | 'other';
 }) {
@@ -44,7 +46,7 @@ export default function BeatMyScoreCard({
   const isCreole = useStore((s) => s.language) === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const [busy, setBusy] = useState<'wa' | 'any' | null>(null);
-  const glass = variant === 'glass';
+  const glass = variant === 'glass' || variant === 'night';
 
   const lang: 'fr' | 'ht' = isCreole ? 'ht' : 'fr';
   const opts = { title, score, total, asPercent, lang };
@@ -61,24 +63,24 @@ export default function BeatMyScoreCard({
     }
   };
 
-  const ink = glass ? '#ffffff' : colors.ink;
-  const sub = glass ? 'rgba(255,255,255,0.72)' : colors.muted;
+  const ink = glass ? N.ink : colors.ink;
+  const sub = glass ? N.muted : colors.muted;
   const scoreStr = asPercent ? `${score}%` : total != null ? `${score}/${total}` : `${score}`;
 
   return (
     <View
       style={{
         width: '100%',
-        borderRadius: 16,
-        padding: 14,
+        borderRadius: glass ? 20 : 16,
+        padding: glass ? 18 : 14,
         gap: 12,
-        backgroundColor: glass ? 'rgba(255,255,255,0.12)' : colors.surface,
-        borderWidth: 1,
-        borderColor: glass ? 'rgba(255,255,255,0.22)' : colors.border,
+        backgroundColor: glass ? N.surface : colors.surface,
+        // Opaque, no ring: it sits inside a result screen that already has its
+        // one primary — this card's actions are tonal.
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <Swords color={glass ? '#ffffff' : colors.azure} size={20} />
+        <Swords color={glass ? N.coral : colors.azure} size={20} />
         <View style={{ flex: 1 }}>
           <Text style={[typeScale.label, { color: ink }]}>
             {t('Défie un ami', 'Defye yon zanmi')}
@@ -96,16 +98,16 @@ export default function BeatMyScoreCard({
           accessibilityLabel={t('Défier sur WhatsApp', 'Defye sou WhatsApp')}
           style={{
             flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-            gap: 7, paddingVertical: 12, borderRadius: 12,
-            backgroundColor: glass ? '#ffffff' : colors.azureFill,
+            gap: 7, minHeight: 48, borderRadius: glass ? 999 : 12,
+            backgroundColor: glass ? N.secondary : colors.azureSoft,
           }}
         >
           {busy === 'wa' ? (
-            <ActivityIndicator size="small" color={glass ? colors.azure : '#ffffff'} />
+            <ActivityIndicator size="small" color={glass ? N.ink : colors.azure} />
           ) : (
             <>
-              <Send color={glass ? colors.azure : '#ffffff'} size={16} />
-              <Text style={[typeScale.label, { color: glass ? colors.azure : '#ffffff' }]}>WhatsApp</Text>
+              <Send color={glass ? N.ink : colors.azure} size={16} />
+              <Text style={[typeScale.label, { fontFamily: typeScale.titleSm.fontFamily, color: glass ? N.ink : colors.azure }]}>WhatsApp</Text>
             </>
           )}
         </PressableScale>
@@ -115,15 +117,13 @@ export default function BeatMyScoreCard({
           accessibilityRole="button"
           accessibilityLabel={t('Partager ailleurs', 'Pataje lòt kote')}
           style={{
-            paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12,
+            paddingHorizontal: 18, minHeight: 48, borderRadius: glass ? 999 : 12,
             alignItems: 'center', justifyContent: 'center',
-            borderWidth: 1,
-            borderColor: glass ? 'rgba(255,255,255,0.35)' : colors.border,
-            backgroundColor: glass ? 'transparent' : colors.surfaceAlt,
+            backgroundColor: glass ? N.secondary : colors.surfaceAlt,
           }}
         >
           {busy === 'any' ? (
-            <ActivityIndicator size="small" color={glass ? '#ffffff' : colors.azure} />
+            <ActivityIndicator size="small" color={glass ? N.ink : colors.azure} />
           ) : (
             <Text style={[typeScale.label, { color: ink }]}>{t('Autre', 'Lòt')}</Text>
           )}

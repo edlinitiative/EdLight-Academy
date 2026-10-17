@@ -144,7 +144,7 @@ function ScoreRing({
           <Text style={{ fontSize: 42, fontFamily: fonts.display, color: '#fff', letterSpacing: -1 }}>
             {shownScore}<Text style={{ fontSize: 20, color: 'rgba(255,255,255,0.5)' }}>/{total}</Text>
           </Text>
-          <Text style={{ fontSize: 12, color: to, fontFamily: typeScale.overline.fontFamily, letterSpacing: 0.5 }}>
+          <Text style={{ fontSize: 14, color: to, fontFamily: typeScale.overline.fontFamily, letterSpacing: 0.5 }}>
             {shownPct}%
           </Text>
         </View>

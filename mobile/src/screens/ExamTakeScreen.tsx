@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
-import { ArrowLeft, ChevronLeft, ChevronRight, Send, Lightbulb, Check } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Send, Lightbulb, Check } from 'lucide-react-native';
 import { fetchSingleExam } from '../utils/examCatalog';
 import { flattenQuestions, gradeExam, normalizeSubject, normalizeExamTitle, normalizeYear, stripExamHallBoilerplate, subjectFromText } from '../utils/examUtils';
 import { loadExamAttemptDraft, saveExamAttemptDraft, markExamAttemptSubmitted } from '../services/examAttempts';
@@ -16,6 +16,7 @@ import { saveExamResult } from '../services/examResults';
 import { recordReview } from '../services/reviewService';
 import useStore from '../contexts/store';
 import { useColors, useTheme, typeScale, fonts } from '../theme/theme';
+import { useReduceMotion } from '../utils/motion';
 import PressableScale from '../components/ui/PressableScale';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import Button from '../components/ui/Button';
@@ -46,14 +47,15 @@ type Answer = string | string[] | null;
  */
 function ProgressStrip({ progress }: { progress: number }) {
   const colors = useColors();
+  const reduce = useReduceMotion();
   const w = useSharedValue(progress);
   useEffect(() => {
-    w.value = withTiming(progress, { duration: 320 });
-  }, [progress]);
+    w.value = reduce ? progress : withTiming(progress, { duration: 320 });
+  }, [progress, reduce]); // eslint-disable-line react-hooks/exhaustive-deps
   const fillStyle = useAnimatedStyle(() => ({ width: `${w.value}%` }));
   return (
-    <View style={{ height: 6, borderRadius: 999, backgroundColor: colors.border, marginHorizontal: 16, marginTop: 10, overflow: 'hidden' }}>
-      <Animated.View style={[{ height: 6, borderRadius: 999, backgroundColor: colors.azure }, fillStyle]} />
+    <View style={{ height: 6, borderRadius: 999, backgroundColor: colors.surfaceAlt, marginHorizontal: 20, marginTop: 4, overflow: 'hidden' }}>
+      <Animated.View style={[{ height: 6, borderRadius: 999, backgroundColor: colors.azureFill }, fillStyle]} />
     </View>
   );
 }
@@ -106,7 +108,6 @@ function QuestionNav({ current, total, answers, sections, onGoto }: {
             height: 18,
             marginRight: 8,
             alignSelf: 'center',
-            backgroundColor: colors.border,
           }}
         />,
       );
@@ -128,15 +129,13 @@ function QuestionNav({ current, total, answers, sections, onGoto }: {
           alignItems: 'center',
           justifyContent: 'center',
           marginRight: 8,
-          backgroundColor: active ? colors.azure : answered ? colors.azureSoft : colors.surface,
-          borderWidth: active ? 0 : 1,
-          borderColor: colors.border,
+          backgroundColor: active ? colors.azureFill : answered ? colors.azureSoft : colors.surfaceAlt,
         }}
       >
         {answered && !active ? (
-          <Check color={colors.azure} size={16} strokeWidth={3} />
+          <Check color={colors.azureInk} size={16} strokeWidth={3} />
         ) : (
-          <Text style={[typeScale.caption, { color: active ? '#ffffff' : colors.muted, fontFamily: fonts.headingBold }]}>
+          <Text style={[typeScale.caption, { color: active ? '#ffffff' : colors.ink, fontFamily: fonts.headingBold }]}>
             {i + 1}
           </Text>
         )}
@@ -150,7 +149,7 @@ function QuestionNav({ current, total, answers, sections, onGoto }: {
       horizontal
       showsHorizontalScrollIndicator={false}
       style={{ flexGrow: 0 }}
-      contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10 }}
+      contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 12 }}
     >
       {items}
     </ScrollView>
@@ -165,7 +164,7 @@ function MCQQuestion({ question, answer, onAnswer, isCreole }: {
   isCreole: boolean;
 }) {
   const colors = useColors();
-  const { shadow, radius } = useTheme();
+  const { elevation, isDark } = useTheme();
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const entries = normalizeOptions(question?.options ?? question?.choices);
 
@@ -180,7 +179,7 @@ function MCQQuestion({ question, answer, onAnswer, isCreole }: {
   }
 
   return (
-    <View style={{ gap: 10 }}>
+    <View style={{ gap: 12 }}>
       {entries.map(({ key, label, value }, idx) => {
         const selected =
           answer === value ||
@@ -199,29 +198,29 @@ function MCQQuestion({ question, answer, onAnswer, isCreole }: {
               {
                 flexDirection: 'row',
                 alignItems: 'center',
-                gap: 12,
-                padding: 14,
-                borderRadius: radius.card,
-                borderWidth: 1,
-                borderColor: selected ? colors.azure : colors.border,
+                gap: 14,
+                paddingVertical: 14,
+                paddingHorizontal: 14,
+                minHeight: 64,
+                borderRadius: 16,
                 backgroundColor: selected ? colors.azureSoft : colors.surface,
               },
-              selected ? undefined : shadow.sm,
+              selected || isDark ? undefined : elevation.card,
             ]}
           >
             <View
               style={{
-                width: 32,
-                height: 32,
+                width: 36,
+                height: 36,
                 borderRadius: 999,
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: selected ? colors.azure : colors.surfaceAlt,
+                backgroundColor: selected ? colors.azureFill : colors.surfaceAlt,
               }}
             >
-              <Text style={[typeScale.label, { color: selected ? '#ffffff' : colors.muted, fontFamily: fonts.headingBold }]}>{key.toUpperCase()}</Text>
+              <Text style={{ fontFamily: fonts.headingBold, fontSize: 16, lineHeight: 20, color: selected ? '#ffffff' : colors.muted }}>{key.toUpperCase()}</Text>
             </View>
-            <MathText text={String(label)} style={{ flex: 1, fontSize: 15, lineHeight: 22, color: colors.ink }} />
+            <MathText text={String(label)} style={{ flex: 1, fontSize: 17, lineHeight: 24, color: colors.ink }} />
           </PressableScale>
         );
       })}
@@ -237,7 +236,7 @@ function OpenQuestion({ answer, onAnswer, placeholder, minHeight = 120, isCreole
   isCreole?: boolean;
 }) {
   const colors = useColors();
-  const { shadow, radius } = useTheme();
+  const { radius, isDark } = useTheme();
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const resolvedPlaceholder = placeholder ?? t('Votre réponse…', 'Repons ou…');
   const value = Array.isArray(answer) ? answer.join(', ') : String(answer ?? '');
@@ -255,8 +254,8 @@ function OpenQuestion({ answer, onAnswer, placeholder, minHeight = 120, isCreole
           color: colors.ink,
           minHeight,
         },
-        shadow.sm,
       ]}
+      keyboardAppearance={isDark ? 'dark' : 'light'}
       value={value}
       onChangeText={onAnswer}
       multiline
@@ -269,7 +268,7 @@ function OpenQuestion({ answer, onAnswer, placeholder, minHeight = 120, isCreole
 
 function TrueFalseQuestion({ answer, onAnswer, isCreole }: { answer: Answer; onAnswer: (a: Answer) => void; isCreole: boolean }) {
   const colors = useColors();
-  const { shadow, radius } = useTheme();
+  const { elevation, isDark } = useTheme();
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   // `value` is the stored/graded answer (kept in French so grading is unaffected);
   // `label` is display-only.
@@ -292,17 +291,16 @@ function TrueFalseQuestion({ answer, onAnswer, isCreole }: { answer: Answer; onA
             style={[
               {
                 flex: 1,
-                paddingVertical: 16,
-                borderRadius: radius.card,
+                minHeight: 64,
+                justifyContent: 'center',
+                borderRadius: 16,
                 alignItems: 'center',
-                borderWidth: 1,
-                borderColor: selected ? colors.azure : colors.border,
                 backgroundColor: selected ? colors.azureSoft : colors.surface,
               },
-              selected ? undefined : shadow.sm,
+              selected || isDark ? undefined : elevation.card,
             ]}
           >
-            <Text style={[typeScale.titleSm, { color: selected ? colors.azure : colors.muted }]}>{label}</Text>
+            <Text style={{ fontFamily: fonts.headingBold, fontSize: 17, lineHeight: 22, color: selected ? colors.azureInk : colors.ink }}>{label}</Text>
           </PressableScale>
         );
       })}
@@ -329,6 +327,8 @@ function ExamHint({ hints, isCreole }: { hints?: any; isCreole: boolean }) {
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const clean = (Array.isArray(hints) ? hints : []).map(cleanHint).filter(Boolean);
   const [shown, setShown] = useState(0);
+  const { isDark } = useTheme();
+  const hintInk = isDark ? colors.warn : '#9A5B00';
   if (clean.length === 0) return null;
 
   if (shown === 0) {
@@ -337,28 +337,28 @@ function ExamHint({ hints, isCreole }: { hints?: any; isCreole: boolean }) {
         onPress={() => setShown(1)}
         accessibilityRole="button"
         accessibilityLabel={t("Besoin d'un indice ?", 'Ou bezwen yon endis?')}
-        style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 18, alignSelf: 'flex-start', paddingHorizontal: 16, minHeight: 44, borderRadius: 12, backgroundColor: colors.azureSoft }}
       >
-        <Lightbulb color={colors.azure} size={16} />
-        <Text style={[typeScale.label, { color: colors.azure }]}>{t("Besoin d'un indice ?", 'Ou bezwen yon endis?')}</Text>
+        <Lightbulb color={colors.azureInk} size={17} />
+        <Text style={{ fontFamily: fonts.bold, fontSize: 15, lineHeight: 20, color: colors.azureInk }}>{t("Besoin d'un indice ?", 'Ou bezwen yon endis?')}</Text>
       </TouchableOpacity>
     );
   }
 
   return (
-    <View style={{ marginTop: 16, backgroundColor: colors.warn + '18', borderRadius: 16, borderWidth: 1, borderColor: colors.warn + '33', padding: 14, gap: 8 }}>
+    <View style={{ marginTop: 18, backgroundColor: colors.warnSoft, borderRadius: 16, padding: 16, gap: 8 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-        <Lightbulb color={colors.warn} size={15} />
-        <Text style={[typeScale.overline, { color: colors.warn }]}>
+        <Lightbulb color={hintInk} size={16} />
+        <Text style={[typeScale.label, { color: hintInk, fontFamily: fonts.bold }]}>
           {clean.length > 1 ? `${t('Indice', 'Endis')} ${shown} / ${clean.length}` : t('Indice', 'Endis')}
         </Text>
       </View>
       {clean.slice(0, shown).map((h, i) => (
-        <MathText key={i} text={clean.length > 1 ? `${i + 1}. ${h}` : h} style={{ fontSize: 14, lineHeight: 21, color: colors.ink }} />
+        <MathText key={i} text={clean.length > 1 ? `${i + 1}. ${h}` : h} style={{ fontSize: 16, lineHeight: 23, color: colors.ink }} />
       ))}
       {shown < clean.length ? (
-        <TouchableOpacity onPress={() => setShown((s) => s + 1)} style={{ alignSelf: 'flex-start', marginTop: 4 }} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-          <Text style={[typeScale.label, { color: colors.azure, fontFamily: fonts.headingBold }]}>{t('Indice suivant', 'Endis swivan')} →</Text>
+        <TouchableOpacity onPress={() => setShown((s) => s + 1)} style={{ alignSelf: 'flex-start', minHeight: 40, justifyContent: 'center' }} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+          <Text style={{ fontFamily: fonts.bold, fontSize: 15, lineHeight: 20, color: colors.azureInk }}>{t('Indice suivant', 'Endis swivan')} →</Text>
         </TouchableOpacity>
       ) : null}
     </View>
@@ -371,7 +371,7 @@ export default function ExamTakeScreen() {
   const { level, examId } = route.params;
   const { user, recordActivity, clearActivity, setFocusMode, language, track } = useStore();
   const colors = useColors();
-  const { shadow, radius } = useTheme();
+  const { cardSurface, isDark } = useTheme();
   const centerColumn = useContentContainerStyle('readable');
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -717,9 +717,9 @@ export default function ExamTakeScreen() {
   // only the tab bar or an edge swipe to escape. Same shape in, same shape out.
   const withChrome = (body: React.ReactNode) => (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-        <TouchableOpacity onPress={handleBack} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel={t('Retour', 'Retounen')}>
-          <ArrowLeft color={colors.ink} size={22} />
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 10, paddingRight: 16, paddingVertical: 8, gap: 8, backgroundColor: colors.bg }}>
+        <TouchableOpacity onPress={handleBack} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel={t('Retour', 'Retounen')}>
+          <ChevronLeft color={colors.ink} size={26} />
         </TouchableOpacity>
         <Text style={[typeScale.titleSm, { color: colors.ink, flex: 1 }]} numberOfLines={1}>
           {exam ? normalizeExamTitle(exam) : t('Examen', 'Egzamen')}
@@ -842,19 +842,20 @@ export default function ExamTakeScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
       {/* Header */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-        <TouchableOpacity onPress={handleBack} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel={t('Retour', 'Retounen')}>
-          <ArrowLeft color={colors.ink} size={22} />
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 10, paddingRight: 16, paddingVertical: 8, gap: 8, backgroundColor: colors.bg }}>
+        <TouchableOpacity onPress={handleBack} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel={t('Retour', 'Retounen')}>
+          <ChevronLeft color={colors.ink} size={26} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={[typeScale.titleSm, { color: colors.ink }]} numberOfLines={1}>{normalizeExamTitle(exam)}</Text>
-          <Text style={[typeScale.caption, { color: colors.muted }]}>{answeredCount}/{questions.length} {t('réponses', 'repons')}</Text>
+          <Text style={{ fontFamily: fonts.headingBold, fontSize: 16, lineHeight: 21, color: colors.ink }} numberOfLines={1}>{normalizeExamTitle(exam)}</Text>
+          <Text style={[typeScale.meta, { color: colors.muted }]}>{answeredCount}/{questions.length} {t('réponses', 'repons')}</Text>
         </View>
         <Button
           onPress={() => { tapMedium(); handleSubmit(); }}
           loading={submitting}
           size="sm"
-          icon={<Send color="#fff" size={14} />}
+          variant="secondary"
+          icon={<Send color={colors.azureInk} size={15} />}
           accessibilityLabel={t('Soumettre', 'Soumèt')}
           label={t('Soumettre', 'Soumèt')}
         />
@@ -877,7 +878,7 @@ export default function ExamTakeScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={[{ paddingBottom: 32, padding: 16 }, centerColumn]}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={[{ paddingBottom: 32, padding: 20 }, centerColumn]}>
           {/* Section context — full intro on the section's first question,
               compact chip + "Consignes" toggle on the following ones. Keyed by
               question index so the toggle resets when navigating. */}
@@ -892,16 +893,18 @@ export default function ExamTakeScreen() {
           {/* Question label */}
           <View style={{ marginBottom: 16 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
-              <Text style={[typeScale.overline, { color: colors.muted }]}>
-                {t('Question', 'Kesyon')} {safeIdx + 1} / {questions.length}
+              <Text style={[typeScale.meta, { color: colors.muted }]}>
+                {t(`Question ${safeIdx + 1} sur ${questions.length}`, `Kesyon ${safeIdx + 1} sou ${questions.length}`)}
               </Text>
               {points > 0 ? (
-                <Text style={[typeScale.micro, { color: colors.muted }]}>{points} pt{points > 1 ? 's' : ''}</Text>
+                <View style={{ backgroundColor: colors.surfaceAlt, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
+                  <Text style={{ fontFamily: fonts.headingBold, fontSize: 14, lineHeight: 18, color: colors.ink }}>{points} pt{points > 1 ? 's' : ''}</Text>
+                </View>
               ) : null}
             </View>
             {usesEngine ? null : (
-              <View style={[{ backgroundColor: colors.surface, borderRadius: radius.card, padding: 16, borderWidth: 1, borderColor: colors.border }, shadow.sm]}>
-                <MathText text={questionText} style={{ fontSize: 16, color: colors.ink, lineHeight: 24 }} />
+              <View style={{ ...cardSurface, padding: 20 }}>
+                <MathText text={questionText} style={{ fontSize: 18, color: colors.ink, lineHeight: 27 }} />
                 {q?.has_figure && q?.figure_description ? (
                   <ExamFigure description={String(q.figure_description)} />
                 ) : null}
@@ -998,20 +1001,21 @@ export default function ExamTakeScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Navigation buttons */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border }}>
-        <PressableScale
+      {/* Navigation buttons — a white strip, no rule; one solid button. */}
+      <View
+        style={{
+          flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12, gap: 12, backgroundColor: colors.surface,
+          shadowColor: '#0B296B', shadowOffset: { width: 0, height: -4 }, shadowOpacity: isDark ? 0 : 0.05, shadowRadius: 10, elevation: 6,
+        }}
+      >
+        <Button
           onPress={() => setCurrentIdx(Math.max(0, safeIdx - 1))}
           disabled={isFirst}
-          pressedScale={0.97}
-          accessibilityRole="button"
+          variant="secondary"
           accessibilityLabel={t('Question précédente', 'Kesyon anvan')}
-          accessibilityState={{ disabled: isFirst }}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 16, paddingVertical: 10, borderRadius: radius.control, borderWidth: 1, borderColor: colors.border, opacity: isFirst ? 0.4 : 1 }}
-        >
-          <ChevronLeft color={colors.ink} size={18} />
-          <Text style={[typeScale.label, { color: colors.ink }]}>{t('Préc.', 'Anvan')}</Text>
-        </PressableScale>
+          label={t('Préc.', 'Anvan')}
+          icon={<ChevronLeft color={colors.azureInk} size={18} />}
+        />
         <View style={{ flex: 1 }} />
         {isLast ? (
           <Button
@@ -1021,16 +1025,12 @@ export default function ExamTakeScreen() {
             label={t('Terminer', 'Fini')}
           />
         ) : (
-          <PressableScale
+          <Button
             onPress={() => setCurrentIdx(Math.min(questions.length - 1, safeIdx + 1))}
-            pressedScale={0.97}
-            accessibilityRole="button"
             accessibilityLabel={t('Question suivante', 'Kesyon pwochen')}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.azure, paddingHorizontal: 16, paddingVertical: 10, borderRadius: radius.control }}
-          >
-            <Text style={[typeScale.label, { color: '#ffffff' }]}>{t('Suiv.', 'Pwochen')}</Text>
-            <ChevronRight color="#fff" size={18} />
-          </PressableScale>
+            label={t('Suivante', 'Pwochen')}
+            trailingIcon={<ChevronRight color="#ffffff" size={18} />}
+          />
         )}
       </View>
     </SafeAreaView>

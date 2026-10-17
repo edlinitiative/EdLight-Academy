@@ -60,11 +60,9 @@ export default function ExamFigure({ description }: ExamFigureProps) {
     <View style={{ marginTop: 14 }}>
       <Text
         style={{
-          fontSize: 11,
-          fontWeight: '700',
+          fontSize: 14,
+          fontWeight: '600',
           color: colors.muted,
-          textTransform: 'uppercase',
-          letterSpacing: 0.8,
           marginBottom: 6,
         }}
       >
@@ -74,7 +72,7 @@ export default function ExamFigure({ description }: ExamFigureProps) {
       {failed ? (
         // Offline / embed unavailable → plain description, neutral card.
         <View style={[card, cardShadow, { padding: 14 }]}>
-          <Text style={{ fontSize: 13, color: colors.ink, lineHeight: 20 }}>
+          <Text style={{ fontSize: 15, color: colors.ink, lineHeight: 22 }}>
             {String(description ?? '')}
           </Text>
         </View>

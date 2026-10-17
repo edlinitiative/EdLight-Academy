@@ -17,6 +17,9 @@ export type CoursesParamList = {
     lessonId?: string;
     /** Auto-open the first unfinished lesson so the tap lands on a playable page. */
     autoplay?: boolean;
+    /** Open the overview with this chapter (0-based) expanded and scrolled to
+     *  — the Cours tab's chapter cards. */
+    chapterIndex?: number;
   };
   /** `handoff`: context from a lesson/result (LJ-06), built with practiceParams()
    *  and read back with readPracticeHandoff(). */

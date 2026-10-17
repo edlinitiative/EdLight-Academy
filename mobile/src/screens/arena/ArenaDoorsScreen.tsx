@@ -127,8 +127,6 @@ export default function ArenaDoorsScreen() {
                   padding: 16,
                   borderRadius: radius.card,
                   backgroundColor: colors.surface,
-                  borderWidth: 1,
-                  borderColor: colors.border,
                   gap: 4,
                 }}
               >

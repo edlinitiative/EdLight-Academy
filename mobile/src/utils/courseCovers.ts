@@ -17,12 +17,12 @@
 export const COURSE_COVER_FRAMES: Readonly<Record<string, string>> = {
   'math-ns1': 'eLmxna326QM/sddefault',
   'math-ns2': 'bms0NxhaUDg/sddefault',
-  'math-ns3': 'k3PgXLur2CU/sddefault',
-  'math-ns4': 'ztUcXCU82pA/sd1',
-  'econ-ns1': 'HNOuKpOp1AE/sd3',
-  'econ-ns2': 'BePNgqPtwl0/sddefault',
-  'econ-ns3': 'fQjfPyOYK48/sd2',
-  'econ-ns4': 'bh8l5kXnXkU/sddefault',
+  'math-ns3': 'd8zrnduv0Gc/sd1',
+  'math-ns4': 'JH_sSDwehqo/sd3',
+  'econ-ns1': 's8V74XR5BcY/sd2',
+  'econ-ns2': 'zy68zhmLVS0/sd3',
+  'econ-ns3': 'AqIcMfBkjzA/sddefault',
+  'econ-ns4': 'bh8l5kXnXkU/sd1',
   'chem-ns1': 'Xe0jGLMZoXg/sddefault',
 };
 

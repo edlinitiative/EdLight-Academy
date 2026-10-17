@@ -4,7 +4,8 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { X, RotateCcw, ChevronLeft, ChevronRight, Info } from 'lucide-react-native';
 import { useAppData } from '../hooks/useData';
 import useStore from '../contexts/store';
-import { useColors, type Palette } from '../theme/theme';
+import { useColors, fonts, type Palette } from '../theme/theme';
+import Segmented from './ui/Segmented';
 import { selectCardsScoped, toInt, type PracticeCard as Card } from '../utils/practiceCards';
 import PracticeRunner from './journey/practice/PracticeRunner';
 import { AnswerStatus, Rich } from './journey/practice/Answer';
@@ -58,7 +59,7 @@ function Flashcards({ cards, isCreole }: { cards: Card[]; isCreole: boolean }) {
           <Rich text={card.explanation} style={styles.cardExpl} />
         ) : null}
         <View style={styles.flipHint}>
-          <RotateCcw color={colors.faint} size={13} />
+          <RotateCcw color={colors.muted} size={16} />
           <Text style={styles.flipHintText}>{isCreole ? 'Tape pou vire' : 'Touchez pour retourner'}</Text>
         </View>
       </TouchableOpacity>
@@ -126,8 +127,11 @@ export function Exercices({
       <ScrollView contentContainerStyle={{ padding: 24, gap: 14 }}>
         {done.scored > 0 ? (
           <View style={{ alignItems: 'center', gap: 2 }}>
-            <Text style={{ fontSize: 40, fontWeight: '800', color: colors.ink, fontVariant: ['tabular-nums'] }}>{done.correct}/{done.scored}</Text>
-            <Text style={{ fontSize: 15, color: colors.muted }}>{t('bonnes réponses', 'bon repons')}</Text>
+            <Text style={{ fontFamily: fonts.heading, fontSize: 56, lineHeight: 60, letterSpacing: -2, color: colors.ink, fontVariant: ['tabular-nums'] }}>
+              {done.correct}
+              <Text style={{ fontFamily: fonts.headingBold, fontSize: 22, letterSpacing: 0, color: colors.muted }}>{`  / ${done.scored}`}</Text>
+            </Text>
+            <Text style={{ fontFamily: fonts.regular, fontSize: 15, color: colors.muted }}>{t('bonnes réponses', 'bon repons')}</Text>
           </View>
         ) : (
           <Text style={{ fontSize: 15, color: colors.ink, textAlign: 'center' }}>
@@ -191,7 +195,7 @@ function TallyRow({ kind, n, label, t }: { kind: 'correct' | 'incorrect' | 'ungr
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
       <AnswerStatus kind={kind} t={t} label={label} />
-      <Text style={{ fontSize: 16, fontWeight: '700', color: colors.ink, fontVariant: ['tabular-nums'] }}>{n}</Text>
+      <Text style={{ fontFamily: fonts.heading, fontSize: 18, color: colors.ink, fontVariant: ['tabular-nums'] }}>{n}</Text>
     </View>
   );
 }
@@ -233,35 +237,26 @@ export default function LessonPractice({
       {/* Own provider so safe-area insets resolve inside the RN Modal window. */}
       <SafeAreaProvider>
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top', 'bottom']}>
-        {/* Header */}
+        {/* Header — a white strip with the pill switch; no rule under it. */}
         <View style={styles.header}>
-          <View style={styles.segment}>
-            {(['flashcards', 'exercices'] as const).map((m) => (
-              <TouchableOpacity
-                key={m}
-                onPress={() => setMode(m)}
-                hitSlop={8}
-                style={[styles.segBtn, mode === m && styles.segBtnActive]}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: mode === m }}
-              >
-                <Text style={[styles.segText, mode === m && styles.segTextActive]}>
-                  {m === 'flashcards'
-                    ? (isCreole ? 'Kat etid' : 'Flashcards')
-                    : (isCreole ? 'Egzèsis' : 'Exercices')}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ padding: 4 }} accessibilityRole="button" accessibilityLabel={t('Fermer', 'Fèmen')}>
-            <X color={colors.muted} size={24} />
+          <Segmented<'flashcards' | 'exercices'>
+            options={[
+              { key: 'flashcards', label: isCreole ? 'Kat etid' : 'Flashcards' },
+              { key: 'exercices', label: isCreole ? 'Egzèsis' : 'Exercices' },
+            ]}
+            value={mode}
+            onChange={setMode}
+            style={{ flex: 1 }}
+          />
+          <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }} accessibilityRole="button" accessibilityLabel={t('Fermer', 'Fèmen')}>
+            <X color={colors.ink} size={24} />
           </TouchableOpacity>
         </View>
 
         {cards.length > 0 ? (
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-            <Info color={colors.muted} size={16} style={{ marginTop: 2 }} />
-            <Text style={{ flex: 1, fontSize: 14, lineHeight: 20, color: colors.ink }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 2 }}>
+            <Info color={colors.muted} size={16} style={{ marginTop: 3 }} />
+            <Text style={{ flex: 1, fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.muted }}>
               {scope === 'lesson'
                 ? t(`${cards.length} question${cards.length > 1 ? 's' : ''} liée${cards.length > 1 ? 's' : ''} à cette leçon.`, `${cards.length} kesyon ki mache ak leson sa a.`)
                 : t(`${cards.length} question${cards.length > 1 ? 's' : ''} sur tout le chapitre : elles ne sont pas encore classées leçon par leçon.`,
@@ -321,34 +316,22 @@ export default function LessonPractice({
 
 const makeStyles = (colors: Palette) => StyleSheet.create({
   header: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingHorizontal: 16, paddingVertical: 12, backgroundColor: colors.surface,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingLeft: 20, paddingRight: 10, paddingVertical: 10, backgroundColor: colors.surface,
+    shadowColor: '#0B296B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2, zIndex: 1,
   },
-  segment: { flex: 1, flexDirection: 'row', backgroundColor: colors.surfaceAlt, borderRadius: 12, padding: 3 },
-  segBtn: { flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center' },
-  segBtnActive: { backgroundColor: colors.surface, shadowColor: '#0f172a', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: 1 },
-  segText: { fontSize: 13.5, fontWeight: '600', color: colors.muted },
-  segTextActive: { color: colors.azure, fontWeight: '700' },
-  counter: { fontSize: 14, fontWeight: '600', color: colors.muted, marginBottom: 10 },
+  counter: { fontFamily: fonts.headingBold, fontSize: 15, color: colors.muted, marginBottom: 12, fontVariant: ['tabular-nums'] },
   card: {
-    flex: 1, backgroundColor: colors.surface, borderRadius: 20, borderWidth: 1, borderColor: colors.border,
+    flex: 1, backgroundColor: colors.surface, borderRadius: 24,
     padding: 24, alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#0f172a', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3,
+    shadowColor: '#0B296B', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.08, shadowRadius: 24, elevation: 4,
   },
-  cardLabel: { fontSize: 11, fontWeight: '700', color: colors.azure, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 16 },
-  cardText: { fontSize: 20, fontWeight: '700', color: colors.ink, textAlign: 'center', lineHeight: 28 },
-  cardExpl: { fontSize: 14, color: colors.muted, textAlign: 'center', marginTop: 14, lineHeight: 20 },
-  flipHint: { position: 'absolute', bottom: 16, flexDirection: 'row', alignItems: 'center', gap: 5 },
-  flipHintText: { fontSize: 13, color: colors.faint },
+  cardLabel: { fontFamily: fonts.medium, fontSize: 15, color: colors.azureInk, marginBottom: 16 },
+  cardText: { fontFamily: fonts.headingBold, fontSize: 21, color: colors.ink, textAlign: 'center', lineHeight: 29 },
+  cardExpl: { fontFamily: fonts.regular, fontSize: 15, color: colors.muted, textAlign: 'center', marginTop: 14, lineHeight: 22 },
+  flipHint: { position: 'absolute', bottom: 18, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  flipHintText: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 },
-  navBtn: { width: 52, height: 44, borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
-  questionBox: { backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16 },
-  questionText: { fontSize: 16, fontWeight: '600', color: colors.ink, lineHeight: 23 },
-  explBox: { flexDirection: 'row', gap: 8, backgroundColor: colors.surfaceAlt, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 14, marginTop: 14 },
-  explText: { flex: 1, fontSize: 14, color: colors.muted, lineHeight: 20 },
-  footer: { padding: 16, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border },
-  primaryBtn: { backgroundColor: colors.azure, borderRadius: 14, paddingVertical: 15, alignItems: 'center' },
-  primaryBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  navBtn: { width: 56, height: 48, borderRadius: 12, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
   disabled: { opacity: 0.4 },
 });

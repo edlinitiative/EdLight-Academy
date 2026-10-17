@@ -65,7 +65,7 @@ function WidgetInput({ widget, value, onChange, inline, mathy }: {
   mathy?: boolean;
 }) {
   const colors = useColors();
-  const { radius } = useTheme();
+  const { radius, isDark } = useTheme();
   const t = useT();
   const text = typeof value === 'string' ? value : value == null ? '' : String(value);
 
@@ -91,6 +91,7 @@ function WidgetInput({ widget, value, onChange, inline, mathy }: {
         // written with a comma as often as a dot, so `decimal-pad` (which is
         // locale-aware) beats `numeric`.
         keyboardType={numeric ? 'decimal-pad' : 'default'}
+        keyboardAppearance={isDark ? 'dark' : 'light'}
         autoCapitalize="none"
         autoCorrect={false}
         placeholder={numeric ? '0' : '…'}
@@ -113,6 +114,7 @@ function WidgetInput({ widget, value, onChange, inline, mathy }: {
           value={text}
           onChangeText={onChange}
           keyboardType={numeric ? 'decimal-pad' : 'default'}
+          keyboardAppearance={isDark ? 'dark' : 'light'}
           autoCapitalize="none"
           autoCorrect={false}
           multiline={!numeric}
@@ -157,7 +159,7 @@ function Prompt({ blocks, widgets, response, onChange }: {
               // mathToText itself. Transforming first strips the `$…$` and
               // makes the KaTeX path unreachable.
               text={block.content}
-              style={{ fontSize: 16, color: colors.ink, lineHeight: hasHole ? 32 : 24 }}
+              style={{ fontSize: 18, color: colors.ink, lineHeight: hasHole ? 34 : 27 }}
             />
           );
         }
@@ -186,8 +188,7 @@ export default function QuestionView({ question, response, onChange, mathy }: {
   onChange: (id: string, value: string) => void;
   mathy?: boolean;
 }) {
-  const colors = useColors();
-  const { radius, shadow } = useTheme();
+  const { cardSurface } = useTheme();
 
   // Widgets already placed in the prompt are answered there; the rest get a
   // field below it.
@@ -198,10 +199,7 @@ export default function QuestionView({ question, response, onChange, mathy }: {
 
   return (
     <View style={{ gap: 16 }}>
-      <View style={[
-        { backgroundColor: colors.surface, borderRadius: radius.card, padding: 16, borderWidth: 1, borderColor: colors.border },
-        shadow.sm,
-      ]}>
+      <View style={{ ...cardSurface, padding: 20 }}>
         <Prompt
           blocks={question.prompt}
           widgets={question.widgets}

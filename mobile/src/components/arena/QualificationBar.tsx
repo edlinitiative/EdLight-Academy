@@ -58,8 +58,6 @@ export default function QualificationBar({
       padding: 14,
       borderRadius: radius.card,
       backgroundColor: qualified ? colors.successSoft : colors.surface,
-      borderWidth: 1,
-      borderColor: qualified ? colors.success : colors.border,
     }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         {qualified ? <Check color={colors.successFill} size={15} /> : null}

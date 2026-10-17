@@ -11,7 +11,7 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import { AlertCircle, Inbox } from 'lucide-react-native';
 import useStore from '../contexts/store';
-import { useColors, useColorScheme, radius, shadow, typeScale } from '../theme/theme';
+import { useColors, useColorScheme, radius, typeScale, cardSurfaceFor } from '../theme/theme';
 import { useReduceMotion } from '../utils/motion';
 import LoadingSpinner from './ui/LoadingSpinner';
 import Button from './ui/Button';
@@ -28,7 +28,7 @@ import Button from './ui/Button';
 export function Skeleton({
   width,
   height = 14,
-  radius: blockRadius = 8,
+  radius: blockRadius = 14,
   style,
 }: {
   width?: number | string;
@@ -66,7 +66,7 @@ export function Skeleton({
           width: (width as any) ?? '100%',
           height,
           borderRadius: blockRadius,
-          backgroundColor: colors.border,
+          backgroundColor: colors.surfaceAlt,
           overflow: 'hidden',
         },
         style,
@@ -105,6 +105,7 @@ export function ListSkeleton({
 }) {
   const { language } = useStore();
   const colors = useColors();
+  const scheme = useColorScheme();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   return (
@@ -120,7 +121,7 @@ export function ListSkeleton({
       {showHeader && (
         <View className="mb-5" style={{ gap: 8 }}>
           <Skeleton width={200} height={26} radius={8} />
-          <Skeleton width={150} height={13} />
+          <Skeleton width={150} height={14} />
         </View>
       )}
       <View style={{ gap: 12 }}>
@@ -131,12 +132,8 @@ export function ListSkeleton({
               flexDirection: 'row',
               alignItems: 'center',
               gap: 12,
-              backgroundColor: colors.surface,
-              borderRadius: radius.card,
-              borderWidth: 1,
-              borderColor: colors.border,
+              ...cardSurfaceFor(scheme),
               padding: 16,
-              ...shadow.sm,
             }}
           >
             <Skeleton width={44} height={44} radius={radius.tile} />
@@ -152,37 +149,26 @@ export function ListSkeleton({
 }
 
 /**
- * Soft tinted medallion behind a state icon — a gradient-filled circle inside a
- * fainter ring. Purely decorative, so it's hidden from assistive tech.
+ * The disc behind a state icon: one OPAQUE grey circle, the icon carries the
+ * tint. (Was a translucent tint ring around a translucent gradient: tint on
+ * tint, the look the founder rejected.) Decorative, hidden from assistive tech.
  */
-function Medallion({ tint, children }: { tint: string; children: React.ReactNode }) {
+function Medallion({ children }: { tint?: string; children: React.ReactNode }) {
+  const colors = useColors();
   return (
     <View
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
       style={{
-        width: 104,
-        height: 104,
-        borderRadius: 52,
+        width: 88,
+        height: 88,
+        borderRadius: 44,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: tint + '12',
+        backgroundColor: colors.surfaceAlt,
       }}
     >
-      <LinearGradient
-        colors={[tint + '2E', tint + '10']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{
-          width: 76,
-          height: 76,
-          borderRadius: 38,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        {children}
-      </LinearGradient>
+      {children}
     </View>
   );
 }
@@ -248,7 +234,7 @@ export function ErrorState({
         accessibilityLabel={sub ? `${heading}. ${sub}` : heading}
         style={{ alignItems: 'center' }}
       >
-        <Text style={[typeScale.h2, { color: colors.ink, textAlign: 'center', marginTop: 20 }]}>
+        <Text style={[typeScale.section, { color: colors.ink, textAlign: 'center', marginTop: 20 }]}>
           {heading}
         </Text>
         {sub ? (
@@ -301,7 +287,7 @@ export function EmptyState({
       <Medallion tint={tint}>
         {icon ?? <Inbox color={tint} size={34} strokeWidth={1.75} />}
       </Medallion>
-      <Text accessibilityRole="header" style={[typeScale.h2, { color: colors.ink, textAlign: 'center', marginTop: 20 }]}>
+      <Text accessibilityRole="header" style={[typeScale.section, { color: colors.ink, textAlign: 'center', marginTop: 20 }]}>
         {heading}
       </Text>
       {description ? (

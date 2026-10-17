@@ -139,7 +139,7 @@ export default function NavTour() {
             {steps.map((_, i) => (
               <View
                 key={i}
-                style={[styles.dot, { backgroundColor: colors.border }, i === index && { width: 18, backgroundColor: colors.azure }]}
+                style={[styles.dot, { backgroundColor: colors.surfaceAlt }, i === index && { width: 20, backgroundColor: colors.azure }]}
               />
             ))}
           </View>
@@ -161,15 +161,15 @@ export default function NavTour() {
   /** Miniature tab bar — highlights the slot by position, not by coordinates. */
   const miniBar = step ? (
     <View
-      style={[styles.miniBar, { borderColor: colors.border, backgroundColor: colors.surfaceAlt }]}
+      style={[styles.miniBar, { backgroundColor: colors.surfaceAlt }]}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
       {steps.map((s) => {
         const on = s.tab === step.tab;
         return (
-          <View key={s.tab} style={[styles.miniSlot, on && { backgroundColor: colors.azureSoft }]}>
-            <TabIcon name={s.icon} color={on ? colors.azure : colors.faint} size={22} focused={on} />
+          <View key={s.tab} style={[styles.miniSlot, on && { backgroundColor: colors.surface }]}>
+            <TabIcon name={s.icon} color={on ? colors.azureInk : colors.faint} size={22} focused={on} />
           </View>
         );
       })}
@@ -179,17 +179,17 @@ export default function NavTour() {
   const body = (
     <>
       {offering ? (
-        <View style={[styles.tipIcon, { backgroundColor: colors.azureSoft }]}>
-          <Compass color={colors.azure} size={26} />
+        <View style={[styles.tipIcon, { backgroundColor: colors.surfaceAlt }]}>
+          <Compass color={colors.azureInk} size={26} />
         </View>
       ) : null}
       {!offering ? (
-        <Text style={[typeScale.label, { color: colors.muted, marginBottom: 4 }]}>{stepLabel}</Text>
+        <Text style={[typeScale.meta, { color: colors.muted, marginBottom: 4 }]}>{stepLabel}</Text>
       ) : null}
-      <Text accessibilityRole="header" style={[typeScale.h2, { color: colors.ink, marginBottom: 6 }]}>
+      <Text accessibilityRole="header" style={[typeScale.section, { color: colors.ink, marginBottom: 8 }]}>
         {offering ? t('Un tour rapide de l’app ?', 'Yon ti vizit rapid nan app la ?') : pick(step!.title)}
       </Text>
-      <Text style={[typeScale.instruction, { color: colors.muted }]}>
+      <Text style={[typeScale.body, { color: colors.muted }]}>
         {offering
           ? t(
             'Bravo pour ta première activité. Veux-tu voir où se trouve chaque chose ? Moins d’une minute.',
@@ -287,21 +287,22 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
-  card: { borderRadius: radius.hero, padding: 18 },
+  card: { borderRadius: radius.hero, padding: 22 },
   center: { ...StyleSheet.absoluteFillObject, justifyContent: 'center' },
   centerScroll: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
   centerCard: { width: '100%', maxWidth: 420 },
   tipIcon: { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, gap: 12, flexWrap: 'wrap' },
   dots: { flexDirection: 'row', gap: 6 },
-  dot: { width: 7, height: 7, borderRadius: 999 },
+  dot: { width: 8, height: 8, borderRadius: 999 },
+  // Same anatomy as the Button primitive: radius 12, 48 tall.
   primaryBtn: {
-    borderRadius: radius.pill, paddingHorizontal: 20, minHeight: touch.min,
+    borderRadius: radius.control, paddingHorizontal: 20, minHeight: 48,
     alignItems: 'center', justifyContent: 'center', marginLeft: 'auto',
   },
   ghostBtn: { minHeight: touch.min, paddingHorizontal: 8, alignItems: 'center', justifyContent: 'center' },
   miniBar: {
-    flexDirection: 'row', marginTop: 16, borderRadius: radius.pill, borderWidth: 1,
+    flexDirection: 'row', marginTop: 16, borderRadius: radius.pill,
     padding: 4, justifyContent: 'space-between',
   },
   miniSlot: { flex: 1, height: 40, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },

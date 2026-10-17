@@ -9,12 +9,14 @@ import { View, Text } from 'react-native';
 import { HelpCircle } from 'lucide-react-native';
 import { buildSequenceRounds } from '../../utils/gameGen';
 import GameOverCard, { GameReward } from './GameOverCard';
-import { useColors, typeScale, radius } from '../../theme/theme';
+import { typeScale } from '../../theme/theme';
+import { useArenaColors, arenaColors as C } from '../../theme/arenaTheme';
 import PressableScale from '../ui/PressableScale';
 import { success, warn } from '../../utils/haptics';
 
 const ROUNDS = 10;
-const ACCENT = '#0e7490';
+// The night has one accent; the score and the blank speak in tonal steps.
+const ACCENT = C.coral;
 
 interface SuitesGameProps {
   isCreole: boolean;
@@ -26,7 +28,7 @@ interface SuitesGameProps {
 export default function SuitesGame({
   isCreole, onExit, onRecord, highScore = null,
 }: SuitesGameProps) {
-  const colors = useColors();
+  const colors = useArenaColors();
   const [nonce, setNonce] = useState(0);
   const rounds = useMemo(() => buildSequenceRounds(ROUNDS), [nonce]);
 
@@ -95,7 +97,7 @@ export default function SuitesGame({
         <Text style={[typeScale.bodyMd, { color: colors.muted }]}>
           {idx + 1} / {ROUNDS}
         </Text>
-        <Text style={[typeScale.bodyMd, { color: ACCENT }]}>
+        <Text style={[typeScale.bodyMd, { color: C.ink }]}>
           {score} {isCreole ? 'pwen' : 'points'}
         </Text>
       </View>
@@ -111,30 +113,30 @@ export default function SuitesGame({
         {round.shown.map((n, i) => (
           <View
             key={i}
-            className="items-center justify-center rounded-xl border"
-            style={{ minWidth: 56, height: 52, paddingHorizontal: 10, backgroundColor: colors.surface, borderColor: colors.border }}
+            className="items-center justify-center"
+            style={{ minWidth: 56, height: 52, paddingHorizontal: 10, borderRadius: 14, backgroundColor: C.surfaceRaised }}
           >
             <Text style={[typeScale.h2, { color: colors.ink }]}>{n}</Text>
           </View>
         ))}
         <View
-          className="items-center justify-center rounded-xl"
-          style={{ minWidth: 56, height: 52, backgroundColor: ACCENT }}
+          className="items-center justify-center"
+          style={{ minWidth: 56, height: 52, borderRadius: 14, backgroundColor: C.secondary }}
         >
-          <HelpCircle color="#fff" size={22} />
+          <HelpCircle color={C.coral} size={22} />
         </View>
       </View>
 
       {/* Options — 2×2 grid */}
       <View className="flex-row flex-wrap justify-center mt-7" style={{ gap: 10 }}>
         {round.options.map((opt) => {
-          let bg = colors.surface;
-          let border = colors.border;
-          let color = colors.ink;
+          // State is a tonal wash, never an outline.
+          let bg: string = C.surface;
+          let color: string = C.ink;
           let opacity = 1;
           if (picked != null) {
-            if (opt === round.answer) { bg = colors.success; border = colors.success; color = '#ffffff'; }
-            else if (opt === picked) { bg = colors.danger; border = colors.danger; color = '#ffffff'; }
+            if (opt === round.answer) { bg = C.successSoft; color = C.success; }
+            else if (opt === picked) { bg = C.dangerSoft; color = C.danger; }
             else { opacity = 0.45; }
           }
           return (
@@ -150,10 +152,8 @@ export default function SuitesGame({
                 justifyContent: 'center',
                 width: '46%',
                 height: 64,
-                borderRadius: radius.tile,
+                borderRadius: 18,
                 backgroundColor: bg,
-                borderWidth: 2,
-                borderColor: border,
                 opacity,
               }}
             >

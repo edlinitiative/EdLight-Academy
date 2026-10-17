@@ -10,7 +10,7 @@ import {
   startTimer, remainingMs, isExpired, pauseTimer, resumeTimer, onBackground, onForeground,
   type BackgroundPolicy, type DeadlineTimer,
 } from '../../utils/deadlineTimer';
-import { useColors } from '../../theme/theme';
+import { arenaColors as C } from '../../theme/arenaTheme';
 
 /** Seconds left at which the HUD flips to the danger colour. */
 export const URGENT_AT_SECONDS = 10;
@@ -118,14 +118,17 @@ export function useRoundTimer(
   return { timeLeft, urgent: timeLeft <= URGENT_AT_SECONDS };
 }
 
-/** The thin progress bar under the HUD, tinted per game. */
-export function TimeBar({ timeLeft, total, color }: { timeLeft: number; total: number; color: string }) {
-  const colors = useColors();
+/**
+ * The 6px countdown bar under the HUD, on the Jeux night: coral on a night
+ * track. `color` is honoured only as a STATE colour (e.g. danger when urgent);
+ * any other value falls back to coral — the night has one accent.
+ */
+export function TimeBar({ timeLeft, total, color }: { timeLeft: number; total: number; color?: string }) {
+  const fill = color === C.danger ? C.danger : C.coral;
   return (
-    <View className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: colors.border }}>
+    <View style={{ height: 6, borderRadius: 3, overflow: 'hidden', backgroundColor: C.surface }}>
       <View
-        className="h-1.5 rounded-full"
-        style={{ width: `${(timeLeft / Math.max(total, 1)) * 100}%`, backgroundColor: color }}
+        style={{ height: 6, borderRadius: 3, width: `${Math.max(0, Math.min(1, timeLeft / Math.max(total, 1))) * 100}%`, backgroundColor: fill }}
       />
     </View>
   );

@@ -10,13 +10,13 @@ import { View, Text, TouchableOpacity, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ArrowLeft, BarChart3, ChevronRight } from 'lucide-react-native';
+import { ChevronLeft, BarChart3, ChevronRight } from 'lucide-react-native';
 import useStore from '../contexts/store';
-import { useTheme, typeScale } from '../theme/theme';
+import { useTheme, typeScale, fonts } from '../theme/theme';
 import { ListSkeleton, EmptyState, ErrorState } from '../components/StateViews';
 import { loadAllExamResultSummaries } from '../services/examResults';
 import { fetchCatalogIndex } from '../utils/examCatalog';
-import { normalizeSubject, normalizeLevel } from '../utils/examUtils';
+import { normalizeSubject, normalizeLevel, normalizeExamTitle, subjectDisplayName } from '../utils/examUtils';
 import type { ExamsParamList } from '../navigation/ExamsNavigator';
 import { tapLight } from '../utils/haptics';
 
@@ -46,7 +46,7 @@ export default function ExamHistoryScreen() {
   const { user, language, toggleAuthModal } = useStore();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
-  const { colors, cardSurface } = useTheme();
+  const { colors, cardSurface, isDark } = useTheme();
 
   const [rows, setRows] = useState<HistoryRow[] | null>(null);
   const [error, setError] = useState(false);
@@ -70,8 +70,9 @@ export default function ExamHistoryScreen() {
             const lvl = entry?.level ? normalizeLevel(entry.level) : '';
             return {
               examId,
-              title: entry?.exam_title || subject || t('Examen', 'Egzamen'),
-              meta: [subject, lvl, entry?.year].filter(Boolean).join(' · '),
+              // Raw catalog titles are the ministry's PDF header: compose a readable one.
+              title: (entry ? normalizeExamTitle(entry) : '') || subjectDisplayName(subject) || t('Examen', 'Egzamen'),
+              meta: [lvl, entry?.year].filter(Boolean).join(' · '),
               levelSlug: RAW_LEVEL_TO_SLUG[entry?.level ?? ''] || 'terminale',
               percentage: typeof s?.percentage === 'number' ? s.percentage : null,
               submittedAtMs: s?.submittedAtMs ?? null,
@@ -89,17 +90,17 @@ export default function ExamHistoryScreen() {
   );
 
   const header = (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingTop: 4, paddingBottom: 12 }}>
       <TouchableOpacity
         onPress={() => { tapLight(); navigation.goBack(); }}
-        style={{ padding: 4 }}
+        style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         accessibilityRole="button"
         accessibilityLabel={t('Retour', 'Retounen')}
       >
-        <ArrowLeft color={colors.ink} size={22} />
+        <ChevronLeft color={colors.ink} size={26} />
       </TouchableOpacity>
-      <Text style={[typeScale.title, { color: colors.ink, flex: 1 }]} numberOfLines={1}>
+      <Text accessibilityRole="header" style={[typeScale.section, { color: colors.ink, flex: 1 }]} numberOfLines={1}>
         {t('Mes résultats', 'Rezilta mwen yo')}
       </Text>
     </View>
@@ -133,7 +134,7 @@ export default function ExamHistoryScreen() {
           title={t('Aucun examen terminé pour l’instant', 'Ou poko fini okenn egzamen')}
           description={t('Passez un examen blanc. Votre score apparaîtra ici.', 'Fè yon egzamen blan. Nòt ou ap parèt la.')}
           ctaLabel={t('Voir les examens', 'Gade egzamen yo')}
-          onCta={() => navigation.navigate('ExamBrowser', { level: 'terminale' })}
+          onCta={() => navigation.navigate('ExamLanding')}
         />
       );
     }
@@ -141,11 +142,13 @@ export default function ExamHistoryScreen() {
       <FlatList
         data={rows}
         keyExtractor={(r) => r.examId}
-        contentContainerStyle={{ paddingHorizontal: GUTTER, paddingBottom: 40, gap: 10 }}
+        contentContainerStyle={{ paddingHorizontal: GUTTER, paddingBottom: 110, gap: 12 }}
         renderItem={({ item }) => {
-          const tone = item.percentage == null ? colors.muted
-            : item.percentage >= 60 ? colors.success
-            : item.percentage >= 40 ? colors.warn : colors.danger;
+          const pct = item.percentage == null ? null : Math.round(item.percentage);
+          const tone = pct == null ? { bg: colors.surfaceAlt, fg: colors.muted }
+            : pct >= 60 ? { bg: colors.successSoft, fg: isDark ? colors.success : colors.successFill }
+            : pct >= 40 ? { bg: colors.warnSoft, fg: isDark ? colors.warn : '#9A5B00' }
+            : { bg: colors.dangerSoft, fg: colors.danger };
           const when = item.submittedAtMs
             ? new Date(item.submittedAtMs).toLocaleDateString(isCreole ? 'fr-HT' : 'fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
             : '';
@@ -157,20 +160,22 @@ export default function ExamHistoryScreen() {
               }}
               activeOpacity={0.75}
               accessibilityRole="button"
-              style={{ ...cardSurface, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+              accessibilityLabel={[item.title, pct != null ? `${pct}%` : '', when].filter(Boolean).join(', ')}
+              style={{ ...cardSurface, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 84 }}
             >
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={[typeScale.titleSm, { color: colors.ink }]} numberOfLines={1}>{item.title}</Text>
-                <Text style={[typeScale.micro, { color: colors.muted, marginTop: 2 }]} numberOfLines={1}>
+              {/* The score leads the row — the number is the reason to come back. */}
+              <View style={{ width: 56, height: 56, borderRadius: 14, backgroundColor: tone.bg, alignItems: 'center', justifyContent: 'center' }}>
+                <Text maxFontSizeMultiplier={1.3} style={{ fontFamily: fonts.heading, fontSize: pct != null && pct >= 100 ? 15 : 17, lineHeight: 21, color: tone.fg, fontVariant: ['tabular-nums'] }}>
+                  {pct != null ? `${pct}%` : '—'}
+                </Text>
+              </View>
+              <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                <Text style={{ fontFamily: fonts.headingBold, fontSize: 17, lineHeight: 22, color: colors.ink }} numberOfLines={1}>{item.title}</Text>
+                <Text style={[typeScale.meta, { color: colors.muted }]} numberOfLines={1}>
                   {[item.meta, when].filter(Boolean).join(' · ')}
                 </Text>
               </View>
-              {item.percentage != null && (
-                <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: colors.surface, borderWidth: 1, borderColor: tone }}>
-                  <Text style={[typeScale.label, { color: tone }]} maxFontSizeMultiplier={1.3}>{item.percentage}%</Text>
-                </View>
-              )}
-              <ChevronRight size={16} color={colors.faint} />
+              <ChevronRight size={20} color={colors.faint} />
             </TouchableOpacity>
           );
         }}

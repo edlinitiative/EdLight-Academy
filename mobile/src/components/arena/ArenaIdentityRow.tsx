@@ -49,9 +49,8 @@ export default function ArenaIdentityRow({
       style={{
         padding: 13,
         borderRadius: radius.card,
-        backgroundColor: colors.surface,
-        borderWidth: 1,
-        borderColor: blocking ? colors.danger : colors.border,
+        // A blocking problem is a danger wash, never a red outline.
+        backgroundColor: blocking ? colors.dangerSoft : colors.surface,
         gap: 6,
       }}
     >

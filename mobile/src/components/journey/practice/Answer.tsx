@@ -8,13 +8,15 @@
  *   explanation  the authored one, or an honest "no explanation" line
  *   next step    the labelled footer button (owned by the runner)
  *
- * No shake, no flash: a checked option changes its fill and gains an icon,
- * and nothing moves.
+ * Look (Stitch 06, 2026-10-17): options are opaque white cards with the soft
+ * card drop and NO outline. State is a full opaque wash — azureSoft for the
+ * pending pick, successSoft for the right answer, dangerSoft for a wrong pick —
+ * plus a 28pt disc and a word on the right. Nothing moves: no shake, no flash.
  */
 import React from 'react';
 import { View, Text } from 'react-native';
-import { Check, X, Circle, AlertCircle, HelpCircle, Lightbulb } from 'lucide-react-native';
-import { useTheme, typeScale, radius } from '../../../theme/theme';
+import { Check, X, Circle, AlertCircle, HelpCircle } from 'lucide-react-native';
+import { useTheme, typeScale, fonts } from '../../../theme/theme';
 import PressableScale from '../../ui/PressableScale';
 import { MathText } from '../../MathText';
 import { needsKatex } from '../../../utils/mathRouting';
@@ -29,26 +31,25 @@ const ICON: Record<AnswerStatusKind, any> = {
   ungraded: HelpCircle,
 };
 
-function useStatusTone(kind: AnswerStatusKind) {
+export function useStatusTone(kind: AnswerStatusKind) {
   const { colors, isDark } = useTheme();
   switch (kind) {
-    case 'correct': return { fg: isDark ? colors.success : colors.successFill, bg: colors.successSoft };
-    case 'incorrect': return { fg: colors.danger, bg: colors.dangerSoft };
-    case 'partial': return { fg: colors.warn, bg: colors.warnSoft };
-    default: return { fg: colors.muted, bg: colors.surfaceAlt };
+    case 'correct': return { fg: isDark ? colors.success : colors.successFill, bg: colors.successSoft, disc: colors.successFill };
+    case 'incorrect': return { fg: colors.danger, bg: colors.dangerSoft, disc: colors.danger };
+    case 'partial': return { fg: isDark ? colors.warn : '#9A5B00', bg: colors.warnSoft, disc: '#B45309' };
+    default: return { fg: colors.muted, bg: colors.surfaceAlt, disc: colors.faint };
   }
 }
 
 /** Rich text when the string carries math, plain themed text otherwise. */
-export function Rich({ text, style }: { text: string; style?: any }) {
+export function Rich({ text, style, numberOfLines }: { text: string; style?: any; numberOfLines?: number }) {
   const { colors } = useTheme();
   // MathText spreads its style into a WebView: give it none, it themes itself.
   if (needsKatex(text)) return <MathText text={text} />;
-  return <Text style={[{ color: colors.ink }, style]}>{text}</Text>;
+  return <Text numberOfLines={numberOfLines} style={[{ color: colors.ink }, style]}>{text}</Text>;
 }
 
 export function AnswerStatus({ kind, t, label }: { kind: AnswerStatusKind; t: Tx; label?: string }) {
-  const { colors } = useTheme();
   const tone = useStatusTone(kind);
   const Icon = ICON[kind];
   const words = label || answerStatusLabel(kind, t);
@@ -59,11 +60,22 @@ export function AnswerStatus({ kind, t, label }: { kind: AnswerStatusKind; t: Tx
       accessibilityLabel={words}
       style={{
         flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
-        backgroundColor: tone.bg, borderRadius: radius.chip, paddingHorizontal: 10, paddingVertical: 5,
+        backgroundColor: tone.bg, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5,
       }}
     >
-      <Icon color={tone.fg} size={16} strokeWidth={2.5} />
-      <Text style={[typeScale.bodyMd, { color: colors.ink }]}>{words}</Text>
+      <Icon color={tone.fg} size={16} strokeWidth={2.6} />
+      <Text style={[typeScale.label, { fontFamily: fonts.bold, color: tone.fg }]}>{words}</Text>
+    </View>
+  );
+}
+
+/** The 28pt result disc on a checked option: white glyph on the status ground. */
+function StatusDisc({ kind }: { kind: 'correct' | 'incorrect' }) {
+  const tone = useStatusTone(kind);
+  const Icon = ICON[kind];
+  return (
+    <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: tone.disc, alignItems: 'center', justifyContent: 'center' }}>
+      <Icon color="#ffffff" size={16} strokeWidth={3} />
     </View>
   );
 }
@@ -71,9 +83,10 @@ export function AnswerStatus({ kind, t, label }: { kind: AnswerStatusKind; t: Tx
 const LETTERS = 'ABCDEFGHIJ';
 
 /**
- * One option. Before checking: neutral, selected = azure. After checking: the
- * right option (when known) gets a check, the student's wrong pick an X, and
- * both say so to VoiceOver.
+ * One option. Before checking: neutral white, the pending pick washed azure.
+ * After checking: the right option (when known) washes green with "Bonne
+ * réponse", the student's wrong pick washes red with "Ta réponse", and both
+ * say so to VoiceOver.
  */
 export function AnswerOption({
   item, index, entry, selected, checked, onPress, t,
@@ -87,33 +100,41 @@ export function AnswerOption({
   onPress: () => void;
   t: Tx;
 }) {
-  const { colors } = useTheme();
+  const { colors, isDark, elevation } = useTheme();
   const opt = item.options[index];
   const graded = isGradable(item);
   const isKey = graded && index === item.correctIndex;
   const isPick = checked ? entry?.selected === index : selected;
 
-  let border = colors.border;
   let bg = colors.surface;
-  let badgeBg = colors.surfaceAlt;
-  let badgeFg = colors.muted;
+  let discBg = colors.surfaceAlt;
+  let discFg = colors.muted;
   let state = '';
-  let Icon: any = null;
-  let iconColor = colors.muted;
+  let tag: { kind: 'correct' | 'incorrect' | null; words: string; fg: string } | null = null;
+  let lifted = true;
 
   if (checked) {
     if (isKey) {
-      border = colors.success; bg = colors.successSoft; badgeBg = colors.successFill; badgeFg = '#ffffff';
-      Icon = Check; iconColor = colors.success; state = t('bonne réponse', 'bon repons');
+      bg = colors.successSoft; discBg = colors.surface; discFg = isDark ? colors.success : colors.successFill;
+      state = t('bonne réponse', 'bon repons');
+      tag = { kind: 'correct', words: t('Bonne réponse', 'Bon repons'), fg: isDark ? colors.success : colors.successFill };
+      lifted = false;
     } else if (isPick) {
-      border = graded ? colors.danger : colors.azure;
-      bg = graded ? colors.dangerSoft : colors.azureSoft;
-      badgeBg = graded ? colors.danger : colors.azureFill; badgeFg = '#ffffff';
-      Icon = graded ? X : null; iconColor = colors.danger;
-      state = graded ? t('ta réponse, incorrecte', 'repons ou, pa kòrèk') : t('ta réponse', 'repons ou');
+      if (graded) {
+        bg = colors.dangerSoft; discBg = colors.surface; discFg = colors.danger;
+        state = t('ta réponse, incorrecte', 'repons ou, pa kòrèk');
+        tag = { kind: 'incorrect', words: t('Ta réponse', 'Repons ou'), fg: colors.danger };
+      } else {
+        // No key to compare with: the pick is shown as the student's, never as wrong.
+        bg = colors.azureSoft; discBg = colors.surface; discFg = colors.azureInk;
+        state = t('ta réponse', 'repons ou');
+        tag = { kind: null, words: t('Ta réponse', 'Repons ou'), fg: colors.azureInk };
+      }
+      lifted = false;
     }
   } else if (isPick) {
-    border = colors.azure; bg = colors.azureSoft; badgeBg = colors.azureFill; badgeFg = '#ffffff';
+    bg = colors.azureSoft; discBg = colors.azureFill; discFg = '#ffffff';
+    lifted = false;
   }
 
   const letter = LETTERS[index] ?? String(index + 1);
@@ -121,33 +142,69 @@ export function AnswerOption({
     <PressableScale
       onPress={onPress}
       disabled={checked}
+      disabledOpacity={1}
       haptic={false}
       pressedScale={0.99}
       accessibilityRole="radio"
       accessibilityState={{ checked: isPick, disabled: checked }}
       accessibilityLabel={`${letter}. ${opt}${state ? `. ${state}` : ''}`}
-      style={{
-        flexDirection: 'row', alignItems: 'center', gap: 12,
-        borderWidth: 1.5, borderColor: border, backgroundColor: bg,
-        borderRadius: radius.hero, paddingVertical: 12, paddingHorizontal: 12, marginBottom: 10,
-        minHeight: 52,
-      }}
+      style={[
+        {
+          flexDirection: 'row', alignItems: 'center', gap: 14,
+          backgroundColor: bg, borderRadius: 16,
+          paddingVertical: 14, paddingHorizontal: 14, marginBottom: 12, minHeight: 64,
+        },
+        lifted && !isDark ? elevation.card : null,
+      ]}
     >
-      <View style={{ width: 32, height: 32, borderRadius: 999, backgroundColor: badgeBg, alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={[typeScale.titleSm, { color: badgeFg }]}>{letter}</Text>
+      <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: discBg, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ fontFamily: fonts.headingBold, fontSize: 16, lineHeight: 20, color: discFg }}>{letter}</Text>
       </View>
       <View style={{ flex: 1 }}>
-        <Rich text={opt} style={[typeScale.body, { fontSize: 16, lineHeight: 23, color: colors.ink }]} />
+        <Rich text={opt} style={{ fontFamily: fonts.medium, fontSize: 18, lineHeight: 25, color: colors.ink }} />
       </View>
-      {Icon ? <Icon color={iconColor} size={20} strokeWidth={2.5} /> : null}
+      {tag ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, maxWidth: '42%' }}>
+          <Text numberOfLines={2} style={[typeScale.label, { fontFamily: fonts.bold, color: tag.fg, textAlign: 'right', flexShrink: 1 }]}>{tag.words}</Text>
+          {tag.kind ? <StatusDisc kind={tag.kind} /> : null}
+        </View>
+      ) : null}
     </PressableScale>
+  );
+}
+
+/**
+ * "Ta réponse : [31,5 g/cm³]" — a label and a tonal value. Short plain values
+ * sit in a pill on the right; long or math values drop below as a full-width
+ * tonal block so nothing is squeezed or cut.
+ */
+function ValueRow({ label, value, tone }: { label: string; value: string; tone: { fg: string; bg: string } }) {
+  const { colors } = useTheme();
+  const inline = value.length <= 28 && !needsKatex(value) && !value.includes('\n');
+  if (inline) {
+    return (
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: 36 }}>
+        <Text style={[typeScale.body, { color: colors.muted }]}>{label}</Text>
+        <View style={{ backgroundColor: tone.bg, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6, flexShrink: 1 }}>
+          <Text style={{ fontFamily: fonts.headingBold, fontSize: 16, lineHeight: 21, color: tone.fg, textAlign: 'right' }}>{value}</Text>
+        </View>
+      </View>
+    );
+  }
+  return (
+    <View style={{ gap: 6 }}>
+      <Text style={[typeScale.body, { color: colors.muted }]}>{label}</Text>
+      <View style={{ backgroundColor: tone.bg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 }}>
+        <Rich text={value} style={{ fontFamily: fonts.medium, fontSize: 16, lineHeight: 23, color: colors.ink }} />
+      </View>
+    </View>
   );
 }
 
 /**
  * The correction under a checked question (and in the result list).
  * `showQuestion` repeats the prompt — the result list needs it, the live
- * question already shows it above.
+ * question already shows it above. Bare: the caller owns the card around it.
  */
 export function Correction({
   item, entry, t, showQuestion = false, index,
@@ -159,27 +216,32 @@ export function Correction({
   /** 1-based position, for the result list. */
   index?: number;
 }) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const kind = statusOf(item, entry);
   const yours = entry?.selected != null ? item.options[entry.selected] : null;
   const expected = isGradable(item) ? item.options[item.correctIndex] : null;
-  const label = (s: string) => <Text style={[typeScale.label, { color: colors.muted }]}>{s}</Text>;
+  const wrongTone = { fg: colors.danger, bg: colors.dangerSoft };
+  const rightTone = { fg: isDark ? colors.success : colors.successFill, bg: colors.successSoft };
+  const neutralTone = { fg: colors.azureInk, bg: colors.azureSoft };
+  const yoursTone = kind === 'correct' ? rightTone : kind === 'incorrect' ? wrongTone : neutralTone;
+  // Hints are authored "think about…" lines; worth repeating after the answer
+  // as a reminder, never instead of the explanation.
+  const rappel = item.hint && item.hint.trim() && item.hint.trim() !== (item.explanation ?? '').trim() ? item.hint.trim() : '';
 
   return (
-    <View style={{ gap: 10 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        {index != null ? (
-          <Text style={[typeScale.label, { color: colors.muted }]}>{t(`Question ${index}`, `Kesyon ${index}`)}</Text>
-        ) : null}
+    <View style={{ gap: 14 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+        <Text style={[typeScale.label, { color: colors.muted }]}>
+          {index != null ? t(`Question ${index}`, `Kesyon ${index}`) : t('Correction', 'Koreksyon')}
+        </Text>
         <AnswerStatus kind={kind} t={t} />
       </View>
-      {showQuestion ? <Rich text={item.question} style={[typeScale.bodyMd, { fontSize: 15, lineHeight: 22 }]} /> : null}
+      {showQuestion ? <Rich text={item.question} style={{ fontFamily: fonts.headingBold, fontSize: 17, lineHeight: 24, color: colors.ink }} /> : null}
 
-      {yours != null ? (
-        <View style={{ gap: 2 }}>
-          {label(t('Ta réponse', 'Repons ou'))}
-          <Rich text={yours} style={[typeScale.body, { fontSize: 15, lineHeight: 22 }]} />
-        </View>
+      {yours != null ? <ValueRow label={t('Ta réponse :', 'Repons ou :')} value={yours} tone={yoursTone} /> : null}
+
+      {expected != null && kind !== 'correct' ? (
+        <ValueRow label={t('Bonne réponse :', 'Bon repons :')} value={expected} tone={rightTone} />
       ) : null}
 
       {kind === 'ungraded' ? (
@@ -189,19 +251,15 @@ export function Correction({
         </Text>
       ) : null}
 
-      {expected != null && kind !== 'correct' ? (
-        <View style={{ gap: 2 }}>
-          {label(t('Bonne réponse', 'Bon repons'))}
-          <Rich text={expected} style={[typeScale.bodyMd, { fontSize: 15, lineHeight: 22 }]} />
-        </View>
-      ) : null}
-
       {kind !== 'unanswered' || showQuestion ? (
         item.explanation ? (
-          <View style={{ flexDirection: 'row', gap: 8, backgroundColor: colors.surfaceAlt, borderRadius: radius.card, padding: 12 }}>
-            <Lightbulb color={colors.muted} size={16} style={{ marginTop: 2 }} />
-            <View style={{ flex: 1 }}>
-              <Rich text={item.explanation} style={[typeScale.body, { fontSize: 15, lineHeight: 22, color: colors.ink }]} />
+          <View style={{ gap: 8 }}>
+            <Text style={[typeScale.body, { color: colors.muted }]}>{t('Explication :', 'Eksplikasyon :')}</Text>
+            <View style={{ backgroundColor: isDark ? colors.surfaceAlt : colors.bg, borderRadius: 14, padding: 16, gap: 8 }}>
+              <Rich text={item.explanation} style={{ fontFamily: fonts.medium, fontSize: 16, lineHeight: 24, color: colors.ink }} />
+              {rappel ? (
+                <Text style={[typeScale.meta, { color: colors.muted }]}>{`${t('Rappel', 'Rapèl')} : ${rappel}`}</Text>
+              ) : null}
             </View>
           </View>
         ) : (

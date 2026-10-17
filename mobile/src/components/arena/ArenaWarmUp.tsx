@@ -134,8 +134,6 @@ export default function ArenaWarmUp({ isCreole, onExit }: { isCreole: boolean; o
               style={{
                 flexDirection: 'row', alignItems: 'center', gap: 10,
                 padding: 13, borderRadius: radius.card,
-                borderWidth: 1,
-                borderColor: show ? (isAnswer ? colors.success : colors.danger) : colors.border,
                 backgroundColor: show
                   ? (isAnswer ? colors.successSoft : colors.dangerSoft)
                   : colors.bg,
@@ -160,8 +158,8 @@ export default function ArenaWarmUp({ isCreole, onExit }: { isCreole: boolean; o
               pressedScale={0.98}
               accessibilityRole="button"
               style={{
-                paddingVertical: 12, paddingHorizontal: 16, borderRadius: radius.card,
-                borderWidth: 1, borderColor: colors.border,
+                minHeight: 44, justifyContent: 'center', paddingHorizontal: 16, borderRadius: 999,
+                backgroundColor: colors.surfaceAlt,
               }}
             >
               <Text style={[typeScale.label, { color: colors.muted }]}>{t('Arrêter', 'Kanpe')}</Text>
