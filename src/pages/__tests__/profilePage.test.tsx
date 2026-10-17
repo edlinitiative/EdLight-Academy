@@ -151,7 +151,9 @@ it('lists weak units from due reviews and strong units from mastery, each linkin
   expect(within(weak).getByText('2 à revoir')).toBeInTheDocument();
   // CHEM-NSI's only entry was answered correctly since — not a weak point.
   expect(screen.queryByText(/Chimie NS1/)).toBeNull();
-  const strong = await screen.findByText('2 maîtrisées');
+  // One lesson confirmed by a chapter test, one only by exercises: the chip
+  // must not call both "maîtrisées" (LJ-10).
+  const strong = await screen.findByText('1 maîtrisée · 1 pratiquée');
   expect(strong.closest('a')).toHaveAttribute('href', '/quizzes?course=ECON-NSI&unit=U1');
   expect(screen.getByRole('link', { name: /Lancer ma révision/ })).toHaveAttribute('href', '/revision');
 });

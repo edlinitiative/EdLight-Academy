@@ -1138,18 +1138,23 @@
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
-.qr-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.2rem 0.65rem;
-  border-radius: 999px;
+.qr-item__head { flex-wrap: wrap; }
+.qr-item__tag {
+  margin-left: auto;
+  color: var(--text-600);
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 650;
 }
-.qr-badge--first { background: #E7F7EF; color: #11643A; }
-.qr-badge--retry { background: #FFF3DC; color: #805000; }
-.qr-badge--missed { background: #FDEBEC; color: #A12232; }
+.qr-score__def--practice { font-size: 1.0625rem; }
+.qr-score__note {
+  margin: 0.75rem 0 0;
+  color: var(--text-600);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+.qr-item__row--yours.is-plain .qr-item__given { color: var(--text-800, var(--text-900)); text-decoration: none; }
+.qr-item__row--right dd.is-none { color: var(--text-600); font-weight: 600; font-style: italic; }
+.qr-item__why--none { color: var(--text-600); font-style: italic; }
 .qr-item__stem {
   color: var(--text-900);
   font-size: 1.0625rem;
@@ -1202,7 +1207,8 @@
   line-height: 1.55;
 }
 /* First-try questions stay in the list for context but step back. */
-.qr-item--first { box-shadow: none; background: transparent; outline: 1px solid var(--border, #DCE5F0); outline-offset: -1px; }
+/* Right first time: kept for context, stepping back. */
+.qr-item--correct { box-shadow: none; background: transparent; outline: 1px solid var(--border, #DCE5F0); outline-offset: -1px; }
 
 @media (max-width: 600px) {
   .qr-actions .button { width: 100%; }
@@ -1210,13 +1216,18 @@
   .qr-item__row { grid-template-columns: 1fr; gap: 0.1rem; }
 }
 
-[data-theme="dark"] .qr-badge--first { background: #173F31; color: #A4ECC7; }
-[data-theme="dark"] .qr-badge--retry { background: #47371E; color: #FFDA91; }
-[data-theme="dark"] .qr-badge--missed { background: #48232D; color: #FFB7C0; }
 [data-theme="dark"] .qr-item__row--right dd { color: #A4ECC7; }
 [data-theme="dark"] .qr-item__given { color: #FFB7C0; }
 [data-theme="dark"] .qr-item { box-shadow: none; }
-[data-theme="dark"] .qr-item--first { background: transparent; }
+[data-theme="dark"] .qr-item--correct { background: transparent; }
 @media (prefers-reduced-motion: reduce) {
   .qr-review { scroll-behavior: auto; }
 }
+
+/* ══ Learning journey (2026-10-17, LJ-06…LJ-09) ═════════════════════════════
+   The mode rules sit under the configurator's switch so a student reads what
+   a mode does before starting it. The open-practice context bar has no thumb. */
+.qz-config__rules { margin-top: 0.85rem; }
+.qz-config__rules .pe-rules li { font-size: 0.95rem; }
+.qz-context--slim { margin-bottom: 1rem; }
+.qz--taking .pq-leave { margin-top: -0.5rem; }

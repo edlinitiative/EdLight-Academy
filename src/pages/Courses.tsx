@@ -19,6 +19,7 @@ import { courseCover } from '../utils/courseCovers';
 import '../styles/pf.css';
 import './Courses.css';
 import LearnWorkspace from './courses/LearnWorkspace';
+import { buildHomePreview } from '../components/journey/home/homePreview';
 
 const SUBJECT_ORDER = ['MATH', 'PHYS', 'CHEM', 'ECON'];
 const LEVEL_ORDER = ['NSI', 'NSII', 'NSIII', 'NSIV'];
@@ -288,7 +289,7 @@ function CourseRow({
     );
   }
 
-  const goToCourse = () => navigate(`/courses/${course.id}`);
+  const goToCourse = () => navigate(`/courses/${course.id}`, { state: { from: window.location.pathname + window.location.search } });
   const panelId = `units-${course.id}`;
   const hasUnits = shownUnits.length > 0;
 
@@ -480,7 +481,7 @@ export default function Courses({ mode = 'catalog' }: { mode?: 'catalog' | 'work
   const L = useCallback((fr: string, ht: string) => (isCreole ? ht : fr), [isCreole]);
   const { t } = useTranslation();
 
-  const { progress: allProgress } = useAllProgress();
+  const { progress: allProgress, loading: progressLoading } = useAllProgress();
   const progressByCourseId = useMemo(() => {
     const m = new Map();
     for (const p of allProgress || []) if (p?.courseId) m.set(p.courseId, p);
@@ -581,6 +582,51 @@ export default function Courses({ mode = 'catalog' }: { mode?: 'catalog' | 'work
     const lv: string[] = [...new Set<string>(courses.map(courseLevel).filter(Boolean))];
     return lv.sort((a, b) => LEVEL_ORDER.indexOf(a) - LEVEL_ORDER.indexOf(b));
   }, [courses]);
+
+  // /dashboard — Ted: "use this [the 'Espace de travail' mockup] to change the
+  // dashboard … the actual dashboard /dashboard", while the signed-in home
+  // ("/") keeps its own layout. The workspace needs the catalogue helpers this
+  // page already computes, so /dashboard renders this page in workspace mode:
+  // the student's workspace alone, no catalogue under it.
+  //
+  // It is decided BEFORE the catalogue's own loading/error screens: the
+  // workspace draws its own row-shaped skeleton and its own per-section
+  // failure (LJ-01 / PRD §13), so a catalogue error never hides the student's
+  // exams and review list behind a whole-page error.
+  if (mode === 'workspace') {
+    // Dev-only: /dashboard?preview=returning|new|noclass|uncovered|exam|failed|
+    // loading|stale|caughtup renders the workspace from fixtures, signed out.
+    const previewKey = process.env.NODE_ENV !== 'production' ? searchParams.get('preview') : null;
+    const preview = previewKey && courses.length > 0 ? buildHomePreview(previewKey, courses, courseLevel) : null;
+    if (!signedIn && !preview) {
+      if (previewKey && isLoading) return null;
+      return <Navigate to="/" replace />;
+    }
+    return (
+      <section className="section pf lrn lrn--workspace">
+        <div className="container">
+          <h1 className="lrn-sr-title">{L('Espace de travail', 'Espas travay')}</h1>
+          <LearnWorkspace
+            courses={courses}
+            courseStats={courseStats}
+            courseLevel={courseLevel}
+            subjectName={subjectName}
+            levelLabel={levelLabel}
+            myLevel={grade ? GRADE_TO_LEVEL[grade] : undefined}
+            progressByCourseId={progressByCourseId}
+            SubjectTile={SubjectTile as any}
+            L={L}
+            coursesLoading={isLoading}
+            coursesFailed={isError}
+            onRetryCourses={() => refetch()}
+            retryingCourses={isFetching}
+            progressLoading={progressLoading}
+            preview={preview}
+          />
+        </div>
+      </section>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -688,35 +734,6 @@ export default function Courses({ mode = 'catalog' }: { mode?: 'catalog' | 'work
   const groupLabel = (key) => (axis === 'level' ? levelLabel(key) : subjectName(key));
 
 
-  // /dashboard — Ted: "use this [the 'Espace de travail' mockup] to change the
-  // dashboard … the actual dashboard /dashboard", while the signed-in home
-  // ("/") keeps its own layout. The workspace needs the catalogue helpers this
-  // page already computes, so /dashboard renders this page in workspace mode:
-  // the student's workspace alone, no catalogue under it.
-  if (mode === 'workspace') {
-    if (!signedIn) return <Navigate to="/" replace />;
-    return (
-      <section className="section pf lrn lrn--workspace">
-        <div className="container">
-          <h1 className="lrn-sr-title">{L('Espace de travail', 'Espas travay')}</h1>
-          {courses.length > 0 && (
-            <LearnWorkspace
-              courses={courses}
-              courseStats={courseStats}
-              courseLevel={courseLevel}
-              subjectName={subjectName}
-              levelLabel={levelLabel}
-              myLevel={myLevel}
-              progressByCourseId={progressByCourseId}
-              SubjectTile={SubjectTile as any}
-              L={L}
-            />
-          )}
-        </div>
-      </section>
-    );
-  }
-
   // Course cards open on a real frame of the course's own lessons (YouTube
   // already hosts one for every video); the subject cover is the fallback.
   const coverFor = (course) => {
@@ -817,7 +834,7 @@ export default function Courses({ mode = 'catalog' }: { mode?: 'catalog' | 'work
           {heroMode && heroFrames.length > 0 && (
             <div className="cl-fan" aria-hidden="true">
               {heroFrames.map(({ course, src }, i) => (
-                <button key={course.id} type="button" tabIndex={-1} className={`cl-fan__card cl-fan__card--${i}`} onClick={() => navigate(`/courses/${course.id}`)}>
+                <button key={course.id} type="button" tabIndex={-1} className={`cl-fan__card cl-fan__card--${i}`} onClick={() => navigate(`/courses/${course.id}`, { state: { from: window.location.pathname + window.location.search } })}>
                   <img src={src} alt="" />
                   <span className="cl-fan__label">{subjectName(course.subject)} · {levelLabel(courseLevel(course))}</span>
                   {i === 0 && <span className="cl-fan__play"><PlayCircle size={34} /></span>}
@@ -913,7 +930,7 @@ export default function Courses({ mode = 'catalog' }: { mode?: 'catalog' | 'work
                     const mineHere = !!myLevel && lvl === myLevel;
                     const dur = durationOf(course);
                     return (
-                      <button key={course.id} type="button" className={`cl-card cl-card--${course.subject}`} onClick={() => navigate(`/courses/${course.id}`)}>
+                      <button key={course.id} type="button" className={`cl-card cl-card--${course.subject}`} onClick={() => navigate(`/courses/${course.id}`, { state: { from: window.location.pathname + window.location.search } })}>
                         <span className="cl-card__cover">
                           {cover
                             ? <img src={cover} alt="" loading="lazy" />

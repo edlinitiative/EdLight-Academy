@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Check, BookOpen } from './icons';
+import { X, Check, BookOpen, Play } from './icons';
 import MasteryBadge from './MasteryBadge';
 import { lessonMastery, summarize } from '../../shared/mastery';
 
@@ -31,6 +31,23 @@ function saveExpanded(courseId, set) {
   } catch {}
 }
 
+/** True below the two-column breakpoint, where the outline is a drawer. */
+function useConstrained(query = '(max-width: 960px)') {
+  const get = () => typeof window !== 'undefined' && !!window.matchMedia?.(query)?.matches;
+  const [match, setMatch] = useState(get);
+  useEffect(() => {
+    const mq = typeof window !== 'undefined' ? window.matchMedia?.(query) : null;
+    if (!mq) return undefined;
+    const on = () => setMatch(mq.matches);
+    on();
+    mq.addEventListener?.('change', on);
+    return () => mq.removeEventListener?.('change', on);
+  }, [query]);
+  return match;
+}
+
+const FOCUSABLE = 'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export default function CourseSidebar({
@@ -55,6 +72,51 @@ export default function CourseSidebar({
   const [expandedModules, setExpandedModules] = useState(() => loadExpanded(courseId));
   const activeLessonRef = useRef(null);
   const listRef = useRef(null);
+  const asideRef = useRef<HTMLElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+
+  // ── The outline as a sheet on constrained widths (PRD §11, LJ-04) ─────────
+  // A labelled modal dialog while open: focus moves in, Tab stays inside,
+  // Escape closes, and focus goes back to whatever opened it. While closed it
+  // is inert — it used to sit off-canvas with every lesson still in the Tab
+  // order. On the wide layout it is the sticky rail and none of this applies.
+  const constrained = useConstrained();
+  const asDialog = constrained && isOpen;
+  useEffect(() => {
+    const el = asideRef.current;
+    if (!el) return;
+    if (constrained && !isOpen) el.setAttribute('inert', '');
+    else el.removeAttribute('inert');
+  }, [constrained, isOpen]);
+
+  useEffect(() => {
+    if (!asDialog) return undefined;
+    returnFocusRef.current = (document.activeElement as HTMLElement) || null;
+    const focusTarget = (activeLessonRef.current as HTMLElement | null) || closeRef.current;
+    focusTarget?.focus({ preventScroll: true });
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onOpenChange(false);
+        return;
+      }
+      if (e.key !== 'Tab' || !asideRef.current) return;
+      const items = Array.from(asideRef.current.querySelectorAll(FOCUSABLE)) as HTMLElement[];
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      const back = returnFocusRef.current;
+      returnFocusRef.current = null;
+      if (back && document.contains(back)) back.focus({ preventScroll: true });
+    };
+  }, [asDialog, onOpenChange]);
 
   // Reload persisted expansion when course changes
   useEffect(() => {
@@ -113,10 +175,18 @@ export default function CourseSidebar({
         onClick={() => onOpenChange(false)}
       />
 
-      <aside className={`lesson-sidebar ${isOpen ? 'lesson-sidebar--visible' : ''}`}>
+      <aside
+        ref={asideRef}
+        id="lesson-outline"
+        className={`lesson-sidebar ${isOpen ? 'lesson-sidebar--visible' : ''}`}
+        aria-labelledby="lesson-outline-title"
+        role={asDialog ? 'dialog' : undefined}
+        aria-modal={asDialog ? true : undefined}
+        aria-hidden={constrained && !isOpen ? true : undefined}
+      >
         <div className="lesson-sidebar__header">
           <div>
-            <h3 className="lesson-sidebar__heading">{t('courses.courseContent', 'Contenu du cours')}</h3>
+            <h2 id="lesson-outline-title" className="lesson-sidebar__heading">{t('courses.courseContent', 'Contenu du cours')}</h2>
 
           {/* Overall progress bar — enrolled users with at least one completed lesson */}
           {isEnrolled && progress && completedCount > 0 && (
@@ -137,6 +207,7 @@ export default function CourseSidebar({
           )}
           </div>
           <button
+            ref={closeRef}
             className="lesson-sidebar__close"
             onClick={() => onOpenChange(false)}
             type="button"
@@ -210,14 +281,26 @@ export default function CourseSidebar({
                             ref={isActiveLesson ? activeLessonRef : null}
                             type="button"
                             className={`lesson-list__item lesson-list__item--lesson ${isActiveLesson ? 'lesson-list__item--active' : ''} ${isCompleted ? 'lesson-list__item--completed' : ''}`}
+                            aria-current={isActiveLesson ? 'step' : undefined}
                             onClick={() => {
                               onSelectLesson(idx, lidx);
                               onOpenChange(false);
                             }}
                           >
-                            <span className="lesson-list__index">
-                              {isCompleted ? <Check size={14} /> : `${idx + 1}.${lidx + 1}`}
+                            {/* State as a symbol AND words, never colour alone:
+                                a check for a finished lesson, a play mark for
+                                the one on screen, its number otherwise. */}
+                            <span className="lesson-list__index" aria-hidden="true">
+                              {isCompleted ? <Check size={14} weight="bold" /> : isActiveLesson ? <Play size={12} weight="fill" /> : `${idx + 1}.${lidx + 1}`}
                             </span>
+                            {(isCompleted || isActiveLesson) && (
+                              <span className="qz__sr-only">
+                                {[
+                                  isActiveLesson ? (isCreole ? 'Leson ki ouvè kounye a' : 'Leçon en cours') : '',
+                                  isCompleted ? (isCreole ? 'Fini' : 'Terminée') : '',
+                                ].filter(Boolean).join(', ')}{' : '}
+                              </span>
+                            )}
                             <span className="lesson-list__meta">
                               {icon ? (
                                 <span className="lesson-list__type-icon" aria-hidden>

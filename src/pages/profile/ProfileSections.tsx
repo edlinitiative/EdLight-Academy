@@ -16,7 +16,7 @@ import { getCurrentUser, getUserProfile, updateUser } from '../../services/fireb
 import { sendPasswordReset } from '../../services/authService';
 import { normalizeName } from '../../../shared/leaderboardAgg';
 import {
-  GOALS, RHYTHMS, courseLabel, loadUnitTitles, practiceHref, readStudyPrefs, strongSpots, weakSpots,
+  GOALS, RHYTHMS, courseLabel, loadUnitTitles, practiceHref, readStudyPrefs, strongSpotLabel, strongSpots, weakSpots,
   type SkillSpot, type StudyPrefs,
 } from './profileData';
 
@@ -149,7 +149,7 @@ function SpotChip({ spot, titles, isCreole, t, tone }: {
   const title = titles[spot.unitKey] || t(`Unité ${spot.unitNo}`, `Inite ${spot.unitNo}`);
   const count = tone === 'weak'
     ? t(`${spot.count} à revoir`, `${spot.count} pou revize`)
-    : t(`${spot.count} maîtrisée${spot.count > 1 ? 's' : ''}`, `${spot.count} metrize`);
+    : strongSpotLabel(spot, isCreole);
   return (
     <Link to={practiceHref(spot)} className={`pr-spot pr-spot--${tone}`}>
       <span className="pr-spot__course">{courseLabel(spot.course, isCreole)}</span>
@@ -204,7 +204,10 @@ export function SkillSpots({ uid, isCreole, t }: { uid: string; isCreole: boolea
           <span className="pr-muted">{t('Chargement…', 'Ap chaje…')}</span>
         ) : strong.length === 0 ? (
           <span className="pr-muted">
-            {t('Pas encore de leçon maîtrisée. Réussissez les exercices d’une leçon pour la voir ici.', 'Poko gen leson metrize. Reyisi egzèsis yon leson pou w wè l isit la.')}
+            {t(
+              'Pas encore de leçon pratiquée avec succès. Réussissez les exercices d’une leçon pour la voir ici ; un test de chapitre la rend maîtrisée.',
+              'Poko gen leson ou pratike avèk siksè. Reyisi egzèsis yon leson pou w wè l isit la ; yon tès chapit fè l metrize.',
+            )}
           </span>
         ) : (
           <div className="pr-spot-list">

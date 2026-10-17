@@ -1,18 +1,26 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Check, ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal, RotateCcw } from '../components/icons';
+import { ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal } from '../components/icons';
 import DirectBankQuiz, { MAX_ATTEMPTS } from '../components/DirectBankQuiz';
-import QuizResult, { type QuizLogEntry } from '../components/QuizResult';
+import QuizResult, { entryStatus, type QuizLogEntry } from '../components/QuizResult';
 import LearnSwitch from '../components/LearnSwitch';
 import { ErrorState } from '../components/StateViews';
 import { Skeleton, SkeletonText } from '../components/Skeleton';
+import PracticeEntry, { ModeRules, ScopeNotice, type PracticeMode } from '../components/journey/practice/PracticeEntry';
+import {
+  COURSE_WIDE, countQuizzable, findCourse, isGradable, matchUnit, poolRows, resolvePracticeScope, unitOptionsFor,
+} from '../components/journey/practice/practiceScope';
+import { useJourneyOnce } from '../components/journey/practice/useJourneyOnce';
+import { readPracticeHandoff, trackJourney } from '../utils/learningJourney';
+import { toDirectItemFromRow } from '../services/quizBank';
 import { useAppData } from '../hooks/useData';
 import { useFocusMode } from '../hooks/useFocusMode';
 import useStore from '../contexts/store';
-import { GRADES, gradeProfile } from '../config/trackConfig';
+import { gradeProfile } from '../config/trackConfig';
 import { useTranslation } from 'react-i18next';
 import { subjectThumbs } from './home/content';
 import { loadDueReviewIds } from '../services/reviewService';
+import '../components/journey/practice/practice.css';
 import './Quizzes.css';
 
 /**
@@ -26,6 +34,11 @@ import './Quizzes.css';
  * Neither is timed and neither writes a grade anywhere; both feed the Revizyon
  * review map through DirectBankQuiz when a student is signed in. Every fact
  * line below states exactly that and nothing more — no invented durations.
+ *
+ * Arriving from a lesson (LJ-06) — `/quizzes?course=…&unit=…&lesson=…&from=lesson`
+ * — the page resolves the scope against the loaded bank in the same render
+ * and shows a compact confirmation instead of the selectors. A scope the bank
+ * cannot serve is explained, never silently widened.
  */
 const QUIZ_LENGTH = 10;
 
@@ -33,30 +46,27 @@ const QUIZ_LENGTH = 10;
  * A student's class → the catalog level that carries their programme. Only the
  * four secondary years map onto a level: 7ᵉ, 8ᵉ, 9ᵉ and Post-Bac have no
  * `NS*` courses of their own, so they keep the first available level.
- *
- * The same four-entry literal already lives in Courses.tsx, which owns the
- * /courses picker. It is a label mapping, not state — nothing is derived or
- * remembered here, so this is not a second progress model (§10). The
- * authoritative grade itself is read from the store, never guessed.
  */
 const GRADE_TO_LEVEL: Record<string, string> = {
   NS1: 'NSI', NS2: 'NSII', NS3: 'NSIII', NS4: 'NSIV',
 };
 
 /** gradeProfile().examLevel → the level path, so the exam link lands on the
- *  student's own papers rather than the generic browser. Mirrors the map in
- *  Practice.tsx, which sends students here in the first place. */
+ *  student's own papers rather than the generic browser. */
 const EXAM_LEVEL_TO_PATH: Record<string, string> = {
   baccalaureat: '/exams/terminale',
   universite: '/exams/university',
   '9eme_af': '/exams/9e',
 };
 
-/** A fixed deck for the quiz mode: distinct rows from the unit, shuffled. */
-function buildQuizDeck(quizBank, courseCode, unit, toDirectItemFromRow, length = QUIZ_LENGTH) {
-  const unitKey = unit && courseCode ? `${courseCode}|${unit}` : '';
-  const pool = (unitKey && quizBank?.byUnit?.[unitKey]) || quizBank?.bySubject?.[courseCode] || [];
-  const rows = [...pool];
+/**
+ * A fixed deck for the quiz mode: distinct, auto-gradable rows of exactly the
+ * chosen scope, shuffled. No widening: an empty unit yields an empty deck
+ * (the page says so) — `COURSE_WIDE` is the only way to draw from the whole
+ * course, and only an explicit choice sets it.
+ */
+function buildQuizDeck(quizBank, courseCode: string, unit: string, length = QUIZ_LENGTH) {
+  const rows = [...poolRows(quizBank, courseCode, unit)];
   // Fisher-Yates: a stable `sort(() => Math.random() - 0.5)` is not a shuffle.
   for (let i = rows.length - 1; i > 0; i -= 1) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -68,8 +78,9 @@ function buildQuizDeck(quizBank, courseCode, unit, toDirectItemFromRow, length =
     const id = row?.id ? String(row.id) : '';
     if (id && seen.has(id)) continue;
     const item = toDirectItemFromRow(row);
-    // Essays cannot be auto-scored, so they would break the score at the end.
-    if (!item || item.kind === 'essay') continue;
+    // Essays and key-less questions cannot be auto-scored, so they would
+    // make the score at the end a lie.
+    if (!isGradable(item)) continue;
     if (id) seen.add(id);
     deck.push(item);
     if (deck.length >= length) break;
@@ -77,18 +88,26 @@ function buildQuizDeck(quizBank, courseCode, unit, toDirectItemFromRow, length =
   return deck;
 }
 
-// Quizzes page: curriculum practice only (Course/Grade/Unit), polished layout
+interface Session {
+  mode: PracticeMode;
+  courseCode: string;
+  unit: string;
+  subjectLabel: string;
+  levelLabel: string;
+  unitLabel: string;
+  /** Where the student came from (handoff `from`), for attribution only. */
+  source: string;
+  start: number;
+}
+
 const Quizzes = () => {
   const { t, i18n } = useTranslation();
   const location = useLocation();
   const { data: appData, isLoading, isError, isFetching, refetch } = useAppData();
   const quizBank = appData?.quizBank;
-  const courses = appData?.courses || [];
+  const courses = useMemo(() => appData?.courses || [], [appData]);
   const userId = useStore((state) => state.user?.uid);
   const toggleAuthModal = useStore((state) => state.toggleAuthModal);
-  // §5 requires the grade-appropriate emphasis to survive the redesign, and
-  // this page is where it was missing: an NS4 student used to land on NS I
-  // because that is simply the first level in the catalog.
   const grade = useStore((state) => state.grade);
   const profile = gradeProfile(grade);
   /** `examLevel: null` (7ᵉ, 8ᵉ, NS1–NS3) — no national paper is theirs to sit. */
@@ -96,35 +115,17 @@ const Quizzes = () => {
   const examHref = (profile.examLevel && EXAM_LEVEL_TO_PATH[profile.examLevel]) || '/exams';
   const myLevel = grade ? GRADE_TO_LEVEL[grade] : '';
 
-  // Every pre-existing string keeps its i18next key (FR + Kreyòl both live in
-  // src/utils/i18n.ts, which this page must not edit). The handful of genuinely
-  // new lines the redesign needs are written inline the way the sibling
-  // /practice hub does it — `fallbackLng: 'fr'` means a brand-new key would
-  // silently render French to Kreyòl readers, which is worse than this.
+  // Pre-existing strings keep their i18next keys; new lines are inline FR/HT
+  // (`fallbackLng: 'fr'` would show a new key in French to Kreyòl readers).
   const isCreole = String(i18n.language || '').toLowerCase().startsWith('ht');
   const tx = (fr: string, ht: string) => (isCreole ? ht : fr);
 
-  /**
-   * The student's own class, short enough to sit inside a sentence. The picker
-   * labels carry a qualifier ("NS4 · Terminale (Bac)") that would nest a
-   * parenthesis inside a parenthesis here, so the qualifier is trimmed — the
-   * label itself is never rewritten, only cut at its own separator.
-   */
-  const myGradeLabel = React.useMemo(() => {
-    const g = GRADES.find((x) => x.code === grade);
-    if (!g) return '';
-    return (isCreole ? g.labelHt : g.label).split(' · ')[0].split(' (')[0].trim();
-  }, [grade, isCreole]);
 
-
-  // The configurator's length. buildQuizDeck caps at what the unit holds, so
-  // 20 on a 12-question unit is a 12-question quiz — the count shown says so.
   const [quizLength, setQuizLength] = useState(QUIZ_LENGTH);
-  const [mode, setMode] = useState<'practice' | 'quiz'>('practice');
+  const [mode, setMode] = useState<PracticeMode>('practice');
 
   // Missed questions still due for review (Revizyon), for the diagnostic and
-  // the per-chapter "à revoir" column. Real data only: the review map stores
-  // misses, not a success rate, so no rate is shown anywhere on this page.
+  // the per-chapter "à revoir" column. Real data only.
   const [dueIds, setDueIds] = useState<Set<string> | null>(null);
   useEffect(() => {
     let live = true;
@@ -135,6 +136,25 @@ const Quizzes = () => {
     return () => { live = false; };
   }, [userId]);
 
+  // ── The handoff (LJ-06) ──────────────────────────────────────────────────
+  const params = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const handoff = useMemo(() => readPracticeHandoff(params), [params]);
+  const source = handoff?.from || 'general';
+  /** Resolved in render from loaded data: no frame where the count is a guess. */
+  const scope = useMemo(
+    () => (appData ? resolvePracticeScope(handoff, courses, quizBank, toDirectItemFromRow) : null),
+    [appData, handoff, courses, quizBank],
+  );
+  const [entryDismissed, setEntryDismissed] = useState(false);
+  const [entryMode, setEntryMode] = useState<PracticeMode>(() => (handoff?.mode === 'practice' ? 'practice' : 'quiz'));
+  useJourneyOnce('practice_handoff_opened', scope && handoff ? location.search : null, {
+    status: scope?.status,
+    course: scope?.courseCode || handoff?.course,
+    unit: scope?.unit?.value || handoff?.unit,
+    lesson: handoff?.lesson,
+    from: source,
+  });
+
   // Selection state
   const [subjectBase, setSubjectBase] = useState('');
   const [level, setLevel] = useState('');
@@ -144,78 +164,52 @@ const Quizzes = () => {
   const [pendingLevel, setPendingLevel] = useState(null);
   const [pendingUnit, setPendingUnit] = useState(null);
 
-  // Derived options
+  const friendlySubject = useMemo(() => ({
+    CHEM: t('subjects.CHEM', 'Chimie'),
+    PHYS: t('subjects.PHYS', 'Physique'),
+    MATH: t('subjects.MATH', 'Mathématiques'),
+    ECON: t('subjects.ECON', 'Économie'),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [i18n.language, t]);
+
   const subjectOptions = useMemo(() => {
     const uniq = new Map();
     for (const c of courses) uniq.set(c.subject, c.subject);
-    const friendly = {
-      CHEM: t('subjects.CHEM', 'Chimie'),
-      PHYS: t('subjects.PHYS', 'Physique'),
-      MATH: t('subjects.MATH', 'Mathématiques'),
-      ECON: t('subjects.ECON', 'Économie'),
-    };
-    const arr = Array.from(uniq.values());
-    return arr.map((s) => ({ value: s, label: friendly[s] || s }));
-  }, [courses, i18n.language, t]);
+    return Array.from(uniq.values()).map((s: string) => ({ value: s, label: friendlySubject[s] || s }));
+  }, [courses, friendlySubject]);
 
-  const queryDefaults = useMemo(() => {
-    const params = new URLSearchParams(location.search);
-    return {
-      // /practice links carry ?matiere=ECON&niveau=NSI (the Pratiquer tab is
-      // this page now); they mean the same course as ?course=ECON-NSI.
-      course: ((params.get('course') || '').trim()
-        || [params.get('matiere'), params.get('niveau')].filter(Boolean).join('-')).trim(),
-      unit: (params.get('unit') || '').trim(),
-      // /practice sends ?mode=quiz for "take a short quiz". It only decides
-      // which button leads; both activities stay available either way.
-      mode: (params.get('mode') || '').trim().toLowerCase(),
-    };
-  }, [location.search]);
+  const queryDefaults = useMemo(() => ({
+    // /practice links carry ?matiere=ECON&niveau=NSI (the Pratiquer tab is
+    // this page now); they mean the same course as ?course=ECON-NSI.
+    course: ((params.get('course') || '').trim()
+      || [params.get('matiere'), params.get('niveau')].filter(Boolean).join('-')).trim(),
+    unit: (params.get('unit') || '').trim(),
+    mode: (params.get('mode') || '').trim().toLowerCase(),
+  }), [params]);
 
   const preferQuiz = queryDefaults.mode === 'quiz';
-  // A ?mode=quiz deep link opens the session console on the quiz.
   useEffect(() => { if (preferQuiz) setMode('quiz'); }, [preferQuiz]);
 
-  // Apply deep-link defaults once (e.g. /quizzes?course=CHEM-NSII&unit=U3).
-  // The subject is validated against the options we actually have: a stale or
-  // bogus ?course= must fall through to the generic default below rather than
-  // stranding the page on a subject with no levels or units.
+  // Apply deep-link defaults once. The course is matched by catalog id
+  // ("chem-ns1") or code ("CHEM-NSI") — a link in either shape lands on the
+  // same course; one that matches nothing falls to the generic default and
+  // the ScopeNotice above the hub says so.
   useEffect(() => {
     if (queryDefaultsApplied) return;
     if (!subjectOptions.length) return;
-
-    const { course, unit: qUnit } = queryDefaults;
-    if (course) {
-      const [subj, lvl] = course.split('-');
-      if (subj && subjectOptions.some((o) => o.value === subj)) {
-        setSubjectBase(subj);
-        // Staged like `pendingUnit`, not written straight to `level`:
-        // `levelOptions` derives from `subjectBase`, so it is still empty in
-        // this commit and the level guard below would immediately reset a
-        // direct write. The guard claims it once the options exist.
-        if (lvl) setPendingLevel(lvl);
-      }
+    const c = findCourse(courses, queryDefaults.course);
+    if (c) {
+      setSubjectBase(c.subject);
+      // Staged, not written to `level`: `levelOptions` is still empty in
+      // this commit and the level guard below would reset a direct write.
+      if (c.level) setPendingLevel(c.level);
+      const u = scope?.unit || matchUnit(unitOptionsFor(c), queryDefaults.unit);
+      if (u) setPendingUnit(u.value);
     }
-
-    if (qUnit) {
-      setPendingUnit(qUnit);
-    }
-
     setQueryDefaultsApplied(true);
-  }, [queryDefaultsApplied, queryDefaults, subjectOptions]);
+  }, [queryDefaultsApplied, queryDefaults, subjectOptions, courses, scope]);
 
-  /**
-   * The subject to open on: the first one that actually ships a course at the
-   * student's own class.
-   *
-   * Without this half of the rule the level default below can never fire.
-   * Chimie is the first subject in the catalog and ships NS1 only, so an NS4
-   * student opened this page on "Chimie · NS I" — the level dropdown had a
-   * single option and their class never got a look in. Skipping subjects that
-   * have nothing at their level is the smallest honest fix; when none does
-   * (7ᵉ, 8ᵉ, 9ᵉ, Post-Bac have no `NS*` courses of their own) the first
-   * subject stands, exactly as before.
-   */
+  /** The first subject that ships a course at the student's own class. */
   const defaultSubject = useMemo(() => {
     if (!subjectOptions.length) return '';
     const mine = myLevel
@@ -224,13 +218,8 @@ const Quizzes = () => {
     return (mine || subjectOptions[0]).value;
   }, [subjectOptions, courses, myLevel]);
 
-  // Generic default.
-  //
-  // Gated on `queryDefaultsApplied` so it can never clobber a deep link: both
-  // effects run in the same commit once `subjectOptions` first arrives, and
-  // `subjectBase` still reads as '' here (a state update isn't visible to the
-  // effect that queued it), so without the gate this always won the last write
-  // and /quizzes?course=MATH landed on the first subject alphabetically.
+  // Generic default, gated on `queryDefaultsApplied` so it never clobbers a
+  // deep link (both effects run in the commit where the options arrive).
   useEffect(() => {
     if (!queryDefaultsApplied) return;
     if (!subjectBase && defaultSubject) setSubjectBase(defaultSubject);
@@ -239,7 +228,7 @@ const Quizzes = () => {
   const levelOptions = useMemo(() => {
     const lvls = new Set(courses.filter((c) => c.subject === subjectBase).map((c) => c.level));
     const ordered = ['NSI', 'NSII', 'NSIII', 'NSIV'];
-    const list = Array.from(lvls);
+    const list = Array.from(lvls) as string[];
     list.sort((a, b) => ordered.indexOf(a) - ordered.indexOf(b));
     return list.map((l) => ({ value: l, label: l.replace(/^NS(.*)$/i, 'NS $1') }));
   }, [courses, subjectBase]);
@@ -253,46 +242,26 @@ const Quizzes = () => {
         setPendingLevel(null);
         return;
       }
-      // Options for the deep-linked subject haven't arrived yet — leaving
-      // `level` alone here is what keeps the request alive across commits.
       if (!levelOptions.length) return;
-      // They have arrived and the level isn't among them (e.g. ?course=CHEM-NSII
-      // when Chimie only ships NS I) — drop it and take the default below.
       setPendingLevel(null);
     }
-
     if (!levelOptions.find((o) => o.value === level)?.value) {
-      // The student's own class first, the first available level only as a
-      // fallback. A deep link has already returned above, so this never
-      // overrides ?course=MATH-NSII.
       const mine = myLevel && levelOptions.some((o) => o.value === myLevel) ? myLevel : '';
       setLevel(mine || levelOptions[0]?.value || '');
     }
   }, [levelOptions, level, pendingLevel, myLevel]);
 
   const courseCode = subjectBase && level ? `${subjectBase}-${level}` : '';
-  const unitOptions = useMemo(() => {
-    // Course objects may store the normalized code on `code` (e.g. "CHEM-NSII")
-    // or the original Firestore doc id on `id` (e.g. "chem-ns1"). Match either to be robust.
-    const course = courses.find((c) => c.code === courseCode || c.id === courseCode);
-    const modules = course?.modules || [];
-
-    // Sort by order field (chapter number) to ensure proper unit sequence
-    const sorted = [...modules].sort((a, b) => (a.order || 0) - (b.order || 0));
-
-    // The value is the quiz bank's unit key (`U{n}`), NOT the module's
-    // Firestore id. The bank indexes `byUnit` as `${course}|U${unit_no}`, so
-    // keying on `m.id` never matched and every "unit" silently fell back to
-    // the whole subject — choosing a unit changed nothing about the questions.
-    return sorted.map((m) => {
-      const n = Number(m.unit_no || m.order);
-      return { value: Number.isFinite(n) && n > 0 ? `U${n}` : m.id, label: m.title || m.id };
-    });
-  }, [courses, courseCode]);
+  const currentCourse = useMemo(
+    () => courses.find((c) => c.code === courseCode || c.id === courseCode),
+    [courses, courseCode],
+  );
+  // The value is the quiz bank's unit key (`U{n}`), not the module's id: the
+  // bank indexes `byUnit` as `${course}|U${unit_no}`.
+  const unitOptions = useMemo(() => unitOptionsFor(currentCourse), [currentCourse]);
 
   useEffect(() => {
     const normalize = (v) => String(v || '').trim().toLowerCase();
-
     if (pendingUnit) {
       const target = normalize(pendingUnit);
       const match = unitOptions.find((o) => normalize(o.value) === target || normalize(o.label) === target);
@@ -301,36 +270,35 @@ const Quizzes = () => {
         setPendingUnit(null);
         return;
       }
-      // Don't override unit while waiting for options to catch up.
       if (unit) return;
     }
-
     if (!unitOptions.find((o) => o.value === unit)?.value) {
       setUnit(unitOptions[0]?.value || '');
     }
   }, [unitOptions, unit, pendingUnit]);
 
-  // Availability counts
+  /**
+   * The hub is "ready" once its selection has settled. Before that, counts
+   * read 0 for a commit or two while the effects above catch up, and the page
+   * used to flash "Aucun exercice disponible" / "0 question" (LJ-06).
+   */
+  const hubReady = queryDefaultsApplied && !!subjectBase && !!level && !pendingLevel && !pendingUnit
+    && (unitOptions.length === 0 || !!unit);
+
+  // Availability counts — strictly the selected unit (no silent widening).
   const counts = useMemo(() => {
-    const unitKey = unit && courseCode ? `${courseCode}|${unit}` : '';
-    const unitCount = (quizBank?.byUnit && unitKey && quizBank.byUnit[unitKey]?.length) || 0;
-    const subjCount = (quizBank?.bySubject && courseCode && quizBank.bySubject[courseCode]?.length) || 0;
-    return { unitCount, subjCount, count: unitCount || subjCount || 0 };
+    const rows = unit ? poolRows(quizBank, courseCode, unit) : poolRows(quizBank, courseCode, COURSE_WIDE);
+    return { count: rows.length, quizzable: countQuizzable(rows, toDirectItemFromRow) };
   }, [quizBank, courseCode, unit]);
 
-  const unitSel = unit;
-
-  // One row per real unit of the course: its question count in the bank and,
-  // for a signed-in student, how many of its questions they missed and have
-  // not yet got right (Revizyon). Nothing else is claimed per chapter.
   const unitRows = useMemo(() => unitOptions.map((o) => {
-    const rows = (quizBank?.byUnit && courseCode && quizBank.byUnit[`${courseCode}|${o.value}`]) || [];
+    const rows = poolRows(quizBank, courseCode, o.value);
     const due = dueIds ? rows.filter((r) => r?.id && dueIds.has(String(r.id))).length : null;
     return { ...o, count: rows.length, due };
   }), [unitOptions, quizBank, courseCode, dueIds]);
   const courseDue = useMemo(() => {
     if (!dueIds || !courseCode) return null;
-    const rows = quizBank?.bySubject?.[courseCode] || [];
+    const rows = poolRows(quizBank, courseCode, COURSE_WIDE);
     return rows.filter((r) => r?.id && dueIds.has(String(r.id))).length;
   }, [dueIds, quizBank, courseCode]);
   const weakest = useMemo(
@@ -338,89 +306,50 @@ const Quizzes = () => {
     [unitRows],
   );
 
-  // Quiz panel state
-  const [bankDirectItem, setBankDirectItem] = useState(null);
+  // ── Sessions ─────────────────────────────────────────────────────────────
+  const [session, setSession] = useState<Session | null>(null);
   const [bankMessage, setBankMessage] = useState('');
-  const [isLoadingBank, setIsLoadingBank] = useState(false);
-  // While a question is on screen the selectors collapse behind a disclosure,
-  // so switching unit mid-session never means leaving the page.
   const [showSelectors, setShowSelectors] = useState(false);
 
-  // ── Quiz mode (a fixed deck of QUIZ_LENGTH) ──────────────────────────────
-  // The deck is frozen when the session starts; the selectors are not touched
-  // mid-quiz, so "question 4 / 10" keeps meaning what it said.
+  // Quiz: the deck is frozen at start, so "question 4 sur 10" keeps meaning
+  // what it said.
   const [quizDeck, setQuizDeck] = useState(null);
   const [quizIdx, setQuizIdx] = useState(0);
-  // One entry per deck question, in order: how many tries it took, whether it
-  // was found, and every answer given. The result screen's score and review
-  // list are both read from this, so they can never disagree.
+  // One entry per session question: tries, found or not, every answer. The
+  // result's score and review list are both read from this.
   const [quizLog, setQuizLog] = useState<QuizLogEntry[]>([]);
   const [canAdvance, setCanAdvance] = useState(false);
-  const [outcome, setOutcome] = useState(null);
-  const [attemptsLeft, setAttemptsLeft] = useState(MAX_ATTEMPTS);
   const [quizFinished, setQuizFinished] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
 
-  useEffect(() => {
-    setCanAdvance(false);
-    setOutcome(null);
-    setAttemptsLeft(MAX_ATTEMPTS);
-  }, [quizIdx]);
+  // Practice: an open run, logged the same way so it can end on a summary.
+  const [practiceDeck, setPracticeDeck] = useState<any[]>([]);
+  const [practiceLog, setPracticeLog] = useState<QuizLogEntry[]>([]);
+  const [practiceDone, setPracticeDone] = useState(false);
+  const bankDirectItem = practiceDeck.length && !practiceDone ? practiceDeck[practiceDeck.length - 1] : null;
+
+  useEffect(() => { setCanAdvance(false); }, [quizIdx]);
 
   const inQuiz = !!quizDeck && !quizFinished;
-
-  // Taking a practice question is a focused task: hide the bottom tab bar +
-  // footer while one is on screen so it reads like a dedicated quiz. The
-  // completion screen releases it — that screen's whole job is to offer the
-  // next action, and the nav is part of that.
   useFocusMode(!!bankDirectItem || inQuiz);
 
-  const generateCurriculumPractice = async (unitArg?: string) => {
-    // A chapter row starts ITS unit; the unit chip then follows so the
-    // context bar and the next question agree with what was clicked.
-    const unit = typeof unitArg === 'string' && unitArg ? unitArg : unitSel;
-    if (unit !== unitSel) setUnit(unit);
-    try {
-      setIsLoadingBank(true);
-      setBankDirectItem(null);
-      setBankMessage('');
-      if (!quizBank || !courseCode || !unit) {
-        setBankMessage(t('quizzes.selectToBegin', 'Choisissez un cours, un niveau et une unité pour commencer.'));
-        return;
-      }
-      const { pickRandomQuestion, toDirectItemFromRow } = require('../services/quizBank');
-      /*
-       * No whole-bank fallback. This used to reach for
-       * `quizBank.rows[random]` when the selection came back empty, which
-       * served a question from AN UNRELATED SUBJECT to a student who had just
-       * chosen Chimie NS2 — and made the honest "aucun exercice disponible"
-       * message below unreachable, because a row was always found.
-       *
-       * The sensible fallback already exists one layer down:
-       * `pickRandomQuestion` tries the exact unit, then any question in the
-       * SAME subject, and returns null only when the subject itself is empty.
-       * That is precisely when a student should be told so.
-       */
-      const row = pickRandomQuestion(quizBank.byUnit, courseCode, unit, quizBank.bySubject);
-      if (!row) {
-        setBankMessage(t('quizzes.noPractice', 'Aucun exercice disponible pour cette sélection pour le moment.'));
-        return;
-      }
-      const direct = toDirectItemFromRow(row);
-      setBankDirectItem(direct);
-      setShowSelectors(false);
-    } catch (e) {
-      console.error('Curriculum practice failed', e);
-      setBankMessage(t('quizzes.unableToLoad', 'Impossible de charger les exercices pour le moment.'));
-    } finally {
-      setIsLoadingBank(false);
-    }
+  const labelsFor = (code: string, unitVal: string) => {
+    const c = findCourse(courses, code);
+    const lvl = String(c?.level || '');
+    return {
+      subjectLabel: friendlySubject[c?.subject] || c?.subject || '',
+      levelLabel: lvl ? lvl.replace(/^NS(.*)$/i, 'NS $1') : '',
+      unitLabel: unitVal === COURSE_WIDE
+        ? tx('Tout le cours', 'Tout kou a')
+        : unitOptionsFor(c).find((o) => o.value === unitVal)?.label || '',
+    };
   };
 
-  /** Leave the question and return to the selection screen (also restores nav chrome). */
-  const endPractice = () => {
-    setBankDirectItem(null);
-    setBankMessage('');
-    setShowSelectors(false);
+  const openSession = (m: PracticeMode, code: string, unitVal: string, src: string, count: number): Session => {
+    const s: Session = { mode: m, courseCode: code, unit: unitVal, source: src, start: Date.now(), ...labelsFor(code, unitVal) };
+    setSession(s);
+    trackJourney('practice_started', { mode: m, course: code, unit: unitVal, source: src, count, signedIn: !!userId });
+    return s;
   };
 
   const resetQuiz = () => {
@@ -429,25 +358,71 @@ const Quizzes = () => {
     setQuizLog([]);
     setQuizFinished(false);
     setCanAdvance(false);
-    setOutcome(null);
-    setAttemptsLeft(MAX_ATTEMPTS);
+    setConfirmLeave(false);
+  };
+  const resetPractice = () => {
+    setPracticeDeck([]);
+    setPracticeLog([]);
+    setPracticeDone(false);
+    setShowSelectors(false);
+  };
+  /** Back to where the session started from (confirmation or hub). */
+  const endSession = () => {
+    resetQuiz();
+    resetPractice();
+    setSession(null);
+    setBankMessage('');
   };
 
-  const startQuiz = (unitArg?: string) => {
-    const unit = typeof unitArg === 'string' && unitArg ? unitArg : unitSel;
-    if (unit !== unitSel) setUnit(unit);
-    setBankDirectItem(null);
-    setBankMessage('');
-    setShowSelectors(false);
+  const drawPracticeItem = (code: string, unitVal: string, lastId?: string) => {
+    const rows = poolRows(quizBank, code, unitVal);
+    if (!rows.length) return null;
+    let row = rows[Math.floor(Math.random() * rows.length)];
+    // Avoid serving the question just answered when there is any other.
+    for (let k = 0; k < 4 && rows.length > 1 && lastId && String(row?.id) === lastId; k += 1) {
+      row = rows[Math.floor(Math.random() * rows.length)];
+    }
+    try { return toDirectItemFromRow(row); } catch { return null; }
+  };
+
+  const startPractice = (code = courseCode, unitVal = unit, src = 'general') => {
     resetQuiz();
-    if (!quizBank || !courseCode || !unit) {
+    resetPractice();
+    setBankMessage('');
+    if (!quizBank || !code || !unitVal) {
+      setBankMessage(t('quizzes.selectToBegin', 'Choisissez un cours, un niveau et une unité pour commencer.'));
+      return;
+    }
+    const item = drawPracticeItem(code, unitVal);
+    if (!item) {
+      setBankMessage(t('quizzes.noPractice', 'Aucun exercice disponible pour cette sélection pour le moment.'));
+      return;
+    }
+    openSession('practice', code, unitVal, src, poolRows(quizBank, code, unitVal).length);
+    setPracticeDeck([item]);
+    setPracticeLog([{ tries: 0, solved: false, answers: [] }]);
+  };
+
+  const nextPracticeQuestion = () => {
+    if (!session) return;
+    const item = drawPracticeItem(session.courseCode, session.unit, bankDirectItem?.id ? String(bankDirectItem.id) : undefined);
+    if (!item) return;
+    setPracticeDeck((d) => [...d, item]);
+    setPracticeLog((l) => [...l, { tries: 0, solved: false, answers: [] }]);
+    setShowSelectors(false);
+  };
+
+  const startQuiz = (code = courseCode, unitVal = unit, src = 'general', length = quizLength) => {
+    resetPractice();
+    resetQuiz();
+    setBankMessage('');
+    if (!quizBank || !code || !unitVal) {
       setBankMessage(t('quizzes.selectToBegin', 'Choisissez un cours, un niveau et une unité pour commencer.'));
       return;
     }
     let deck = [];
     try {
-      const { toDirectItemFromRow } = require('../services/quizBank');
-      deck = buildQuizDeck(quizBank, courseCode, unit, toDirectItemFromRow, quizLength);
+      deck = buildQuizDeck(quizBank, code, unitVal, length);
     } catch (e) {
       console.error('Quiz build failed', e);
       setBankMessage(t('quizzes.unableToLoad', 'Impossible de charger les exercices pour le moment.'));
@@ -457,35 +432,39 @@ const Quizzes = () => {
       setBankMessage(t('quizzes.noPractice', 'Aucun exercice disponible pour cette sélection pour le moment.'));
       return;
     }
+    openSession('quiz', code, unitVal, src, deck.length);
     setQuizDeck(deck);
   };
 
-  /** DirectBankQuiz reports every attempt; only the resolved ones move the deck. */
+  /** One reducer for both modes: DirectBankQuiz reports every attempt. */
+  const applyScore = (log: QuizLogEntry[], idx: number, evt): QuizLogEntry[] => {
+    const next = log.slice();
+    const prev = next[idx] || { tries: 0, solved: false, answers: [] };
+    if (prev.solved || prev.ungraded) return log;
+    next[idx] = {
+      tries: typeof evt.attempt === 'number' ? evt.attempt : prev.tries + 1,
+      solved: evt.message === 'correct',
+      answers: typeof evt.answer === 'string' ? [...prev.answers, evt.answer] : prev.answers,
+      ungraded: evt.message === 'ungraded' || undefined,
+    };
+    return next;
+  };
+
   const handleQuizScore = (evt) => {
     if (!evt) return;
     if (!canAdvance) {
       const idx = quizIdx;
-      setQuizLog((log) => {
-        const next = log.slice();
-        const prev = next[idx] || { tries: 0, solved: false, answers: [] };
-        next[idx] = {
-          tries: typeof evt.attempt === 'number' ? evt.attempt : prev.tries + 1,
-          solved: evt.message === 'correct',
-          answers: typeof evt.answer === 'string' ? [...prev.answers, evt.answer] : prev.answers,
-        };
-        return next;
-      });
+      setQuizLog((log) => applyScore(log, idx, evt));
     }
-    if (evt.message === 'correct') {
+    if (evt.message === 'correct' || evt.message === 'exhausted_attempts' || evt.message === 'ungraded') {
       setCanAdvance(true);
-      setOutcome('correct');
-    } else if (evt.message === 'exhausted_attempts') {
-      setCanAdvance(true);
-      setOutcome('out');
-      setAttemptsLeft(0);
-    } else if (typeof evt.attemptsLeft === 'number') {
-      setAttemptsLeft(evt.attemptsLeft);
     }
+  };
+
+  const handlePracticeScore = (evt) => {
+    if (!evt) return;
+    const idx = practiceDeck.length - 1;
+    setPracticeLog((log) => applyScore(log, idx, evt));
   };
 
   const goNextQuizQuestion = () => {
@@ -495,48 +474,69 @@ const Quizzes = () => {
     else setQuizIdx(next);
   };
 
+  /** Leaving a quiz with answers in it asks first (LJ-07): nothing is lost silently. */
+  const requestLeaveQuiz = () => {
+    const answered = quizLog.some((e) => e && (e.tries > 0 || e.ungraded));
+    if (!answered) { endSession(); return; }
+    setConfirmLeave(true);
+  };
+
+  const finishPractice = () => {
+    const answered = practiceLog.some((e) => e && (e.tries > 0 || e.ungraded));
+    if (!answered) { endSession(); return; }
+    setPracticeDone(true);
+  };
+
+  // practice_completed — once per session, when its summary is reached.
+  const completedLog = quizFinished ? quizLog : practiceDone ? practiceLog : null;
+  const completedDeck = quizFinished ? quizDeck : practiceDone ? practiceDeck : null;
+  const tally = useMemo(() => {
+    if (!completedDeck) return null;
+    const st = completedDeck.map((_, i) => entryStatus(completedLog?.[i]));
+    const c = (k) => st.filter((x) => x === k).length;
+    return { total: st.length, correct: c('correct'), retry: c('retry'), incorrect: c('incorrect'), unanswered: c('unanswered'), ungraded: c('ungraded') };
+  }, [completedDeck, completedLog]);
+  useJourneyOnce('practice_completed', session && tally ? String(session.start) : null, {
+    mode: session?.mode,
+    course: session?.courseCode,
+    unit: session?.unit,
+    source: session?.source,
+    ...(tally || {}),
+    signedIn: !!userId,
+  });
+
   const subjectLabel = subjectOptions.find((o) => o.value === subjectBase)?.label || subjectBase;
   const levelLabel = level ? level.replace(/^NS(.*)$/i, 'NS $1') : '';
   const unitLabel = unitOptions.find((o) => o.value === unit)?.label || '';
   const countLabel = t('quizzes.questionsAvailable', '{{count}} question disponible', { count: counts.count });
   const hasQuestions = counts.count > 0;
-
-  const ctaLabel = isLoadingBank
-    ? t('common.loading', 'Chargement…')
-    : bankDirectItem
-      ? t('quizzes.nextQuestion', 'Question suivante')
-      : t('quizzes.startPractice', 'Commencer');
-
   const pageTitle = t('quizzes.curriculumPractice', 'Quiz du programme');
 
-  /**
-   * What these activities actually are — §6.4 asks for purpose, expected time
-   * when known, timed/untimed and whether results are saved, so a quiz is
-   * never mistaken for an exam. Every line below is a fact about the code on
-   * this page: `DirectBankQuiz` has no timer, gives MAX_ATTEMPTS tries with
-   * hints, reveals the explanation on the last one, and persists no score. It
-   * does feed the Revizyon review map, but only for a signed-in user
-   * (`recordReviewOutcome` no-ops without a uid), so that line is gated.
-   *
-   * No duration is claimed for either mode: nothing on this page measures or
-   * limits time, and a made-up "≈15 min" is exactly what §6.4 forbids.
-   */
+  const lessonHref = (lessonId?: string) => (scope?.course && lessonId
+    ? `/courses/${scope.course.id}?lesson=${encodeURIComponent(lessonId)}`
+    : null);
+  const fromLesson = source === 'lesson' && !!scope?.lesson;
+  const sessionContext = session
+    ? [session.subjectLabel, session.levelLabel, session.unitLabel].filter(Boolean).join(' · ')
+    : '';
+  const reviewHrefFor = (s: Session | null) => {
+    if (!s) return '/revision';
+    const q = new URLSearchParams({ course: s.courseCode, from: 'result' });
+    if (s.unit && s.unit !== COURSE_WIDE) q.set('unit', s.unit);
+    return `/revision?${q.toString()}`;
+  };
+  const scopeIdsFor = (s: Session | null) => (s
+    ? poolRows(quizBank, s.courseCode, s.unit).map((r) => String(r?.id || '')).filter(Boolean)
+    : undefined);
 
-  /** The three dropdowns — shared by the setup card and the in-practice disclosure. */
+  /** The three dropdowns — shown in the in-practice disclosure. */
   const selectors = (
     <div className="qz-fields">
       <div className="qz-field">
         <label className="qz-field__label" htmlFor="qz-subject">{t('quizzes.course', 'Matière')}</label>
         <span className="qz-field__control">
-          <select
-            id="qz-subject"
-            className="qz-field__select"
-            value={subjectBase}
-            onChange={(e) => setSubjectBase(e.target.value)}
-          >
-            {subjectOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
+          <select id="qz-subject" className="qz-field__select" value={subjectBase} onChange={(e) => setSubjectBase(e.target.value)}>
+            {subjectOptions.map((opt) => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
           </select>
           <ChevronDown size={16} className="qz-field__chevron" aria-hidden="true" />
         </span>
@@ -544,15 +544,8 @@ const Quizzes = () => {
       <div className="qz-field">
         <label className="qz-field__label" htmlFor="qz-level">{t('quizzes.gradeLevel', 'Niveau')}</label>
         <span className="qz-field__control">
-          <select
-            id="qz-level"
-            className="qz-field__select"
-            value={level}
-            onChange={(e) => setLevel(e.target.value)}
-          >
-            {levelOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
+          <select id="qz-level" className="qz-field__select" value={level} onChange={(e) => setLevel(e.target.value)}>
+            {levelOptions.map((opt) => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
           </select>
           <ChevronDown size={16} className="qz-field__chevron" aria-hidden="true" />
         </span>
@@ -560,41 +553,12 @@ const Quizzes = () => {
       <div className="qz-field qz-field--wide">
         <label className="qz-field__label" htmlFor="qz-unit">{t('quizzes.unit', 'Unité')}</label>
         <span className="qz-field__control">
-          <select
-            id="qz-unit"
-            className="qz-field__select"
-            value={unit}
-            onChange={(e) => setUnit(e.target.value)}
-          >
-            {unitOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
+          <select id="qz-unit" className="qz-field__select" value={unit} onChange={(e) => setUnit(e.target.value)}>
+            {unitOptions.map((opt) => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
           </select>
           <ChevronDown size={16} className="qz-field__chevron" aria-hidden="true" />
         </span>
       </div>
-    </div>
-  );
-
-  /** Subject/level/unit + how many questions back it. Same strip in both states. */
-  const subjectStrip = (
-    <div className="qz-strip">
-      <img
-        className="qz-strip__thumb"
-        src={subjectThumbs[subjectBase] || subjectThumbs.MATH}
-        alt=""
-        width={112}
-        height={80}
-        loading="lazy"
-        decoding="async"
-      />
-      <div className="qz-strip__text">
-        <span className="qz-strip__subject">
-          {subjectLabel}{levelLabel ? ` · ${levelLabel}` : ''}
-        </span>
-        {unitLabel && <span className="qz-strip__unit">{unitLabel}</span>}
-      </div>
-      <span className="qz-strip__count">{countLabel}</span>
     </div>
   );
 
@@ -609,6 +573,27 @@ const Quizzes = () => {
   }
 
   if (isLoading && !appData) {
+    // A handoff waits in the shape of its confirmation — no number is drawn
+    // until the bank has answered, so "0 questions" never flashes (LJ-06).
+    if (handoff) {
+      return (
+        <section className="section qz qz--entry">
+          <div className="container qz__container" aria-busy="true">
+            <div className="pe" aria-label={tx('Chargement de ta pratique…', 'N ap chaje pratik ou…')}>
+              <Skeleton width={180} height={14} />
+              <Skeleton width="70%" height={34} />
+              <Skeleton width="45%" height={16} />
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <Skeleton width={150} height={44} radius={999} />
+                <Skeleton width={170} height={44} radius={999} />
+              </div>
+              <SkeletonText lines={3} lastWidth="55%" />
+              <Skeleton width={220} height={52} radius={12} />
+            </div>
+          </div>
+        </section>
+      );
+    }
     return (
       <section className="section qz">
         <div className="container qz__container" aria-busy="true">
@@ -631,56 +616,110 @@ const Quizzes = () => {
     );
   }
 
-  // ── Quiz mode: the fixed deck, then a completion screen ──────────────────
+  // ── Session summary (quiz or practice) ───────────────────────────────────
+  if (session && completedDeck) {
+    const isQuiz = session.mode === 'quiz';
+    const next = fromLesson && scope?.nextLesson ? { title: scope.nextLesson.title, href: lessonHref(scope.nextLesson.id) || '' } : null;
+    return (
+      <section className="section qz qz--result">
+        <div className="container qz__container">
+          <QuizResult
+            deck={completedDeck}
+            log={completedLog || []}
+            mode={session.mode}
+            title={isQuiz ? tx('Quiz terminé', 'Kwiz fini') : tx('Entraînement terminé', 'Pratik fini')}
+            context={sessionContext}
+            tx={tx}
+            signedIn={!!userId}
+            uid={userId}
+            onSignIn={toggleAuthModal}
+            onReplay={() => (isQuiz
+              ? startQuiz(session.courseCode, session.unit, session.source, quizDeck?.length || quizLength)
+              : startPractice(session.courseCode, session.unit, session.source))}
+            onChangeUnit={() => { endSession(); setEntryDismissed(true); }}
+            examHref={examsRelevant ? examHref : null}
+            sessionStart={session.start}
+            reviewHref={reviewHrefFor(session)}
+            scopeIds={scopeIdsFor(session)}
+            nextLesson={next && next.href ? next : null}
+            backHref={fromLesson ? (lessonHref(scope?.lesson?.id) || '/practice') : '/practice'}
+            backLabel={fromLesson ? tx('Retour à la leçon', 'Retounen nan leson an') : undefined}
+          />
+        </div>
+      </section>
+    );
+  }
+
+  // ── Quiz in progress: the fixed deck ─────────────────────────────────────
   if (quizDeck && !quizFinished) {
     const item = quizDeck[quizIdx];
     const isLast = quizIdx === quizDeck.length - 1;
+    const answeredCount = quizLog.filter((e) => e && (e.tries > 0 || e.ungraded)).length;
     return (
       <section className="section qz qz--taking">
         <div className="container qz__container">
           <h1 className="qz__sr-only">{pageTitle}</h1>
 
-          {/* One quiet top bar: leave, where you are, how far along. */}
           <div className="qz-top">
-            <button type="button" onClick={resetQuiz} className="qz-top__quit">
+            <button type="button" onClick={requestLeaveQuiz} className="qz-top__quit" aria-expanded={confirmLeave} aria-controls="qz-leave">
               <ChevronLeft size={18} aria-hidden="true" />
               {tx('Quitter', 'Kite')}
             </button>
-            <span className="qz-top__where">
-              {subjectLabel}{levelLabel ? ` · ${levelLabel}` : ''}{unitLabel ? ` · ${unitLabel}` : ''}
-            </span>
-            <span className="qz-top__count" aria-label={tx('Progression', 'Pwogrè')}>
+            <span className="qz-top__where">{sessionContext}</span>
+            <span className="qz-top__count">
               {tx(`Question ${quizIdx + 1} sur ${quizDeck.length}`, `Kesyon ${quizIdx + 1} sou ${quizDeck.length}`)}
             </span>
           </div>
 
-          {/* A progress bar, because "4 / 10" alone does not show how much is
-              left at a glance. Both carry the same fact (§7). */}
-          <div className="qz-bar" role="presentation">
+          <div
+            className="qz-bar"
+            role="progressbar"
+            aria-label={tx('Progression du quiz', 'Pwogrè kwiz la')}
+            aria-valuemin={0}
+            aria-valuemax={quizDeck.length}
+            aria-valuenow={quizIdx + 1}
+          >
             <div className="qz-bar__fill" style={{ width: `${((quizIdx + 1) / quizDeck.length) * 100}%` }} />
           </div>
+
+          {confirmLeave && (
+            <div className="pq-leave" id="qz-leave" role="region" aria-labelledby="qz-leave-title">
+              <p className="pq-leave__title" id="qz-leave-title">{tx('Quitter le quiz ?', 'Kite kwiz la ?')}</p>
+              <p>
+                {tx(`Tu as répondu à ${answeredCount} question${answeredCount > 1 ? 's' : ''} sur ${quizDeck.length}. Le quiz ne reprendra pas plus tard.`,
+                  `Ou reponn ${answeredCount} kesyon sou ${quizDeck.length}. Kwiz la p ap rekòmanse pita.`)}
+                {' '}
+                {userId
+                  ? tx('Les erreurs déjà faites au premier essai vont quand même dans ta Révision.', 'Erè ou deja fè premye fwa yo ale nan Revizyon ou kanmenm.')
+                  : tx('Sans compte, rien n’est gardé.', 'San kont, anyen pa kenbe.')}
+              </p>
+              <div className="pq-leave__actions">
+                <button type="button" className="button button--primary" onClick={() => setConfirmLeave(false)}>
+                  {tx('Continuer le quiz', 'Kontinye kwiz la')}
+                </button>
+                <button type="button" className="button button--ghost" onClick={() => { setConfirmLeave(false); setQuizFinished(true); }}>
+                  {tx('Voir mon bilan maintenant', 'Wè rezilta m kounye a')}
+                </button>
+                <button type="button" className="qr-actions__text" onClick={endSession}>
+                  {tx('Quitter sans bilan', 'Kite san rezilta')}
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="qz-question">
             <DirectBankQuiz item={item} onScore={handleQuizScore} onNext={undefined} onClose={undefined} />
           </div>
 
-          {/* One primary action at a time: the question's own "Vérifier"
-              until it is answered, then this. */}
           {canAdvance ? (
             <div className="qz-next">
-              <button
-                type="button"
-                onClick={goNextQuizQuestion}
-                className="button button--primary button--lg qz-next__primary"
-              >
-                {isLast
-                  ? tx('Voir mon score', 'Wè nòt mwen')
-                  : t('quizzes.nextQuestion', 'Question suivante')}
+              <button type="button" onClick={goNextQuizQuestion} className="button button--primary button--lg qz-next__primary">
+                {isLast ? tx('Voir mon bilan', 'Wè rezilta m') : t('quizzes.nextQuestion', 'Question suivante')}
               </button>
             </div>
           ) : (
             <p className="qz-hint">
-              {tx('Trois essais, avec un indice après chaque erreur.', 'Twa esè, ak yon endis apre chak erè.')}
+              {tx(`${MAX_ATTEMPTS} essais, avec un indice après chaque erreur. Pas de chrono.`, `${MAX_ATTEMPTS} esè, ak yon endis apre chak erè. Pa gen kwonomèt.`)}
             </p>
           )}
         </div>
@@ -688,265 +727,272 @@ const Quizzes = () => {
     );
   }
 
-  if (quizDeck && quizFinished) {
+  // ── Open practice in progress ────────────────────────────────────────────
+  if (bankDirectItem && session) {
+    const current = practiceLog[practiceLog.length - 1];
+    const st = entryStatus(current);
+    const resolved = !!current && (current.solved || current.ungraded || (current.tries >= MAX_ATTEMPTS));
+    const seen = practiceDeck.length;
     return (
-      <section className="section qz qz--result">
+      <section className="section qz qz--taking">
         <div className="container qz__container">
-          <QuizResult
-            deck={quizDeck}
-            log={quizLog}
-            title={tx('Quiz terminé', 'Kwiz fini')}
-            context={`${subjectLabel}${levelLabel ? ` · ${levelLabel}` : ''}${unitLabel ? ` · ${unitLabel}` : ''}`}
-            tx={tx}
+          <h1 className="qz__sr-only">{pageTitle}</h1>
+          <div className="qz-top">
+            <button type="button" onClick={finishPractice} className="qz-top__quit">
+              <ChevronLeft size={18} aria-hidden="true" />
+              {tx('Terminer', 'Fini')}
+            </button>
+            <span className="qz-top__where">{sessionContext}</span>
+            <span className="qz-top__count">
+              {tx(`Entraînement libre · ${seen} vue${seen > 1 ? 's' : ''}`, `Pratik lib · ${seen} wè`)}
+            </span>
+          </div>
+
+          <div className="qz-context qz-context--slim">
+            <div className="qz-context__text">
+              <span className="qz-context__subject">{session.subjectLabel}{session.levelLabel ? ` · ${session.levelLabel}` : ''}</span>
+              {session.unitLabel && <span className="qz-context__unit">{session.unitLabel}</span>}
+            </div>
+            <button
+              type="button"
+              className="qz-context__toggle"
+              onClick={() => setShowSelectors((v) => !v)}
+              aria-expanded={showSelectors}
+              aria-controls="qz-selection-panel"
+              aria-label={t('quizzes.selectArea', 'Choisir une zone d\'exercice')}
+            >
+              <SlidersHorizontal size={15} aria-hidden="true" />
+              <span className="qz-context__toggle-label">{t('quizzes.selectArea', 'Choisir une zone d\'exercice')}</span>
+            </button>
+          </div>
+
+          {showSelectors && (
+            <div className="qz-setup qz-setup--tight" id="qz-selection-panel">
+              {selectors}
+              <p className="qz-count">{hubReady ? countLabel : t('common.loading', 'Chargement…')}</p>
+              <p className="qz-config__note">{tx('Changer de chapitre recommence un nouvel entraînement.', 'Chanje chapit rekòmanse yon nouvo pratik.')}</p>
+              <button type="button" onClick={() => startPractice(courseCode, unit, session.source)} className="button button--ghost qz-cta" disabled={!hasQuestions}>
+                {tx('Recommencer sur ce chapitre', 'Rekòmanse sou chapit sa a')}
+              </button>
+            </div>
+          )}
+
+          <div className="qz-question">
+            <DirectBankQuiz item={bankDirectItem} onScore={handlePracticeScore} onNext={undefined} onClose={undefined} />
+          </div>
+
+          {bankMessage && <p className="qz-message" role="status">{bankMessage}</p>}
+
+          <div className="qz-next">
+            <button
+              type="button"
+              onClick={nextPracticeQuestion}
+              className={`button ${resolved ? 'button--primary' : 'button--ghost'} button--lg qz-next__primary`}
+            >
+              {resolved ? tx('Autre question', 'Lòt kesyon') : tx('Passer : autre question', 'Sote : lòt kesyon')}
+              <ChevronRight size={17} aria-hidden="true" />
+            </button>
+          </div>
+          <p className="qz-hint">
+            {st === 'unanswered'
+              ? tx('Une question passée compte « sans réponse », pas comme une erreur.', 'Yon kesyon ou sote konte « san repons », pa tankou yon erè.')
+              : tx('« Autre question » tire une nouvelle question du même chapitre.', '« Lòt kesyon » bay yon nouvo kesyon nan menm chapit la.')}
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  // ── Arriving with context: the compact confirmation (LJ-06) ──────────────
+  if (scope?.status === 'ok' && !entryDismissed && scope.courseCode && scope.unit) {
+    const quizMax = Math.min(QUIZ_LENGTH, scope.quizCount);
+    const effectiveMode: PracticeMode = quizMax > 0 ? entryMode : 'practice';
+    const labels = labelsFor(scope.courseCode, scope.unit.value);
+    return (
+      <section className="section qz qz--entry">
+        <div className="container qz__container">
+          <LearnSwitch />
+          {bankMessage && <p className="qz-message" role="status">{bankMessage}</p>}
+          <PracticeEntry
+            scope={scope}
+            subjectLabel={labels.subjectLabel}
+            levelLabel={labels.levelLabel}
+            thumb={subjectThumbs[scope.course?.subject] || undefined}
+            mode={effectiveMode}
+            onMode={setEntryMode}
+            quizLength={quizMax}
+            tries={MAX_ATTEMPTS}
             signedIn={!!userId}
             onSignIn={toggleAuthModal}
-            onReplay={() => startQuiz()}
-            onChangeUnit={resetQuiz}
-            examHref={examsRelevant ? examHref : null}
+            onStart={() => (effectiveMode === 'quiz'
+              ? startQuiz(scope.courseCode, scope.unit!.value, source, QUIZ_LENGTH)
+              : startPractice(scope.courseCode, scope.unit!.value, source))}
+            onChange={() => setEntryDismissed(true)}
+            backHref={fromLesson ? lessonHref(scope.lesson?.id) : null}
+            tx={tx}
           />
         </div>
       </section>
     );
   }
 
+  const showNotice = !!scope && ['unknown-course', 'unknown-unit', 'empty-unit'].includes(scope.status);
+  const quizMaxHub = Math.min(quizLength, counts.quizzable);
+
   return (
-    <section className={`section qz${bankDirectItem ? ' qz--taking' : ''}`}>
+    <section className="section qz">
       <div className="container qz__container">
-        {!bankDirectItem && <LearnSwitch />}
-        {bankDirectItem ? (
-          /* ── In practice (§6.5): the question owns the column. The page
-                header steps aside — it survives as a visually hidden <h1> so
-                the document keeps exactly one heading for screen readers —
-                and the selection collapses into a re-openable context bar. ── */
-          <>
-            <h1 className="qz__sr-only">{pageTitle}</h1>
-
-            <div className="qz-context">
-              <img
-                className="qz-context__thumb"
-                src={subjectThumbs[subjectBase] || subjectThumbs.MATH}
-                alt=""
-                width={96}
-                height={64}
-                loading="lazy"
-                decoding="async"
-              />
-              <div className="qz-context__text">
-                <span className="qz-context__subject">
-                  {subjectLabel}{levelLabel ? ` · ${levelLabel}` : ''}
-                </span>
-                {unitLabel && <span className="qz-context__unit">{unitLabel}</span>}
-              </div>
-              <button
-                type="button"
-                className="qz-context__toggle"
-                onClick={() => setShowSelectors((v) => !v)}
-                aria-expanded={showSelectors}
-                aria-controls="qz-selection-panel"
-                /* The label is hidden below 560px, which would otherwise leave
-                   this icon-only button with no accessible name. */
-                aria-label={t('quizzes.selectArea', 'Choisir une zone d\'exercice')}
-              >
-                <SlidersHorizontal size={15} aria-hidden="true" />
-                <span className="qz-context__toggle-label">{t('quizzes.selectArea', 'Choisir une zone d\'exercice')}</span>
-              </button>
+        <LearnSwitch />
+        {/* One title line, then the filters as chips — no hero (Ted). */}
+        <header className="qz-top">
+          <h1 className="qz-top__title">{tx('Entraînement et quiz', 'Antrènman ak kwiz')}</h1>
+          <div className="qz-top__chips">
+            <div className="qz-chips" role="group" aria-label={t('quizzes.course', 'Matière')}>
+              {subjectOptions.map((o) => (
+                <button key={o.value} type="button" aria-pressed={subjectBase === o.value} className={subjectBase === o.value ? 'is-on' : ''} onClick={() => setSubjectBase(o.value)}>{o.label}</button>
+              ))}
             </div>
-
-            {showSelectors && (
-              <div className="qz-setup qz-setup--tight" id="qz-selection-panel">
-                {selectors}
-                <p className="qz-count">{countLabel}</p>
-                <button
-                  type="button"
-                  onClick={() => generateCurriculumPractice()}
-                  className="button button--primary qz-cta"
-                  disabled={isLoadingBank}
-                >
-                  {isLoadingBank ? t('common.loading', 'Chargement…') : t('quizzes.startPractice', 'Commencer')}
+            <div className="qz-chips" role="group" aria-label={t('quizzes.gradeLevel', 'Niveau')}>
+              {levelOptions.map((o) => (
+                <button key={o.value} type="button" aria-pressed={level === o.value} className={level === o.value ? 'is-on' : ''} onClick={() => setLevel(o.value)}>
+                  {o.label}{myLevel === o.value && <small>{tx('ta classe', 'klas ou')}</small>}
                 </button>
-              </div>
-            )}
-
-            <div className="qz-question">
-              <DirectBankQuiz
-                item={bankDirectItem}
-                onScore={undefined}
-                onNext={undefined}
-                onClose={undefined}
-              />
+              ))}
             </div>
+          </div>
+        </header>
 
-            {bankMessage && <p className="qz-message" role="status">{bankMessage}</p>}
+        {showNotice && (
+          <ScopeNotice
+            scope={scope!}
+            courseLabel={scope?.courseCode ? [labelsFor(scope.courseCode, '').subjectLabel, labelsFor(scope.courseCode, '').levelLabel].filter(Boolean).join(' ') : ''}
+            onCourseWide={scope?.courseCode ? () => startPractice(scope.courseCode!, COURSE_WIDE, source) : undefined}
+            tx={tx}
+          />
+        )}
 
-            <div className="qz-next">
+        <div className="qz-hub">
+          <div className="qz-hub__main">
+            {hubReady && !hasQuestions && (
+              <p className="qz-note" role="status">
+                {t('quizzes.noPractice', 'Aucun exercice disponible pour cette sélection pour le moment.')}{' '}
+                {tx('Choisissez une autre unité.', 'Chwazi yon lòt inite.')}
+              </p>
+            )}
+            {bankMessage && <p className="qz-hint" role="status">{bankMessage}</p>}
+
+            {unitRows.length > 0 && (
+              <section className="qz-shelf" aria-labelledby="qz-chapters-title">
+                <div className="qz-chapters__head">
+                  <h2 id="qz-chapters-title">{tx('Les chapitres', 'Chapit yo')}</h2>
+                  <span>{subjectLabel}{levelLabel ? ` · ${levelLabel}` : ''}</span>
+                </div>
+                <ol className="qz-chaps">
+                  {unitRows.map((r, i) => (
+                    <li key={r.value} className={`qz-chap${unit === r.value ? ' is-current' : ''}${!r.count ? ' is-empty' : ''}`}>
+                      <button type="button" className="qz-chap__pick" onClick={() => setUnit(r.value)} aria-pressed={unit === r.value} disabled={!r.count}>
+                        <span className="qz-chap__no">{String(i + 1).padStart(2, '0')}</span>
+                        <span className="qz-chap__name">{r.label}</span>
+                        <span className="qz-chap__meta">
+                          {r.count ? tx(`${r.count} questions`, `${r.count} kesyon`) : tx('Bientôt', 'Talè')}
+                          {r.due && r.due > 0 ? <em>{tx(`${r.due} à revoir`, `${r.due} pou revize`)}</em> : null}
+                        </span>
+                      </button>
+                      <span className="qz-chap__acts">
+                        <button type="button" className="qz-act" disabled={!r.count} onClick={() => startPractice(courseCode, r.value, source)}>
+                          {tx('S’entraîner', 'Pratike')}
+                        </button>
+                        <button type="button" className="qz-act qz-act--primary" disabled={!r.count} onClick={() => startQuiz(courseCode, r.value, source)}>
+                          {tx('Quiz', 'Kwiz')}
+                        </button>
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            )}
+          </div>
+
+          <aside className="qz-hub__side">
+            <section className="qz-card qz-diag" aria-labelledby="qz-diag-title">
+              <span className="qz-card__eyebrow">{tx('Diagnostic', 'Dyagnostik')}</span>
+              <h2 id="qz-diag-title" className="qz-card__title">{tx('Tes erreurs à revoir', 'Erè ou pou revize')}</h2>
+              {!userId ? (
+                <p className="qz-card__sub">{tx('Connecte-toi : tes erreurs seront gardées et reviendront ici.', 'Konekte : erè ou yo ap kenbe epi y ap tounen isit la.')}</p>
+              ) : courseDue === null ? (
+                <p className="qz-card__sub">{t('common.loading', 'Chargement…')}</p>
+              ) : courseDue === 0 ? (
+                <p className="qz-card__sub">{tx('Aucune question ratée en attente dans ce cours.', 'Pa gen kesyon ou rate k ap tann nan kou sa a.')}</p>
+              ) : (
+                <>
+                  <p className="qz-diag__big"><strong>{courseDue}</strong> {tx(courseDue === 1 ? 'question ratée' : 'questions ratées', 'kesyon ou rate')}</p>
+                  {weakest && (
+                    <p className="qz-diag__weak">
+                      {tx('Surtout dans ', 'Sitou nan ')}<strong>{weakest.label}</strong> ({weakest.due})
+                    </p>
+                  )}
+                  <div className="qz-diag__actions">
+                    <Link className="button button--primary button--sm" to={`/revision?${new URLSearchParams({ course: courseCode, from: 'practice' }).toString()}`}>{tx('Revoir mes erreurs', 'Revize erè m yo')}</Link>
+                    {weakest && (
+                      <button type="button" className="button button--ghost button--sm" onClick={() => startPractice(courseCode, weakest.value, source)}>
+                        {tx('Travailler ce chapitre', 'Travay chapit sa a')}
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+            </section>
+
+            {/* Configurator — only what the two activities really support. */}
+            <section className="qz-card qz-config" aria-labelledby="qz-config-title">
+              <span className="qz-card__eyebrow">{tx('Sur mesure', 'Sou mezi')}</span>
+              <h2 id="qz-config-title" className="qz-card__title">{tx('Ta session', 'Sesyon ou')}</h2>
+              <p className="qz-config__label">{tx('Activité', 'Aktivite')}</p>
+              <div className="qz-seg" role="radiogroup" aria-label={tx('Activité', 'Aktivite')}>
+                <button type="button" role="radio" aria-checked={mode === 'practice'} className={mode === 'practice' ? 'is-on' : ''} onClick={() => setMode('practice')}>{tx('Entraînement libre', 'Pratik lib')}</button>
+                <button type="button" role="radio" aria-checked={mode === 'quiz'} className={mode === 'quiz' ? 'is-on' : ''} onClick={() => setMode('quiz')}>{tx('Quiz avec score', 'Kwiz ak nòt')}</button>
+              </div>
+              {mode === 'quiz' && (
+                <>
+                  <p className="qz-config__label">{tx('Nombre de questions', 'Kantite kesyon')}</p>
+                  <div className="qz-seg" role="radiogroup" aria-label={tx('Nombre de questions', 'Kantite kesyon')}>
+                    {[5, 10, 20].map((n) => (
+                      <button key={n} type="button" role="radio" aria-checked={quizLength === n} className={quizLength === n ? 'is-on' : ''} onClick={() => setQuizLength(n)}>{n}</button>
+                    ))}
+                  </div>
+                  {hubReady && counts.quizzable > 0 && counts.quizzable < quizLength && (
+                    <p className="qz-config__note">{tx(`Cette unité a ${counts.quizzable} questions corrigeables : le quiz en aura ${counts.quizzable}.`, `Inite sa a gen ${counts.quizzable} kesyon ki ka korije : kwiz la ap genyen ${counts.quizzable}.`)}</p>
+                  )}
+                </>
+              )}
+              {hubReady && (
+                <div className="qz-config__rules">
+                  <ModeRules mode={mode} count={quizMaxHub || quizLength} tries={MAX_ATTEMPTS} tx={tx} />
+                </div>
+              )}
               <button
                 type="button"
-                onClick={() => generateCurriculumPractice()}
-                className="button button--primary qz-next__primary"
-                disabled={isLoadingBank}
+                className="button button--primary qz-cta"
+                disabled={!hubReady || !hasQuestions || (mode === 'quiz' && counts.quizzable === 0)}
+                onClick={() => (mode === 'quiz' ? startQuiz(courseCode, unit, source) : startPractice(courseCode, unit, source))}
               >
-                <RotateCcw size={16} aria-hidden="true" /> {ctaLabel}
+                {mode === 'quiz' ? tx('Lancer le quiz', 'Lanse kwiz la') : tx('Commencer l’entraînement', 'Kòmanse pratik la')}
+                <ChevronRight size={16} aria-hidden="true" />
               </button>
-              <button type="button" onClick={endPractice} className="qz-next__end">
-                {tx('Terminer la pratique', 'Fini pratik la')}
-              </button>
-            </div>
-          </>
-        ) : (
-          /* ── The hub (Ted's "Entraînement & Quiz" mockup) ─────────────────
-                A header card with the discipline, level and chapter chips and
-                the language toggle; the selected series with its two modes;
-                the course's chapters as a table; a side console with the
-                real diagnostic and the configurator. Every number is read
-                from the bank or the Revizyon map — no rate, no timer, no XP
-                is invented. ── */
-          <>
-            {/* Ted: "i complained about hero and you bring me a big filter
-                hero". The header is now one title line and one row of
-                compact selects — no crumbs, no stacked chip rows, no card. */}
-            {/* One title line, then the filters as chips — no hero (Ted). */}
-            <header className="qz-top">
-              <h1 className="qz-top__title">{tx('Entraînement et quiz', 'Antrènman ak kwiz')}</h1>
-              <div className="qz-top__chips">
-                <div className="qz-chips" role="group" aria-label={t('quizzes.course', 'Matière')}>
-                  {subjectOptions.map((o) => (
-                    <button key={o.value} type="button" aria-pressed={subjectBase === o.value} className={subjectBase === o.value ? 'is-on' : ''} onClick={() => setSubjectBase(o.value)}>{o.label}</button>
-                  ))}
-                </div>
-                <div className="qz-chips" role="group" aria-label={t('quizzes.gradeLevel', 'Niveau')}>
-                  {levelOptions.map((o) => (
-                    <button key={o.value} type="button" aria-pressed={level === o.value} className={level === o.value ? 'is-on' : ''} onClick={() => setLevel(o.value)}>
-                      {o.label}{myLevel === o.value && <small>{tx('ta classe', 'klas ou')}</small>}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </header>
+              {unitLabel && <p className="qz-config__note">{tx('Sur : ', 'Sou : ')}{unitLabel}{hubReady ? ` · ${countLabel}` : ''}</p>}
+            </section>
 
-            <div className="qz-hub">
-              <div className="qz-hub__main">
-                {!hasQuestions && (
-                  <p className="qz-note" role="status">
-                    {t('quizzes.noPractice', 'Aucun exercice disponible pour cette sélection pour le moment.')}{' '}
-                    {tx('Choisissez une autre unité.', 'Chwazi yon lòt inite.')}
-                  </p>
-                )}
-                {bankMessage && <p className="qz-hint" role="status">{bankMessage}</p>}
-
-                {/* Every chapter of the course as a card: pick it, or start
-                    straight from it. The counts are the bank's own. */}
-                {unitRows.length > 0 && (
-                  <section className="qz-shelf" aria-labelledby="qz-chapters-title">
-                    <div className="qz-chapters__head">
-                      <h2 id="qz-chapters-title">{tx('Les chapitres', 'Chapit yo')}</h2>
-                      <span>{subjectLabel}{levelLabel ? ` · ${levelLabel}` : ''}</span>
-                    </div>
-                    <ol className="qz-chaps">
-                      {unitRows.map((r, i) => (
-                        <li key={r.value} className={`qz-chap${unit === r.value ? ' is-current' : ''}${!r.count ? ' is-empty' : ''}`}>
-                          <button type="button" className="qz-chap__pick" onClick={() => setUnit(r.value)} aria-pressed={unit === r.value} disabled={!r.count}>
-                            <span className="qz-chap__no">{String(i + 1).padStart(2, '0')}</span>
-                            <span className="qz-chap__name">{r.label}</span>
-                            <span className="qz-chap__meta">
-                              {r.count ? tx(`${r.count} questions`, `${r.count} kesyon`) : tx('Bientôt', 'Talè')}
-                              {r.due && r.due > 0 ? <em>{tx(`${r.due} à revoir`, `${r.due} pou revize`)}</em> : null}
-                            </span>
-                          </button>
-                          <span className="qz-chap__acts">
-                            <button type="button" className="qz-act" disabled={!r.count || isLoadingBank} onClick={() => generateCurriculumPractice(r.value)}>
-                              {tx('S’entraîner', 'Pratike')}
-                            </button>
-                            <button type="button" className="qz-act qz-act--primary" disabled={!r.count || isLoadingBank} onClick={() => startQuiz(r.value)}>
-                              {tx('Quiz', 'Kwiz')}
-                            </button>
-                          </span>
-                        </li>
-                      ))}
-                    </ol>
-                  </section>
-                )}
-              </div>
-
-              <aside className="qz-hub__side">
-                {/* Diagnostic — the student's own missed questions, nothing
-                    estimated. Signed out there is nothing to diagnose. */}
-                <section className="qz-card qz-diag" aria-labelledby="qz-diag-title">
-                  <span className="qz-card__eyebrow">{tx('Diagnostic', 'Dyagnostik')}</span>
-                  <h2 id="qz-diag-title" className="qz-card__title">{tx('Tes erreurs à revoir', 'Erè ou pou revize')}</h2>
-                  {!userId ? (
-                    <p className="qz-card__sub">{tx('Connecte-toi : tes erreurs seront gardées et reviendront ici.', 'Konekte : erè ou yo ap kenbe epi y ap tounen isit la.')}</p>
-                  ) : courseDue === null ? (
-                    <p className="qz-card__sub">{t('common.loading', 'Chargement…')}</p>
-                  ) : courseDue === 0 ? (
-                    <p className="qz-card__sub">{tx('Aucune question ratée en attente dans ce cours.', 'Pa gen kesyon ou rate k ap tann nan kou sa a.')}</p>
-                  ) : (
-                    <>
-                      <p className="qz-diag__big"><strong>{courseDue}</strong> {tx(courseDue === 1 ? 'question ratée' : 'questions ratées', 'kesyon ou rate')}</p>
-                      {weakest && (
-                        <p className="qz-diag__weak">
-                          {tx('Surtout dans ', 'Sitou nan ')}<strong>{weakest.label}</strong> ({weakest.due})
-                        </p>
-                      )}
-                      <div className="qz-diag__actions">
-                        <Link className="button button--primary button--sm" to="/revision">{tx('Revoir mes erreurs', 'Revize erè m yo')}</Link>
-                        {weakest && (
-                          <button type="button" className="button button--ghost button--sm" onClick={() => generateCurriculumPractice(weakest.value)}>
-                            {tx('Travailler ce chapitre', 'Travay chapit sa a')}
-                          </button>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </section>
-
-                {/* Configurator — only what the two activities really support. */}
-                <section className="qz-card qz-config" aria-labelledby="qz-config-title">
-                  <span className="qz-card__eyebrow">{tx('Sur mesure', 'Sou mezi')}</span>
-                  <h2 id="qz-config-title" className="qz-card__title">{tx('Ta session', 'Sesyon ou')}</h2>
-                  <p className="qz-config__label">{tx('Activité', 'Aktivite')}</p>
-                  <div className="qz-seg" role="radiogroup" aria-label={tx('Activité', 'Aktivite')}>
-                    <button type="button" role="radio" aria-checked={mode === 'practice'} className={mode === 'practice' ? 'is-on' : ''} onClick={() => setMode('practice')}>{tx('Entraînement libre', 'Pratik lib')}</button>
-                    <button type="button" role="radio" aria-checked={mode === 'quiz'} className={mode === 'quiz' ? 'is-on' : ''} onClick={() => setMode('quiz')}>{tx('Quiz avec score', 'Kwiz ak nòt')}</button>
-                  </div>
-                  {mode === 'quiz' && (
-                    <>
-                      <p className="qz-config__label">{tx('Nombre de questions', 'Kantite kesyon')}</p>
-                      <div className="qz-seg" role="radiogroup" aria-label={tx('Nombre de questions', 'Kantite kesyon')}>
-                        {[5, 10, 20].map((n) => (
-                          <button key={n} type="button" role="radio" aria-checked={quizLength === n} className={quizLength === n ? 'is-on' : ''} onClick={() => setQuizLength(n)}>{n}</button>
-                        ))}
-                      </div>
-                      {counts.count > 0 && counts.count < quizLength && (
-                        <p className="qz-config__note">{tx(`Cette unité a ${counts.count} questions : le quiz en aura ${counts.count}.`, `Inite sa a gen ${counts.count} kesyon : kwiz la ap genyen ${counts.count}.`)}</p>
-                      )}
-                    </>
-                  )}
-                  <button
-                    type="button"
-                    className="button button--primary qz-cta"
-                    disabled={isLoadingBank || !hasQuestions}
-                    onClick={() => (mode === 'quiz' ? startQuiz() : generateCurriculumPractice())}
-                  >
-                    {mode === 'quiz' ? tx('Lancer le quiz', 'Lanse kwiz la') : tx('Commencer l’entraînement', 'Kòmanse pratik la')}
-                    <ChevronRight size={16} aria-hidden="true" />
-                  </button>
-                  {unitLabel && <p className="qz-config__note">{tx('Sur : ', 'Sou : ')}{unitLabel}</p>}
-                </section>
-
-                {/* One line: the link carries the rest (Ted: shorter disclaimer). */}
-                <section className="qz-card qz-examlink" aria-label={tx('Examens', 'Egzamen')}>
-                  <p className="qz-card__sub qz-examlink__line">
-                    {tx('Un quiz n’est pas un examen : rien n’est chronométré ni gardé.', 'Yon kwiz se pa yon egzamen : pa gen kwonomèt ni nòt ki rete.')}
-                  </p>
-                  <Link to={examHref} className="qz-examlink__cta">
-                    {examsRelevant ? tx('Passer un examen blanc', 'Pase yon egzamen blan') : tx('Voir les épreuves officielles', 'Wè eprèv ofisyèl yo')}
-                    <ChevronRight size={15} aria-hidden="true" />
-                  </Link>
-                </section>
-              </aside>
-            </div>
-          </>
-        )}
+            <section className="qz-card qz-examlink" aria-label={tx('Examens', 'Egzamen')}>
+              <p className="qz-card__sub qz-examlink__line">
+                {tx('Un quiz n’est pas un examen : rien n’est chronométré ni noté.', 'Yon kwiz se pa yon egzamen : pa gen kwonomèt ni nòt.')}
+              </p>
+              <Link to={examHref} className="qz-examlink__cta">
+                {examsRelevant ? tx('Passer un examen blanc', 'Pase yon egzamen blan') : tx('Voir les épreuves officielles', 'Wè eprèv ofisyèl yo')}
+                <ChevronRight size={15} aria-hidden="true" />
+              </Link>
+            </section>
+          </aside>
+        </div>
       </div>
     </section>
   );

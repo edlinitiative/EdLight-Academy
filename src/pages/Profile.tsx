@@ -34,6 +34,8 @@ import { getFirstName } from '../utils/shared';
 import '../styles/pf.css';
 import './Profile.css';
 import { AccountBlock, GoalRhythm, SectionHead, SkillSpots, Schoolmates, Toggle } from './profile/ProfileSections';
+import { completedLessonsLabel, loadCourseLessonCounts } from './profile/profileData';
+import { evidenceLabel, trackJourney } from '../utils/learningJourney';
 
 
 
@@ -596,6 +598,45 @@ export function CourseProgressCard({ allProgress, loading, isCreole, onExplore }
 }) {
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
+  // Denominators: lessons per course from the catalogue snapshot. Until (or
+  // unless) it arrives, a row shows the count alone — never a guessed total.
+  const [totals, setTotals] = React.useState<Record<string, number>>({});
+  React.useEffect(() => {
+    let live = true;
+    loadCourseLessonCounts().then((x) => { if (live) setTotals(x); });
+    return () => { live = false; };
+  }, []);
+
+  // progress_summary_opened: once, when the course list is actually on screen
+  // (it sits low on the page). Technical context only.
+  const cardRef = React.useRef<HTMLDivElement>(null);
+  const tracked = React.useRef(false);
+  const courseCount = allProgress?.length || 0;
+  React.useEffect(() => {
+    if (loading || tracked.current || !cardRef.current) return undefined;
+    const fire = () => {
+      if (tracked.current) return;
+      tracked.current = true;
+      trackJourney('progress_summary_opened', { surface: 'profile', courses: courseCount });
+    };
+    if (typeof IntersectionObserver === 'undefined') { fire(); return undefined; }
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) { fire(); io.disconnect(); }
+    }, { threshold: 0.3 });
+    io.observe(cardRef.current);
+    return () => io.disconnect();
+  }, [loading, courseCount]);
+
+  const doneWord = evidenceLabel('completed', isCreole);
+  const scopeNote = (
+    <p className="pf-scope-note">
+      {t(
+        `« ${doneWord} » = vidéo de la leçon regardée jusqu’au bout, sur le total de leçons du cours. La maîtrise se construit avec la pratique.`,
+        `« ${doneWord} » = ou gade videyo leson an jiska lafen, sou total leson kou a. Metriz la bati ak pratik.`,
+      )}
+    </p>
+  );
+
   const SUBJECTS: Record<string, string> = {
     CHEM: t('Chimie', 'Chimi'),
     PHYS: t('Physique', 'Fizik'),
@@ -625,7 +666,7 @@ export function CourseProgressCard({ allProgress, loading, isCreole, onExplore }
 
   if (!allProgress || allProgress.length === 0) {
     return (
-      <div className="pf-card">
+      <div className="pf-card" ref={cardRef}>
         <CardHead eyebrow={t('Progression', 'Pwogrè')} title={t('Tes cours', 'Kou ou yo')} />
         <p className="pf-empty">
           {t(
@@ -648,8 +689,9 @@ export function CourseProgressCard({ allProgress, loading, isCreole, onExplore }
   );
 
   return (
-    <div className="pf-card">
+    <div className="pf-card" ref={cardRef}>
       <CardHead eyebrow={t('Progression', 'Pwogrè')} title={t('Tes cours', 'Kou ou yo')} />
+      {scopeNote}
       <ul className="pf-rows">
         {sorted.map((p) => {
           const done = p.completedLessons?.length || 0;
@@ -661,10 +703,11 @@ export function CourseProgressCard({ allProgress, loading, isCreole, onExplore }
                 <span className="pf-row__body">
                   <span className="pf-row__title">{name}{level ? ` · ${level}` : ''}</span>
                   <span className="pf-row__meta">
-                    {/* No "x / y": the total lesson count for a course isn't
-                        loaded here, and a fraction would imply a denominator we
-                        do not have. */}
-                    {done} {done === 1 ? t('leçon terminée', 'leson fini') : t('leçons terminées', 'leson fini')}
+                    {/* "x / y" only when the catalogue gives the course's
+                        lesson count; otherwise the count alone, never a
+                        guessed denominator. "Terminée" is the shared
+                        evidence label: completion, not mastery. */}
+                    {completedLessonsLabel(done, totals[String(p.courseId || '').toLowerCase()], isCreole)}
                     {p.totalPoints ? ` · ${p.totalPoints} ${t('points', 'pwen')}` : ''}
                   </span>
                 </span>

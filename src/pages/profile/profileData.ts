@@ -14,6 +14,7 @@
  */
 import { isDue, type ReviewMap } from '../../utils/review';
 import { lessonMastery, type ProgressMap } from '../../../shared/mastery';
+import { evidenceLabel } from '../../utils/learningJourney';
 
 export type SkillSpot = {
   /** "MATH-NSI-U1" */
@@ -22,6 +23,9 @@ export type SkillSpot = {
   course: string;
   unitNo: number;
   count: number;
+  /** Strong spots only: how many of `count` are confirmed by a chapter test
+   *  ("mastered"); the rest are "proficient" from exercises ("practised"). */
+  mastered?: number;
 };
 
 const UNIT_RE = /^([A-Z]+-NS[IV]+)-U(\d+)/;
@@ -59,14 +63,21 @@ export function weakSpots(map: ReviewMap, max = 4): SkillSpot[] {
   return ranked(acc, max);
 }
 
-/** Units with lessons at "proficient" or better, most first. */
+/**
+ * Units with lessons at "proficient" or better, most first. `mastered` keeps
+ * the two apart: only a chapter test makes a lesson "mastered"; a good
+ * exercise score makes it "proficient", which the profile calls practised.
+ */
 export function strongSpots(progress: ProgressMap, max = 4): SkillSpot[] {
   const acc = new Map<string, SkillSpot>();
   for (const [lessonId, p] of Object.entries(progress || {})) {
     const level = lessonMastery(p);
     if (level !== 'proficient' && level !== 'mastered') continue;
     const u = parseUnit(lessonId);
-    if (u) bump(acc, u.course, u.unitNo);
+    if (!u) continue;
+    bump(acc, u.course, u.unitNo);
+    const spot = acc.get(`${u.course}-U${u.unitNo}`)!;
+    spot.mastered = (spot.mastered || 0) + (level === 'mastered' ? 1 : 0);
   }
   return ranked(acc, max);
 }
@@ -102,8 +113,7 @@ let inflight: Promise<Record<string, string>> | null = null;
 export function loadUnitTitles(): Promise<Record<string, string>> {
   if (titles) return Promise.resolve(titles);
   if (inflight) return inflight;
-  inflight = fetch('/catalog.json')
-    .then((r) => (r.ok ? r.json() : {}))
+  inflight = loadCatalog()
     .then((c: any) => {
       const out: Record<string, string> = {};
       const courses = Array.isArray(c?.courses) ? c.courses : [];
@@ -124,6 +134,68 @@ export function loadUnitTitles(): Promise<Record<string, string>> {
     .catch(() => ({}))
     .finally(() => { inflight = null; });
   return inflight;
+}
+
+/* One fetch of the snapshot, shared by unit titles and lesson counts. A
+ * failed fetch is not memoised, so the next caller tries again. */
+let catalogInflight: Promise<any> | null = null;
+function loadCatalog(): Promise<any> {
+  if (!catalogInflight) {
+    catalogInflight = fetch('/catalog.json')
+      .then((r) => (r.ok ? r.json() : {}))
+      .catch(() => { catalogInflight = null; return {}; });
+  }
+  return catalogInflight;
+}
+
+/** Test hook: forget the memoised catalogue, titles and counts. */
+export function __resetCatalogCache(): void {
+  catalogInflight = null;
+  titles = null;
+  inflight = null;
+}
+
+/**
+ * Lessons per course ("chem-ns1" → 33), from the same snapshot. This is the
+ * denominator of "x / y leçons terminées": without it the profile shows the
+ * count alone rather than inventing a total.
+ */
+export function loadCourseLessonCounts(): Promise<Record<string, number>> {
+  return loadCatalog().then((c: any) => {
+    const out: Record<string, number> = {};
+    for (const course of (Array.isArray(c?.courses) ? c.courses : []) as any[]) {
+      const id = String(course?.id || '').toLowerCase();
+      const n = Number(course?.number_of_lessons);
+      if (id && Number.isFinite(n) && n > 0) out[id] = n;
+    }
+    return out;
+  }).catch(() => ({}));
+}
+
+/**
+ * "3 / 33 leçons terminées" when the total is known and consistent, else
+ * "3 leçons terminées". Words come from the shared evidence labels, so a
+ * finished video is never called mastery.
+ */
+export function completedLessonsLabel(done: number, total: number | undefined, isCreole: boolean): string {
+  const word = evidenceLabel('completed', isCreole).toLowerCase();
+  const fr = (n: number) => `${n === 1 ? 'leçon' : 'leçons'} ${word}${n > 1 ? 's' : ''}`;
+  const ht = () => `leson ${word}`;
+  const noun = isCreole ? ht() : fr(done);
+  if (total && total >= done) return `${done} / ${total} ${noun}`;
+  return `${done} ${noun}`;
+}
+
+/** Strong-spot chip text: practised and mastered counted apart. */
+export function strongSpotLabel(spot: Pick<SkillSpot, 'count' | 'mastered'>, isCreole: boolean): string {
+  const mastered = spot.mastered || 0;
+  const practised = Math.max(0, spot.count - mastered);
+  const m = evidenceLabel('mastered', isCreole).toLowerCase();
+  const p = evidenceLabel('practised', isCreole).toLowerCase();
+  const part = (n: number, w: string) => (isCreole ? `${n} ${w}` : `${n} ${w}${n > 1 ? 's' : ''}`);
+  return [mastered ? part(mastered, m) : '', practised ? part(practised, p) : '']
+    .filter(Boolean)
+    .join(' · ');
 }
 
 /* ── Goal and rhythm ─────────────────────────────────────────────────────────
