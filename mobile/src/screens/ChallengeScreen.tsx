@@ -86,6 +86,9 @@ export default function ChallengeScreen({ code, onClose }: { code: string; onClo
           category={category ?? { id: challenge.categoryId, name: categoryLabel, icon: '⚔️' }}
           isCreole={isCreole}
           onFinish={(score) => handleFinish(score)}
+          // A scored duel: the challenger's clock did not stop, so this one
+          // keeps running in the background (utils/deadlineTimer.ts).
+          timerPolicy="run"
         />
       </SafeAreaView>
     );
@@ -98,7 +101,7 @@ export default function ChallengeScreen({ code, onClose }: { code: string; onClo
       ? t('Envoi du résultat…', 'Ap voye rezilta a…')
       : outcome
         ? outcome.result === 'won'
-          ? t('Tu as gagné ! 🏆', 'Ou genyen ! 🏆')
+          ? t('Tu as gagné !', 'Ou genyen !')
           : outcome.result === 'tie'
             ? t('Égalité !', 'Egalite !')
             : t('Perdu de peu…', 'Ou pèdi tou piti…')
@@ -153,7 +156,7 @@ export default function ChallengeScreen({ code, onClose }: { code: string; onClo
         >
           <ChevronLeft color={colors.ink} size={26} />
         </TouchableOpacity>
-        <Text style={[typeScale.h1, { color: colors.ink }]}>{t('Défi reçu', 'Defi ou resevwa')} ⚔️</Text>
+        <Text style={[typeScale.h1, { color: colors.ink }]}>{t('Défi reçu', 'Defi ou resevwa')}</Text>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>

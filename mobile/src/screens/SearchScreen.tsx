@@ -8,7 +8,7 @@
  * chat (RAG + study-plan tools) on an explicit tap.
  */
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -16,16 +16,18 @@ import {
   TouchableOpacity,
   FlatList,
   Keyboard,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  X, Search, BookOpen, PlayCircle, ClipboardList, Gamepad2, Sparkles, MessageCircle, ChevronRight,
+  X, Search, BookOpen, PlayCircle, ClipboardList, Gamepad2, Sparkles, MessageCircle, ChevronRight, AlertCircle,
 } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { useTheme, radius, typeScale } from '../theme/theme';
 import { gradeProfile } from '../config/trackConfig';
 import {
-  getSearchIndex, searchItems, type SearchItem, type SearchResult, type SearchItemType,
+  getSearchIndex, rankResults, rowContext, typeTag, indexHealth, suggestFor, itemKey,
+  type SearchItem, type SearchItemType, type RankedRow,
 } from '../services/searchIndex';
 
 const GUTTER = 20;
@@ -38,14 +40,11 @@ const TYPE_ICONS: Record<SearchItemType, any> = {
   action: Sparkles,
 };
 
-const GROUP_ORDER: SearchItemType[] = ['action', 'course', 'lesson', 'exam', 'game'];
-const GROUP_LIMIT: Record<SearchItemType, number> = {
-  action: 3, course: 4, lesson: 4, exam: 5, game: 3,
-};
-
 type Row =
   | { kind: 'eyebrow'; key: string; label: string }
-  | { kind: 'item'; key: string; item: SearchResult };
+  | { kind: 'item'; key: string; item: RankedRow; best: boolean };
+
+type IndexStatus = 'loading' | 'ready' | 'failed';
 
 export default function SearchScreen({ onClose, navigation }: { onClose?: () => void; navigation: any }) {
   const language = useStore((s) => s.language);
@@ -56,43 +55,56 @@ export default function SearchScreen({ onClose, navigation }: { onClose?: () => 
 
   const [query, setQuery] = useState('');
   const [index, setIndex] = useState<SearchItem[]>([]);
+  const [status, setStatus] = useState<IndexStatus>('loading');
+  const [round, setRound] = useState(0);
   const inputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     let alive = true;
-    getSearchIndex(isCreole ? 'ht' : 'fr').then((items) => {
-      if (alive) setIndex(items);
-    });
-    const focusTimer = setTimeout(() => inputRef.current?.focus(), 250);
-    return () => { alive = false; clearTimeout(focusTimer); };
-  }, [isCreole]);
+    setStatus('loading');
+    getSearchIndex(isCreole ? 'ht' : 'fr', { force: round > 0 })
+      .then((items) => {
+        if (!alive) return;
+        setIndex(items);
+        // Courses are the core of search: without them the index failed.
+        setStatus(indexHealth(items).missingCourses ? 'failed' : 'ready');
+      })
+      .catch(() => { if (alive) setStatus('failed'); });
+    return () => { alive = false; };
+  }, [isCreole, round]);
 
-  const groupLabel = (type: SearchItemType): string => ({
+  useEffect(() => {
+    const focusTimer = setTimeout(() => inputRef.current?.focus(), 250);
+    return () => clearTimeout(focusTimer);
+  }, []);
+
+  const retry = useCallback(() => setRound((r) => r + 1), []);
+  const examsMissing = status === 'ready' && indexHealth(index).missingExams;
+
+  const groupLabel = (key: 'best' | SearchItemType): string => ({
+    best: t('Meilleurs résultats', 'Pi bon rezilta'),
     action: t('Actions', 'Aksyon'),
     course: t('Cours', 'Kou'),
     lesson: t('Leçons', 'Leson'),
     exam: t('Examens', 'Egzamen'),
     game: t('Jeux', 'Jwèt'),
-  })[type];
+  })[key];
 
   const rows = useMemo<Row[]>(() => {
     if (!query.trim()) return [];
-    const ranked = searchItems(index, query, 60);
-    const grouped = new Map<SearchItemType, SearchResult[]>();
-    for (const r of ranked) {
-      const bucket = grouped.get(r.type) || [];
-      if (bucket.length < GROUP_LIMIT[r.type]) bucket.push(r);
-      grouped.set(r.type, bucket);
-    }
     const out: Row[] = [];
-    for (const type of GROUP_ORDER) {
-      const bucket = grouped.get(type);
-      if (!bucket?.length) continue;
-      out.push({ kind: 'eyebrow', key: `eyebrow-${type}`, label: groupLabel(type) });
-      bucket.forEach((item, i) => out.push({ kind: 'item', key: `${type}-${i}`, item }));
+    for (const g of rankResults(index, query)) {
+      out.push({ kind: 'eyebrow', key: `eyebrow-${g.key}`, label: groupLabel(g.key) });
+      g.rows.forEach((item) => out.push({ kind: 'item', key: `${g.key}-${item.key}`, item, best: g.key === 'best' }));
     }
     return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, query, isCreole]);
+
+  const noResultSuggestions = useMemo(
+    () => (query.trim() && rows.length === 0 && status === 'ready' ? suggestFor(index, query) : []),
+    [rows.length, query, index, status],
+  );
 
   /** Close the modal, then run the navigation on the underlying stack. */
   const go = (item: SearchItem) => {
@@ -157,31 +169,39 @@ export default function SearchScreen({ onClose, navigation }: { onClose?: () => 
   const renderRow = ({ item: row }: { item: Row }) => {
     if (row.kind === 'eyebrow') {
       return (
-        <Text style={[typeScale.overline, { color: colors.faint, marginTop: 16, marginBottom: 6 }]}>
+        <Text accessibilityRole="header" style={[typeScale.overline, { color: colors.muted, marginTop: 16, marginBottom: 6, fontSize: 12 }]}>
           {row.label.toUpperCase()}
         </Text>
       );
     }
-    const Icon = TYPE_ICONS[row.item.type];
+    return resultRow(row.item, row.best);
+  };
+
+  const resultRow = (item: SearchItem, best: boolean, key?: string) => {
+    const Icon = TYPE_ICONS[item.type];
+    const context = rowContext(item, isCreole);
+    const tag = typeTag(item.type, isCreole);
     return (
       <TouchableOpacity
-        onPress={() => go(row.item)}
+        key={key}
+        onPress={() => go(item)}
         activeOpacity={0.7}
         accessibilityRole="button"
-        style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 }}
+        accessibilityLabel={`${tag} : ${item.title}${context ? `, ${context}` : ''}`}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, minHeight: 52 }}
       >
-        <View style={{ width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.azureSoft }}>
-          <Icon size={16} color={colors.azure} />
+        <View style={{ width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.azureSoft }}>
+          <Icon size={17} color={colors.azure} />
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={[typeScale.body, { color: colors.ink, fontWeight: '600' }]} numberOfLines={1}>
-            {row.item.title}
+          <Text style={[typeScale.bodyMd, { color: colors.ink, fontSize: 15 }]} numberOfLines={2}>
+            {item.title}
           </Text>
-          {!!row.item.subtitle && (
-            <Text style={[typeScale.micro, { color: colors.muted }]} numberOfLines={1}>
-              {row.item.subtitle}
+          {!!context || best ? (
+            <Text style={[typeScale.body, { color: colors.muted }]} numberOfLines={1}>
+              {best ? `${tag}${context ? ' · ' : ''}` : ''}{context}
             </Text>
-          )}
+          ) : null}
         </View>
         <ChevronRight size={16} color={colors.faint} />
       </TouchableOpacity>
@@ -220,7 +240,7 @@ export default function SearchScreen({ onClose, navigation }: { onClose?: () => 
             accessibilityLabel={t('Rechercher', 'Chèche')}
           />
           {query.length > 0 && (
-            <TouchableOpacity onPress={() => setQuery('')} hitSlop={8} accessibilityLabel={t('Effacer', 'Efase')}>
+            <TouchableOpacity onPress={() => setQuery('')} hitSlop={8} accessibilityRole="button" accessibilityLabel={t('Effacer', 'Efase')}>
               <X size={15} color={colors.faint} />
             </TouchableOpacity>
           )}
@@ -233,6 +253,7 @@ export default function SearchScreen({ onClose, navigation }: { onClose?: () => 
               width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center',
               backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
             }}
+            accessibilityRole="button"
             accessibilityLabel={t('Fermer', 'Fèmen')}
           >
             <X size={18} color={colors.muted} />
@@ -251,24 +272,43 @@ export default function SearchScreen({ onClose, navigation }: { onClose?: () => 
                 key={s.label}
                 onPress={s.run}
                 activeOpacity={0.75}
+                accessibilityRole="button"
                 style={{
                   paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999,
                   borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface,
                 }}
               >
-                <Text style={{ fontSize: 13, fontWeight: '700', color: colors.muted }}>{s.label}</Text>
+                <Text style={[typeScale.bodyMd, { color: colors.ink }]}>{s.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 20 }}>
             <MessageCircle size={14} color={colors.muted} />
-            <Text style={[typeScale.caption, { color: colors.muted, flex: 1 }]}>
+            <Text style={[typeScale.body, { color: colors.muted, flex: 1 }]}>
               {t(
                 'Astuce : tapez une question et envoyez-la à Sandra. Elle peut aussi créer votre plan d’étude.',
                 'Ti konsèy : ekri yon kesyon epi voye l bay Sandra. Li ka kreye plan etid ou tou.',
               )}
             </Text>
           </View>
+        </View>
+      ) : status === 'loading' && index.length === 0 ? (
+        <View accessibilityLiveRegion="polite" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: GUTTER, paddingTop: 20 }}>
+          <ActivityIndicator color={colors.muted} />
+          <Text style={[typeScale.body, { color: colors.muted }]}>{t('Préparation de la recherche…', 'N ap prepare rechèch la…')}</Text>
+        </View>
+      ) : status === 'failed' ? (
+        <View accessibilityRole="alert" style={{ paddingHorizontal: GUTTER, paddingTop: 20, gap: 12 }}>
+          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
+            <AlertCircle size={18} color={colors.warn} style={{ marginTop: 1 }} />
+            <Text style={[typeScale.body, { color: colors.ink, flex: 1 }]}>
+              {t('Les cours n’ont pas pu être chargés, la recherche est incomplète. Vérifie ta connexion.',
+                'Kou yo pa t ka chaje, rechèch la pa konplè. Verifye koneksyon ou.')}
+            </Text>
+          </View>
+          <TouchableOpacity onPress={retry} accessibilityRole="button" style={{ alignSelf: 'flex-start', paddingVertical: 10, paddingHorizontal: 16, borderRadius: radius.control, borderWidth: 1, borderColor: colors.border }}>
+            <Text style={[typeScale.bodyMd, { color: colors.ink }]}>{t('Réessayer', 'Eseye ankò')}</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
@@ -277,10 +317,27 @@ export default function SearchScreen({ onClose, navigation }: { onClose?: () => 
           renderItem={renderRow}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ paddingHorizontal: GUTTER, paddingBottom: 90 }}
+          ListHeaderComponent={examsMissing ? (
+            <TouchableOpacity onPress={retry} accessibilityRole="button" style={{ paddingTop: 8 }}>
+              <Text style={[typeScale.body, { color: colors.muted }]}>
+                {t('Examens indisponibles pour l’instant. Toucher pour réessayer.', 'Egzamen yo pa disponib pou kounye a. Touche pou eseye ankò.')}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
           ListEmptyComponent={
-            <Text style={[typeScale.caption, { color: colors.muted, marginTop: 16 }]}>
-              {t('Aucun résultat local pour', 'Pa gen rezilta lokal pou')} « {query.trim()} »
-            </Text>
+            <View style={{ marginTop: 16, gap: 8 }} accessibilityLiveRegion="polite">
+              <Text style={[typeScale.body, { color: colors.ink }]}>
+                {t('Aucun résultat pour', 'Pa gen rezilta pou')} « {query.trim()} »
+              </Text>
+              {noResultSuggestions.length > 0 ? (
+                <>
+                  <Text accessibilityRole="header" style={[typeScale.overline, { color: colors.muted, marginTop: 8, fontSize: 12 }]}>
+                    {t('PEUT-ÊTRE', 'PETÈT')}
+                  </Text>
+                  {noResultSuggestions.map((it) => resultRow(it, false, itemKey(it)))}
+                </>
+              ) : null}
+            </View>
           }
         />
       )}
@@ -291,6 +348,7 @@ export default function SearchScreen({ onClose, navigation }: { onClose?: () => 
           onPress={askSandra}
           activeOpacity={0.85}
           accessibilityRole="button"
+          accessibilityLabel={`${t('Demander à Sandra', 'Mande Sandra')} : ${query.trim()}`}
           style={{
             position: 'absolute', left: GUTTER, right: GUTTER, bottom: 24,
             flexDirection: 'row', alignItems: 'center', gap: 12,

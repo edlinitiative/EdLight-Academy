@@ -23,8 +23,9 @@ import {
 } from '../services/triviaService';
 import { isWeeklyGame, WEEKLY_GAME_XP_MULTIPLIER } from '../utils/weeklyGame';
 import { success } from '../utils/haptics';
+import { queryKeys } from '../lifecycle/queryKeys';
 
-const triviaKey = (uid: string | null) => ['trivia-profile', uid];
+const triviaKey = (uid: string | null) => queryKeys.triviaProfile(uid);
 
 export function useTrivia() {
   const user = useStore((s) => s.user);

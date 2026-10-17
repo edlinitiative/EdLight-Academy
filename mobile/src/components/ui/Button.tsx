@@ -89,7 +89,10 @@ export default function Button({
         <>
           {icon}
           <Text
-            maxFontSizeMultiplier={1.3}
+            // Was 1.3: capped every button label in the app below what large-text
+            // users asked for. 2.0 still prevents a single label from blowing up
+            // a row at the very largest accessibility sizes.
+            maxFontSizeMultiplier={2}
             style={[typeScale.title, { color: V.fg, fontSize, lineHeight: fontSize + 4 }]}
           >
             {label}

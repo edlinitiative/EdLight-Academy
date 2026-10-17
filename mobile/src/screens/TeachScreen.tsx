@@ -285,7 +285,7 @@ export default function TeachScreen({ onClose }: { onClose?: () => void }) {
             </Text>
           </PressableScale>
 
-          <Text style={[typeScale.micro, { color: colors.faint, marginTop: 10, lineHeight: 16 }]}>
+          <Text style={[typeScale.label, { color: colors.muted, marginTop: 10 }]}>
             {t(
               'Postuler ne garantit pas une place : chaque candidature est examinée par notre équipe. L’enseignement sur EdLight est bénévole.',
               'Aplike pa garanti yon plas : ekip nou an gade chak aplikasyon. Anseye sou EdLight se yon travay volontè.',

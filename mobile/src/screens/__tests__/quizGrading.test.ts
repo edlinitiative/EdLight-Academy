@@ -4,7 +4,23 @@
 // chain and keep the suite cheap and offline.
 import { isQuizAnswerCorrect } from '../QuizzesScreen';
 
-jest.mock('../../hooks/useData', () => ({ usePracticeQuizzes: () => ({ data: [] }) }));
+jest.mock('../../hooks/useData', () => ({
+  usePracticeQuizzes: () => ({ data: [] }),
+  useCourses: () => ({ data: [] }),
+  useAppData: () => ({ data: null }),
+}));
+// The practice runner renders math through MathText → react-native-webview,
+// a native module Jest has no binary for.
+jest.mock('react-native-webview', () => ({ WebView: () => null }));
+// searchIndex (readableCourseMeta) imports dataService → firebase.
+jest.mock('../../services/dataService', () => ({ getCachedCourses: jest.fn(), loadCoursesData: jest.fn() }));
+jest.mock('../../utils/examCatalog', () => ({ fetchCatalogIndex: jest.fn(async () => []) }));
+// reviewService (flushReviewPush) reaches firebase too.
+jest.mock('../../services/reviewService', () => ({ flushReviewPush: jest.fn(async () => {}) }));
+jest.mock('@react-native-community/netinfo', () => ({
+  __esModule: true,
+  default: { fetch: jest.fn(async () => ({ isConnected: true, isInternetReachable: true })), addEventListener: jest.fn(() => () => {}) },
+}));
 // QuizzesScreen also reaches firebase through answerEventsService (imported
 // directly and again via useCrowdOrderedQuestions) — firebase ships
 // untranspiled ESM Jest can't parse, so sever that chain the same way.
@@ -64,5 +80,11 @@ describe('isQuizAnswerCorrect', () => {
     expect(isQuizAnswerCorrect({ options: ['a', 'b'], answer: 'Z' }, 'a')).toBe(false);
     // Missing stored answer → nothing is ever correct.
     expect(isQuizAnswerCorrect({ options: ['a', 'b'] }, 'a')).toBe(false);
+  });
+
+  it('reads a one-letter TEXT answer as text, so only one option is right', () => {
+    const q = { options: ['s', 'p', 'd', 'f'], answer: 'd' };
+    expect(isQuizAnswerCorrect(q, 'd')).toBe(true);
+    expect(isQuizAnswerCorrect(q, 'f')).toBe(false);
   });
 });

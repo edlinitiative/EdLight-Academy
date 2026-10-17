@@ -112,7 +112,9 @@ export function ListSkeleton({
       className="flex-1 px-5 pt-5"
       style={{ backgroundColor: colors.bg }}
       accessible
+      accessibilityRole="progressbar"
       accessibilityLabel={label ?? t('Chargement…', 'Ap chaje…')}
+      accessibilityState={{ busy: true }}
       accessibilityLiveRegion="polite"
     >
       {showHeader && (
@@ -192,12 +194,21 @@ export function LoadingState({ message }: { message?: string }) {
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const label = message ?? t('Chargement…', 'Ap chaje…');
   return (
-    <View className="flex-1 items-center justify-center gap-4 py-16" style={{ backgroundColor: colors.bg }}>
-      <LoadingSpinner color={colors.azure} />
-      <Text
-        accessibilityLiveRegion="polite"
-        style={[typeScale.bodyMd, { color: colors.muted }]}
-      >
+    <View
+      className="flex-1 items-center justify-center gap-4 py-16"
+      style={{ backgroundColor: colors.bg }}
+      // One announcement for the whole state ("Chargement…, occupé") instead of
+      // an unlabeled spinner followed by a separate text node.
+      accessible
+      accessibilityRole="progressbar"
+      accessibilityLabel={label}
+      accessibilityState={{ busy: true }}
+      accessibilityLiveRegion="polite"
+    >
+      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        <LoadingSpinner color={colors.azure} />
+      </View>
+      <Text style={[typeScale.status, { color: colors.muted, textAlign: 'center' }]}>
         {label}
       </Text>
     </View>
@@ -228,14 +239,24 @@ export function ErrorState({
       <Medallion tint={colors.danger}>
         <AlertCircle color={colors.danger} size={34} strokeWidth={1.75} />
       </Medallion>
-      <Text style={[typeScale.h2, { color: colors.ink, textAlign: 'center', marginTop: 20 }]}>
-        {heading}
-      </Text>
-      {sub ? (
-        <Text style={[typeScale.body, { color: colors.muted, textAlign: 'center', marginTop: 8, maxWidth: 300, lineHeight: 21 }]}>
-          {sub}
+      {/* The message is announced as it appears (an error replaces content the
+          student was waiting for), heading + explanation read as one alert. */}
+      <View
+        accessible
+        accessibilityRole="alert"
+        accessibilityLiveRegion="assertive"
+        accessibilityLabel={sub ? `${heading}. ${sub}` : heading}
+        style={{ alignItems: 'center' }}
+      >
+        <Text style={[typeScale.h2, { color: colors.ink, textAlign: 'center', marginTop: 20 }]}>
+          {heading}
         </Text>
-      ) : null}
+        {sub ? (
+          <Text style={[typeScale.instruction, { color: colors.muted, textAlign: 'center', marginTop: 8, maxWidth: 320 }]}>
+            {sub}
+          </Text>
+        ) : null}
+      </View>
       {onRetry && (
         <Button
           label={t('Réessayer', 'Eseye ankò')}
@@ -280,11 +301,11 @@ export function EmptyState({
       <Medallion tint={tint}>
         {icon ?? <Inbox color={tint} size={34} strokeWidth={1.75} />}
       </Medallion>
-      <Text style={[typeScale.h2, { color: colors.ink, textAlign: 'center', marginTop: 20 }]}>
+      <Text accessibilityRole="header" style={[typeScale.h2, { color: colors.ink, textAlign: 'center', marginTop: 20 }]}>
         {heading}
       </Text>
       {description ? (
-        <Text style={[typeScale.body, { color: colors.muted, textAlign: 'center', marginTop: 8, maxWidth: 300, lineHeight: 21 }]}>
+        <Text style={[typeScale.instruction, { color: colors.muted, textAlign: 'center', marginTop: 8, maxWidth: 320 }]}>
           {description}
         </Text>
       ) : null}

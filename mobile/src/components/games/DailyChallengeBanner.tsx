@@ -36,8 +36,6 @@ export default function DailyChallengeBanner({
             padding: 16,
             borderRadius: radius.card,
             backgroundColor: colors.surfaceAlt,
-            borderWidth: 1,
-            borderColor: colors.border,
           },
           style,
         ]}
@@ -90,9 +88,8 @@ export default function DailyChallengeBanner({
             borderRadius: radius.tile,
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: 'rgba(255,255,255,0.18)',
-            borderWidth: 1,
-            borderColor: 'rgba(255,255,255,0.22)',
+            // Opaque tone of the banner's own blue — no translucent fill + hairline.
+            backgroundColor: '#3F8DF2',
           }}
         >
           <CalendarCheck color="#ffffff" size={23} />

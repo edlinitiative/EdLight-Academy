@@ -5,6 +5,7 @@ import { TRACK_COEFFICIENTS } from '../config/trackConfig';
 import { normalizeSubject } from '../utils/examUtils';
 import { fetchCatalogIndex } from '../utils/examCatalog';
 import { listRecentExamResults } from '../services/userActivity';
+import { queryKeys } from '../lifecycle/queryKeys';
 import {
   computeReadiness,
   aggregateExamResultsBySubject,
@@ -34,7 +35,7 @@ export function useReadiness() {
   });
 
   const { data: examResults, isLoading: resultsLoading } = useQuery({
-    queryKey: ['exam-results-by-subject', uid],
+    queryKey: queryKeys.examResults(uid),
     queryFn: () => listRecentExamResults(uid as string, 300),
     enabled: !!uid,
     staleTime: 5 * 60 * 1000,

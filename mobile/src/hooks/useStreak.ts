@@ -15,8 +15,7 @@ import {
   buildHeatmapData,
 } from '../services/streakService';
 import { success } from '../utils/haptics';
-
-const STREAK_KEY = ['global-streak'];
+import { queryKeys } from '../lifecycle/queryKeys';
 
 /**
  * Primary hook consumed by StreakBadge, StreakWidget, etc.
@@ -39,7 +38,8 @@ export function useStreak() {
   const [newMilestones, setNewMilestones] = useState<any[]>([]);
 
   const { data: streak, isLoading } = useQuery({
-    queryKey: STREAK_KEY,
+    // Per-student key: a shared key served one student's streak to the next.
+    queryKey: queryKeys.streak(uid),
     queryFn: () => loadStreak(uid),
     enabled: !!uid,
     staleTime: 5 * 60_000, // 5 min
@@ -73,7 +73,7 @@ export function useStreak() {
       await recordStreakActivity(uid);
 
     // Optimistically update cache
-    qc.setQueryData(STREAK_KEY, updated);
+    qc.setQueryData(queryKeys.streak(uid), updated);
 
     if (milestones.length > 0) {
       // Reaching a streak milestone is a genuine win — celebrate it with a

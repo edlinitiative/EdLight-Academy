@@ -15,6 +15,8 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { QueryClient } from '@tanstack/react-query';
+import useStore, { waitForStoreHydration } from '../contexts/store';
+import { keyBelongsTo } from '../lifecycle/queryKeys';
 
 const CACHE_KEY = 'edlight:queryCache:v1';
 const MAX_AGE_MS = 24 * 60 * 60 * 1000; // don't resurrect data older than a day
@@ -31,8 +33,30 @@ const PERSISTED_KEYS = new Set([
 
 type PersistedEntry = { key: unknown[]; data: unknown; updatedAt: number };
 
-function shouldPersist(queryKey: readonly unknown[]): boolean {
-  return PERSISTED_KEYS.has(String(queryKey?.[0]));
+function currentUid(): string | null {
+  return useStore.getState().user?.uid ?? null;
+}
+
+/**
+ * Whitelisted AND owned by the current student. Student-private keys carry
+ * their uid (lifecycle/queryKeys), so an entry for another account — or for
+ * nobody, after sign-out — is never written to disk nor read back from it.
+ */
+export function shouldPersist(queryKey: readonly unknown[], uid: string | null): boolean {
+  return PERSISTED_KEYS.has(String(queryKey?.[0])) && keyBelongsTo(queryKey, uid);
+}
+
+/**
+ * Forget everything on disk. Called on sign-out, account deletion and an
+ * account switch (lifecycle/accountIsolation), together with clearing the
+ * in-memory QueryClient.
+ */
+export async function clearPersistedQueryCache(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(CACHE_KEY);
+  } catch {
+    /* best-effort */
+  }
 }
 
 /**
@@ -42,13 +66,16 @@ function shouldPersist(queryKey: readonly unknown[]): boolean {
  */
 export async function hydrateQueryCache(queryClient: QueryClient): Promise<void> {
   try {
+    // Ownership is judged against the persisted store user, so wait for it.
+    await waitForStoreHydration();
+    const uid = currentUid();
     const raw = await AsyncStorage.getItem(CACHE_KEY);
     if (!raw) return;
     const entries = JSON.parse(raw) as PersistedEntry[];
     if (!Array.isArray(entries)) return;
     const now = Date.now();
     for (const e of entries) {
-      if (!e || !Array.isArray(e.key) || !shouldPersist(e.key)) continue;
+      if (!e || !Array.isArray(e.key) || !shouldPersist(e.key, uid)) continue;
       if (now - (e.updatedAt || 0) > MAX_AGE_MS) continue;
       queryClient.setQueryData(e.key, e.data, { updatedAt: e.updatedAt });
     }
@@ -65,10 +92,11 @@ export function persistQueryCacheOnChange(queryClient: QueryClient): () => void 
   let timer: ReturnType<typeof setTimeout> | null = null;
 
   const save = () => {
+    const uid = currentUid();
     const entries: PersistedEntry[] = queryClient
       .getQueryCache()
       .getAll()
-      .filter((q) => q.state.status === 'success' && shouldPersist(q.queryKey))
+      .filter((q) => q.state.status === 'success' && shouldPersist(q.queryKey, uid))
       .map((q) => ({
         key: q.queryKey as unknown[],
         data: q.state.data,

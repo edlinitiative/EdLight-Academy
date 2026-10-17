@@ -127,6 +127,70 @@ export async function markLessonComplete(userId: string, courseId: string, lesso
 }
 
 /**
+ * The honest version of "mark this lesson complete" (learning-journey PRD
+ * LJ-05; web: src/services/progressTracking.ts `confirmLessonComplete`).
+ *
+ *   resolves 'saved'    the server acknowledged the write
+ *   resolves 'already'  the progress document already listed the lesson
+ *   throws              nothing landed — the caller shows "not saved, retry"
+ *
+ * Unlike `markLessonComplete` it never swallows a failure, so the screen can
+ * celebrate ONLY a confirmed save. Firestore resolves a write promise on the
+ * server ack; while offline the promise stays pending (the caller shows that
+ * as "queued"), and a rejected write (rules, auth) throws.
+ *
+ * One deliberate difference from the web: the mobile app never created the
+ * per-course progress document (no `trackVideoProgress` caller), so a missing
+ * document is created here with merge instead of being an error. The write is
+ * an `arrayUnion`, so repeating it can never record the lesson twice; points
+ * are awarded only when the pre-read proved the lesson was new, so a retry
+ * after an unreadable pre-read cannot award them twice either.
+ *
+ * `markLessonComplete` stays for its existing callers.
+ */
+export async function confirmLessonComplete(
+  userId: string,
+  courseId: string,
+  lessonId: string,
+): Promise<'saved' | 'already'> {
+  if (!userId || !courseId || !lessonId) throw new Error('lesson-completion/missing-context');
+  const progressRef = doc(db, 'users', userId, 'progress', courseId);
+
+  // Best-effort pre-read: it decides 'already' and whether points are due. An
+  // offline/unreadable read must not block the write, which Firestore queues.
+  let known: 'listed' | 'absent' | 'new-doc' | 'unknown' = 'unknown';
+  try {
+    const snap = await getDoc(progressRef);
+    if (!snap.exists()) known = 'new-doc';
+    else known = (snap.data().completedLessons || []).includes(lessonId) ? 'listed' : 'absent';
+  } catch {
+    known = 'unknown';
+  }
+  if (known === 'listed') return 'already';
+
+  const now = new Date();
+  await setDoc(
+    progressRef,
+    {
+      courseId,
+      completedLessons: arrayUnion(lessonId),
+      lastAccessedAt: now,
+      ...(known === 'new-doc' ? { enrolledAt: now, totalPoints: 0 } : {}),
+    },
+    { merge: true },
+  );
+
+  if (known === 'absent' || known === 'new-doc') {
+    try {
+      await awardPoints(userId, courseId, 10, 'lesson_complete');
+    } catch (error) {
+      console.error('[Progress] Lesson saved; awarding points failed:', error);
+    }
+  }
+  return 'saved';
+}
+
+/**
  * Track quiz attempt
  */
 export async function trackQuizAttempt(userId: string, courseId: string, quizId: string, attemptData: any) {

@@ -21,14 +21,19 @@ export function useCourseProgress(courseId: string) {
       return;
     }
     
+    // Stale-result guard: a read for a previous account/course must not land
+    // after the uid or course has changed.
+    let cancelled = false;
     const loadProgress = async () => {
       setLoading(true);
       const data = await getCourseProgress(user.uid, courseId);
+      if (cancelled) return;
       setProgress(data);
       setLoading(false);
     };
     
     loadProgress();
+    return () => { cancelled = true; };
   }, [user?.uid, courseId]);
   
   return { progress, loading };
@@ -52,14 +57,17 @@ export function useAllProgress() {
       return;
     }
     
+    let cancelled = false; // stale-result guard (see useCourseProgress)
     const loadProgress = async () => {
       setLoading(true);
       const data = await getAllUserProgress(user.uid);
+      if (cancelled) return;
       setProgress(data);
       setLoading(false);
     };
     
     loadProgress();
+    return () => { cancelled = true; };
   }, [user?.uid]);
   
   return { progress, loading };

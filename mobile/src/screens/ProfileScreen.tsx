@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useScrollToTop, useNavigation } from '@react-navigation/native';
-import { View, Text, ScrollView, TouchableOpacity, Alert, Switch, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert, Switch, Image, AppState } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Flame, Trophy, Zap, LogOut, Moon, Sun, Languages, Trash2,
   Award, Target, BookOpen, Bell, ChevronRight, GraduationCap,
-  Sprout, Brain, Gift, Mail,
+  Sprout, Brain, Gift, Mail, Vibrate,
 } from 'lucide-react-native';
 import * as Notifications from 'expo-notifications';
 import Avatar from '../components/ui/Avatar';
@@ -28,15 +28,20 @@ import InviteSheet from '../components/InviteSheet';
 import FollowInstagram from '../components/FollowInstagram';
 import { GRADES, gradeProfile } from '../config/trackConfig';
 import { resetTabToRoot } from '../navigation/navHelpers';
-import { useColors, useTheme, radius, typeScale } from '../theme/theme';
+import { useColors, useTheme, radius, typeScale, touch } from '../theme/theme';
+import { usePreference } from '../settings/preferences';
+import { countLessonEvidence } from '../settings/profileEvidence';
+import { EVIDENCE, evidenceLabel } from '../utils/learningJourney';
+import { select as hapticSelect } from '../utils/haptics';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import {
   areNotificationsEnabled,
   setNotificationsEnabled as persistNotificationsEnabled,
-  requestPermissions,
+  askForNotifications,
+  getNotificationPermissionAction,
+  openNotificationSettings,
   scheduleEngagementReminders,
 } from '../services/notificationService';
-import { registerForPushNotifications } from '../services/pushService';
 
 const GUTTER = 20;
 
@@ -74,7 +79,7 @@ function StatTile({
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[typeScale.h2, { color: colors.ink }]} maxFontSizeMultiplier={1.3}>{value}</Text>
-        <Text style={[typeScale.micro, { color: colors.muted, marginTop: 1 }]} numberOfLines={1}>{label}</Text>
+        <Text style={[typeScale.label, { color: colors.muted, marginTop: 1 }]} numberOfLines={2}>{label}</Text>
       </View>
     </PressableScale>
   );
@@ -89,6 +94,7 @@ function SettingRow({
   accessory,
   onPress,
   last,
+  sublabelTone,
 }: {
   icon: React.ReactNode;
   iconBg: string;
@@ -97,6 +103,8 @@ function SettingRow({
   accessory?: React.ReactNode;
   onPress?: () => void;
   last?: boolean;
+  /** 'status' = the sublabel is an essential state (e.g. blocked in settings): 14pt, danger tint. */
+  sublabelTone?: 'status';
 }) {
   const colors = useColors();
   const Body = (
@@ -104,8 +112,9 @@ function SettingRow({
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 14,
+        paddingVertical: 12,
         paddingHorizontal: 16,
+        minHeight: touch.min + 12,
         gap: 12,
         borderBottomWidth: last ? 0 : 1,
         borderBottomColor: colors.border,
@@ -116,14 +125,28 @@ function SettingRow({
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[typeScale.bodyMd, { color: colors.ink }]}>{label}</Text>
-        {sublabel ? <Text style={[typeScale.caption, { color: colors.muted, marginTop: 1 }]}>{sublabel}</Text> : null}
+        {sublabel ? (
+          <Text
+            style={[
+              sublabelTone === 'status' ? typeScale.status : typeScale.label,
+              { color: sublabelTone === 'status' ? colors.danger : colors.muted, marginTop: 1 },
+            ]}
+          >
+            {sublabel}
+          </Text>
+        ) : null}
       </View>
       {accessory}
     </View>
   );
   if (onPress) {
     return (
-      <TouchableOpacity onPress={onPress} activeOpacity={0.6} accessibilityRole="button" accessibilityLabel={label}>
+      <TouchableOpacity
+        onPress={onPress}
+        activeOpacity={0.6}
+        accessibilityRole="button"
+        accessibilityLabel={sublabel ? `${label}, ${sublabel}` : label}
+      >
         {Body}
       </TouchableOpacity>
     );
@@ -152,6 +175,7 @@ export default function ProfileScreen() {
     logout,
     quizAttempts,
     enrolledCourses,
+    progress,
     track,
     grade,
     setGradeChosen,
@@ -202,11 +226,24 @@ export default function ProfileScreen() {
   })();
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  // Refused at the OS level: the switch can't fix it, only the system settings can.
+  const [notificationsBlocked, setNotificationsBlocked] = useState(false);
   const [emailRemindersEnabled, setEmailRemindersEnabled] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [hapticsEnabled, setHapticsEnabled] = usePreference('hapticsEnabled');
 
+  // Read on mount and every time the app comes back to the foreground — the
+  // student may have just changed the permission in the system settings.
   useEffect(() => {
-    areNotificationsEnabled().then(setNotificationsEnabled).catch(() => {});
+    const refresh = () => {
+      areNotificationsEnabled().then(setNotificationsEnabled).catch(() => {});
+      getNotificationPermissionAction()
+        .then((a) => setNotificationsBlocked(a === 'settings'))
+        .catch(() => {});
+    };
+    refresh();
+    const sub = AppState.addEventListener('change', (st) => { if (st === 'active') refresh(); });
+    return () => sub.remove();
   }, []);
 
   // Server-side prefs are a separate store from the device toggle above: the
@@ -229,25 +266,35 @@ export default function ProfileScreen() {
   }
 
   async function handleNotificationToggle(value: boolean) {
-    setNotificationsEnabled(value);
-    await persistNotificationsEnabled(value);
-    // Also record it server-side. Without this, switching notifications off
-    // silenced only the LOCAL schedule while the backend kept sending nudges.
-    if (user?.uid) {
-      saveNotificationPrefs(user.uid, { studyReminders: value }).catch(() => {});
-    }
     if (value) {
-      const granted = await requestPermissions();
-      if (!granted) {
+      // Explicit opt-in: explain → OS dialog (at most once) → or the settings
+      // path after an earlier refusal. Never a silent re-prompt.
+      setNotificationsEnabled(true);
+      const result = await askForNotifications('profile');
+      if (result !== 'granted') {
         setNotificationsEnabled(false);
         await persistNotificationsEnabled(false);
+        setNotificationsBlocked(result === 'blocked' || result === 'denied');
         return;
       }
+      setNotificationsBlocked(false);
+      await persistNotificationsEnabled(true);
+      // Also record it server-side. Without this, switching notifications off
+      // silenced only the LOCAL schedule while the backend kept sending nudges.
+      if (user?.uid) saveNotificationPrefs(user.uid, { studyReminders: true }).catch(() => {});
       await scheduleEngagementReminders();
-      if (user?.uid) registerForPushNotifications(user.uid).catch(() => {});
     } else {
+      setNotificationsEnabled(false);
+      await persistNotificationsEnabled(false);
+      if (user?.uid) saveNotificationPrefs(user.uid, { studyReminders: false }).catch(() => {});
       await Notifications.cancelAllScheduledNotificationsAsync();
     }
+  }
+
+  function handleHapticsToggle(value: boolean) {
+    setHapticsEnabled(value);
+    // Confirm "on" with the very feedback it enables (the setter is synchronous).
+    if (value) hapticSelect();
   }
 
   function handleLanguageChange(next: string) {
@@ -324,11 +371,11 @@ export default function ProfileScreen() {
         <View className="flex-1 items-center justify-center px-8" style={{ gap: 20 }}>
           <Image source={require('../../assets/logo.png')} style={{ width: 96, height: 96 }} resizeMode="contain" />
           <Text style={[typeScale.h1, { color: colors.ink, textAlign: 'center' }]}>
-            {t('Votre profil EdLight', 'Pwofil EdLight ou')}
+            {t('Ton profil EdLight', 'Pwofil EdLight ou')}
           </Text>
           <Text style={[typeScale.body, { color: colors.muted, textAlign: 'center' }]}>
             {t(
-              'Connectez-vous pour suivre votre progression, vos XP et votre série.',
+              'Connecte-toi pour suivre ta progression, tes XP et ta série.',
               'Konekte pou swiv pwogrè ou, XP ou ak seri ou.',
             )}
           </Text>
@@ -364,6 +411,11 @@ export default function ProfileScreen() {
   // of a 2×2 wall of 0 / — / 0 / 0.
   const statsAllZero =
     totalQuizzes === 0 && enrolledCourses.length === 0 && (streak?.currentStreak ?? 0) === 0;
+
+  // Lessons by EVIDENCE (learningJourney): a finished video is "Terminée",
+  // never "Maîtrisée" — only a chapter test confirms mastery.
+  const evidence = countLessonEvidence(progress);
+  const hasEvidence = evidence.completed + evidence.practised + evidence.mastered > 0;
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
@@ -508,6 +560,41 @@ export default function ProfileScreen() {
           )}
         </View>
 
+        {/* Lessons by evidence — same words as the lesson and course screens. */}
+        {hasEvidence ? (
+          <View style={{ paddingHorizontal: GUTTER, marginTop: 12 }}>
+            <View
+              style={{ ...cardSurface, padding: 14 }}
+              accessible
+              accessibilityLabel={[
+                t('Leçons', 'Leson'),
+                `${evidenceLabel('completed', isCreole)} ${evidence.completed}`,
+                `${evidenceLabel('practised', isCreole)} ${evidence.practised}`,
+                `${evidenceLabel('mastered', isCreole)} ${evidence.mastered}`,
+              ].join(', ')}
+            >
+              <Text style={[typeScale.titleSm, { color: colors.ink, marginBottom: 10 }]}>{t('Leçons', 'Leson')}</Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {(['completed', 'practised', 'mastered'] as const).map((e) => (
+                  <View
+                    key={e}
+                    style={{
+                      flex: 1, borderRadius: radius.tile, paddingVertical: 10, paddingHorizontal: 8, alignItems: 'center',
+                      backgroundColor: e === 'mastered' ? colors.successSoft : e === 'practised' ? colors.azureSoft : colors.surfaceAlt,
+                    }}
+                  >
+                    <Text style={[typeScale.h2, { color: colors.ink }]}>{evidence[e]}</Text>
+                    <Text style={[typeScale.label, { color: colors.muted, textAlign: 'center' }]}>{evidenceLabel(e, isCreole)}</Text>
+                  </View>
+                ))}
+              </View>
+              <Text style={[typeScale.body, { color: colors.muted, marginTop: 10 }]}>
+                {isCreole ? EVIDENCE.mastered.helpHt : EVIDENCE.mastered.helpFr}
+              </Text>
+            </View>
+          </View>
+        ) : null}
+
         {/* Readiness — the Bac preparation score only makes sense for Bac-track
             students (coefficient-weighted Bac subjects). For prefac / lower
             grades it's just noise, so we show a grade-appropriate progress card
@@ -554,7 +641,7 @@ export default function ProfileScreen() {
                     >
                       <a.Icon color={unlocked ? colors.azure : colors.faint} size={20} />
                     </View>
-                    <Text style={[typeScale.micro, { textAlign: 'center', color: unlocked ? colors.ink : colors.faint }]}>{a.label}</Text>
+                    <Text style={[typeScale.caption, { textAlign: 'center', color: unlocked ? colors.ink : colors.faint }]}>{a.label}</Text>
                   </View>
                 );
               })}
@@ -577,7 +664,7 @@ export default function ProfileScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[typeScale.titleSm, { color: colors.ink }]}>{t('Classement', 'Klasman')}</Text>
               <Text style={[typeScale.caption, { color: colors.muted, marginTop: 1 }]} numberOfLines={1}>
-                {t('Voyez où vous vous situez', 'Wè kote ou ye')}
+                {t('Vois où tu te situes', 'Wè kote ou ye')}
               </Text>
             </View>
             {myRank ? (
@@ -651,17 +738,50 @@ export default function ProfileScreen() {
               accessory={<ChevronRight color={colors.faint} size={18} />}
               onPress={toggleTheme}
             />
+            {notificationsBlocked ? (
+              // Refused at the OS level: a switch would only flip back. Offer the
+              // one thing that works — the system settings — and never re-prompt.
+              <SettingRow
+                icon={<Bell color={colors.azure} size={18} />}
+                iconBg={colors.azureSoft}
+                label={t('Notifications', 'Notifikasyon')}
+                sublabel={t('Désactivées dans les réglages du téléphone', 'Dezaktive nan paramèt telefòn nan')}
+                sublabelTone="status"
+                onPress={openNotificationSettings}
+                accessory={
+                  <Text style={[typeScale.action, { color: colors.azure }]}>{t('Réglages', 'Paramèt')}</Text>
+                }
+              />
+            ) : (
+              <SettingRow
+                icon={<Bell color={colors.azure} size={18} />}
+                iconBg={colors.azureSoft}
+                label={t('Notifications', 'Notifikasyon')}
+                sublabel={t("Rappels d'étude et défi du jour", 'Rapèl etid ak defi jodi a')}
+                accessory={
+                  <Switch
+                    value={notificationsEnabled}
+                    onValueChange={handleNotificationToggle}
+                    accessibilityLabel={t('Notifications', 'Notifikasyon')}
+                    trackColor={{ false: colors.border, true: colors.azureBorder }}
+                    thumbColor={notificationsEnabled ? colors.azure : colors.faint}
+                    ios_backgroundColor={colors.border}
+                  />
+                }
+              />
+            )}
             <SettingRow
-              icon={<Bell color={colors.azure} size={18} />}
+              icon={<Vibrate color={colors.azure} size={18} />}
               iconBg={colors.azureSoft}
-              label={t('Notifications', 'Notifikasyon')}
-              sublabel={t("Rappels d'étude quotidiens", 'Rapèl etid chak jou')}
+              label={t('Vibrations', 'Vibrasyon')}
+              sublabel={t('Petits retours au toucher', 'Ti vibrasyon lè w touche')}
               accessory={
                 <Switch
-                  value={notificationsEnabled}
-                  onValueChange={handleNotificationToggle}
+                  value={hapticsEnabled}
+                  onValueChange={handleHapticsToggle}
+                  accessibilityLabel={t('Vibrations', 'Vibrasyon')}
                   trackColor={{ false: colors.border, true: colors.azureBorder }}
-                  thumbColor={notificationsEnabled ? colors.azure : colors.faint}
+                  thumbColor={hapticsEnabled ? colors.azure : colors.faint}
                   ios_backgroundColor={colors.border}
                 />
               }
@@ -675,6 +795,7 @@ export default function ProfileScreen() {
                 <Switch
                   value={emailRemindersEnabled}
                   onValueChange={handleEmailRemindersToggle}
+                  accessibilityLabel={t('Emails de rappel', 'Imèl rapèl')}
                   trackColor={{ false: colors.border, true: colors.azureBorder }}
                   thumbColor={emailRemindersEnabled ? colors.azure : colors.faint}
                   ios_backgroundColor={colors.border}
@@ -691,6 +812,7 @@ export default function ProfileScreen() {
                 <Switch
                   value={boardVisible}
                   onValueChange={handleBoardVisibilityToggle}
+                  accessibilityLabel={t('Classement public', 'Klasman piblik')}
                   trackColor={{ false: colors.border, true: colors.azureBorder }}
                   thumbColor={boardVisible ? colors.azure : colors.faint}
                   ios_backgroundColor={colors.border}
@@ -714,10 +836,16 @@ export default function ProfileScreen() {
         </View>
 
         {/* Delete account (irreversible; required for App Store) */}
-        <TouchableOpacity onPress={handleDeleteAccount} activeOpacity={0.7} className="items-center" style={{ paddingVertical: 16, marginTop: 4 }}>
+        <TouchableOpacity
+          onPress={handleDeleteAccount}
+          activeOpacity={0.7}
+          className="items-center"
+          accessibilityRole="button"
+          style={{ paddingVertical: 16, marginTop: 4, minHeight: touch.min }}
+        >
           <View className="flex-row items-center" style={{ gap: 6 }}>
             <Trash2 color={colors.faint} size={13} />
-            <Text style={[typeScale.caption, { color: colors.faint }]}>{t('Supprimer mon compte', 'Efase kont mwen')}</Text>
+            <Text style={[typeScale.label, { color: colors.faint }]}>{t('Supprimer mon compte', 'Efase kont mwen')}</Text>
           </View>
         </TouchableOpacity>
 

@@ -1,37 +1,58 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import {
-  View, Text, ScrollView, TouchableOpacity, RefreshControl,
-} from 'react-native';
+/**
+ * QuizzesScreen — the question bank: general practice (Subject → Level →
+ * Chapter) and the receiving end of every practice handoff (LJ-06).
+ *
+ *   browse    pick a subject, a level, a chapter (chapters come from the
+ *             course's real units, not the bank's "Général" catch-all)
+ *   entry     PracticeEntry: topic, mode, real count, what is saved, Commencer
+ *   taking    PracticeRunner (quiz or open practice)
+ *   results   PracticeResult: tallies, what was saved, one next action,
+ *             corrections, Révision for this topic
+ *
+ * A handoff arrives as `route.params.handoff` (utils/learningJourney
+ * `practiceParams`). It is resolved against loaded data in one pass, so the
+ * entry never flashes "0 questions"; a stale or unknown scope lands on the
+ * browse list with an explanation and an explicit choice, never a silent
+ * swap. Mounted in the Courses stack and as the Quiz tab (QuizNavigator).
+ */
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import Animated, {
-  useSharedValue, useAnimatedStyle, withTiming, withSpring, withSequence, withRepeat, Easing,
-  FadeInDown,
-} from 'react-native-reanimated';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ChevronRight, BookOpen, RefreshCw, Check, X } from 'lucide-react-native';
-import { CoursesParamList } from '../navigation/CoursesNavigator';
-import { usePracticeQuizzes } from '../hooks/useData';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import { ChevronRight, BookOpen } from 'lucide-react-native';
+import { usePracticeQuizzes, useCourses } from '../hooks/useData';
 import { logAnswerEvent } from '../services/answerEventsService';
 import { useCrowdOrderedQuestions } from '../hooks/useCrowdOrderedQuestions';
 import useStore from '../contexts/store';
 import { ListSkeleton, ErrorState, EmptyState } from '../components/StateViews';
-import { useColors, useTheme, typeScale, displayScale, lift, radius } from '../theme/theme';
+import { useColors, useTheme, typeScale, radius } from '../theme/theme';
 import { subjectColor } from '../utils/examUtils';
-import { tapLight, tapMedium, select, success, warn } from '../utils/haptics';
-import { useReduceMotion } from '../utils/motion';
-import { spring as springs, easing as easings, duration as durations, travel, stagger } from '../theme/motion';
-import PressableScale from '../components/ui/PressableScale';
-import PopIn from '../components/ui/PopIn';
-import BeatMyScoreCard from '../components/share/BeatMyScoreCard';
+import { tapLight, success, warn } from '../utils/haptics';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
-import QuizResultHero, { HeroButton, glass } from '../components/quiz/QuizResultHero';
+import BeatMyScoreCard from '../components/share/BeatMyScoreCard';
 import DefiHandoffCard from '../components/DefiHandoffCard';
+import ReviewSession from '../components/ReviewSession';
+import { resolveCorrectIndex, normKey } from '../utils/practiceCards';
+import { dueQuestionIds } from '../utils/review';
+import { readPracticeHandoff, trackJourney, type PracticeHandoff } from '../utils/learningJourney';
+import { readableCourseMeta } from '../services/searchIndex';
+import PracticeEntry, { ScopeNotice } from '../components/journey/practice/PracticeEntry';
+import PracticeRunner, { type FinishReason } from '../components/journey/practice/PracticeRunner';
+import PracticeResult from '../components/journey/practice/PracticeResult';
+import { useReviewConfirmation } from '../components/journey/practice/useReviewConfirmation';
+import { useOnline } from '../components/journey/practice/useOnline';
+import { questionsLabel } from '../components/journey/practice/copy';
+import type { ReviewScope } from '../components/journey/practice/reviewScope';
+import {
+  buildDeck, chooseNextAction, fisherYates, itemFromQuizQuestion, reviewIdsOf, sessionSlice, tally,
+  type LogEntry, type SessionItem, type SessionMode,
+} from '../components/journey/practice/session';
+import {
+  chaptersFor, countQuizzable, courseWideScope, findCourse, itemsForScope, normalizeCourseCode,
+  resolvePracticeScope, scopeForChapter, type BrowseChapter, type ResolvedScope,
+} from '../components/journey/practice/practiceScope';
 
 type Translate = (fr: string, ht: string) => string;
-
-type QuizState = 'list' | 'taking' | 'results';
 
 /** Pretty subject name — the part before " — " in a grouped quiz title. */
 function subjectNameOf(quiz: any): string {
@@ -39,27 +60,18 @@ function subjectNameOf(quiz: any): string {
   const before = title.split(' — ')[0]?.trim();
   return before || String(quiz?.subject ?? 'Divers');
 }
-/** Chapter/unit name — the part after " — ", or the raw unit. */
-function chapterNameOf(quiz: any): string {
-  const title = String(quiz?.title ?? '');
-  const after = title.split(' — ').slice(1).join(' — ').trim();
-  return after || String(quiz?.unit ?? 'Général');
-}
 
 /**
- * Split a quiz's subject code ("chem-nsi") into a BASE subject ("Chimie") and a
- * GRADE LEVEL ("NSI"). The base drives the top-level picker; the level is the
- * intermediary step before chapters — so the bank reads Subject → Level →
- * Chapter instead of one flat "Chimie NSI / Chimie NSII / Économie NSI…" wall.
+ * Split a quiz's subject code ("CHEM-NSI") into a BASE subject ("Chimie") and a
+ * GRADE LEVEL ("NSI"), so the bank reads Subject → Level → Chapter.
  */
 function subjectParts(quiz: any): { baseName: string; baseCode: string; levelLabel: string | null } {
-  const fullName = subjectNameOf(quiz);        // e.g. "Chimie nsi"
-  const code = String(quiz?.subject ?? '');    // e.g. "chem-nsi"
+  const fullName = subjectNameOf(quiz);
+  const code = String(quiz?.subject ?? '');
   const dash = code.indexOf('-');
   const baseCode = (dash >= 0 ? code.slice(0, dash) : code) || fullName.toLowerCase();
   const levelRaw = dash >= 0 ? code.slice(dash + 1) : '';
   const levelLabel = levelRaw ? levelRaw.toUpperCase() : null;
-  // Strip the trailing level token from the display name → the base subject.
   const baseName = levelRaw
     ? (fullName.replace(new RegExp(`\\s*${levelRaw}\\s*$`, 'i'), '').trim() || fullName)
     : fullName;
@@ -67,503 +79,109 @@ function subjectParts(quiz: any): { baseName: string; baseCode: string; levelLab
 }
 
 /**
- * The quiz bank stores the correct answer as a LETTER ("B" from
- * `correct_answer`), while the runner records the selected option TEXT. Map the
- * stored letter → option index → option text before comparing (same approach as
- * LessonPractice), so both surfaces grade identically. Handles letters,
- * already-text answers, and out-of-range values gracefully.
+ * Is `given` (an option's text, or a letter) the right answer? Kept for the
+ * grading tests and any caller holding a raw bank question. Resolution is the
+ * shared one (utils/practiceCards.resolveCorrectIndex): answer text first,
+ * then a letter, then a 1-based number. An unresolvable key is never "right".
  */
 export function isQuizAnswerCorrect(question: any, given: string | undefined): boolean {
   if (given == null || given === '') return false;
   const options: string[] = (question.options ?? question.choices ?? []).map(String);
   const raw = String(question.answer ?? question.correct_answer ?? question.correctAnswer ?? '').trim();
   if (!raw) return false;
-
-  // Case/whitespace/punctuation-insensitive compare (accents kept significant
-  // for FR grading). Previously this was an exact, case-sensitive === compare,
-  // so "paris" ≠ "Paris" and "42 " ≠ "42" were false negatives.
-  const norm = (s: string) => String(s ?? '')
-    .toLowerCase().replace(/\s+/g, ' ').trim()
-    .replace(/^[\s.,;:!?'"()[\]]+|[\s.,;:!?'"()[\]]+$/g, '');
-
-  // Resolve the correct option index — but only treat `raw` as a letter/number
-  // key when it truly is one. The old code read the first char of ANY answer as
-  // a letter index, so a text answer like "Cellule" was misread as option C.
-  let idx = -1;
-  if (/^[A-Z]$/i.test(raw)) idx = raw.toUpperCase().charCodeAt(0) - 65;
-  else if (/^\d+$/.test(raw)) idx = parseInt(raw, 10) - 1;
-  if (idx < 0 || idx >= options.length) {
-    const target = norm(raw);
-    idx = options.findIndex((o) => norm(o) === target);
-  }
-
-  const correctText = idx >= 0 ? options[idx] : raw;
-  return norm(given) === norm(correctText) || norm(given) === norm(raw);
+  const idx = resolveCorrectIndex(raw, options);
+  if (idx < 0) return false;
+  return normKey(given) === normKey(options[idx]) || normKey(given) === normKey(raw);
 }
 
-/**
- * Resolve the correct option's TEXT (for the reveal message) using the same
- * letter/index/text resolution as isQuizAnswerCorrect — display only; grading
- * still runs through isQuizAnswerCorrect untouched.
- */
-function correctAnswerText(question: any): string {
-  const options: string[] = (question.options ?? question.choices ?? []).map(String);
-  const raw = String(question.answer ?? question.correct_answer ?? question.correctAnswer ?? '').trim();
-  if (!raw) return '';
-  const norm = (s: string) => String(s ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
-  let idx = -1;
-  if (/^[A-Z]$/i.test(raw)) idx = raw.toUpperCase().charCodeAt(0) - 65;
-  else if (/^\d+$/.test(raw)) idx = parseInt(raw, 10) - 1;
-  if (idx < 0 || idx >= options.length) idx = options.findIndex((o) => norm(o) === norm(raw));
-  return idx >= 0 ? options[idx] : raw;
-}
+type Entry = {
+  scope: ResolvedScope;
+  pool: SessionItem[];
+  origin: 'handoff' | 'browse';
+  from?: PracticeHandoff['from'];
+};
+type Session = { id: number; deck: SessionItem[]; mode: SessionMode };
+type Result = { log: Array<LogEntry | null>; reason: FinishReason };
 
-// Animated brand-gradient progress bar — fills smoothly as the runner advances.
-function QuizProgressBar({ pct }: { pct: number }) {
-  const colors = useColors();
-  const reduceMotion = useReduceMotion();
-  const w = useSharedValue(pct);
-  useEffect(() => {
-    w.value = reduceMotion ? pct : withTiming(pct, { duration: 420, easing: Easing.out(Easing.cubic) });
-  }, [pct, reduceMotion, w]);
-  const barStyle = useAnimatedStyle(() => ({ width: `${w.value}%` }));
-  return (
-    <View className="rounded-full overflow-hidden" style={{ height: 6, backgroundColor: colors.border }}>
-      <Animated.View style={[barStyle, { height: 6 }]}>
-        <LinearGradient colors={[colors.azure, colors.azureDeep]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ flex: 1, borderRadius: 999 }} />
-      </Animated.View>
-    </View>
-  );
-}
+const stemOf = (q: SessionItem) => q?.question ?? '';
 
-// One answer option — Trivia-grade tonal states: selected = azure, and after
-// confirm, green (correct) / red (wrong) with a Check/X icon + spoken state so
-// correctness is never conveyed by colour alone. Correct pops, wrong shakes.
-function QuizAnswerOption({
-  opt, label, index, isSelected, isCorrectOpt, confirmed, onPress, colors, reduceMotion, t,
-}: {
-  opt: string;
-  label: string;
-  /** Position in the list — drives the entrance stagger. */
-  index: number;
-  isSelected: boolean;
-  isCorrectOpt: boolean;
-  confirmed: boolean;
-  onPress: () => void;
-  colors: ReturnType<typeof useColors>;
-  reduceMotion: boolean;
-  t: Translate;
-}) {
-  const scale = useSharedValue(1);
-  const shake = useSharedValue(0);
-
-  useEffect(() => {
-    if (!confirmed || reduceMotion) return;
-    if (isCorrectOpt) {
-      scale.value = withSequence(
-        withTiming(1.04, { duration: durations.instant, easing: easings.emphasis }),
-        withSpring(1, springs.celebrate),
-      );
-    } else if (isSelected) {
-      shake.value = withSequence(
-        withTiming(-6, { duration: 50, easing: Easing.linear }),
-        withRepeat(withTiming(6, { duration: 70, easing: Easing.linear }), 4, true),
-        withTiming(0, { duration: 50, easing: Easing.linear }),
-      );
-    }
-  }, [confirmed, isCorrectOpt, isSelected, reduceMotion, scale, shake]);
-
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }, { translateX: shake.value }],
-  }));
-
-  let borderColor = colors.border;
-  let bgColor = colors.surface;
-  let labelBg = colors.surfaceAlt;
-  let labelText = colors.muted;
-
-  if (confirmed) {
-    if (isCorrectOpt) { borderColor = colors.success; bgColor = colors.successSoft; labelBg = colors.success; labelText = '#ffffff'; }
-    else if (isSelected) { borderColor = colors.danger; bgColor = colors.dangerSoft; labelBg = colors.danger; labelText = '#ffffff'; }
-  } else if (isSelected) {
-    borderColor = colors.azure; bgColor = colors.azureSoft; labelBg = colors.azure; labelText = '#ffffff';
-  }
-
-  // Non-visual cue for VoiceOver so state isn't colour-only.
-  const stateWord = confirmed
-    ? isCorrectOpt ? t('réponse correcte', 'bon repons') : isSelected ? t('réponse incorrecte', 'move repons') : ''
-    : '';
-
-  return (
-    <Animated.View
-      style={animStyle}
-      // Siblings arrive in sequence rather than all at once — the cheapest way
-      // to make four plain rows read as considered. Keyed by question upstream
-      // so it replays on every question, not just the first.
-      entering={reduceMotion
-        ? undefined
-        : FadeInDown
-            .delay(stagger(index))
-            .springify()
-            .damping(springs.settle.damping)
-            .stiffness(springs.settle.stiffness)
-            .withInitialValues({ transform: [{ translateY: travel.md }] })}
-    >
-      <PressableScale
-        onPress={onPress}
-        disabled={confirmed}
-        haptic={false}
-        pressedScale={0.98}
-        accessibilityRole="button"
-        accessibilityState={{ selected: isSelected, disabled: confirmed }}
-        accessibilityLabel={`${label}. ${opt}${stateWord ? `. ${stateWord}` : ''}`}
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          overflow: 'hidden',
-          // Resting rows keep a hairline; the row in focus drops the outline and
-          // rises instead, so the selection reads as physical rather than
-          // recoloured. One element lifted beats four elements outlined.
-          borderWidth: isSelected || confirmed ? 0 : 1,
-          borderColor,
-          backgroundColor: bgColor,
-          borderRadius: radius.hero,
-          marginBottom: 12,
-          ...(isSelected || (confirmed && isCorrectOpt) ? lift.focus : lift.rest),
-        }}
-      >
-        <View className="items-center justify-center m-2" style={{ width: 36, height: 36, borderRadius: 999, backgroundColor: labelBg }}>
-          {/* Serif letter: a small moment of the display voice inside UI chrome. */}
-          <Text style={{ fontFamily: displayScale.md.fontFamily, fontSize: 17, color: labelText }}>{label.toLowerCase()}</Text>
-        </View>
-        <Text style={[typeScale.bodyMd, { flex: 1, color: colors.ink, paddingVertical: 10, paddingRight: 12 }]}>{opt}</Text>
-        {confirmed && isCorrectOpt && (
-          <View className="pr-3"><Check color={colors.success} size={18} /></View>
-        )}
-        {confirmed && isSelected && !isCorrectOpt && (
-          <View className="pr-3"><X color={colors.danger} size={18} /></View>
-        )}
-      </PressableScale>
-    </Animated.View>
-  );
-}
-
-function QuizRunner({ quiz, onFinish, t }: { quiz: any; onFinish: (score: number, total: number) => void; t: Translate }) {
-  const colors = useColors();
-  const { shadow } = useTheme();
-  const reduceMotion = useReduceMotion();
-  const centerColumn = useContentContainerStyle('readable');
-  const baseQuestions = useMemo(() => {
-    const qs = quiz.questions ?? [];
-    return qs.slice(0, 20);
-  }, [quiz]);
-  // Crowd-difficulty ordering (Adaptive Engine, Slice 3b). Auto-gated + frozen at
-  // mount — a pure pass-through until the pipeline has enough data (see hook).
-  const canonicalStemOf = useCallback((q: any) => q?.question ?? q?.stem ?? '', []);
-  const questions = useCrowdOrderedQuestions(baseQuestions, canonicalStemOf);
-
-  const [idx, setIdx] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, string>>({});
-  // Confirm-then-reveal: options grade only after the learner confirms.
-  const [confirmed, setConfirmed] = useState(false);
-  useEffect(() => { setConfirmed(false); }, [idx]);
-
-  if (questions.length === 0) {
-    return (
-      <View className="flex-1 items-center justify-center p-6" style={{ backgroundColor: colors.bg }}>
-        <Text style={[typeScale.body, { color: colors.muted }]}>{t('Ce quiz n\'a pas de questions.', 'Quiz sa a pa gen kesyon.')}</Text>
-        <TouchableOpacity onPress={() => onFinish(0, 0)} accessibilityRole="button" accessibilityLabel={t('Retour', 'Tounen')} className="mt-4 px-6 py-3" style={{ backgroundColor: colors.azure, borderRadius: radius.control }}>
-          <Text style={[typeScale.title, { color: '#fff' }]}>{t('Retour', 'Tounen')}</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  const q = questions[idx];
-  const options: string[] = q.options ?? q.choices ?? [];
-  const letters = ['A', 'B', 'C', 'D'];
-  const selected = answers[idx];
-  const isLast = idx === questions.length - 1;
-  const selectedCorrect = confirmed && isQuizAnswerCorrect(q, selected);
-  const pct = ((idx + 1) / questions.length) * 100;
-
-  function handleSelect(opt: string) {
-    if (confirmed) return;
-    select();
-    setAnswers((prev) => ({ ...prev, [idx]: opt }));
-  }
-
-  function handleConfirm() {
-    if (confirmed || !selected) return;
-    tapMedium();
-    setConfirmed(true);
-    const correct = isQuizAnswerCorrect(q, selected);
-    if (correct) success(); else warn();
-    // Crowd-difficulty logging (Adaptive Engine, Slice 3b).
-    logAnswerEvent(q.question ?? q.stem, correct);
-    // Revizyon: a miss here becomes a review question; a hit resolves one
-    // missed anywhere (lesson exercises, chapter test, web).
-    if (q.id) {
-      useStore.getState().recordReviewOutcome(q.id, correct, {
-        subjectCode: q.subjectCode,
-        unitNo: q.unitNo,
-      });
-    }
-  }
-
-  function handleNext() {
-    tapMedium();
-    if (!isLast) {
-      setIdx((i) => i + 1);
-    } else {
-      // Grade — unchanged: isQuizAnswerCorrect over the recorded answers.
-      let correct = 0;
-      questions.forEach((question: any, i: number) => {
-        if (isQuizAnswerCorrect(question, answers[i])) correct++;
-      });
-      onFinish(correct, questions.length);
-    }
-  }
-
-  return (
-    <View className="flex-1" style={{ backgroundColor: colors.bg }}>
-      {/* Header: "Question X / N" + animated gradient progress bar */}
-      <View className="px-4 pt-3 pb-3" style={{ backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-        <Text className="mb-2" style={[typeScale.label, { color: colors.ink }]}>
-          {t('Question', 'Kesyon')} {idx + 1} / {questions.length}
-        </Text>
-        <QuizProgressBar pct={pct} />
-      </View>
-
-      <ScrollView className="flex-1" contentContainerStyle={[{ padding: 16, paddingBottom: 24 }, centerColumn]} showsVerticalScrollIndicator={false}>
-        {/* Lifted question card — subtle top→bottom surface gradient (Trivia feel) */}
-        <Animated.View
-          // The question leads its options in, so each new question reads as a
-          // sequence starting rather than a screen swapping.
-          key={`q-${idx}`}
-          entering={reduceMotion
-            ? undefined
-            : FadeInDown
-                .springify()
-                .damping(springs.settle.damping)
-                .stiffness(springs.settle.stiffness)
-                .withInitialValues({ transform: [{ translateY: travel.lg }] })}
-          // Lift, not outline: depth comes from light. A border AND a shadow is
-          // belt-and-braces and reads cheaper than either alone.
-          style={{ borderRadius: radius.hero, overflow: 'hidden', marginBottom: 18, ...lift.rest }}
-        >
-          <LinearGradient colors={[colors.surface, colors.surfaceAlt]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={{ padding: 22 }}>
-            <Text style={[displayScale.lg, { color: colors.ink }]}>{q.question ?? q.stem ?? ''}</Text>
-          </LinearGradient>
-        </Animated.View>
-
-        {options.map((opt, i) => (
-          <QuizAnswerOption
-            // Keyed by question too: remounting is what makes the entrance
-            // replay for each new question instead of only the first.
-            key={`${idx}-${i}`}
-            opt={opt}
-            index={i}
-            label={letters[i] ?? String(i + 1)}
-            isSelected={opt === selected}
-            isCorrectOpt={isQuizAnswerCorrect(q, opt)}
-            confirmed={confirmed}
-            onPress={() => handleSelect(opt)}
-            colors={colors}
-            reduceMotion={reduceMotion}
-            t={t}
-          />
-        ))}
-
-        {/* Verdict after confirm — icon + word so it's not colour-only */}
-        {confirmed && (
-          <PopIn style={{ marginTop: 16, paddingHorizontal: 4 }} from={0.85}>
-            <View className="flex-row items-center gap-2 mb-1">
-              {selectedCorrect ? <Check color={colors.success} size={18} /> : <X color={colors.danger} size={18} />}
-              <Text style={[typeScale.title, { color: selectedCorrect ? colors.success : colors.danger }]}>
-                {selectedCorrect ? t('Correct !', 'Kòrèk !') : t('Incorrect', 'Pa kòrèk')}
-              </Text>
-            </View>
-            {!selectedCorrect && (
-              <Text className="mt-1" style={[typeScale.body, { color: colors.muted }]}>
-                {t('Bonne réponse :', 'Bon repons :')}{' '}
-                <Text style={[typeScale.bodyMd, { color: colors.success }]}>{correctAnswerText(q)}</Text>
-              </Text>
-            )}
-          </PopIn>
-        )}
-      </ScrollView>
-
-      <View className="px-5 pb-5 pt-3" style={{ backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border }}>
-        {!confirmed ? (
-          <TouchableOpacity
-            onPress={handleConfirm}
-            disabled={!selected}
-            accessibilityRole="button"
-            accessibilityState={{ disabled: !selected }}
-            accessibilityLabel={t('Confirmer', 'Konfime')}
-            className="py-4 items-center"
-            style={{ backgroundColor: selected ? colors.azure : colors.border, borderRadius: radius.tile }}
-          >
-            <Text style={[typeScale.title, { color: selected ? '#ffffff' : colors.faint }]}>{t('Confirmer', 'Konfime')}</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            onPress={handleNext}
-            accessibilityRole="button"
-            accessibilityLabel={isLast ? t('Terminer', 'Fini') : t('Suivant', 'Swivan')}
-            className="flex-row py-4 items-center justify-center gap-1"
-            style={{ backgroundColor: colors.azure, borderRadius: radius.tile }}
-          >
-            <Text style={[typeScale.title, { color: '#ffffff' }]}>
-              {isLast ? t('Terminer', 'Fini') : t('Suivant', 'Swivan')}
-            </Text>
-            {!isLast && <ChevronRight color="#ffffff" size={18} />}
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
-  );
-}
-
-function QuizResultScreen({ score, total, onRetry, onBack, t, isCreole, quizTitle }: {
-  score: number; total: number; onRetry: () => void; onBack: () => void; t: Translate; isCreole: boolean;
-  /** Names the quiz in the challenge message ("J'ai fait 8/10 en Chimie NS1"). */
-  quizTitle: string;
-}) {
-  const pct = total > 0 ? Math.round((score / total) * 100) : 0;
-  const title = pct >= 80
-    ? t('Excellent !', 'Ekselan !')
-    : pct >= 60
-      ? t('Bon travail !', 'Bon travay !')
-      : t('Continue à t’entraîner !', 'Kontinye antrene w !');
-
-  return (
-    <QuizResultHero
-      score={score}
-      total={total}
-      isCreole={isCreole}
-      title={title}
-      showConfetti={pct >= 60}
-      footer={
-        <>
-          <HeroButton
-            variant="glass"
-            icon={<RefreshCw color="#fff" size={18} />}
-            label={t('Recommencer', 'Rekòmanse')}
-            onPress={onRetry}
-            style={{ marginBottom: 10 }}
-          />
-          <HeroButton
-            variant="ghost"
-            label={t('Retour aux quiz', 'Tounen nan quiz yo')}
-            onPress={onBack}
-          />
-        </>
-      }
-    >
-      {/* Glass stat row — score + accuracy */}
-      <View style={{ flexDirection: 'row', gap: 10, marginTop: 20, width: '100%' }}>
-        <View style={{ ...glass, flex: 1, borderRadius: 14, paddingVertical: 12, alignItems: 'center' }}>
-          <Text style={{ fontSize: 18, fontFamily: typeScale.num.fontFamily, color: '#fff' }}>{score}/{total}</Text>
-          <Text style={{ fontSize: 10, fontFamily: typeScale.overline.fontFamily, color: 'rgba(255,255,255,0.6)', letterSpacing: 0.5 }}>{t('SCORE', 'NÒT')}</Text>
-        </View>
-        <View style={{ ...glass, flex: 1, borderRadius: 14, paddingVertical: 12, alignItems: 'center' }}>
-          <Text style={{ fontSize: 18, fontFamily: typeScale.num.fontFamily, color: '#fff' }}>{pct}%</Text>
-          <Text style={{ fontSize: 10, fontFamily: typeScale.overline.fontFamily, color: 'rgba(255,255,255,0.6)', letterSpacing: 0.5 }}>{t('CORRECT', 'KÒRÈK')}</Text>
-        </View>
-      </View>
-
-      {/* The duel prompt, at the one moment the score is fresh. Finishing a quiz
-          is the most frequent completion in the app, and until now it offered no
-          way to challenge anyone — scoreShare was only wired to exam results and
-          the Jeux hub. The referral code rides in the message, so a challenge is
-          also an invite. */}
-      <View style={{ width: '100%', marginTop: 16 }}>
-        <BeatMyScoreCard title={quizTitle} score={score} total={total} variant="glass" source="quiz" />
-      </View>
-
-      {/* Handoff into the XP loop — practice quizzes award no XP, so this is
-          where a content-only user discovers the Défi (hidden once done). */}
-      <View style={{ width: '100%', marginTop: 12 }}>
-        <DefiHandoffCard variant="glass" />
-      </View>
-    </QuizResultHero>
-  );
+/** Freezes crowd-difficulty order once per mounted session (Adaptive Engine 3b). */
+function SessionShell(props: Omit<React.ComponentProps<typeof PracticeRunner>, 'items'> & { deck: SessionItem[] }) {
+  const { deck, ...rest } = props;
+  const ordered = useCrowdOrderedQuestions(deck, stemOf);
+  return <PracticeRunner items={ordered} {...rest} />;
 }
 
 export default function QuizzesScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<CoursesParamList, 'Quizzes'>>();
-  const { data, isLoading, isError, refetch, isFetching } = usePracticeQuizzes();
-  const { language, recordQuizAttempt, setFocusMode } = useStore();
+  const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  const quizzesQ = usePracticeQuizzes();
+  const coursesQ = useCourses();
+  const { language, recordQuizAttempt, setFocusMode, isAuthenticated, recordReviewOutcome, setShowAuthModal } = useStore();
+  const review = useStore((s) => s.review);
   const colors = useColors();
   const { shadow } = useTheme();
   const centerColumn = useContentContainerStyle('readable');
+  const online = useOnline();
   const isCreole = language === 'ht';
-  /*
-   * "1 chapitres" was on every level with a single chapter. French
-   * pluralises, Creole does not ("1 chapit", "5 chapit"), so the `s` belongs
-   * to the French branch alone rather than to the number.
-   */
+  const t: Translate = useCallback((fr: string, ht: string) => (isCreole ? ht : fr), [isCreole]);
   const countOf = (n: number, fr: string, ht: string) => `${n} ${isCreole ? ht : fr + (n > 1 ? 's' : '')}`;
 
-  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  const courses: any[] = useMemo(() => (Array.isArray(coursesQ.data) ? coursesQ.data : []), [coursesQ.data]);
 
-  const [state, setState] = useState<QuizState>('list');
-
-  // Hide the floating tab bar while taking a quiz or viewing results so its
-  // bottom action button ("Suivant"/"Terminer"/"Recommencer") isn't overlapped.
-  useFocusEffect(
-    useCallback(() => {
-      setFocusMode(state === 'taking' || state === 'results');
-      return () => setFocusMode(false);
-    }, [state, setFocusMode]),
-  );
-  const [activeQuiz, setActiveQuiz] = useState<any | null>(null);
-  const [lastResult, setLastResult] = useState<{ score: number; total: number } | null>(null);
-  // Browse drill: Subject (baseName) → Level (full code) → Chapters.
-  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
-  const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
-
+  // ── The bank, as session items ─────────────────────────────────────────────
   const quizzes = useMemo(() => {
-    if (!data) return [];
-    return Array.isArray(data)
-      ? data.filter((q: any) => (q.questions?.length ?? 0) > 0)
-      : [];
-  }, [data]);
+    const data = quizzesQ.data;
+    return Array.isArray(data) ? data.filter((q: any) => (q.questions?.length ?? 0) > 0) : [];
+  }, [quizzesQ.data]);
+  const quizItems = useMemo(
+    () => quizzes.map((q: any) => ({
+      id: String(q.id),
+      unit: q.unit as string | undefined,
+      title: String(q.title ?? ''),
+      subject: String(q.subject ?? ''),
+      items: (q.questions ?? []).map(itemFromQuizQuestion).filter((x: SessionItem | null): x is SessionItem => !!x),
+      quiz: q,
+    })),
+    [quizzes],
+  );
+  const allItems = useMemo(() => {
+    const seen = new Set<string>();
+    const out: SessionItem[] = [];
+    for (const q of quizItems) for (const it of q.items) {
+      if (it.id && seen.has(it.id)) continue;
+      if (it.id) seen.add(it.id);
+      out.push(it);
+    }
+    return out;
+  }, [quizItems]);
 
-  // Nest quizzes: base subject → grade levels → chapters. The base subject is
-  // the top-level picker; each base drills into its NSI/NSII/… levels, and each
-  // level lists its chapters (the playable quizzes).
-  type QuizLevel = { levelLabel: string | null; name: string; code: string; chapters: any[]; questionCount: number };
-  type QuizSubject = { baseName: string; baseCode: string; levels: QuizLevel[]; questionCount: number; chapterCount: number };
+  // ── Browse drill: Subject (baseName) → Level (code) → Chapters ─────────────
+  type QuizLevel = { levelLabel: string | null; name: string; code: string; groups: typeof quizItems; questionCount: number };
+  type QuizSubject = { baseName: string; baseCode: string; levels: QuizLevel[]; questionCount: number };
   const subjectGroups = useMemo<QuizSubject[]>(() => {
     const bases = new Map<string, { baseName: string; baseCode: string; levels: Map<string, QuizLevel> }>();
-    for (const q of quizzes) {
-      const { baseName, baseCode, levelLabel } = subjectParts(q);
+    for (const g of quizItems) {
+      const { baseName, baseCode, levelLabel } = subjectParts(g.quiz);
       const bKey = baseName.toLowerCase();
       let base = bases.get(bKey);
       if (!base) { base = { baseName, baseCode, levels: new Map() }; bases.set(bKey, base); }
-      const lKey = String(q.subject ?? levelLabel ?? baseName).toLowerCase();
+      const lKey = String(g.subject || levelLabel || baseName).toLowerCase();
       let lvl = base.levels.get(lKey);
-      if (!lvl) { lvl = { levelLabel, name: subjectNameOf(q), code: q.subject, chapters: [], questionCount: 0 }; base.levels.set(lKey, lvl); }
-      lvl.chapters.push(q);
-      lvl.questionCount += q.questions?.length ?? 0;
+      if (!lvl) { lvl = { levelLabel, name: subjectNameOf(g.quiz), code: g.subject, groups: [], questionCount: 0 }; base.levels.set(lKey, lvl); }
+      lvl.groups.push(g);
+      lvl.questionCount += g.items.length;
     }
     return Array.from(bases.values())
       .map((b) => {
         const levels = Array.from(b.levels.values()).sort((a, c) => a.name.localeCompare(c.name, 'fr'));
-        return {
-          baseName: b.baseName,
-          baseCode: b.baseCode,
-          levels,
-          questionCount: levels.reduce((s, l) => s + l.questionCount, 0),
-          chapterCount: levels.reduce((s, l) => s + l.chapters.length, 0),
-        };
+        return { baseName: b.baseName, baseCode: b.baseCode, levels, questionCount: levels.reduce((s, l) => s + l.questionCount, 0) };
       })
       .sort((a, c) => a.baseName.localeCompare(c.baseName, 'fr'));
-  }, [quizzes]);
+  }, [quizItems]);
 
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+  const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
   const activeBase = useMemo(
     () => subjectGroups.find((b) => b.baseName.toLowerCase() === selectedSubject?.toLowerCase()) ?? null,
     [subjectGroups, selectedSubject],
@@ -572,75 +190,296 @@ export default function QuizzesScreen() {
     () => activeBase?.levels.find((l) => l.code === selectedLevel) ?? null,
     [activeBase, selectedLevel],
   );
+  const levelChapters = useMemo<BrowseChapter[]>(
+    () => (activeLevel ? chaptersFor(activeLevel.code, activeLevel.groups, findCourse(courses, activeLevel.code)) : []),
+    [activeLevel, courses],
+  );
 
-  // Open a base subject → skip the level step when there's only one level.
+  /** Drill straight to a course's chapter list. */
+  const openLevelFor = useCallback((courseCode: string) => {
+    const want = normalizeCourseCode(courseCode);
+    for (const b of subjectGroups) {
+      const lvl = b.levels.find((l) => normalizeCourseCode(l.code) === want);
+      if (lvl) { setSelectedSubject(b.baseName); setSelectedLevel(lvl.code); return; }
+    }
+  }, [subjectGroups]);
+
   const openBase = useCallback((b: QuizSubject) => {
     tapLight();
     setSelectedSubject(b.baseName);
     setSelectedLevel(b.levels.length === 1 ? b.levels[0].code : null);
   }, []);
-  // Back out of chapters: to the level picker, or straight to the subject
-  // picker when we auto-skipped a single-level subject.
   const backFromChapters = useCallback(() => {
     tapLight();
     if (activeBase && activeBase.levels.length === 1) setSelectedSubject(null);
     setSelectedLevel(null);
   }, [activeBase]);
 
-  function startQuiz(quiz: any) {
-    setActiveQuiz(quiz);
-    setState('taking');
-  }
+  // ── Session state ──────────────────────────────────────────────────────────
+  const [notice, setNotice] = useState<ResolvedScope | null>(null);
+  const [entry, setEntry] = useState<Entry | null>(null);
+  const [mode, setMode] = useState<SessionMode>('quiz');
+  const [session, setSession] = useState<Session | null>(null);
+  const [result, setResult] = useState<Result | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const sessionSeq = useRef(0);
 
-  function handleFinish(score: number, total: number) {
-    if (activeQuiz) {
-      recordQuizAttempt(activeQuiz.id, { score, total, date: Date.now() });
+  const phase: 'browse' | 'entry' | 'taking' | 'results' = result ? 'results' : session ? 'taking' : entry ? 'entry' : 'browse';
+
+  // Hide the floating tab bar outside the browse list so it never covers
+  // « Commencer » / « Vérifier » / the result actions.
+  useFocusEffect(
+    useCallback(() => {
+      setFocusMode(phase !== 'browse');
+      return () => setFocusMode(false);
+    }, [phase, setFocusMode]),
+  );
+
+  const openEntry = useCallback((scope: ResolvedScope, pool: SessionItem[], origin: Entry['origin'], from?: Entry['from'], wanted?: SessionMode) => {
+    setNotice(null);
+    setResult(null);
+    setSession(null);
+    setEntry({ scope, pool, origin, from });
+    const canQuiz = scope.quizCount > 0;
+    setMode(wanted === 'practice' || !canQuiz ? 'practice' : 'quiz');
+  }, []);
+
+  // ── Receiving a handoff (LJ-06) ────────────────────────────────────────────
+  const [pendingHandoff, setPendingHandoff] = useState<PracticeHandoff | null>(null);
+  const rawHandoff = route.params?.handoff ?? (route.params?.courseId ? { course: route.params.courseId } : null);
+  const handoffKey = rawHandoff ? JSON.stringify(rawHandoff) : '';
+  useEffect(() => {
+    const h = readPracticeHandoff(rawHandoff);
+    if (!h) return;
+    setPendingHandoff(h);
+    // Consumed: returning to this tab later must not reopen the same entry.
+    navigation.setParams({ handoff: undefined, courseId: undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handoffKey]);
+
+  const dataReady = !quizzesQ.isLoading && !coursesQ.isLoading && !!quizzesQ.data;
+  useEffect(() => {
+    if (!pendingHandoff || !dataReady) return;
+    const h = pendingHandoff;
+    setPendingHandoff(null);
+    const scope = resolvePracticeScope(h, courses, allItems);
+    if (!scope) return;
+    trackJourney('practice_handoff_opened', {
+      from: h.from ?? null, status: scope.status, course: scope.course?.id ?? h.course, unit: scope.unit?.value ?? h.unit ?? null, mode: h.mode ?? null,
+    });
+    if (scope.status === 'ok') {
+      openEntry(scope, itemsForScope(scope, allItems), 'handoff', h.from, h.mode);
+    } else {
+      setEntry(null); setSession(null); setResult(null);
+      setNotice(scope);
+      if (scope.courseCode) openLevelFor(scope.courseCode);
+      else { setSelectedSubject(null); setSelectedLevel(null); }
     }
-    // Celebrate a passing score; a gentle nudge otherwise.
-    if (total > 0 && score / total >= 0.6) success();
-    else if (total > 0) warn();
-    setLastResult({ score, total });
-    setState('results');
-  }
+  }, [pendingHandoff, dataReady, courses, allItems, openEntry, openLevelFor]);
 
-  if (state === 'taking' && activeQuiz) {
-    return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
-        <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.bg }}>
-          <TouchableOpacity onPress={() => setState('list')} className="p-1 mr-3" hitSlop={8} accessibilityRole="button" accessibilityLabel={t('Retour', 'Tounen')}>
-            <ChevronRight color={colors.muted} size={22} style={{ transform: [{ rotate: '180deg' }] }} />
-          </TouchableOpacity>
-          <Text className="flex-1" numberOfLines={1} style={[typeScale.title, { color: colors.ink }]}>{activeQuiz.title}</Text>
-        </View>
-        <QuizRunner quiz={activeQuiz} onFinish={handleFinish} t={t} />
-      </SafeAreaView>
-    );
-  }
+  // ── Labels ─────────────────────────────────────────────────────────────────
+  const subjectLabelOf = useCallback((scope: ResolvedScope): string => {
+    const c = scope.course;
+    if (c?.subject && c?.level) return readableCourseMeta(`${c.subject} · ${c.level}`, isCreole);
+    const code = String(scope.courseCode || '');
+    const [subj, lvl] = code.split('-');
+    return readableCourseMeta([subj, lvl].filter(Boolean).join(' · '), isCreole);
+  }, [isCreole]);
+  const contextOf = useCallback((scope: ResolvedScope) => {
+    const chapter = scope.unitIndex ? t(`Chapitre ${scope.unitIndex}`, `Chapit ${scope.unitIndex}`) : '';
+    return [subjectLabelOf(scope), chapter].filter(Boolean).join(' · ');
+  }, [subjectLabelOf, t]);
 
-  if (state === 'results' && lastResult) {
+  // ── Starting, answering, finishing ─────────────────────────────────────────
+  const start = useCallback((m: SessionMode) => {
+    if (!entry) return;
+    const deck = buildDeck(entry.pool, m, fisherYates);
+    if (deck.length === 0) return;
+    sessionSeq.current += 1;
+    setResult(null);
+    setSession({ id: sessionSeq.current, deck, mode: m });
+    trackJourney('practice_started', {
+      mode: m, source: entry.origin, from: entry.from ?? null,
+      course: entry.scope.course?.id ?? entry.scope.courseCode ?? null,
+      unit: entry.scope.unit?.value ?? null, count: deck.length,
+      scope: entry.scope.unit?.value === '*' ? 'course' : 'chapter',
+    });
+  }, [entry]);
+
+  const onAnswer = useCallback((item: SessionItem, _e: LogEntry, outcome: boolean | null) => {
+    if (outcome == null) return; // ungraded: nothing learned, nothing stored
+    logAnswerEvent(item.question, outcome);
+    recordReviewOutcome(item.id, outcome, { subjectCode: item.subjectCode, unitNo: item.unitNo });
+  }, [recordReviewOutcome]);
+
+  const onFinish = useCallback((log: Array<LogEntry | null>, reason: FinishReason) => {
+    if (!session || !entry) return;
+    const slice = sessionSlice(session.deck, log, session.mode);
+    const tl = tally(slice.items, slice.log);
+    const answered = tl.total - tl.unanswered;
+    if (session.mode === 'quiz' && answered > 0 && tl.scored > 0) {
+      recordQuizAttempt(`bank:${entry.scope.courseCode}|${entry.scope.unit?.value}`, { score: tl.correct, total: tl.scored, date: Date.now() });
+      if (tl.correct / tl.scored >= 0.6) success(); else warn();
+    }
+    trackJourney('practice_completed', {
+      mode: session.mode, reason, total: tl.total, correct: tl.correct, incorrect: tl.incorrect,
+      unanswered: tl.unanswered, ungraded: tl.ungraded,
+    });
+    setResult({ log, reason });
+  }, [session, entry, recordQuizAttempt]);
+
+  // ── Result state (computed every render; hooks stay unconditional) ────────
+  const slice = session && result ? sessionSlice(session.deck, result.log, session.mode) : null;
+  const reviewIds = useMemo(() => (slice ? reviewIdsOf(slice.items, slice.log) : []), [slice?.items, slice?.log]); // eslint-disable-line react-hooks/exhaustive-deps
+  const confirm = useReviewConfirmation(!!isAuthenticated && phase === 'results', reviewIds);
+  const scopeIds = useMemo(() => new Set((entry?.pool ?? []).map((it) => it.id).filter(Boolean)), [entry]);
+  const dueInScope = useMemo(() => dueQuestionIds(review).filter((id) => scopeIds.has(id)).length, [review, scopeIds]);
+
+  const reviewScope = useMemo<ReviewScope | null>(() => {
+    if (!entry) return null;
+    const wide = entry.scope.unit?.value === '*';
+    return {
+      subjectCode: entry.scope.courseCode,
+      unitNo: wide ? null : entry.scope.unit?.no ?? null,
+      ids: Array.from(scopeIds),
+      label: [subjectLabelOf(entry.scope), entry.scope.unit?.label].filter(Boolean).join(' · '),
+      source: 'result',
+    };
+  }, [entry, scopeIds, subjectLabelOf]);
+
+  const backToBrowse = useCallback(() => {
+    const code = entry?.scope.courseCode;
+    setResult(null); setSession(null); setEntry(null);
+    if (code) openLevelFor(code);
+  }, [entry, openLevelFor]);
+
+  const goNextLesson = useCallback(() => {
+    const course = entry?.scope.course;
+    const next = entry?.scope.nextLesson;
+    if (!course || !next) return;
+    trackJourney('learning_next_action_selected', { action: 'next_lesson', source: 'practice_result' });
+    const params = { courseId: course.id, courseName: course.name, lessonId: next.id };
+    const state = navigation.getState?.();
+    setResult(null); setSession(null); setEntry(null);
+    if (state?.routeNames?.includes('CourseDetail')) {
+      if (typeof navigation.popTo === 'function' && state.routes?.some((r: any) => r.name === 'CourseDetail')) navigation.popTo('CourseDetail', params);
+      else navigation.navigate('CourseDetail', params);
+    } else {
+      navigation.navigate('Courses', { screen: 'CourseDetail', params, initial: false });
+    }
+  }, [entry, navigation]);
+
+  // Back to the lesson only when the lesson really sits under us in this stack.
+  const stackDepth = navigation.getState?.()?.routes?.length ?? 1;
+  const canBackToLesson = entry?.origin === 'handoff' && entry?.from === 'lesson' && stackDepth > 1;
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  // Mounted only while open: Révision rebuilds cards from the full app data,
+  // which the bank tab otherwise never needs to load.
+  const reviewModal = reviewOpen ? (
+    <ReviewSession visible onClose={() => setReviewOpen(false)} isCreole={isCreole} scope={reviewScope} />
+  ) : null;
+
+  if (phase === 'taking' && session && entry) {
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top', 'bottom']}>
-        <QuizResultScreen
-          score={lastResult.score}
-          total={lastResult.total}
-          onRetry={() => { setState('taking'); }}
-          onBack={() => setState('list')}
+        <SessionShell
+          key={session.id}
+          deck={session.deck}
+          mode={session.mode}
           t={t}
-          isCreole={isCreole}
-          quizTitle={String(activeQuiz?.title || t('ce quiz', 'quiz sa a'))}
+          title={entry.scope.unit?.label || ''}
+          context={contextOf(entry.scope)}
+          onAnswer={onAnswer}
+          onFinish={onFinish}
+          onExit={() => setSession(null)}
         />
       </SafeAreaView>
     );
   }
 
-  if (isLoading) {
+  if (phase === 'results' && session && entry && result && slice) {
+    const tl = tally(slice.items, slice.log);
+    const poolSize = session.mode === 'quiz' ? countQuizzable(entry.pool) : entry.pool.length;
+    const next = chooseNextAction({ dueInScope, hasNextLesson: !!entry.scope.nextLesson && entry.origin === 'handoff', poolSize }, tl);
     return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
-        <ListSkeleton rows={6} />
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top', 'bottom']}>
+        <PracticeResult
+          items={session.deck}
+          log={result.log}
+          mode={session.mode}
+          stopped={result.reason === 'stopped'}
+          t={t}
+          title={entry.scope.unit?.label || ''}
+          context={contextOf(entry.scope)}
+          signedIn={!!isAuthenticated}
+          onSignIn={() => setShowAuthModal(true)}
+          newErrors={reviewIds.length}
+          confirm={confirm.state}
+          onRecheck={confirm.recheck}
+          next={next}
+          nextLessonTitle={entry.scope.nextLesson?.title}
+          dueInScope={dueInScope}
+          actions={{
+            onReview: () => { trackJourney('learning_next_action_selected', { action: 'review', source: 'practice_result' }); setReviewOpen(true); },
+            onNextLesson: goNextLesson,
+            onReplay: () => start(session.mode),
+            onOtherChapter: backToBrowse,
+          }}
+          onCorrectionsOpened={(count) => trackJourney('correction_opened', { source: 'result', mode: session.mode, count })}
+          onClose={canBackToLesson ? () => { setResult(null); setSession(null); setEntry(null); navigation.goBack(); } : backToBrowse}
+        >
+          {session.mode === 'quiz' && tl.scored > 0 && tl.total - tl.unanswered > 0 ? (
+            <View style={{ gap: 12, marginTop: 8 }}>
+              <BeatMyScoreCard title={`${subjectLabelOf(entry.scope)} — ${entry.scope.unit?.label || ''}`} score={tl.correct} total={tl.scored} variant="surface" source="quiz" />
+              <DefiHandoffCard />
+            </View>
+          ) : null}
+        </PracticeResult>
+        {reviewModal}
       </SafeAreaView>
     );
   }
-  if (isError) return <ErrorState onRetry={() => refetch()} />;
+
+  if (phase === 'entry' && entry) {
+    return (
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top', 'bottom']}>
+        <PracticeEntry
+          scope={entry.scope}
+          subjectLabel={subjectLabelOf(entry.scope)}
+          mode={mode}
+          onMode={setMode}
+          signedIn={!!isAuthenticated}
+          online={online}
+          onSignIn={() => setShowAuthModal(true)}
+          onStart={() => start(mode)}
+          onChange={backToBrowse}
+          onBackToLesson={canBackToLesson ? () => { setEntry(null); navigation.goBack(); } : undefined}
+          t={t}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  // Browse — with a handoff still resolving, the skeleton holds the place: the
+  // screen never claims "0 questions" while the bank loads.
+  if (quizzesQ.isLoading || (pendingHandoff && !dataReady)) {
+    return (
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
+        <ListSkeleton rows={6} label={t('Chargement des questions…', 'N ap chaje kesyon yo…')} />
+      </SafeAreaView>
+    );
+  }
+  if (quizzesQ.isError && quizzes.length === 0) {
+    return (
+      <ErrorState
+        title={t('Questions indisponibles', 'Kesyon yo pa disponib')}
+        message={t('Les questions n’ont pas pu être chargées. Vérifie ta connexion : une fois chargées, elles restent sur ton téléphone.',
+          'Kesyon yo pa t ka chaje. Verifye koneksyon ou : depi yo chaje, yo rete sou telefòn ou.')}
+        onRetry={() => quizzesQ.refetch()}
+      />
+    );
+  }
 
   const cardStyle = {
     backgroundColor: colors.surface,
@@ -655,41 +494,68 @@ export default function QuizzesScreen() {
     gap: 12,
   };
 
+  const noticeView = notice ? (
+    <ScopeNotice
+      scope={notice}
+      courseLabel={String(notice.course?.name || notice.courseCode || '')}
+      onCourseWide={notice.course ? () => {
+        const wide = courseWideScope(notice);
+        openEntry(wide, itemsForScope(wide, allItems), 'handoff');
+      } : undefined}
+      t={t}
+    />
+  ) : null;
+
+  const offlineLine = online === false ? (
+    <Text style={[typeScale.body, { color: colors.muted, marginBottom: 12 }]}>
+      {t('Hors ligne : les questions déjà chargées restent disponibles.', 'San rezo : kesyon ki te deja chaje yo rete disponib.')}
+    </Text>
+  ) : null;
+
+  const backArrow = (onPress: () => void) => (
+    <TouchableOpacity onPress={onPress} hitSlop={8} className="p-1" accessibilityRole="button" accessibilityLabel={t('Retour', 'Tounen')}>
+      <ChevronRight color={colors.muted} size={24} style={{ transform: [{ rotate: '180deg' }] }} />
+    </TouchableOpacity>
+  );
+
   // ── Level 3: chapters within the chosen grade level ────────────────────────
   if (activeLevel) {
     const tint = subjectColor(activeBase?.baseName ?? '');
     const headerTitle = activeBase
-      ? `${activeBase.baseName}${activeLevel.levelLabel ? ` · ${activeLevel.levelLabel}` : ''}`
+      ? `${activeBase.baseName}${activeLevel.levelLabel ? ` · ${readableCourseMeta(activeLevel.levelLabel, isCreole)}` : ''}`
       : activeLevel.name;
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
+        {reviewModal}
         <View className="flex-row items-center px-4 pt-6 pb-3" style={{ gap: 8 }}>
-          <TouchableOpacity onPress={backFromChapters} hitSlop={8} className="p-1" accessibilityRole="button" accessibilityLabel={t('Retour', 'Tounen')}>
-            <ChevronRight color={colors.muted} size={24} style={{ transform: [{ rotate: '180deg' }] }} />
-          </TouchableOpacity>
+          {backArrow(() => { setNotice(null); backFromChapters(); })}
           <View className="flex-1">
-            <Text style={[typeScale.h1, { color: colors.ink }]}>{headerTitle}</Text>
-            <Text style={[typeScale.label, { color: colors.muted, marginTop: 2 }]}>
-              {countOf(activeLevel.chapters.length, 'chapitre', 'chapit')} · {countOf(activeLevel.questionCount, 'question', 'kesyon')}
+            <Text accessibilityRole="header" style={[typeScale.h1, { color: colors.ink }]}>{headerTitle}</Text>
+            <Text style={[typeScale.body, { color: colors.muted, marginTop: 2 }]}>
+              {countOf(levelChapters.length, 'chapitre', 'chapit')} · {questionsLabel(activeLevel.questionCount, t)}
             </Text>
           </View>
         </View>
         <ScrollView className="flex-1 px-5" contentContainerStyle={[{ paddingBottom: 100 }, centerColumn]}>
-          {activeLevel.chapters.map((quiz: any) => (
+          {noticeView}
+          {offlineLine}
+          {levelChapters.map((ch) => (
             <TouchableOpacity
-              key={quiz.id}
-              onPress={() => startQuiz(quiz)}
+              key={ch.key}
+              onPress={() => { tapLight(); openEntry(scopeForChapter(ch, courses, allItems), ch.items, 'browse'); }}
               activeOpacity={0.82}
               style={cardStyle}
               accessibilityRole="button"
-              accessibilityLabel={`${chapterNameOf(quiz)}, ${quiz.questions?.length ?? 0} ${t('questions', 'kesyon')}`}
+              accessibilityLabel={`${ch.title}, ${questionsLabel(ch.items.length, t)}`}
             >
               <View style={{ width: 44, height: 44, borderRadius: radius.tile, backgroundColor: tint + '22', alignItems: 'center', justifyContent: 'center' }}>
                 <BookOpen color={tint} size={20} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[typeScale.bodyMd, { color: colors.ink }]} numberOfLines={2}>{chapterNameOf(quiz)}</Text>
-                <Text style={[typeScale.caption, { color: colors.muted, marginTop: 2 }]}>{quiz.questions?.length ?? 0} {t('questions', 'kesyon')}</Text>
+                <Text style={[typeScale.bodyMd, { color: colors.ink, fontSize: 15 }]} numberOfLines={2}>{ch.title}</Text>
+                <Text style={[typeScale.body, { color: colors.muted, marginTop: 2 }]}>
+                  {[ch.unitNo != null ? t(`Chapitre ${ch.unitNo}`, `Chapit ${ch.unitNo}`) : '', questionsLabel(ch.items.length, t)].filter(Boolean).join(' · ')}
+                </Text>
               </View>
               <ChevronRight color={colors.faint} size={18} />
             </TouchableOpacity>
@@ -703,16 +569,16 @@ export default function QuizzesScreen() {
   if (activeBase) {
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
+        {reviewModal}
         <View className="flex-row items-center px-4 pt-6 pb-3" style={{ gap: 8 }}>
-          <TouchableOpacity onPress={() => { tapLight(); setSelectedSubject(null); setSelectedLevel(null); }} hitSlop={8} className="p-1" accessibilityRole="button" accessibilityLabel={t('Retour', 'Tounen')}>
-            <ChevronRight color={colors.muted} size={24} style={{ transform: [{ rotate: '180deg' }] }} />
-          </TouchableOpacity>
+          {backArrow(() => { tapLight(); setNotice(null); setSelectedSubject(null); setSelectedLevel(null); })}
           <View className="flex-1">
-            <Text style={[typeScale.h1, { color: colors.ink }]}>{activeBase.baseName}</Text>
-            <Text style={[typeScale.label, { color: colors.muted, marginTop: 2 }]}>{t('Choisis un niveau', 'Chwazi yon nivo')}</Text>
+            <Text accessibilityRole="header" style={[typeScale.h1, { color: colors.ink }]}>{activeBase.baseName}</Text>
+            <Text style={[typeScale.body, { color: colors.muted, marginTop: 2 }]}>{t('Choisis un niveau', 'Chwazi yon nivo')}</Text>
           </View>
         </View>
         <ScrollView className="flex-1 px-5" contentContainerStyle={[{ paddingBottom: 100 }, centerColumn]}>
+          {noticeView}
           {activeBase.levels.map((lvl) => (
             <TouchableOpacity
               key={lvl.code}
@@ -720,17 +586,11 @@ export default function QuizzesScreen() {
               activeOpacity={0.82}
               style={cardStyle}
               accessibilityRole="button"
-              accessibilityLabel={`${lvl.levelLabel ?? lvl.name}, ${countOf(lvl.chapters.length, 'chapitre', 'chapit')}`}
+              accessibilityLabel={`${readableCourseMeta(lvl.levelLabel ?? lvl.name, isCreole)}, ${questionsLabel(lvl.questionCount, t)}`}
             >
-              {/* The pale tile used to print `levelLabel` — the SAME string as
-                  the row title beside it, so every row said "NSI" twice.
-                  Reported from TestFlight as "this is redundant", and the same
-                  note the Examens rows got earlier. */}
               <View style={{ flex: 1 }}>
-                <Text style={[typeScale.titleSm, { color: colors.ink }]} numberOfLines={1}>{lvl.levelLabel ?? lvl.name}</Text>
-                <Text style={[typeScale.caption, { color: colors.muted, marginTop: 2 }]}>
-                  {countOf(lvl.chapters.length, 'chapitre', 'chapit')} · {countOf(lvl.questionCount, 'question', 'kesyon')}
-                </Text>
+                <Text style={[typeScale.titleSm, { color: colors.ink }]} numberOfLines={1}>{readableCourseMeta(lvl.levelLabel ?? lvl.name, isCreole)}</Text>
+                <Text style={[typeScale.body, { color: colors.muted, marginTop: 2 }]}>{questionsLabel(lvl.questionCount, t)}</Text>
               </View>
               <ChevronRight color={colors.faint} size={18} />
             </TouchableOpacity>
@@ -743,41 +603,31 @@ export default function QuizzesScreen() {
   // ── Level 1: subject picker ────────────────────────────────────────────────
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
-      {/* When pushed onto the Courses stack (from a course) it needs a back
-          affordance; as a standalone tab root (Quiz-primary grades) there's
-          nowhere to go back to, so the arrow is hidden.
-          Gate on THIS stack's depth, not canGoBack(): canGoBack() also counts
-          the parent tab navigator's history, so it stays true even when this
-          screen is its stack's only route — the arrow then threw Quiz-primary
-          students out to Accueil. */}
+      {reviewModal}
+      {/* Gate the back arrow on THIS stack's depth, not canGoBack(): canGoBack()
+          also counts the parent tab navigator's history, so it stays true when
+          this screen is its stack's only route (the Quiz tab) and the arrow then
+          threw Quiz-primary students out to Accueil. */}
       <View className="flex-row items-center px-5 pt-6 pb-3" style={{ gap: 8 }}>
-        {(navigation.getState()?.routes?.length ?? 1) > 1 ? (
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            hitSlop={8}
-            className="p-1 -ml-1"
-            accessibilityRole="button"
-            accessibilityLabel={t('Retour', 'Tounen')}
-          >
-            <ChevronRight color={colors.muted} size={24} style={{ transform: [{ rotate: '180deg' }] }} />
-          </TouchableOpacity>
-        ) : null}
+        {stackDepth > 1 ? backArrow(() => navigation.goBack()) : null}
         <View className="flex-1">
-          <Text style={[typeScale.display, { color: colors.ink }]}>{t('Banque de questions', 'Bank kesyon')}</Text>
-          <Text style={[typeScale.body, { color: colors.muted, marginTop: 4 }]}>{t('Entraîne-toi par matière et niveau', 'Antrene w pa matyè ak nivo')}</Text>
+          <Text accessibilityRole="header" style={[typeScale.display, { color: colors.ink }]}>{t('Banque de questions', 'Bank kesyon')}</Text>
+          <Text style={[typeScale.body, { color: colors.muted, marginTop: 4 }]}>{t('Entraîne-toi par matière, niveau et chapitre', 'Antrene w pa matyè, nivo ak chapit')}</Text>
         </View>
       </View>
 
       <ScrollView
         className="flex-1 px-5"
-        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} />}
+        refreshControl={<RefreshControl refreshing={quizzesQ.isFetching} onRefresh={quizzesQ.refetch} />}
         contentContainerStyle={[{ paddingBottom: 100 }, centerColumn]}
       >
+        {noticeView}
+        {offlineLine}
         {subjectGroups.length === 0 ? (
           <EmptyState
-            message={t('Aucun quiz disponible.', 'Pa gen quiz disponib.')}
+            message={t('Aucune question disponible pour le moment.', 'Pa gen kesyon disponib pou kounye a.')}
             ctaLabel={t('Actualiser', 'Aktyalize')}
-            onCta={() => refetch()}
+            onCta={() => quizzesQ.refetch()}
           />
         ) : (
           subjectGroups.map((b) => {
@@ -786,19 +636,19 @@ export default function QuizzesScreen() {
             return (
               <TouchableOpacity
                 key={b.baseName}
-                onPress={() => openBase(b)}
+                onPress={() => { setNotice(null); openBase(b); }}
                 activeOpacity={0.82}
                 style={cardStyle}
                 accessibilityRole="button"
-                accessibilityLabel={`${b.baseName}, ${b.levels.length} ${t('niveaux', 'nivo')}`}
+                accessibilityLabel={`${b.baseName}, ${levelSummary}${questionsLabel(b.questionCount, t)}`}
               >
                 <View style={{ width: 44, height: 44, borderRadius: radius.tile, backgroundColor: tint + '22', alignItems: 'center', justifyContent: 'center' }}>
                   <BookOpen color={tint} size={20} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[typeScale.titleSm, { color: colors.ink }]} numberOfLines={1}>{b.baseName}</Text>
-                  <Text style={[typeScale.caption, { color: colors.muted, marginTop: 2 }]}>
-                    {levelSummary}{countOf(b.chapterCount, 'chapitre', 'chapit')} · {countOf(b.questionCount, 'question', 'kesyon')}
+                  <Text style={[typeScale.body, { color: colors.muted, marginTop: 2 }]}>
+                    {levelSummary}{questionsLabel(b.questionCount, t)}
                   </Text>
                 </View>
                 <ChevronRight color={colors.faint} size={18} />

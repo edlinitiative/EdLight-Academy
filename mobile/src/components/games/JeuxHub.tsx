@@ -27,6 +27,9 @@ import PressableScale from '../ui/PressableScale';
 import ShareCardCapture, { type ShareCardCaptureHandle } from '../share/ShareCardCapture';
 import InviteSheet from '../InviteSheet';
 import { shareScore } from '../../services/scoreShare';
+import ArenaHubPanel from '../arena/ArenaHubPanel';
+import { ArenaScreen } from '../arena/ArenaKit';
+import arenaHaptics from '../arena/arenaHaptics';
 
 const GRID_PAD = 16;
 // Cap so the 3-col console grid doesn't balloon on iPad (portrait +
@@ -36,7 +39,7 @@ const COL_W = Math.floor((GRID_W - GRID_PAD * 2) / 3);
 const BTN = 56; // round console button — the whole "smaller tiles" ask
 const BTN_ICON = 24;
 
-type HubTab = 'jouer' | 'records' | 'classement';
+type HubTab = 'jouer' | 'arene' | 'records' | 'classement';
 
 interface GameRecord {
   score: number;
@@ -181,13 +184,16 @@ function HubSegments({
   const { shadow } = useTheme();
   const segs: { id: HubTab; fr: string; ht: string }[] = [
     { id: 'jouer', fr: 'Jouer', ht: 'Jwe' },
+    // The Arena's permanent home (audit #11): always one tap from the tab
+    // bar, between national events too — without a sixth tab.
+    { id: 'arene', fr: 'Arène', ht: 'Arèn' },
     { id: 'records', fr: 'Records', ht: 'Rekò' },
     { id: 'classement', fr: 'Classement', ht: 'Klasman' },
   ];
   return (
     <View
       className="flex-row mx-4 mb-1"
-      style={{ backgroundColor: colors.surfaceAlt, borderRadius: 999, padding: 3, borderWidth: 1, borderColor: colors.border }}
+      style={{ backgroundColor: colors.surfaceAlt, borderRadius: 999, padding: 3 }}
       accessibilityRole="tablist"
     >
       {segs.map((s) => {
@@ -195,7 +201,7 @@ function HubSegments({
         return (
           <TouchableOpacity
             key={s.id}
-            onPress={() => onChange(s.id)}
+            onPress={() => { if (!on) arenaHaptics.choose(); onChange(s.id); }}
             accessibilityRole="tab"
             accessibilityState={{ selected: on }}
             accessibilityLabel={isCreole ? s.ht : s.fr}
@@ -269,8 +275,8 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily, onR
   const statChips = (
     <View className="flex-row" style={{ gap: 6 }}>
       <View
-        className="flex-row items-center rounded-full border"
-        style={{ gap: 4, paddingHorizontal: 9, paddingVertical: 4, backgroundColor: colors.surface, borderColor: colors.border }}
+        className="flex-row items-center rounded-full"
+        style={{ gap: 4, paddingHorizontal: 9, paddingVertical: 4, backgroundColor: colors.surfaceAlt }}
         accessible
         accessibilityLabel={`${level.xp} XP, ${isCreole ? 'nivo' : 'niveau'} ${level.level}`}
       >
@@ -278,8 +284,8 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily, onR
         <Text style={[typeScale.label, { color: colors.ink }]}>{level.xp}</Text>
       </View>
       <View
-        className="flex-row items-center rounded-full border"
-        style={{ gap: 4, paddingHorizontal: 9, paddingVertical: 4, backgroundColor: colors.surface, borderColor: colors.border }}
+        className="flex-row items-center rounded-full"
+        style={{ gap: 4, paddingHorizontal: 9, paddingVertical: 4, backgroundColor: colors.surfaceAlt }}
         accessible
         accessibilityLabel={`${isCreole ? 'Seri' : 'Série'} ${streak?.currentStreak || 0}${freezes > 0 ? `, ${freezes} ${isCreole ? 'jèl' : 'gel'}` : ''}`}
       >
@@ -293,8 +299,8 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily, onR
         )}
       </View>
       <View
-        className="flex-row items-center rounded-full border"
-        style={{ gap: 4, paddingHorizontal: 9, paddingVertical: 4, backgroundColor: colors.surface, borderColor: colors.border }}
+        className="flex-row items-center rounded-full"
+        style={{ gap: 4, paddingHorizontal: 9, paddingVertical: 4, backgroundColor: colors.surfaceAlt }}
         accessible
         accessibilityLabel={`${gamesPlayed} ${isCreole ? 'pati' : 'parties'}`}
       >
@@ -382,8 +388,8 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily, onR
           {/* Guest nudge — replaces the stat chips the un-signed-in can't have. */}
           {!isAuthed && (
             <View
-              className="flex-row items-center mx-4 mb-3 px-4 py-3 rounded-2xl border"
-              style={{ backgroundColor: colors.surface, borderColor: colors.border, gap: 12 }}
+              className="flex-row items-center mx-4 mb-3 px-4 py-3 rounded-2xl"
+              style={{ backgroundColor: colors.surfaceAlt, gap: 12 }}
               accessible
               accessibilityLabel={isCreole
                 ? 'Konekte pou swiv XP, seri ak pati ou yo'
@@ -479,7 +485,7 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily, onR
                     {isCreole ? g.nameHt : g.name}
                   </Text>
                   <Text style={[typeScale.micro, { color: colors.faint, marginTop: 1 }]} numberOfLines={1}>
-                    {hs != null ? `🏆 ${hs}` : `~${g.minutes} min`}
+                    {hs != null ? `${isCreole ? 'rekò' : 'record'} ${hs}` : `~${g.minutes} min`}
                   </Text>
                 </PressableScale>
               );
@@ -491,8 +497,8 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily, onR
             onPress={() => setTab('classement')}
             accessibilityRole="button"
             accessibilityLabel={isCreole ? 'Wè klasman an' : 'Voir le classement'}
-            className="flex-row items-center mx-4 mt-5 px-4 py-3 rounded-2xl border"
-            style={{ backgroundColor: colors.surface, borderColor: colors.border, gap: 10 }}
+            className="flex-row items-center mx-4 mt-5 px-4 py-3 rounded-2xl"
+            style={{ backgroundColor: colors.surfaceAlt, gap: 10 }}
             activeOpacity={0.85}
           >
             <Crown color={colors.warn} size={18} />
@@ -518,8 +524,8 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily, onR
               above. New players see invite alone — no 0 to share. */}
           {isAuthed && (
             <View
-              className="mx-4 mt-3 px-4 py-4 rounded-2xl border"
-              style={{ backgroundColor: colors.surface, borderColor: colors.border }}
+              className="mx-4 mt-3 px-4 py-4 rounded-2xl"
+              style={{ backgroundColor: colors.surfaceAlt }}
             >
               <View className="flex-row items-center" style={{ gap: 10 }}>
                 <View
@@ -577,8 +583,6 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily, onR
                       paddingHorizontal: 10,
                       borderRadius: radius.control,
                       backgroundColor: colors.azureSoft,
-                      borderWidth: 1,
-                      borderColor: colors.azureBorder,
                     }}
                   >
                     <Share2 color={colors.azure} size={15} />
@@ -614,6 +618,20 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily, onR
             </View>
           )}
         </ScrollView>
+      )}
+
+      {/* ── Arène — the competition world, in its own night palette ── */}
+      {tab === 'arene' && (
+        // The venue art behind the hub, still and faded (ArenaScreen), so the
+        // segment reads as walking into the Arène — not a flat dark page.
+        <ArenaScreen edges={[]}>
+          <ScrollView
+            contentContainerStyle={{ padding: 16, paddingBottom: 110 }}
+            showsVerticalScrollIndicator={false}
+          >
+            <ArenaHubPanel onPractice={onStartTrivia} onDuel={onStartTrivia} />
+          </ScrollView>
+        </ArenaScreen>
       )}
 
       {/* ── Records ── */}

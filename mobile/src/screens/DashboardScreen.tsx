@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Image } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useScrollToTop } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { ChevronRight, CalendarCheck, Search as SearchIcon } from 'lucide-react-native';
+import { ChevronRight, CalendarCheck, Search as SearchIcon, RotateCcw } from 'lucide-react-native';
 import { courseVideoThumb, courseVideoThumbs } from '../utils/videoThumb';
 import { FollowInstagramPrompt } from '../components/FollowInstagram';
 import WeeklyGoalSheet from '../components/WeeklyGoalSheet';
@@ -13,13 +13,11 @@ import { useCourses } from '../hooks/useData';
 import { useStreak } from '../hooks/useStreak';
 import { useAllProgress } from '../hooks/useProgress';
 import { useLeaderboard } from '../hooks/useLeaderboard';
-import { getFirstName } from '../utils/shared';
-import { Skeleton, ErrorState } from '../components/StateViews';
+import { Skeleton } from '../components/StateViews';
 import Avatar from '../components/ui/Avatar';
 import PressableScale from '../components/ui/PressableScale';
 import ProgressRing from '../components/ui/ProgressRing';
 import { type ProgressMap } from '../utils/mastery';
-import { courseLessonIds } from '../utils/mastery';
 import ReadinessCard from '../components/ReadinessCard';
 import VideoCoursesRail from '../components/VideoCoursesRail';
 import { countQuizzesThisWeek, WEEKLY_QUIZ_GOAL } from '../utils/weeklyActivity';
@@ -37,9 +35,13 @@ import { computeNextStep } from '../utils/nextStep';
 import { dueQuestionIds } from '../utils/review';
 import { TabParamList } from '../navigation/TabNavigator';
 import { resetTabToRoot } from '../navigation/navHelpers';
-import { useColors, useTheme, radius, courseTint, typeScale, gradients, displayScale } from '../theme/theme';
+import { useColors, useTheme, radius, courseTint, typeScale, displayScale } from '../theme/theme';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import { tapLight } from '../utils/haptics';
+import ProgressSummary from '../components/journey/home/ProgressSummary';
+import {
+  completedByCourse as toCompletedByCourse, progressCourses, summarizeCourse, evidenceLine,
+} from '../components/journey/home/homeJourney';
 
 type Nav = BottomTabNavigationProp<TabParamList>;
 
@@ -63,20 +65,6 @@ function formatXp(n: number): string {
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
-
-/** One cell of the quiet stats strip at the bottom of the page. */
-function StatCell({ value, label, glyph }: { value: string | number; label: string; glyph?: React.ReactNode }) {
-  const colors = useColors();
-  return (
-    <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-        {glyph}
-        <Text style={[typeScale.titleSm, { color: colors.ink, fontSize: 17 }]} maxFontSizeMultiplier={1.3}>{value}</Text>
-      </View>
-      <Text style={[typeScale.caption, { color: colors.faint }]} numberOfLines={1}>{label}</Text>
-    </View>
-  );
-}
 
 function SectionHeader({
   title,
@@ -107,29 +95,42 @@ function SectionHeader({
   );
 }
 
-function DashboardSkeleton() {
-  const colors = useColors();
+/** Placeholder for a course-backed section while the catalogue loads. */
+function SectionSkeleton({ height }: { height: number }) {
+  return <Skeleton height={height} radius={radius.card} />;
+}
+
+/**
+ * A course section that could not load (audit #5): said locally, with its own
+ * retry — the rest of Home (daily activity, Arena, review, shortcuts) stays.
+ */
+function CourseFeedError({ onRetry, isCreole }: { onRetry: () => void; isCreole: boolean }) {
+  const { colors, cardSurface } = useTheme();
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
-      <View className="px-5 pt-4">
-        <View className="flex-row items-center">
-          <Skeleton width={46} height={46} radius={23} />
-          <View className="flex-1 pl-3 gap-2">
-            <Skeleton width={180} height={18} />
-            <Skeleton width={130} height={12} />
-          </View>
-        </View>
-        <View className="mt-6"><Skeleton height={64} radius={radius.card} /></View>
-        <View className="flex-row gap-3 mt-4">
-          <View className="flex-1"><Skeleton height={112} radius={radius.card} /></View>
-          <View className="flex-1"><Skeleton height={112} radius={radius.card} /></View>
-        </View>
-        <View className="mt-4 gap-3">
-          <Skeleton height={72} radius={radius.card} />
-          <Skeleton height={72} radius={radius.card} />
-        </View>
-      </View>
-    </SafeAreaView>
+    <View style={{ ...cardSurface, padding: 16 }} accessibilityLiveRegion="polite">
+      <Text style={[typeScale.title, { color: colors.ink }]}>
+        {t("Les cours n'ont pas pu se charger", 'Kou yo pa t ka chaje')}
+      </Text>
+      <Text style={[typeScale.instruction, { color: colors.muted, marginTop: 4 }]}>
+        {t(
+          'Vérifie ta connexion. Le reste de ton accueil fonctionne toujours.',
+          'Verifye koneksyon ou. Rès paj lakay ou a toujou mache.',
+        )}
+      </Text>
+      <TouchableOpacity
+        onPress={() => { tapLight(); onRetry(); }}
+        accessibilityRole="button"
+        accessibilityLabel={t('Réessayer de charger les cours', 'Eseye chaje kou yo ankò')}
+        style={{
+          marginTop: 12, minHeight: 44, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8,
+          borderWidth: 1, borderColor: colors.border, borderRadius: radius.control, paddingHorizontal: 14,
+        }}
+      >
+        <RotateCcw color={colors.azure} size={16} />
+        <Text style={[typeScale.action, { color: colors.azure }]}>{t('Réessayer', 'Eseye ankò')}</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -140,7 +141,7 @@ function DashboardSkeleton() {
 export default function DashboardScreen() {
   const navigation = useNavigation<Nav>();
   const { colors, cardSurface } = useTheme();
-  const { user, language, enrolledCourses, quizAttempts, lastActivity, grade, setPendingDailyChallenge, progress: lessonProgress, review } = useStore();
+  const { user, language, enrolledCourses, quizAttempts, lastActivity, grade, gradeChosen, setPendingDailyChallenge, progress: lessonProgress, review } = useStore();
   const centerColumn = useContentContainerStyle('readable'); // iPad: center a capped column
   const scrollRef = React.useRef<any>(null);
   useScrollToTop(scrollRef);
@@ -154,14 +155,13 @@ export default function DashboardScreen() {
   const { progress: allProgress } = useAllProgress();
   const { myEntry } = useLeaderboard(25);
 
-  const firstName = getFirstName(user);
-  const greeting = isCreole ? 'Bonjou' : 'Bonjour';
   const weeklyXp = (myEntry as any)?.xp ?? 0;
   const allAttemptsList = Object.values(quizAttempts as Record<string, any[]>).flat();
   const quizzesThisWeek = countQuizzesThisWeek(allAttemptsList);
 
   // "Has used the app for a while" gate for the one-time Instagram prompt:
   // a 2-day streak, a few quizzes, or a few finished lessons all qualify.
+  const completedMap = React.useMemo(() => toCompletedByCourse(allProgress), [allProgress]);
   const lessonsDone = (allProgress ?? []).reduce(
     (sum: number, p: any) => sum + (p?.completedLessons?.length ?? 0), 0);
   const igPromptEligible =
@@ -181,6 +181,8 @@ export default function DashboardScreen() {
   // the mastery ladder (utils/nextStep). Recomputed as the inputs change; the
   // card below the hero renders it.
   const dueReviewCount = React.useMemo(() => dueQuestionIds(review).length, [review]);
+  // `courses` is undefined while loading / after a failure: the engine then
+  // still resolves exam, review and the saved lesson activity (audit #5).
   const nextStep = React.useMemo(
     () => computeNextStep({
       courses,
@@ -189,8 +191,17 @@ export default function DashboardScreen() {
       lastActivity,
       dueReviewCount,
       now: Date.now(),
+      grade,
+      gradeChosen,
+      completedByCourse: completedMap,
     }),
-    [courses, enrolledCourses, lessonProgress, lastActivity, dueReviewCount],
+    [courses, enrolledCourses, lessonProgress, lastActivity, dueReviewCount, grade, gradeChosen, completedMap],
+  );
+
+  // LJ-10: evidence per course, real denominators, only where work exists.
+  const progressRows = React.useMemo(
+    () => progressCourses({ courses, mastery: lessonProgress as ProgressMap, completedByCourse: completedMap, grade }),
+    [courses, lessonProgress, completedMap, grade],
   );
 
   // The next-step card leads with the course's own video still when it points
@@ -199,9 +210,11 @@ export default function DashboardScreen() {
     if (!nextStep || !courses) return [];
     const courseId = nextStep.kind === 'lesson'
       ? nextStep.courseId
-      : nextStep.kind === 'welcome-back' && nextStep.resume.type !== 'exam'
-        ? nextStep.resume.path
-        : null;
+      : nextStep.kind === 'welcome-back'
+        ? (nextStep.target?.courseId ?? null)
+        : nextStep.kind === 'choose-class'
+          ? (nextStep.suggestion?.courseId ?? null)
+          : null;
     const c = courseId ? courses.find((x) => x.id === courseId) : null;
     return c ? courseVideoThumbs(c) : [];
   }, [nextStep, courses]);
@@ -210,8 +223,10 @@ export default function DashboardScreen() {
   // Guards
   // ---------------------------------------------------------------------------
 
-  if (isLoading) return <DashboardSkeleton />;
-  if (isError) return <ErrorState onRetry={() => refetch()} />;
+  // No full-screen guards: the shell, daily activity, Arena and shortcuts
+  // never depend on the course feed. Course sections load/fail locally.
+  const coursesPending = !courses && isLoading;
+  const coursesFailed = !courses && isError;
 
   // initial:false keeps CourseList mounted beneath CourseDetail, so back pops
   // to the course list (not the Home tab) and the Cours tab's pop-to-top works.
@@ -268,14 +283,23 @@ export default function DashboardScreen() {
   const goalSublabel = goalReached
     ? t('Objectif atteint, continue sur ta lancée !', 'Ou rive sou objektif la, kontinye konsa !')
     : quizzesThisWeek === 0
-      ? t('Fais ton premier quiz, gagne 1 gel 🧊', 'Fè premye quiz ou, genyen 1 jèl 🧊')
-      : t(`${quizzesThisWeek}/${WEEKLY_QUIZ_GOAL} quiz, gagne 1 gel 🧊`, `${quizzesThisWeek}/${WEEKLY_QUIZ_GOAL} quiz, genyen 1 jèl 🧊`);
+      ? t('Fais ton premier quiz, gagne 1 gel de série', 'Fè premye quiz ou, genyen 1 jèl seri')
+      : t(`${quizzesThisWeek}/${WEEKLY_QUIZ_GOAL} quiz, gagne 1 gel de série`, `${quizzesThisWeek}/${WEEKLY_QUIZ_GOAL} quiz, genyen 1 jèl seri`);
+  // Momentum lives INSIDE this card now: the separate stat strip was a band
+  // (memory: no-hero-bands). Streak and, for the Bac track, the one date that
+  // matters — as one quiet line, only when there is something to say.
+  const streakDays = streak?.currentStreak ?? 0;
+  const bacDays = Math.max(0, Math.ceil((new Date(seasonAnchorYear(new Date()), 6, 5).getTime() - Date.now()) / 86_400_000));
+  const momentumLine = [
+    streakDays > 0 ? t(`Série : ${streakDays} j`, `Seri : ${streakDays} j`) : null,
+    isBacTrack ? t(`Bac dans ${bacDays} j`, `Bak nan ${bacDays} j`) : null,
+  ].filter(Boolean).join(' · ');
   const weeklyGoalBlock = (
     <View className="px-5 mb-4">
       <PressableScale
         onPress={() => { tapLight(); setGoalSheetOpen(true); }}
         accessibilityRole="button"
-        accessibilityLabel={`${t('Objectif de la semaine', 'Objektif semèn nan')}. ${goalSublabel}`}
+        accessibilityLabel={`${t('Objectif de la semaine', 'Objektif semèn nan')}. ${goalSublabel}${momentumLine ? `. ${momentumLine}` : ''}`}
         style={{ ...cardSurface, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}
       >
         <ProgressRing
@@ -294,6 +318,12 @@ export default function DashboardScreen() {
           <Text style={[typeScale.caption, { color: colors.faint, marginTop: 1 }]} numberOfLines={2}>
             {goalSublabel}
           </Text>
+          {momentumLine ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+              {streakDays > 0 ? <StreakFlame size={14} alive leapKey={streakDays} /> : null}
+              <Text style={[typeScale.caption, { color: colors.muted }]} numberOfLines={1}>{momentumLine}</Text>
+            </View>
+          ) : null}
         </View>
         <View style={{ alignItems: 'flex-end' }}>
           <Text style={[typeScale.titleSm, { color: colors.azure }]} maxFontSizeMultiplier={1.3}>
@@ -318,10 +348,8 @@ export default function DashboardScreen() {
           const tint = courseTint(course.color);
           const totalLessons = countCourseLessons(course);
           // Same source as the Cours tab: lessons finished, one thin bar.
-          const done = courseLessonIds(course).filter((id: string) => {
-            const p = (lessonProgress as ProgressMap)[id];
-            return !!p && (p.completed || !!p.masteredAt);
-          }).length;
+          const ev = summarizeCourse(course, lessonProgress as ProgressMap, completedMap.get(course.id));
+          const done = ev.completed;
           const thumb = courseVideoThumb(course);
 
           return (
@@ -329,9 +357,7 @@ export default function DashboardScreen() {
               key={course.id}
               onPress={() => goCourse(course)}
               accessibilityRole="button"
-              accessibilityLabel={done > 0
-                ? `${course.name}. ${done} ${t('sur', 'sou')} ${totalLessons} ${t('leçons', 'leson')}`
-                : course.name}
+              accessibilityLabel={done > 0 ? `${course.name}. ${evidenceLine(ev, isCreole)}` : course.name}
               style={{ borderTopWidth: 1, borderTopColor: colors.hairline }}
             >
               <View className="flex-row items-center gap-3" style={{ paddingVertical: 13 }}>
@@ -357,8 +383,12 @@ export default function DashboardScreen() {
                       <View style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.hairline }}>
                         <View style={{ width: `${Math.min(100, Math.round((done / totalLessons) * 100))}%`, height: 4, borderRadius: 2, backgroundColor: colors.azure }} />
                       </View>
-                      <Text style={[typeScale.caption, { color: colors.faint }]}>{done}/{totalLessons}</Text>
                     </View>
+                  ) : null}
+                  {done > 0 && totalLessons > 0 ? (
+                    <Text style={[typeScale.caption, { color: colors.muted, marginTop: 4 }]} numberOfLines={1}>
+                      {evidenceLine(ev, isCreole)}
+                    </Text>
                   ) : (
                     <Text style={[typeScale.caption, { color: colors.faint, marginTop: 4 }]}>
                       {totalLessons > 0
@@ -375,47 +405,6 @@ export default function DashboardScreen() {
       </View>
     </View>
   ) : null;
-
-  // The quiet stats strip: momentum without a report card. The third cell is
-  // the one date that matters for the grade (Bac countdown) — or this week's
-  // quiz count for grades with no exam on the horizon.
-  const bacDays = Math.max(0, Math.ceil((new Date(seasonAnchorYear(new Date()), 6, 5).getTime() - Date.now()) / 86_400_000));
-  const statsBlock = (
-    <View className="px-5 mb-4">
-      <View
-        accessible
-        accessibilityLabel={`${t('Série', 'Seri')} ${streak?.currentStreak ?? 0} ${t('jours', 'jou')}, ${weeklyXp} XP ${t('cette semaine', 'semèn sa a')}`}
-        style={{
-          flexDirection: 'row', alignItems: 'center',
-          borderWidth: 1, borderColor: colors.border, borderRadius: radius.card,
-          paddingVertical: 14,
-        }}
-      >
-        <StatCell
-          value={streak?.currentStreak ?? 0}
-          label={t('Jours de série', 'Jou seri')}
-          // Alive only while the streak is running: a lit flame next to a zero
-          // would be celebrating nothing. `leapKey` fires one leap when the
-          // count changes.
-          glyph={(
-            <StreakFlame
-              size={20}
-              alive={(streak?.currentStreak ?? 0) > 0}
-              leapKey={streak?.currentStreak ?? 0}
-            />
-          )}
-        />
-        <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: colors.hairline }} />
-        <StatCell value={formatXp(weeklyXp)} label={t('XP semaine', 'XP semèn')} />
-        <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: colors.hairline }} />
-        {isBacTrack ? (
-          <StatCell value={bacDays} label={t('Jours avant le Bac', 'Jou anvan Bak')} />
-        ) : (
-          <StatCell value={quizzesThisWeek} label={t('Quiz semaine', 'Quiz semèn')} />
-        )}
-      </View>
-    </View>
-  );
 
   // ---------------------------------------------------------------------------
   // Render
@@ -438,20 +427,12 @@ export default function DashboardScreen() {
           />
         }
       >
-        {/* Estil Klè header — a plain greeting on the page's own white ground.
-            The momentum numbers moved to the quiet stats strip at the bottom;
-            the top of the page belongs to the ONE next action. */}
+        {/* One confident title row + its controls, then content right away
+            (memory: no-hero-bands — no greeting, no stat band). */}
         <View className="px-5 pt-5 flex-row items-center justify-between">
-          <View className="flex-1 pr-3">
-            {/* The first line anyone reads on opening the app — worth the
-                display voice rather than another bold sans heading. */}
-            <Text style={[displayScale.xl, { color: colors.ink }]} numberOfLines={1}>
-              {greeting}, {firstName || t('Étudiant', 'Elèv')}
-            </Text>
-            <Text style={[typeScale.label, { color: colors.muted, marginTop: 2 }]} numberOfLines={1}>
-              {t('Prêt à continuer ?', 'Ou pare pou kontinye ?')}
-            </Text>
-          </View>
+          <Text style={[displayScale.xl, { color: colors.ink, flex: 1, paddingRight: 12 }]} numberOfLines={1} accessibilityRole="header">
+            {t('Accueil', 'Lakay')}
+          </Text>
           <TouchableOpacity
             onPress={() => { tapLight(); navigation.getParent()?.navigate('Search'); }}
             activeOpacity={0.8}
@@ -459,7 +440,7 @@ export default function DashboardScreen() {
             accessibilityRole="button"
             accessibilityLabel={t('Rechercher', 'Chèche')}
             style={{
-              width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center',
+              width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center',
               backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, marginRight: 10,
             }}
           >
@@ -481,62 +462,76 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* The dominant next-step card — answers "what should I do right now?"
-            (resume / review / next rung of the ladder), led by the course's
-            real imagery. The old compact ResumeBanner remains only as the
-            fallback for activity the engine doesn't cover (e.g. a quiz resume
-            with no enrolled courses). */}
-        {nextStep ? (
-          <View className="px-5" style={{ marginTop: 18 }}>
+        {/* 1. THE next action (LJ-01) — resume the exact lesson / exam / review
+            / a real first lesson for the class, from real state. It survives a
+            course-feed failure when saved state can answer (audit #5); when it
+            can't, the region says so locally with a retry. */}
+        <View className="px-5" style={{ marginTop: 16 }}>
+          {nextStep ? (
             <NextStepCard step={nextStep} thumbs={nextStepThumb} onOpenReview={() => setReviewOpen(true)} />
-          </View>
-        ) : lastActivity ? (
-          <View className="px-5" style={{ marginTop: 18 }}>
+          ) : coursesPending ? (
+            <SectionSkeleton height={220} />
+          ) : coursesFailed ? (
+            <CourseFeedError onRetry={() => refetch()} isCreole={isCreole} />
+          ) : lastActivity ? (
             <ResumeBanner />
-          </View>
-        ) : null}
+          ) : null}
+        </View>
 
-        {/* Mission du jour — the page's single "do this now" card. Absorbs the
-            old Défi du jour tile and the first-run nudge; flips to a quiet
-            success row once today's challenge is done. */}
+        {/* 2. The competitive opportunity, secondary to learning. Owned by the
+            Arena work; self-hides when nothing is open. */}
+        <View className="px-5 mt-4">
+          <ArenaAnnounceCard />
+        </View>
+
+        {/* Daily activity — the défi du jour, independent of the course feed. */}
         <View className="px-5 mt-4">
           <MissionCard onStart={() => { setPendingDailyChallenge(true); navigation.navigate('Trivia'); }} />
         </View>
 
-        {/* Revizyon — quiet entry to the student's own missed questions. When
-            the pile is big the NextStepCard above already leads with it, so
-            this row steps aside; it self-hides at zero. */}
+        {/* The compact review alternative; steps aside when the next action
+            above already IS review, and self-hides at zero. */}
         {nextStep?.kind !== 'review' ? (
           <ReviewCard onOpen={() => setReviewOpen(true)} />
         ) : null}
 
-        {/* The shortcut grid, the season recommendation card and the countdown
-            banner are gone (Estil Klè): the tab bar already carries the
-            destinations, and the one date that matters lives in the stats
-            strip below. One screen, one job. */}
+        {/* 3. Evidence of progress (LJ-10) — terminées / pratiquées /
+            maîtrisées per course, real denominators, only where work exists. */}
+        {progressRows.length > 0 ? (
+          <View className="px-5 mt-5 mb-1">
+            <ProgressSummary
+              rows={progressRows}
+              isCreole={isCreole}
+              // The overview (outline + evidence per chapter), not autoplay.
+              onOpenCourse={(course) => (navigation as any).navigate('Courses', {
+                screen: 'CourseDetail', initial: false, params: { courseId: course.id, courseName: course.name },
+              })}
+            />
+          </View>
+        ) : null}
+
         <View className="mt-4" />
 
-        {/* Weekly goal + Continue learning + video discovery. Order flips by
-            grade: cours-first grades (NS1–NS3) lead with courses; all other
-            grades keep the goal card first. The video rail always follows the
-            course content it advertises. */}
+        {/* 4. Lower-priority discovery. Course-backed sections load and fail
+            locally; the weekly goal never depends on them. */}
+        {coursesPending ? (
+          <View className="px-5 mb-4"><SectionSkeleton height={130} /></View>
+        ) : coursesFailed && nextStep ? (
+          <View className="px-5 mb-4"><CourseFeedError onRetry={() => refetch()} isCreole={isCreole} /></View>
+        ) : null}
         {coursFirst ? (
           <>
             {continueLearningBlock}
-            {videoRailBlock}
+            {courses ? videoRailBlock : null}
             {weeklyGoalBlock}
           </>
         ) : (
           <>
             {weeklyGoalBlock}
             {continueLearningBlock}
-            {videoRailBlock}
+            {courses ? videoRailBlock : null}
           </>
         )}
-
-        {/* Momentum, in one quiet strip — streak, weekly XP, and the one date
-            that matters for this grade. */}
-        {statsBlock}
 
         {/* One-time community nudge — only once the student has real usage
             behind them (streak / quizzes / lessons), never on first open.
@@ -565,14 +560,6 @@ export default function DashboardScreen() {
             />
           </View>
         )}
-
-        {/* The Arena announcement, when one is open for sign-up, sits ABOVE the
-            weekly school board: a dated event with a closing window is more
-            urgent than an ongoing mechanic, and self-hides the rest of the
-            month when there is nothing to announce. */}
-        <View className="px-5 mb-4">
-          <ArenaAnnounceCard />
-        </View>
 
         {/* The school tournament sits directly above the personal board: the
             individual ranking is what a student cares about, and the collective

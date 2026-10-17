@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Text, Animated, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { WifiOff } from 'lucide-react-native';
+import { WifiOff, RefreshCw } from 'lucide-react-native';
 import NetInfo from '@react-native-community/netinfo';
 import useStore from '../contexts/store';
 import { useColors } from '../theme/theme';
+import { isOnlineSnapshot } from '../lifecycle/connectivity';
 
 /**
  * Live connectivity via NetInfo. Returns:
@@ -18,8 +19,8 @@ function useConnectivity(): boolean | null {
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const resolve = (state: { isConnected: boolean | null; isInternetReachable: boolean | null }) =>
-      state.isConnected === false || state.isInternetReachable === false ? false : true;
+    // Same interpretation as the react-query online bridge (lifecycle/connectivity).
+    const resolve = isOnlineSnapshot;
 
     NetInfo.fetch().then((state) => setIsConnected(resolve(state)));
     const unsub = NetInfo.addEventListener((state) => setIsConnected(resolve(state)));
@@ -41,8 +42,29 @@ export default function NetworkStatus() {
 
   const offline = isConnected === false;
 
+  // Coming back online: say so briefly while queries refetch (the react-query
+  // online bridge resumes them), so the student knows the screen is updating
+  // rather than wondering whether what they see is still the offline copy.
+  const [refreshing, setRefreshing] = useState(false);
+  const wasOffline = useRef(false);
   useEffect(() => {
     if (offline) {
+      wasOffline.current = true;
+      setRefreshing(false);
+      return;
+    }
+    if (isConnected && wasOffline.current) {
+      wasOffline.current = false;
+      setRefreshing(true);
+      const id = setTimeout(() => setRefreshing(false), 2500);
+      return () => clearTimeout(id);
+    }
+  }, [offline, isConnected]);
+
+  const show = offline || refreshing;
+
+  useEffect(() => {
+    if (show) {
       setVisible(true);
       Animated.timing(translateY, {
         toValue: 0,
@@ -56,14 +78,21 @@ export default function NetworkStatus() {
         useNativeDriver: true,
       }).start(() => setVisible(false));
     }
-  }, [offline, hiddenY]);
+  }, [show, hiddenY]);
 
   if (!visible) return null;
 
   return (
-    <Animated.View style={[styles.banner, { backgroundColor: colors.danger, paddingTop: 8 + insets.top, transform: [{ translateY }] }]}>
-      <WifiOff color="#ffffff" size={14} />
-      <Text style={styles.text}>{isCreole ? 'Pa gen koneksyon' : 'Pas de connexion'}</Text>
+    <Animated.View
+      accessibilityLiveRegion="polite"
+      style={[styles.banner, { backgroundColor: offline ? colors.danger : colors.azureFill, paddingTop: 8 + insets.top, transform: [{ translateY }] }]}
+    >
+      {offline ? <WifiOff color="#ffffff" size={14} /> : <RefreshCw color="#ffffff" size={14} />}
+      <Text style={styles.text}>
+        {offline
+          ? (isCreole ? 'Pa gen koneksyon' : 'Pas de connexion')
+          : (isCreole ? 'Koneksyon an tounen · n ap mete ajou' : 'Connexion rétablie · mise à jour')}
+      </Text>
     </Animated.View>
   );
 }

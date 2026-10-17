@@ -630,7 +630,7 @@ export default function SandraScreen({
               style={{ backgroundColor: colors.warn + '1A', borderWidth: 1, borderColor: colors.warn + '55' }}
             >
               <AlertTriangle size={16} color={colors.warn} style={{ marginTop: 1 }} />
-              <Text style={[typeScale.caption, { flex: 1, color: colors.ink }]}>
+              <Text accessibilityRole="alert" style={[typeScale.status, { flex: 1, color: colors.ink }]}>
                 {notice.message}
               </Text>
             </View>
@@ -642,7 +642,7 @@ export default function SandraScreen({
               style={{ backgroundColor: colors.azureSoft, borderWidth: 1, borderColor: colors.azureBorder }}
             >
               <Lock size={16} color={colors.azure} style={{ marginTop: 1 }} />
-              <Text style={[typeScale.caption, { flex: 1, color: colors.azure }]}>
+              <Text style={[typeScale.status, { flex: 1, color: colors.azure }]}>
                 {t('Connectez-vous pour parler à Sandra', 'Konekte pou pale ak Sandra')}
               </Text>
             </View>
@@ -653,7 +653,7 @@ export default function SandraScreen({
               className="rounded-xl p-3 mt-1"
               style={{ backgroundColor: colors.dangerSoft, borderWidth: 1, borderColor: colors.danger + '66' }}
             >
-              <Text style={[typeScale.caption, { color: colors.danger, marginBottom: 8 }]}>
+              <Text accessibilityRole="alert" style={[typeScale.status, { color: colors.danger, marginBottom: 8 }]}>
                 {t(
                   'Oups, la réponse n’est pas arrivée. Vérifiez votre connexion.',
                   'Oups, repons lan pa rive. Tcheke koneksyon ou.',

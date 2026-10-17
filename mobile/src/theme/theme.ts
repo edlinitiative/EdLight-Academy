@@ -155,6 +155,31 @@ export const typeScale = {
   caption:  { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16 },
   micro:    { fontFamily: fonts.medium,  fontSize: 11, lineHeight: 14 },
   overline: { fontFamily: fonts.bold,    fontSize: 11, lineHeight: 14, letterSpacing: 0.6, textTransform: 'uppercase' },
+
+  /*
+   * ── Semantic roles for ESSENTIAL text (audit #15, 2026-10-17) ────────────
+   * caption (12) / micro (11) / overline (11) above stay for decoration and
+   * secondary metadata (dates, counts, tags). Text a student needs in order to
+   * act — a rule, an error, a status, an instruction, a button — must use one
+   * of these instead, so it never drops below 14pt before Dynamic Type.
+   */
+  /** Status / error / state lines ("Hors ligne", "En retard", "Réessaie"). */
+  status:      { fontFamily: fonts.medium,  fontSize: 14, lineHeight: 19 },
+  /** Rules and instructions that change what the student does next. */
+  instruction: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21 },
+  /** Labels on buttons and other primary controls. */
+  action:      { fontFamily: fonts.bold,    fontSize: 15, lineHeight: 20 },
+} as const;
+
+/**
+ * Touch comfort. `min` is the smallest hit area for any control (Apple HIG /
+ * Material both land on 44–48). Use as minHeight/minWidth, or as hitSlop
+ * padding when a control is visually smaller than this.
+ */
+export const touch = {
+  min: 44,
+  /** hitSlop that lifts a 36pt icon button to 44pt. */
+  slop36: { top: 4, bottom: 4, left: 4, right: 4 },
 } as const;
 
 /** Canonical brand gradients — one hero band + the deep "aurora" for completions. */

@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import CoursesScreen from '../screens/CoursesScreen';
 import CourseDetailScreen from '../screens/CourseDetailScreen';
 import QuizzesScreen from '../screens/QuizzesScreen';
+import type { PracticeHandoff } from '../utils/learningJourney';
 
 export type CoursesParamList = {
   /** `resetAt`: a nonce that clears the retained level/subject/search drill-down,
@@ -17,7 +18,9 @@ export type CoursesParamList = {
     /** Auto-open the first unfinished lesson so the tap lands on a playable page. */
     autoplay?: boolean;
   };
-  Quizzes: { courseId?: string };
+  /** `handoff`: context from a lesson/result (LJ-06), built with practiceParams()
+   *  and read back with readPracticeHandoff(). */
+  Quizzes: { courseId?: string; handoff?: PracticeHandoff };
 };
 
 const Stack = createNativeStackNavigator<CoursesParamList>();

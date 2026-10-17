@@ -40,6 +40,8 @@ import VraiFauxGame from '../components/games/VraiFauxGame';
 import MemoireGame from '../components/games/MemoireGame';
 import MoKacheGame from '../components/games/MoKacheGame';
 import CalculGame from '../components/games/CalculGame';
+import { useDeadlineCountdown } from '../components/games/RoundTimer';
+import type { BackgroundPolicy } from '../utils/deadlineTimer';
 import SuitesGame from '../components/games/SuitesGame';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -304,7 +306,7 @@ function CategoryPicker({
             {isCreole ? 'Jwèt Trivia' : 'Jeu Trivia'}
           </Text>
           <Text style={[typeScale.body, { color: colors.muted, marginTop: 4 }]}>
-            {isCreole ? 'Chwazi yon kategori' : 'Choisissez une catégorie'}
+            {isCreole ? 'Chwazi yon kategori' : 'Choisis une catégorie'}
           </Text>
         </View>
       }
@@ -471,13 +473,18 @@ function RoundPicker({
  * timer. It starts at five seconds, because before that the pressure is not
  * real yet and a permanently beating ring is just noise.
  */
+/** Theme tokens, not raw hex, so the ring reads in dark mode too. */
+function timerTone(timeLeft: number, colors: ReturnType<typeof useColors>): string {
+  return timeLeft > 8 ? colors.success : timeLeft > 5 ? colors.warn : colors.danger;
+}
+
 function TimerRing({ timeLeft }: { timeLeft: number }) {
   const colors = useColors();
   const reduceMotion = useReduceMotion();
-  const progress = timeLeft / 15;
+  const progress = timeLeft / QUESTION_SECONDS;
   const fill = progress * CIRC;
 
-  const color = timeLeft > 8 ? '#10b981' : timeLeft > 5 ? '#f59e0b' : '#ef4444';
+  const color = timerTone(timeLeft, colors);
 
   const beat = useSharedValue(1);
   useEffect(() => {
@@ -646,16 +653,26 @@ function AnswerOption({
   );
 }
 
+/** Seconds per practice / duel question. */
+const QUESTION_SECONDS = 15;
+
 export function QuizPlayer({
   questions,
   category,
   isCreole,
   onFinish,
+  timerPolicy = 'pause',
 }: {
   questions: PreparedQuestion[];
   category: any;
   isCreole: boolean;
   onFinish: (score: number, total: number, mistakes: RoundMistake[]) => void;
+  /**
+   * What leaving the app does to the 15s question clock — see the TIMING
+   * POLICY in utils/deadlineTimer.ts. 'pause' for solo practice (default),
+   * 'run' for a scored duel, where the other player's clock did not stop.
+   */
+  timerPolicy?: BackgroundPolicy;
 }) {
   const colors = useColors();
   const { shadow } = useTheme();
@@ -668,8 +685,6 @@ export function QuizPlayer({
   // Consecutive correct answers in THIS round — drives how much light a right
   // answer throws. Reset on a miss, so the build is something to protect.
   const [run, setRun] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(15);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // The current selection, readable from the timeout path without the
   // set-state-updater side-effect trick; and the round's missed questions,
   // handed to the results screen for the "Revois tes erreurs" recap.
@@ -691,38 +706,26 @@ export function QuizPlayer({
   const isCorrect = confirmed && selected === correctFor(q);
 
   // --- Timer ---
-  const stopTimer = useCallback(() => {
-    if (timerRef.current !== null) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-  }, []);
+  // Deadline-based: the seconds shown are re-derived from Date.now() on every
+  // tick, so a suspended interval can never make the clock drift. The policy
+  // (pause vs keep running in the background) is explicit — see
+  // utils/deadlineTimer.ts. Frozen once the answer is confirmed.
+  const { timeLeft } = useDeadlineCountdown(QUESTION_SECONDS, {
+    policy: timerPolicy,
+    paused: confirmed,
+    resetKey: idx,
+  });
 
-  // Reset timer whenever the question changes
+  // Reset the question's local state whenever the question changes.
   useEffect(() => {
-    setTimeLeft(15);
     setSelected(null);
     selectedRef.current = null;
     setConfirmed(false);
-
-    timerRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          // Time's up — auto-confirm (with whatever is currently selected)
-          // We use a ref pattern to read latest selected inside interval
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return stopTimer;
-  }, [idx]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [idx]);
 
   // Watch for timer reaching 0 and auto-confirm
   useEffect(() => {
     if (timeLeft === 0 && !confirmed) {
-      stopTimer();
       setConfirmed(true);
       const currentSelected = selectedRef.current;
       const wasCorrect = currentSelected !== null && currentSelected === correctFor(questions[idx]);
@@ -738,7 +741,7 @@ export function QuizPlayer({
       // Crowd-difficulty logging (canonical FR stem so IDs match across langs).
       if (questions[idx]?.q) logAnswerEvent(questions[idx].q, wasCorrect);
     }
-  }, [timeLeft, confirmed, idx, questions, stopTimer, correctFor]);
+  }, [timeLeft, confirmed, idx, questions, correctFor]);
 
   const handleSelect = (opt: string) => {
     if (!confirmed) {
@@ -751,7 +754,6 @@ export function QuizPlayer({
   const handleConfirm = () => {
     if (confirmed) return;
     tapMedium();
-    stopTimer();
     setConfirmed(true);
     const correct = selected === correctFor(q);
     if (correct) {
@@ -767,7 +769,8 @@ export function QuizPlayer({
   };
 
   const handleNext = () => {
-    tapMedium();
+    // Moving on is routine — a light tick, not the weight of a commitment.
+    tapLight();
     if (idx + 1 >= questions.length) {
       onFinish(score, questions.length, mistakesRef.current);
     } else {
@@ -816,7 +819,7 @@ export function QuizPlayer({
                 style={{
                   fontSize: 13,
                   fontWeight: '800',
-                  color: timeLeft > 8 ? '#10b981' : timeLeft > 5 ? '#f59e0b' : '#ef4444',
+                  color: timerTone(timeLeft, colors),
                 }}
               >
                 {timeLeft}
@@ -1169,7 +1172,7 @@ function TriviaResults({
           </Text>
           {mistakes.map((m, i) => {
             // `chosen` was captured as the DISPLAYED string, so the ✓ answer
-            // and 💡 explanation must resolve in the same language.
+            // and explanation must resolve in the same language.
             const correct = isCreole && m.q.optionsHt && m.q.correctAnswerHt ? m.q.correctAnswerHt : m.q.correctAnswer;
             const explanation = isCreole ? (m.q.explanationHt ?? m.q.explanation) : m.q.explanation;
             return (
@@ -1184,7 +1187,7 @@ function TriviaResults({
                 </Text>
                 {explanation ? (
                   <Text style={{ fontFamily: typeScale.caption.fontFamily, fontSize: 12, lineHeight: 17, color: 'rgba(255,255,255,0.65)', marginTop: 6 }}>
-                    💡 {explanation}
+                    {explanation}
                   </Text>
                 ) : null}
               </View>

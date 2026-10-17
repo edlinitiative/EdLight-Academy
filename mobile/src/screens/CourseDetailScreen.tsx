@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Image,
 } from 'react-native';
@@ -8,16 +8,15 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { WebView } from 'react-native-webview';
 import {
   ArrowLeft, ChevronDown, ChevronRight, PlayCircle, ClipboardList,
-  CheckCircle2, ChevronLeft, Trophy, Sparkles, Target, Circle,
+  CheckCircle2, ChevronLeft, Sparkles, Target, Circle, WifiOff, RotateCcw,
 } from 'lucide-react-native';
-import { useCourses } from '../hooks/useData';
+import { useCourses, useAppData } from '../hooks/useData';
 import useStore from '../contexts/store';
 import { ListSkeleton, ErrorState, EmptyState } from '../components/StateViews';
 import LessonPractice from '../components/LessonPractice';
 import CourseInstructorCard from '../components/CourseInstructorCard';
 import ChapterTest from '../components/ChapterTest';
 import PressableScale from '../components/ui/PressableScale';
-import { MasteryMeter } from '../components/MasteryMeter';
 import { useCourseThumb } from '../hooks/useCourseThumb';
 import {
   summarize, lessonMastery, masteryLabel, masteryColor, masteryNextStep,
@@ -25,7 +24,16 @@ import {
 } from '../utils/mastery';
 import PracticeSpotlight from '../components/PracticeSpotlight';
 import LessonComments from '../components/LessonComments';
-import DefiHandoffCard from '../components/DefiHandoffCard';
+import LessonCompletionPanel from '../components/journey/lesson/LessonCompletionPanel';
+import { useLessonCompletion } from '../components/journey/lesson/useLessonCompletion';
+import { useOffline } from '../components/journey/lesson/useOnline';
+import { chapterPractice } from '../components/journey/lesson/chapterPractice';
+import {
+  courseStartTarget, locateLesson, summarizeLessons, evidenceLine, lessonEvidence, LEVEL_LABEL,
+} from '../components/journey/home/homeJourney';
+import { confirmLessonComplete } from '../services/progressTracking';
+import { evidenceLabel, trackJourney } from '../utils/learningJourney';
+import { success as hapticSuccess } from '../utils/haptics';
 import { CoursesParamList } from '../navigation/CoursesNavigator';
 import { useColors, typeScale, radius, courseTint } from '../theme/theme';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
@@ -132,8 +140,24 @@ export function parseCourseDescription(raw?: string | null): ParsedDescription {
   return { intro, topics };
 }
 
-function VideoPlayer({ videoUrl, isCreole }: { videoUrl: string; isCreole?: boolean }) {
+/**
+ * The lesson player. Video is the one part of a lesson that ALWAYS needs the
+ * network (audit #16): offline it says so — the outline, the lesson text and
+ * saved progress stay on screen — and a failure keeps the lesson in place
+ * with a retry. The lesson title sits ABOVE this, so identity survives either.
+ */
+function VideoPlayer({ videoUrl, isCreole, offline }: { videoUrl: string; isCreole?: boolean; offline: boolean }) {
   const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  const wasOffline = useRef(offline);
+  // Coming back online retries a player that failed for lack of network.
+  useEffect(() => {
+    if (wasOffline.current && !offline) { setFailed(false); setAttempt((n) => n + 1); }
+    wasOffline.current = offline;
+  }, [offline]);
+  useEffect(() => { setFailed(false); }, [videoUrl]);
+
   const ytId = extractYouTubeId(videoUrl);
   const embedUrl = ytId
     ? `https://www.youtube.com/embed/${ytId}?playsinline=1`
@@ -152,14 +176,34 @@ function VideoPlayer({ videoUrl, isCreole }: { videoUrl: string; isCreole?: bool
       allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
     </body></html>`;
 
-  if (failed) {
+  if (offline || failed) {
     return (
       <View
-        className="w-full items-center justify-center gap-2"
-        style={{ aspectRatio: 16 / 9, backgroundColor: '#111827' }}
+        accessibilityLiveRegion="polite"
+        style={{ width: '100%', aspectRatio: 16 / 9, backgroundColor: '#111827', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, gap: 8 }}
       >
-        <PlayCircle color="#9ca3af" size={36} />
-        <Text style={[typeScale.caption, { color: '#9ca3af' }]}>{isCreole ? 'Videyo pa disponib pou kounye a' : 'Vidéo indisponible pour le moment'}</Text>
+        {offline ? <WifiOff color="#cbd5e1" size={30} /> : <PlayCircle color="#cbd5e1" size={32} />}
+        <Text style={[typeScale.status, { color: '#f1f5f9', textAlign: 'center' }]}>
+          {offline
+            ? t('La vidéo a besoin d\'une connexion internet.', 'Videyo a bezwen koneksyon entènèt.')
+            : t('La vidéo ne s\'est pas chargée.', 'Videyo a pa chaje.')}
+        </Text>
+        <Text style={[typeScale.caption, { color: '#cbd5e1', textAlign: 'center' }]}>
+          {offline
+            ? t('Le plan du cours et ta progression enregistrée restent disponibles.', 'Plan kou a ak pwogrè ou anrejistre yo rete disponib.')
+            : t('Ta leçon reste ouverte ici.', 'Leson ou an rete louvri la a.')}
+        </Text>
+        {!offline ? (
+          <TouchableOpacity
+            onPress={() => { setFailed(false); setAttempt((n) => n + 1); }}
+            accessibilityRole="button"
+            accessibilityLabel={t('Réessayer la vidéo', 'Eseye videyo a ankò')}
+            style={{ marginTop: 4, minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)' }}
+          >
+            <RotateCcw color="#ffffff" size={16} />
+            <Text style={[typeScale.action, { color: '#ffffff' }]}>{t('Réessayer', 'Eseye ankò')}</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     );
   }
@@ -167,6 +211,7 @@ function VideoPlayer({ videoUrl, isCreole }: { videoUrl: string; isCreole?: bool
   return (
     <View className="w-full bg-black" style={{ aspectRatio: 16 / 9 }}>
       <WebView
+        key={attempt}
         source={{ html, baseUrl: 'https://edlight-academy.web.app' }}
         allowsFullscreenVideo
         mediaPlaybackRequiresUserAction={false}
@@ -237,14 +282,13 @@ function UnitRow({
     () => summarize(lessons.map((l: any) => l.id).filter(Boolean), progress),
     [lessons, progress],
   );
-  // The simple statement the restyle leads with: lessons finished / total.
-  const done = useMemo(
-    () => lessons.filter((l: any) => {
-      const p = progress[l.id];
-      return !!p && (p.completed || !!p.masteredAt);
-    }).length,
+  // The chapter's evidence in the shared words (LJ-10): terminées /
+  // pratiquées / maîtrisées over its real lesson count.
+  const evidence = useMemo(
+    () => summarizeLessons(lessons.map((l: any) => l.id).filter(Boolean), progress),
     [lessons, progress],
   );
+  const done = evidence.completed;
   const finished = summary.total > 0 && done >= summary.total;
   // The chapter test is worth offering once anything in the chapter is solid —
   // before that there is nothing for it to promote.
@@ -257,7 +301,7 @@ function UnitRow({
         style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 16 }}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
-        accessibilityLabel={`${unit.title}. ${done} ${t('sur', 'sou')} ${summary.total} ${t('leçons', 'leson')}`}
+        accessibilityLabel={`${t('Chapitre', 'Chapit')} ${index + 1}, ${unit.title}. ${evidenceLine(evidence, !!isCreole)}`}
       >
         {/* Chapter state at a glance: finished / in progress / untouched. */}
         {finished ? (
@@ -273,12 +317,9 @@ function UnitRow({
           </Text>
           <Text style={[typeScale.title, { color: colors.ink, marginTop: 3 }]}>{unit.title}</Text>
           <Text style={[typeScale.caption, { color: colors.muted, marginTop: 3 }]}>
-            {finished
-              ? `${summary.total} ${t('leçons', 'leson')} · ${t('Terminé', 'Fini')}`
-              : done > 0
-                ? `${done}/${summary.total} ${t('leçons', 'leson')}`
-                : `${summary.total} ${t('leçons', 'leson')}`}
-            {summary.mastered > 0 ? ` · ${summary.mastered} ${t('maîtrisée', 'metrize')}${summary.mastered > 1 && !isCreole ? 's' : ''}` : ''}
+            {done > 0 || evidence.practised > 0
+              ? evidenceLine(evidence, !!isCreole)
+              : `${summary.total} ${t('leçons', 'leson')}`}
           </Text>
         </View>
         {open
@@ -289,10 +330,14 @@ function UnitRow({
       {open && (
         <View style={{ paddingBottom: 14, paddingLeft: 38 }}>
           {lessons.map((lesson: any) => {
-            const level = lessonMastery(progress[lesson.id]);
-            const p = progress[lesson.id];
-            const isDone = !!p && (p.completed || !!p.masteredAt);
+            const ev = lessonEvidence(lesson.id, progress);
+            const isDone = ev === 'completed' || ev === 'practised' || ev === 'mastered';
             const active = activeLesson?.id === lesson.id;
+            // State in words, never colour alone (LJ-04).
+            const stateWords = [
+              active ? t('Leçon actuelle', 'Leson kounye a') : null,
+              ev ? evidenceLabel(ev, !!isCreole) : t('À faire', 'Pou fè'),
+            ].filter(Boolean).join(', ');
             return (
               <TouchableOpacity
                 key={lesson.id}
@@ -305,7 +350,8 @@ function UnitRow({
                   backgroundColor: active ? colors.azureSoft : 'transparent',
                 }}
                 accessibilityRole="button"
-                accessibilityLabel={`${lesson.title}. ${masteryLabel(level, isCreole)}${lesson.duration ? `, ${lesson.duration} min` : ''}`}
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={`${lesson.title}. ${stateWords}${lesson.duration ? `, ${lesson.duration} min` : ''}`}
               >
                 {/* The checklist: done = filled check, current = play, to do =
                     an empty circle. The content TYPE stays legible for the
@@ -320,15 +366,22 @@ function UnitRow({
                 ) : (
                   <ClipboardList color={colors.faint} size={19} strokeWidth={1.8} />
                 )}
-                <Text
-                  style={[
-                    active || isDone ? typeScale.bodyMd : typeScale.body,
-                    { flex: 1, color: active ? colors.azure : isDone ? colors.muted : colors.ink },
-                  ]}
-                  numberOfLines={2}
-                >
-                  {lesson.title}
-                </Text>
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={[
+                      active || isDone ? typeScale.bodyMd : typeScale.body,
+                      { color: active ? colors.azure : isDone ? colors.muted : colors.ink },
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {lesson.title}
+                  </Text>
+                  {active || (ev && ev !== 'completed') ? (
+                    <Text style={[typeScale.caption, { color: active ? colors.azure : colors.muted, marginTop: 1 }]}>
+                      {active ? t('En cours', 'An kou') : evidenceLabel(ev!, !!isCreole)}
+                    </Text>
+                  ) : null}
+                </View>
                 {lesson.duration ? (
                   <Text style={[typeScale.micro, { color: colors.faint }]}>{lesson.duration} min</Text>
                 ) : null}
@@ -372,37 +425,37 @@ export default function CourseDetailScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { courseId, lessonId, autoplay } = route.params;
-  const { data: courses, isLoading, isError } = useCourses();
-  const { progress, updateProgress, incrementGuestInteraction, recordActivity, language,
-    practiceTipSeen, setPracticeTipSeen } = useStore();
+  const { data: courses, isLoading, isError, refetch } = useCourses();
+  const appQuery = useAppData();
+  const {
+    user, isAuthenticated, progress, updateProgress, incrementGuestInteraction, recordActivity, language,
+    lastActivity, practiceTipSeen, setPracticeTipSeen,
+  } = useStore();
   const colors = useColors();
   const centerColumn = useContentContainerStyle('readable'); // iPad: center a capped column
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  const offline = useOffline();
 
   const [activeLesson, setActiveLesson] = useState<any | null>(null);
   const [practiceMode, setPracticeMode] = useState<'flashcards' | 'exercices' | null>(null);
   const [testUnit, setTestUnit] = useState<any | null>(null);
   const [showPracticeTip, setShowPracticeTip] = useState(false);
+  /** A deep link named a lesson the catalogue no longer has (LJ-02 stale link). */
+  const [staleLesson, setStaleLesson] = useState(false);
   const practiceRowRef = useRef<View>(null);
+  const landedFor = useRef<string | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
 
   // First time a lesson is opened, coach-mark the Flashcards/Exercices buttons.
   useEffect(() => {
     if (activeLesson && !practiceTipSeen) {
-      const t = setTimeout(() => setShowPracticeTip(true), 400);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => setShowPracticeTip(true), 400);
+      return () => clearTimeout(timer);
     }
   }, [activeLesson?.id, practiceTipSeen]);
 
   const course = useMemo(() => courses?.find((c) => c.id === courseId), [courses, courseId]);
-
-  const completedIds = useMemo(() => {
-    const ids = new Set<string>();
-    Object.entries(progress).forEach(([id, p]: [string, any]) => {
-      if (p?.completed) ids.add(id);
-    });
-    return ids;
-  }, [progress]);
 
   // Flat list of all lessons for prev/next navigation
   const allLessons = useMemo(() => {
@@ -414,56 +467,109 @@ export default function CourseDetailScreen() {
     if (!activeLesson) return -1;
     return allLessons.findIndex((l: any) => l.id === activeLesson.id);
   }, [allLessons, activeLesson]);
+  /** Where the open lesson sits (its chapter), for the title block and practice. */
+  const activeRef = useMemo(() => locateLesson(course, activeLesson?.id), [course, activeLesson?.id]);
 
-  // Deep-link landing: open the requested lesson (Reprendre), or with autoplay
-  // the first unfinished lesson — so tapping a course card starts the video
-  // page instead of dropping the student on a bare syllabus.
+  // The one start/resume target, on Home's rules (LJ-03): the lesson the
+  // student was in if unfinished, else the first unfinished one.
+  const lastLessonHere = lastActivity?.type === 'lesson' && lastActivity.path === courseId
+    ? lastActivity.lessonId ?? null
+    : null;
+  const startTarget = useMemo(
+    () => (course ? courseStartTarget(course, progress as ProgressMap, null, lastLessonHere) : null),
+    [course, progress, lastLessonHere],
+  );
+
+  // Deep-link landing, once per distinct request: open the requested lesson
+  // (Reprendre), or with autoplay the course's start target — so tapping a
+  // course card lands on a playable page. A lesson id the catalogue no longer
+  // has is reported, never silently swapped for another lesson.
   useEffect(() => {
     if (allLessons.length === 0) return;
+    const key = `${lessonId ?? ''}|${autoplay ? 1 : 0}`;
+    if (landedFor.current === key) return;
+    landedFor.current = key;
     if (lessonId) {
-      // Explicit lesson request wins, including when this screen is already
-      // mounted and only the params changed (a second "Reprendre").
       const target = allLessons.find((l: any) => l.id === lessonId);
-      if (target && target.id !== activeLesson?.id) setActiveLesson(target);
+      trackJourney('lesson_resume_resolved', {
+        course_id: courseId, lesson_id: lessonId, outcome: target ? 'found' : 'stale',
+      });
+      if (target) { setActiveLesson(target); setStaleLesson(false); } else setStaleLesson(true);
       return;
     }
-    if (!activeLesson && autoplay) {
-      setActiveLesson(allLessons.find((l: any) => !completedIds.has(l.id)) ?? allLessons[0]);
-    }
-    // Intentionally NOT re-running on progress/activeLesson changes: landing only.
+    if (autoplay && startTarget) setActiveLesson(startTarget.ref.lesson);
+    // Intentionally NOT re-running on progress changes: landing only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allLessons, lessonId, autoplay]);
 
-  // Mastery, not consumption: this is what the whole screen is organised around.
+  // Whatever lesson is open is the place Home resumes (Préc./Suiv. included).
+  useEffect(() => {
+    if (!activeLesson || !course) return;
+    recordActivity({
+      type: 'lesson',
+      path: course.id,
+      lessonId: activeLesson.id,
+      title: activeLesson.title,
+      subtitle: course.name,
+      ts: Date.now(),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeLesson?.id, course?.id]);
+
+  // Mastery, not consumption: still drives the chapter-test gates.
   const summary = useMemo(
     () => summarize(courseLessonIds(course), progress as ProgressMap),
     [course, progress],
   );
-  // The hero's one simple number: lessons finished across the course.
-  const courseDone = useMemo(
-    () => allLessons.filter((l: any) => {
-      const p = (progress as ProgressMap)[l.id];
-      return !!p && (p.completed || !!p.masteredAt);
-    }).length,
-    [allLessons, progress],
+  // The course's evidence facts in the shared words (LJ-10).
+  const evidence = useMemo(
+    () => summarizeLessons(courseLessonIds(course), progress as ProgressMap),
+    [course, progress],
   );
   // Full-width 180pt hero — the sharp hq720 still, walking down the candidates
-  // on failure. It used to take the 320×180 mqdefault and upscale it ~3.7x.
+  // on failure.
   const { uri: heroThumb, onError: onHeroThumbError } = useCourseThumb(course);
 
   const tint = courseTint(course?.color);
-  // "Next" is the first lesson that isn't finished learning — which is not the
-  // same as the first unwatched video. A lesson you watched but never practised
-  // is still the thing to go back to.
-  const nextLesson = useMemo(
-    () => allLessons.find((l: any) => lessonMastery(progress[l.id]) !== 'mastered') ?? allLessons[0] ?? null,
-    [allLessons, progress],
-  );
-  const nextLevel = nextLesson ? lessonMastery(progress[nextLesson.id]) : 'none';
-  const nextStep = masteryNextStep(nextLevel, isCreole);
   const description = useMemo(() => parseCourseDescription(course?.description), [course?.description]);
 
+  // ── Completion (LJ-05): acknowledged ONLY after a server-confirmed save ──
+  const uid = isAuthenticated ? user?.uid ?? null : null;
+  const saveCompletion = useCallback(
+    async (u: string, c: string, l: string) => (u ? confirmLessonComplete(u, c, l) : 'local' as const),
+    [],
+  );
+  const completion = useLessonCompletion({
+    uid,
+    courseId: course?.id ?? null,
+    offline,
+    save: saveCompletion,
+    onConfirmed: (id) => {
+      // The existing mastery bookkeeping: `completed` earns the `seen` rung
+      // and syncs to the shared mastery doc. Never mastery itself.
+      updateProgress(id, { completed: true });
+      incrementGuestInteraction();
+      hapticSuccess();
+    },
+  });
+
+  // Chapter-wide practice for the open lesson, with its real count (LJ-05/06).
+  const rawBank = useMemo<any[] | undefined>(
+    () => (appQuery.isError ? [] : appQuery.data?.quizBank?.raw),
+    [appQuery.isError, appQuery.data],
+  );
+  const practice = useMemo(
+    () => chapterPractice({ rawBank, courseCode: course?.code, module: activeRef?.unit, lessonId: activeLesson?.id }),
+    [rawBank, course?.code, activeRef?.unit, activeLesson?.id],
+  );
+
   const goBack = () => {
+    // A lesson open: back returns to the course overview (LJ-04 "clear return").
+    if (activeLesson) {
+      setActiveLesson(null);
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+      return;
+    }
     // Stay inside the Courses stack: canGoBack() also counts the parent tab
     // navigator, which sent deep-linked users "back" to Home. If this is the
     // only route in the stack, land on the course list instead.
@@ -472,9 +578,7 @@ export default function CourseDetailScreen() {
     else navigation.reset({ index: 0, routes: [{ name: 'CourseList' }] });
   };
 
-  // Loading and error carry the same back arrow as the loaded screen: the
-  // header used to appear only once the course resolved, and a failed load left
-  // the student on a bare error with no way out of the screen at all.
+  // Loading and error carry the same back arrow as the loaded screen.
   const withChrome = (body: React.ReactNode) => (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
       <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.bg }}>
@@ -493,84 +597,70 @@ export default function CourseDetailScreen() {
     </SafeAreaView>
   );
 
-  if (isLoading) return withChrome(<ListSkeleton rows={6} />);
-  if (isError || !course) return withChrome(<ErrorState />);
+  if (!course && isLoading) return withChrome(<ListSkeleton rows={6} />);
+  if (!course && isError) return withChrome(<ErrorState onRetry={() => refetch()} />);
+  if (!course) {
+    // The catalogue loaded but this course is not in it (stale link / hidden).
+    return withChrome(
+      <EmptyState
+        title={t("Ce cours n'est plus disponible", 'Kou sa a pa disponib ankò')}
+        description={t('Il a peut-être été déplacé. Choisis un cours dans la liste.', 'Yo ka te deplase l. Chwazi yon kou nan lis la.')}
+        ctaLabel={t('Voir les cours', 'Wè kou yo')}
+        onCta={() => navigation.reset({ index: 0, routes: [{ name: 'CourseList' }] })}
+      />,
+    );
+  }
 
-  // A course that loaded fine but has no lessons (empty `modules` — the
-  // catalog-migration / orphan-video case) otherwise rendered "0/0 leçons", no
-  // player, no start button and an empty accordion: a screen that reads as broken
-  // rather than as "not ready yet".
+  // A course that loaded fine but has no lessons (empty `modules`): say "not
+  // ready yet" instead of rendering "0/0 leçons" and an empty accordion.
   if (allLessons.length === 0) {
-    return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
-        <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.bg }}>
-          <TouchableOpacity
-            onPress={() => {
-              const stackRoutes = navigation.getState()?.routes ?? [];
-              if (stackRoutes.length > 1) navigation.goBack();
-              else navigation.reset({ index: 0, routes: [{ name: 'CourseList' }] });
-            }}
-            className="mr-3 p-1"
-            accessibilityRole="button"
-            accessibilityLabel={t('Retour', 'Retounen')}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <ArrowLeft color={colors.muted} size={22} />
-          </TouchableOpacity>
-          <Text numberOfLines={1} style={[typeScale.title, { color: colors.ink }]}>{course.name}</Text>
-        </View>
-        <EmptyState
-          title={t('Ce cours arrive bientôt', 'Kou sa a ap vini talè')}
-          description={t(
-            'Les leçons vidéo sont en préparation. Essaie un autre cours en attendant.',
-            'Leson videyo yo ap prepare. Eseye yon lòt kou pandan n ap tann.',
-          )}
-          ctaLabel={t('Voir les autres cours', 'Wè lòt kou yo')}
-          onCta={() => navigation.reset({ index: 0, routes: [{ name: 'CourseList' }] })}
-        />
-      </SafeAreaView>
+    return withChrome(
+      <EmptyState
+        title={t('Ce cours arrive bientôt', 'Kou sa a ap vini talè')}
+        description={t(
+          'Les leçons vidéo sont en préparation. Essaie un autre cours en attendant.',
+          'Leson videyo yo ap prepare. Eseye yon lòt kou pandan n ap tann.',
+        )}
+        ctaLabel={t('Voir les autres cours', 'Wè lòt kou yo')}
+        onCta={() => navigation.reset({ index: 0, routes: [{ name: 'CourseList' }] })}
+      />,
     );
   }
 
   function onLessonPress(lesson: any) {
+    setStaleLesson(false);
     setActiveLesson(lesson);
-    recordActivity({
-      type: 'lesson',
-      path: course!.id,
-      lessonId: lesson.id,
-      title: lesson.title,
-      subtitle: course!.name,
-      ts: Date.now(),
-    });
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
   }
 
-  function markComplete() {
-    if (!activeLesson) return;
-    updateProgress(activeLesson.id, { completed: true });
-    incrementGuestInteraction();
-    // Auto-advance to next lesson
-    if (activeIndex < allLessons.length - 1) {
-      setActiveLesson(allLessons[activeIndex + 1]);
-    }
+  function openChapterPractice() {
+    if (practice.status !== 'ready' || !activeLesson) return;
+    trackJourney('practice_handoff_opened', {
+      course_id: course!.id, course_code: practice.handoff.course, unit: practice.unit,
+      lesson_id: activeLesson.id, count: practice.count, from: 'lesson',
+    });
+    navigation.navigate('Quizzes', { courseId: course!.id, handoff: practice.handoff });
   }
 
   const isLastLesson = activeIndex === allLessons.length - 1;
-  const isAlreadyDone = activeLesson ? completedIds.has(activeLesson.id) : false;
-  // The syllabus gets the aurora hero; once a lesson is open the video owns the
-  // screen and the chrome goes quiet.
+  const nextLessonObj = activeIndex >= 0 && !isLastLesson ? allLessons[activeIndex + 1] : null;
+  const activeEvidence = activeLesson ? lessonEvidence(activeLesson.id, progress as ProgressMap) : null;
+  const isAlreadyDone = activeEvidence === 'completed' || activeEvidence === 'practised' || activeEvidence === 'mastered';
+  const entry = completion.entryFor(activeLesson?.id);
+  const levelLabel = course.level ? (LEVEL_LABEL[course.level] ?? course.level) : null;
   const showHero = !activeLesson;
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
-      {/* Back bar — shares the page ground (no seam). On the syllabus it stays
-          minimal (the hero below owns the identity); with a lesson open it
-          carries the course name. */}
+      {/* Back bar. On the overview it stays minimal (the hero owns the
+          identity); with a lesson open it carries the course, and back
+          returns to the course overview. */}
       <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.bg }}>
         <TouchableOpacity
           onPress={goBack}
           className="mr-3 p-1"
           accessibilityRole="button"
-          accessibilityLabel={t('Retour', 'Retounen')}
+          accessibilityLabel={activeLesson ? t('Retour au cours', 'Retounen nan kou a') : t('Retour', 'Retounen')}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <ArrowLeft color={colors.ink} size={22} />
@@ -578,18 +668,38 @@ export default function CourseDetailScreen() {
         {showHero ? (
           <Text style={[typeScale.titleSm, { color: colors.muted }]}>{t('Cours', 'Kou')}</Text>
         ) : (
-          <View className="flex-1">
+          <TouchableOpacity
+            className="flex-1"
+            onPress={goBack}
+            accessibilityRole="button"
+            accessibilityLabel={`${t('Retour au cours', 'Retounen nan kou a')} ${course.name}`}
+          >
             <Text numberOfLines={1} style={[typeScale.title, { color: colors.ink }]}>{course.name}</Text>
-            <Text style={[typeScale.caption, { color: colors.faint }]}>
-              {summary.total} {t('leçons', 'leson')} · {course.modules?.length ?? 0} {t('chapitres', 'chapit')}
+            <Text style={[typeScale.caption, { color: colors.muted }]}>
+              {levelLabel ? `${levelLabel} · ` : ''}{t('Plan du cours', 'Plan kou a')}
             </Text>
-          </View>
+          </TouchableOpacity>
         )}
       </View>
 
-      {/* Video player (no decorative banner when nothing is playing) */}
+      {/* LJ-04: the lesson's identity BEFORE the player in reading order. */}
+      {activeLesson && (
+        <View className="px-5 pb-3" style={{ backgroundColor: colors.bg }} accessible accessibilityRole="header"
+          accessibilityLabel={`${activeRef ? `${t('Chapitre', 'Chapit')} ${activeRef.unitIndex + 1}${activeRef.unit?.title ? `, ${activeRef.unit.title}` : ''}. ` : ''}${activeLesson.title}`}
+        >
+          {activeRef ? (
+            <Text style={[typeScale.overline, { color: tint }]} numberOfLines={1}>
+              {t('Chapitre', 'Chapit')} {activeRef.unitIndex + 1}{activeRef.unit?.title ? ` · ${activeRef.unit.title}` : ''}
+            </Text>
+          ) : null}
+          <Text style={[typeScale.title, { color: colors.ink, fontSize: 18, lineHeight: 23, marginTop: 2 }]} numberOfLines={3}>
+            {activeLesson.title}
+          </Text>
+        </View>
+      )}
+
       {activeLesson?.videoUrl ? (
-        <VideoPlayer videoUrl={activeLesson.videoUrl} isCreole={isCreole} />
+        <VideoPlayer videoUrl={activeLesson.videoUrl} isCreole={isCreole} offline={offline} />
       ) : activeLesson ? (
         <View
           className="w-full items-center justify-center"
@@ -601,130 +711,117 @@ export default function CourseDetailScreen() {
         </View>
       ) : null}
 
-      {/* Active lesson info + mark complete */}
-      {activeLesson && (
-        <View className="px-5 py-4" style={{ backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.hairline }}>
-          <Text style={[typeScale.title, { color: colors.ink }]}>{activeLesson.title}</Text>
-          {activeLesson.objectives ? (
-            <Text className="mt-1 leading-relaxed" style={[typeScale.caption, { color: colors.muted }]}>{activeLesson.objectives}</Text>
-          ) : null}
-
-          {/* Where this lesson stands. Hidden until something is earned: at
-              level `none` this was four invisible dashes next to "À découvrir",
-              which read as a stray artifact under the description rather than
-              as status. */}
-          {(() => {
-            const level = lessonMastery(progress[activeLesson.id]);
-            if (level === 'none') return null;
-            const step = masteryNextStep(level, isCreole);
-            return (
-              <View className="flex-row items-center gap-3 mt-3">
-                <MasteryMeter level={level} />
-                <Text style={[typeScale.micro, { color: masteryColor(level, colors) }]}>
-                  {masteryLabel(level, isCreole)}
-                </Text>
-                {step ? (
-                  <>
-                    <Text style={[typeScale.micro, { color: colors.border }]}>·</Text>
-                    <Text style={[typeScale.micro, { color: colors.faint, flex: 1 }]} numberOfLines={1}>
-                      {step}
-                    </Text>
-                  </>
-                ) : null}
-              </View>
-            );
-          })()}
-          <View className="flex-row gap-3 mt-3">
-            {isAlreadyDone ? (
-              <View className="flex-row items-center gap-2 px-4 py-2.5 bg-emerald-50 dark:bg-emerald-950 rounded-xl border border-emerald-200 dark:border-emerald-800">
-                <CheckCircle2 color={colors.success} size={16} />
-                <Text style={[typeScale.label, { color: colors.success }]}>{t('Terminé', 'Fini')}</Text>
-              </View>
-            ) : (
-              <TouchableOpacity
-                onPress={markComplete}
-                className="flex-row items-center gap-2 px-4 py-2.5 rounded-xl"
-                style={{ backgroundColor: course.color ?? colors.azure }}
-              >
-                <CheckCircle2 color="#fff" size={16} />
-                <Text style={[typeScale.titleSm, { color: '#fff' }]}>{t('Marquer terminé', 'Make kòm fini')}</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Lesson done → hand off into the XP loop (hidden once today's
-              défi is played; compact so the practice row below stays close). */}
-          {isAlreadyDone && (
-            <View className="mt-3">
-              <DefiHandoffCard compact />
-            </View>
-          )}
-
-          {/* Flashcards + Exercices — per-lesson practice (same quiz bank as web) */}
-          <View ref={practiceRowRef} collapsable={false} className="flex-row gap-3 mt-3">
-            <TouchableOpacity
-              onPress={() => setPracticeMode('flashcards')}
-              className="flex-1 flex-row items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-[#131c2e]"
-            >
-              <Sparkles color={colors.azure} size={16} />
-              <Text style={[typeScale.titleSm, { color: colors.ink }]}>{t('Flashcards', 'Kat etid')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setPracticeMode('exercices')}
-              className="flex-1 flex-row items-center justify-center gap-2 px-4 py-2.5 rounded-xl"
-              style={{ backgroundColor: course.color ?? colors.azure }}
-            >
-              <ClipboardList color="#fff" size={16} />
-              <Text style={[typeScale.titleSm, { color: '#fff' }]}>{isCreole ? 'Egzèsis' : 'Exercices'}</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Prev / Next navigation */}
-          <View className="flex-row gap-2 mt-3">
-            <TouchableOpacity
-              onPress={() => activeIndex > 0 && setActiveLesson(allLessons[activeIndex - 1])}
-              disabled={activeIndex <= 0}
-              className={`flex-row items-center gap-1 px-3 py-2 rounded-xl border border-gray-200 dark:border-slate-700 ${activeIndex <= 0 ? 'opacity-30' : ''}`}
-            >
-              <ChevronLeft color={colors.muted} size={16} />
-              <Text style={[typeScale.micro, { color: colors.muted }]}>{t('Préc.', 'Avan')}</Text>
-            </TouchableOpacity>
-            <View className="flex-1" />
-            {isLastLesson ? (
-              <View className="flex-row items-center gap-1 px-3 py-2 bg-amber-50 dark:bg-amber-950 rounded-xl border border-amber-200 dark:border-amber-800">
-                <Trophy color={colors.warn} size={16} />
-                <Text style={[typeScale.micro, { color: colors.warn }]}>{t('Dernière leçon', 'Dènye leson')}</Text>
-              </View>
-            ) : (
-              <TouchableOpacity
-                onPress={() => setActiveLesson(allLessons[activeIndex + 1])}
-                className="flex-row items-center gap-1 px-3 py-2 rounded-xl"
-                style={{ backgroundColor: course.color ?? colors.azure }}
-              >
-                <Text style={[typeScale.micro, { color: '#fff' }]}>{t('Suiv.', 'Aprè')}</Text>
-                <ChevronRight color="#fff" size={16} />
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-      )}
-
-      {/* Module list */}
       <ScrollView
+        ref={scrollRef}
         className="flex-1"
         style={{ backgroundColor: colors.bg }}
         contentContainerStyle={[{ paddingBottom: 100 }, centerColumn]}
       >
-        {/* Estil Klè hero: the course's own imagery, the name, ONE simple
-            progress statement and ONE action. Identity comes from the real
-            video still — no gradient ground, no arc. */}
+        {/* The open lesson: status, the one completion/continuation region,
+            then the lesson's own practice tools and Préc./Suiv. */}
+        {activeLesson && (
+          <View className="px-5 py-4" style={{ borderBottomWidth: 1, borderBottomColor: colors.hairline }}>
+            {activeLesson.objectives ? (
+              <Text className="leading-relaxed" style={[typeScale.body, { color: colors.muted }]}>{activeLesson.objectives}</Text>
+            ) : null}
+
+            {(() => {
+              // Where this lesson stands, in the shared evidence words + what
+              // the ladder still asks. Hidden until something is recorded.
+              if (!activeEvidence) return null;
+              const step = masteryNextStep(lessonMastery((progress as ProgressMap)[activeLesson.id]), isCreole);
+              return (
+                <Text style={[typeScale.status, { color: colors.ink, marginTop: 10 }]}>
+                  {evidenceLabel(activeEvidence, isCreole)}
+                  {step ? <Text style={{ color: colors.muted }}>{` · ${step}`}</Text> : null}
+                </Text>
+              );
+            })()}
+
+            <LessonCompletionPanel
+              entry={entry}
+              alreadyDone={isAlreadyDone}
+              isGuest={!uid}
+              isCreole={isCreole}
+              practice={practice}
+              nextTitle={nextLessonObj?.title ?? null}
+              isLast={isLastLesson}
+              onComplete={() => completion.complete(activeLesson.id)}
+              onPractice={openChapterPractice}
+              onNext={() => nextLessonObj && onLessonPress(nextLessonObj)}
+            />
+
+            {/* This lesson's own tools — quieter than the region above. */}
+            <View ref={practiceRowRef} collapsable={false} className="flex-row gap-3 mt-4">
+              <TouchableOpacity
+                onPress={() => setPracticeMode('flashcards')}
+                accessibilityRole="button"
+                accessibilityLabel={t('Flashcards de cette leçon', 'Kat etid leson sa a')}
+                style={{ flex: 1, minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: radius.control, borderWidth: 1, borderColor: colors.border }}
+              >
+                <Sparkles color={colors.azure} size={16} />
+                <Text style={[typeScale.bodyMd, { color: colors.ink }]}>{t('Flashcards', 'Kat etid')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setPracticeMode('exercices')}
+                accessibilityRole="button"
+                accessibilityLabel={t('Exercices de cette leçon', 'Egzèsis leson sa a')}
+                style={{ flex: 1, minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: radius.control, borderWidth: 1, borderColor: colors.border }}
+              >
+                <ClipboardList color={colors.azure} size={16} />
+                <Text style={[typeScale.bodyMd, { color: colors.ink }]}>{t('Exercices', 'Egzèsis')}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Prev / Next */}
+            <View className="flex-row gap-2 mt-3">
+              <TouchableOpacity
+                onPress={() => activeIndex > 0 && onLessonPress(allLessons[activeIndex - 1])}
+                disabled={activeIndex <= 0}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: activeIndex <= 0 }}
+                accessibilityLabel={t('Leçon précédente', 'Leson anvan an')}
+                style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, opacity: activeIndex <= 0 ? 0.35 : 1 }}
+              >
+                <ChevronLeft color={colors.muted} size={16} />
+                <Text style={[typeScale.bodyMd, { color: colors.muted }]}>{t('Précédente', 'Anvan')}</Text>
+              </TouchableOpacity>
+              <View className="flex-1" />
+              {nextLessonObj ? (
+                <TouchableOpacity
+                  onPress={() => onLessonPress(nextLessonObj)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t('Leçon suivante', 'Pwochen leson')} : ${nextLessonObj.title}`}
+                  style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12 }}
+                >
+                  <Text style={[typeScale.bodyMd, { color: colors.muted }]}>{t('Suivante', 'Apre')}</Text>
+                  <ChevronRight color={colors.muted} size={16} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          </View>
+        )}
+
+        {/* LJ-03 overview: the course's own imagery, its class, the real
+            evidence, and ONE start/resume action that names the lesson. */}
         {showHero && (
           <View style={{ paddingHorizontal: 16 }}>
+            {staleLesson ? (
+              <View accessibilityLiveRegion="polite" style={{ marginBottom: 14, padding: 12, borderRadius: radius.card, backgroundColor: colors.warnSoft }}>
+                <Text style={[typeScale.status, { color: colors.ink }]}>
+                  {t(
+                    "La leçon demandée n'est plus dans ce cours. Choisis une leçon dans le plan ci-dessous.",
+                    'Leson ou te mande a pa nan kou sa a ankò. Chwazi yon leson nan plan ki anba a.',
+                  )}
+                </Text>
+              </View>
+            ) : null}
             {heroThumb ? (
               <Image
                 source={{ uri: heroThumb }}
                 resizeMode="cover"
                 onError={onHeroThumbError}
+                accessibilityIgnoresInvertColors
                 style={{ width: '100%', height: 180, borderRadius: radius.card, backgroundColor: colors.surfaceAlt }}
               />
             ) : (
@@ -732,58 +829,51 @@ export default function CourseDetailScreen() {
                 <View style={{ width: 52, height: 4, borderRadius: 2, backgroundColor: tint, opacity: 0.5 }} />
               </View>
             )}
-            <Text style={[typeScale.h1, { color: colors.ink, marginTop: 18 }]}>{course.name}</Text>
-            <Text style={[typeScale.label, { color: colors.muted, marginTop: 4 }]}>
-              {course.modules?.length ?? 0} {t('chapitres', 'chapit')} · {summary.total} {t('leçons', 'leson')}
+            <Text style={[typeScale.h1, { color: colors.ink, marginTop: 18 }]} accessibilityRole="header">{course.name}</Text>
+            <Text style={[typeScale.body, { color: colors.muted, marginTop: 4 }]}>
+              {levelLabel ? `${levelLabel} · ` : ''}{course.modules?.length ?? 0} {t('chapitres', 'chapit')} · {summary.total} {t('leçons', 'leson')}
             </Text>
 
-            {courseDone > 0 && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14 }}>
-                <View style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.hairline }}>
-                  <View style={{ width: `${Math.min(100, Math.round((courseDone / Math.max(1, summary.total)) * 100))}%`, height: 4, borderRadius: 2, backgroundColor: colors.azure }} />
+            {evidence.completed + evidence.practised > 0 && (
+              <View style={{ marginTop: 14 }}>
+                <View style={{ height: 4, borderRadius: 2, backgroundColor: colors.hairline }}>
+                  <View style={{ width: `${Math.min(100, Math.round((evidence.completed / Math.max(1, evidence.total)) * 100))}%`, height: 4, borderRadius: 2, backgroundColor: colors.azure }} />
                 </View>
-                <Text style={[typeScale.label, { color: colors.muted }]}>
-                  {courseDone}/{summary.total} {t('leçons', 'leson')}
+                <Text style={[typeScale.status, { color: colors.ink, marginTop: 8 }]}>
+                  {evidenceLine(evidence, isCreole)}
                 </Text>
               </View>
             )}
 
-            {nextLesson && (
+            {startTarget && (
               <PressableScale
-                onPress={() => onLessonPress(nextLesson)}
+                onPress={() => {
+                  trackJourney('learning_next_action_selected', {
+                    kind: 'course-start', reason: startTarget.reason, course_id: course.id, lesson_id: startTarget.ref.lesson.id,
+                  });
+                  onLessonPress(startTarget.ref.lesson);
+                }}
                 pressedScale={0.98}
                 style={{
-                  marginTop: 16, height: 46, borderRadius: radius.control,
-                  backgroundColor: colors.azureFill,
+                  marginTop: 16, minHeight: 48, borderRadius: radius.control,
+                  backgroundColor: colors.azureFill, paddingHorizontal: 14,
                   alignItems: 'center', justifyContent: 'center',
                   flexDirection: 'row', gap: 8,
                 }}
                 accessibilityRole="button"
-                accessibilityLabel={`${summary.started > 0 ? t('Reprendre', 'Kontinye') : t('Commencer', 'Kòmanse')} — ${nextLesson.title}`}
+                accessibilityLabel={`${startTarget.started ? t('Reprendre', 'Kontinye') : t('Commencer', 'Kòmanse')} : ${startTarget.ref.lesson.title}, ${t('chapitre', 'chapit')} ${startTarget.ref.unitIndex + 1}`}
               >
                 <PlayCircle color="#ffffff" size={18} />
-                <Text numberOfLines={1} style={[typeScale.titleSm, { color: '#ffffff', maxWidth: '85%' }]}>
-                  {summary.started > 0
-                    ? `${t('Reprendre', 'Kontinye')} — ${nextLesson.title}`
-                    : t('Commencer le cours', 'Kòmanse kou a')}
+                <Text numberOfLines={1} style={[typeScale.action, { color: '#ffffff', flexShrink: 1 }]}>
+                  {startTarget.started ? t('Reprendre', 'Kontinye') : t('Commencer', 'Kòmanse')} : {startTarget.ref.lesson.title}
                 </Text>
               </PressableScale>
             )}
-
-            {/* Mastery stays — as a quiet statement, not a monument. */}
-            {summary.started > 0 && (
-              <View style={{
-                flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 14,
-                borderWidth: 1, borderColor: colors.border, borderRadius: radius.card,
-                paddingVertical: 12, paddingHorizontal: 14,
-              }}>
-                <MasteryMeter level={summary.level} size="sm" />
-                <Text style={[typeScale.label, { color: colors.muted, flex: 1 }]}>
-                  {t('Maîtrise', 'Metriz')} · {summary.points}/100
-                  {nextStep ? ` · ${nextStep}` : ''}
-                </Text>
-              </View>
-            )}
+            {startTarget ? (
+              <Text style={[typeScale.caption, { color: colors.muted, marginTop: 6, textAlign: 'center' }]} numberOfLines={1}>
+                {t('Chapitre', 'Chapit')} {startTarget.ref.unitIndex + 1}{startTarget.ref.unit?.title ? ` · ${startTarget.ref.unit.title}` : ''}
+              </Text>
+            ) : null}
           </View>
         )}
 
@@ -792,18 +882,14 @@ export default function CourseDetailScreen() {
         {activeLesson && (
           <LessonComments threadKey={`comments:${course.id}:${activeLesson.id}`} isCreole={isCreole} />
         )}
-        {/* Chapters come FIRST. They were sitting below the hero, the ladder
-            legend, the description AND the topic list — two and a half screens
-            of scrolling before a returning student could reach lesson four. All
-            of that is reference material; the lessons are the screen. */}
-        {!activeLesson && (
-          <Text style={[typeScale.overline, { color: colors.faint, marginBottom: 2 }]}>
-            {t('Chapitres', 'Chapit yo')} · {course.modules?.length ?? 0}
-          </Text>
-        )}
+        {/* The outline — the real chapters, current/completed marked with a
+            symbol AND words. Chapters come before reference material. */}
+        <Text style={[typeScale.overline, { color: colors.faint, marginBottom: 2 }]}>
+          {activeLesson ? t('Plan du cours', 'Plan kou a') : t('Chapitres', 'Chapit yo')} · {course.modules?.length ?? 0}
+        </Text>
         {(course.modules ?? []).map((unit: any, unitIndex: number) => (
           <UnitRow
-            key={unit.id}
+            key={unit.id ?? unitIndex}
             unit={unit}
             index={unitIndex}
             tint={tint}
@@ -819,7 +905,7 @@ export default function CourseDetailScreen() {
         {!activeLesson && <CourseInstructorCard courseId={courseId} />}
 
         {/* Reference material, after the lessons: what the course covers, and —
-            on a first visit only — how the four levels are earned. */}
+            on a first visit only — how the levels are earned. */}
         {!activeLesson && (description.intro || description.topics.length > 0 || summary.started === 0) && (
           <View style={{ marginTop: 34, paddingTop: 22, borderTopWidth: 1, borderTopColor: colors.hairline }}>
             {description.intro ? (

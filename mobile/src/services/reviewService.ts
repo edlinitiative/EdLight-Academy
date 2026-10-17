@@ -19,6 +19,8 @@ import { db, auth } from './firebase';
 import { doc, getDoc, setDoc, getDocs, collection, serverTimestamp } from 'firebase/firestore';
 import { computeSRS, scoreToQuality } from './studyPlanService';
 import { dueReviews, type ReviewStateEntry, type ReviewItem } from './adaptiveEngine';
+import useStore from '../contexts/store';
+import { toReviewWire, type ReviewMap } from '../utils/review';
 
 const DEFAULT_EASE = 2.5;
 
@@ -102,4 +104,76 @@ export async function loadDueReviews(
   });
 
   return dueReviews(entries, now);
+}
+
+// ── Missed-question review: an awaited, confirmable push (LJ-09) ─────────────
+//
+// The store records every miss locally at once, and services/masterySync
+// mirrors the map to users/{uid}/mastery/review after a 4 s debounce —
+// fire-and-forget, failures only logged. That is right for studying offline,
+// but a result screen cannot say "your errors are in Révision" on the strength
+// of it. `flushReviewPush` writes the given entries NOW and resolves only when
+// Firestore acknowledges the write (the JS SDK's setDoc promise settles on the
+// server commit, not the local cache), so "confirmed" means confirmed.
+// It rejects when signed out, on a write error, or after `timeoutMs` (offline:
+// the SDK keeps the write queued and the debounced sync covers it later).
+
+export type ReviewFlushDeps = {
+  getState: () => { uid: string | null; review: ReviewMap };
+  write: (uid: string, questions: ReturnType<typeof toReviewWire>) => Promise<void>;
+};
+
+const defaultFlushDeps: ReviewFlushDeps = {
+  getState: () => {
+    const s = useStore.getState() as any;
+    const uid = s.isAuthenticated && s.user?.uid && auth.currentUser ? String(s.user.uid) : null;
+    return { uid, review: (s.review || {}) as ReviewMap };
+  },
+  // Merge-write: nested `questions.{id}` maps merge, so only the given
+  // entries are touched — never another device's newer ones.
+  write: (uid, questions) => setDoc(
+    doc(db, 'users', uid, 'mastery', 'review'),
+    { questions, updatedAt: serverTimestamp() },
+    { merge: true },
+  ),
+};
+
+export class ReviewFlushError extends Error {
+  constructor(public reason: 'signed-out' | 'timeout' | 'write-failed', cause?: unknown) {
+    super(`review flush: ${reason}`);
+    if (cause !== undefined) (this as any).cause = cause;
+  }
+}
+
+/**
+ * Push the review entries for `ids` (all entries when omitted) and resolve once
+ * the server has them. See the block comment above.
+ */
+export async function flushReviewPush(
+  ids?: string[],
+  { timeoutMs = 12000, deps = defaultFlushDeps }: { timeoutMs?: number; deps?: ReviewFlushDeps } = {},
+): Promise<void> {
+  const { uid, review } = deps.getState();
+  if (!uid) throw new ReviewFlushError('signed-out');
+  const subset: ReviewMap = {};
+  if (ids && ids.length) {
+    for (const id of ids) if (review[id]) subset[id] = review[id];
+  } else {
+    Object.assign(subset, review);
+  }
+  const questions = toReviewWire(subset);
+  if (Object.keys(questions).length === 0) return;
+
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new ReviewFlushError('timeout')), timeoutMs);
+  });
+  try {
+    await Promise.race([
+      deps.write(uid, questions).catch((e) => { throw new ReviewFlushError('write-failed', e); }),
+      timeout,
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }

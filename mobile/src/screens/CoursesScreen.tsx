@@ -16,8 +16,9 @@ import { useCourseThumb } from '../hooks/useCourseThumb';
 import useStore from '../contexts/store';
 import { ListSkeleton, ErrorState, EmptyState } from '../components/StateViews';
 import {
-  summarize, courseLessonIds, masteryLabel, type MasterySummary, type ProgressMap,
+  summarize, courseLessonIds, type MasterySummary, type ProgressMap,
 } from '../utils/mastery';
+import { summarizeLessons, evidenceLine, type EvidenceSummary } from '../components/journey/home/homeJourney';
 import { CoursesParamList } from '../navigation/CoursesNavigator';
 import { useColors, radius, typeScale } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
@@ -67,16 +68,22 @@ function countUnits(course: any): number {
   return Array.isArray(course?.modules) ? course.modules.length : 0;
 }
 
-/** One thin bar + a fraction — the whole progress language of the restyle. */
-function ProgressBar({ done, total }: { done: number; total: number }) {
+/**
+ * One thin bar for ONE fact (lessons terminées over the course's lessons), and
+ * the evidence line in the shared words (LJ-10): terminées · pratiquées ·
+ * maîtrisées — independent statements, never blended into one score.
+ */
+function ProgressBar({ evidence }: { evidence: EvidenceSummary }) {
   const colors = useColors();
+  const isCreole = useStore((s) => s.language) === 'ht';
+  const { completed: done, total } = evidence;
   const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-      <View style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.hairline }}>
+    <View>
+      <View style={{ height: 4, borderRadius: 2, backgroundColor: colors.hairline }}>
         <View style={{ width: `${pct}%`, height: 4, borderRadius: 2, backgroundColor: colors.azure }} />
       </View>
-      <Text style={[typeScale.label, { color: colors.muted }]}>{done}/{total}</Text>
+      <Text style={[typeScale.body, { color: colors.muted, marginTop: 6 }]}>{evidenceLine(evidence, isCreole)}</Text>
     </View>
   );
 }
@@ -86,13 +93,14 @@ function ProgressBar({ done, total }: { done: number; total: number }) {
  * (the course's video still), one byline, one progress bar, one next action.
  */
 function CourseCard({
-  course, summary, lessonsDone, onPress,
+  course, summary, evidence, onPress,
 }: {
   course: any;
   summary: MasterySummary;
-  lessonsDone: number;
+  evidence: EvidenceSummary;
   onPress: () => void;
 }) {
+  const lessonsDone = evidence.completed;
   const colors = useColors();
   const language = useStore((s) => s.language);
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
@@ -108,7 +116,7 @@ function CourseCard({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={started
-        ? `${course.name}. ${lessonsDone} ${t('sur', 'sou')} ${totalLessons} ${t('leçons', 'leson')}, ${masteryLabel(summary.level, language === 'ht')}`
+        ? `${course.name}. ${evidenceLine(evidence, language === 'ht')}`
         : `${course.name}. ${totalLessons} ${t('leçons', 'leson')}`}
       style={{
         backgroundColor: colors.surface,
@@ -139,7 +147,7 @@ function CourseCard({
         </Text>
         {started ? (
           <View style={{ marginTop: 12 }}>
-            <ProgressBar done={lessonsDone} total={totalLessons} />
+            <ProgressBar evidence={evidence} />
           </View>
         ) : null}
         <Text style={[typeScale.bodyMd, { color: colors.azure, marginTop: started ? 10 : 12 }]}>
@@ -412,13 +420,9 @@ export default function CoursesScreen() {
     [lessonIdsByCourse, progress],
   );
 
-  /** Lessons finished in a course — the simple number the progress bar states. */
-  const lessonsDoneIn = React.useCallback(
-    (course: any) => (lessonIdsByCourse.get(course.id) ?? [])
-      .filter((id) => {
-        const p = (progress as ProgressMap)[id];
-        return !!p && (p.completed || !!p.masteredAt);
-      }).length,
+  /** The course's evidence facts, in the shared words (same as Home). */
+  const evidenceIn = React.useCallback(
+    (course: any) => summarizeLessons(lessonIdsByCourse.get(course.id) ?? [], progress as ProgressMap),
     [lessonIdsByCourse, progress],
   );
 
@@ -509,14 +513,18 @@ export default function CoursesScreen() {
     return best;
   }, [selectedCourses, summaryFor]);
 
-  if (isLoading) {
+  // Loading and failure keep the page title (the shell) — a failure is said
+  // in place with a retry instead of replacing the whole tab.
+  if (!courses && (isLoading || isError)) {
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
-        <ListSkeleton rows={6} />
+        <View className="px-5 pt-5 pb-1">
+          <Text style={[typeScale.display, { color: colors.ink }]} accessibilityRole="header">{t('Cours', 'Kou')}</Text>
+        </View>
+        {isLoading ? <ListSkeleton rows={6} /> : <ErrorState onRetry={() => refetch()} />}
       </SafeAreaView>
     );
   }
-  if (isError) return <ErrorState onRetry={() => refetch()} />;
 
   const openCourse = (course: any) =>
     navigation.navigate('CourseDetail', { courseId: course.id, courseName: course.name });
@@ -648,7 +656,7 @@ export default function CoursesScreen() {
                       key={course.id}
                       course={course}
                       summary={summaryFor([course])}
-                      lessonsDone={lessonsDoneIn(course)}
+                      evidence={evidenceIn(course)}
                       onPress={() => openCourse(course)}
                     />
                   )

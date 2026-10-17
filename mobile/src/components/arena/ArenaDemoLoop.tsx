@@ -12,7 +12,8 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { useColors, useTheme, typeScale } from '../../theme/theme';
+import { useTheme, typeScale } from '../../theme/theme';
+import { useArenaColors, arenaType } from '../../theme/arenaTheme';
 
 /**
  * A silent, looping demonstration of one question being played.
@@ -38,7 +39,7 @@ const BEAT = 1_600;
 const CYCLE = BEAT * 4;
 
 export default function ArenaDemoLoop({ isCreole }: { isCreole: boolean }) {
-  const colors = useColors();
+  const colors = useArenaColors();
   const { radius } = useTheme();
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -72,7 +73,7 @@ export default function ArenaDemoLoop({ isCreole }: { isCreole: boolean }) {
 
   const chipStyle = useAnimatedStyle(() => ({
     borderColor: interpolateColor(
-      clock.value, [0.5, 0.58], [colors.border, colors.success],
+      clock.value, [0.5, 0.58], [colors.bg, colors.success],
     ),
     backgroundColor: interpolateColor(
       clock.value, [0.5, 0.58], [colors.bg, colors.successSoft],
@@ -94,22 +95,22 @@ export default function ArenaDemoLoop({ isCreole }: { isCreole: boolean }) {
       )}
       style={{
         padding: 16, borderRadius: radius.card, gap: 10, overflow: 'hidden',
-        backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+        backgroundColor: colors.surface,
       }}
     >
-      <Text style={[typeScale.overline, { color: colors.muted }]}>
+      <Text style={[arenaType.label, { color: colors.muted }]}>
         {t('Comment ça se joue', 'Kijan yo jwe l')}
       </Text>
 
-      <View style={{ height: 4, borderRadius: 2, backgroundColor: colors.border, overflow: 'hidden' }}>
+      <View style={{ height: 4, borderRadius: 2, backgroundColor: colors.hairline, overflow: 'hidden' }}>
         <Animated.View style={[{ height: '100%', borderRadius: 2 }, barStyle]} />
       </View>
 
       <Animated.View style={questionStyle}>
         {/* Deliberately not a real question: two grey bars read as "a question"
             in every language, and nobody tries to answer them. */}
-        <View style={{ height: 9, borderRadius: 5, backgroundColor: colors.border, width: '88%' }} />
-        <View style={{ height: 9, borderRadius: 5, backgroundColor: colors.border, width: '54%', marginTop: 7 }} />
+        <View style={{ height: 9, borderRadius: 5, backgroundColor: colors.hairline, width: '88%' }} />
+        <View style={{ height: 9, borderRadius: 5, backgroundColor: colors.hairline, width: '54%', marginTop: 7 }} />
       </Animated.View>
 
       <View style={{ gap: 7 }}>
@@ -126,7 +127,7 @@ export default function ArenaDemoLoop({ isCreole }: { isCreole: boolean }) {
         +1000
       </Animated.Text>
 
-      <Text style={[typeScale.caption, { color: colors.muted }]}>
+      <Text style={[arenaType.status, { color: colors.muted }]}>
         {t(
           'Réponds avant 12 s pour la pleine valeur.',
           'Reponn anvan 12 s pou tout valè a.',

@@ -89,11 +89,11 @@ export interface ShareCardProps {
 
 function verdict(pct: number, lang: 'fr' | 'ht'): string {
   const t = (fr: string, ht: string) => (lang === 'ht' ? ht : fr);
-  if (pct >= 100) return t('Score parfait 🏆', 'Nòt pafè 🏆');
-  if (pct >= 80) return t('Excellent 🔥', 'Ekselan 🔥');
-  if (pct >= 60) return t('Bien joué 💪', 'Byen jwe 💪');
-  if (pct >= 40) return t('En progrès 📈', 'W ap pwogrese 📈');
-  return t('Continue 🎯', 'Kontinye 🎯');
+  if (pct >= 100) return t('Score parfait', 'Nòt pafè');
+  if (pct >= 80) return t('Excellent', 'Ekselan');
+  if (pct >= 60) return t('Bien joué', 'Byen jwe');
+  if (pct >= 40) return t('En progrès', 'W ap pwogrese');
+  return t('Continue', 'Kontinye');
 }
 
 

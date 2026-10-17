@@ -29,6 +29,7 @@ import ExamsNavigator from './ExamsNavigator';
 import QuizNavigator from './QuizNavigator';
 import TriviaScreen from '../screens/TriviaScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import { usePreference } from '../settings/preferences';
 
 const Tab = createNativeBottomTabNavigator();
 
@@ -48,6 +49,7 @@ const SF = {
 const icon = (sfSymbol: string) => () => ({ sfSymbol } as any);
 
 export default function NativeTabNavigator() {
+  const [hapticsOn] = usePreference('hapticsEnabled');
   const theme = useStore((s) => s.theme);
   const language = useStore((s) => s.language);
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
@@ -76,8 +78,8 @@ export default function NativeTabNavigator() {
       // collapses", 2026-09-09 "can you remove that feature"). The bar now stays
       // whole; screens that genuinely need the space set `focusMode` instead.
       minimizeBehavior="never"
-      // Matches the JS bar's press haptic.
-      hapticFeedbackEnabled
+      // Matches the JS bar's press haptic; honours Profile › Vibrations.
+      hapticFeedbackEnabled={hapticsOn}
       // Exam-taking and gameplay hide the bar so it can never cover a screen's
       // own submit/next controls.
       tabBarHidden={focusMode}

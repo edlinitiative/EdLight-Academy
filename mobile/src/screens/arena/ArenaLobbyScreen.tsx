@@ -1,8 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ScrollView, Text, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Check, GraduationCap, School as SchoolIcon, Share2, Trophy, User as UserIcon, Users, Zap } from 'lucide-react-native';
+import { Check, GraduationCap, School as SchoolIcon, Share2, ShieldAlert, Trophy, User as UserIcon, Users, Zap } from 'lucide-react-native';
 import useStore from '../../contexts/store';
 import SchoolPicker from '../../components/SchoolPicker';
 import PressableScale from '../../components/ui/PressableScale';
@@ -14,8 +13,11 @@ import { useTrivia } from '../../hooks/useTrivia';
 import { formatCountdown, shareArenaInvite } from '../../services/arenaService';
 import { logInviteSent } from '../../services/referralService';
 import { deviceHash } from '../../utils/integrity';
-import { useColors, useTheme, typeScale, displayScale } from '../../theme/theme';
-import { select, tapMedium } from '../../utils/haptics';
+import { useTheme, typeScale } from '../../theme/theme';
+import { useArenaColors, arenaType } from '../../theme/arenaTheme';
+import arenaHaptics from '../../components/arena/arenaHaptics';
+import { ArenaScreen, ArenaButton, ArenaStateView, StaleBanner, ArenaPanel } from '../../components/arena/ArenaKit';
+import SchoolCrest from '../../components/arena/art/crest/SchoolCrest';
 import type { School } from '../../../../shared/schools';
 import { GRADES } from '../../../../shared/trackConfig';
 import { defaultAlias } from '../../../../shared/alias';
@@ -46,14 +48,14 @@ export default function ArenaLobbyScreen() {
   const route = useRoute<any>();
   const tid: string | null = route?.params?.tournamentId ?? null;
 
-  const colors = useColors();
-  const { radius, shadow } = useTheme();
+  const colors = useArenaColors();
+  const { radius } = useTheme();
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   const lobby = useArenaLobby(tid);
-  const { tournament, loading, absent, signedIn, registered, counts, mySchool, qualification, doorsOpen } = lobby;
+  const { tournament, status, stale, signedIn, registered, counts, mySchool, qualification, doorsOpen, accessDenied } = lobby;
   const navigation = useNavigation<any>();
 
   const [picker, setPicker] = useState(false);
@@ -154,7 +156,7 @@ export default function ArenaLobbyScreen() {
 
   const doRegister = async () => {
     if (!canRegister || !school || !grade) return;
-    tapMedium();
+    arenaHaptics.commit();
     const hash = await deviceHash().catch(() => null);
     const res = await register.mutateAsync({ schoolKey: school.key, grade, deviceHash: hash });
     // Seed the counts from the response so the student sees THEMSELVES in
@@ -165,7 +167,7 @@ export default function ArenaLobbyScreen() {
 
   const invite = async () => {
     if (!qualification) return;
-    tapMedium();
+    arenaHaptics.commit();
     logInviteSent('champion');
     await shareArenaInvite({
       schoolName: schoolName || t('ton école', 'lekòl ou'),
@@ -195,56 +197,60 @@ export default function ArenaLobbyScreen() {
         : `$${(r.cents / 100).toFixed(2)}`,
     })), [tournament?.prizes]);
 
-  if (loading) {
+  /*
+   * Every non-event state has its own screen (utils/arenaViewState.ts). A
+   * listener that failed is "connexion perdue" with a retry — never "aucun
+   * championnat programmé", which would send a registered student away from
+   * an event that is happening.
+   */
+  if (!tid || status !== 'ready' && status !== 'reconnecting' || !tournament) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator color={colors.azure} />
-      </SafeAreaView>
-    );
-  }
-
-  // No tournament, or we were not allowed to read it. Both are "nothing is on
-  // tonight" to a student, and neither is worth an error they cannot act on.
-  if (absent || !tournament) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28, gap: 8 }}>
-          <Trophy color={colors.faint} size={28} />
-          <Text style={[typeScale.title, { color: colors.ink, textAlign: 'center' }]}>
-            {t('Aucun championnat programmé', 'Pa gen chanpyona pwograme')}
-          </Text>
-          <Text style={[typeScale.body, { color: colors.muted, textAlign: 'center' }]}>
-            {t(
-              'Le prochain sera annoncé dans l’application.',
-              'Y ap anonse pwochen an nan aplikasyon an.',
-            )}
-          </Text>
-        </View>
-      </SafeAreaView>
+      <ArenaScreen>
+        <ArenaStateView
+          status={!tid ? 'unavailable' : status === 'ready' ? 'unavailable' : status}
+          t={t}
+          onRetry={lobby.retry}
+          onReturn={() => navigation.navigate('ArenaHub')}
+        />
+      </ArenaScreen>
     );
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
+    <ArenaScreen>
       <ScrollView
         contentContainerStyle={{ padding: 18, paddingBottom: 40, gap: 16 }}
         showsVerticalScrollIndicator={false}
       >
+        {stale ? <StaleBanner t={t} onRetry={lobby.retry} /> : null}
+
+        {/* Integrity review marked this registration ineligible. Said
+            plainly, on top, instead of a register form that cannot work. */}
+        {accessDenied ? (
+          <ArenaPanel tone="warn" accessibilityLabel={t('Accès refusé', 'Aksè refize')}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <ShieldAlert color={colors.warn} size={18} />
+              <Text style={[arenaType.name, { color: colors.ink }]}>{t('Accès refusé', 'Aksè refize')}</Text>
+            </View>
+            <Text style={[arenaType.status, { color: colors.ink }]}>
+              {t(
+                'Après vérification, ton inscription ne peut pas jouer ce championnat. Si tu penses que c’est une erreur, écris à EdLight.',
+                'Apre verifikasyon, enskripsyon ou pa ka jwe chanpyona sa a. Si w panse se yon erè, ekri EdLight.',
+              )}
+            </Text>
+          </ArenaPanel>
+        ) : null}
         {/* ── The hero: how long until the room opens ─────────────────── */}
         <StageEnter playKey="lobby" index={0} springy>
           <View style={{ alignItems: 'center', gap: 6, paddingVertical: 10 }}>
-            <Text style={[typeScale.overline, { color: colors.muted }]}>
+            <Text style={[arenaType.label, { color: colors.muted }]}>
               {lobby.targetIsDoors
                 ? t('Ouverture des portes dans', 'Pòt yo ouvri nan')
                 : t('Première question dans', 'Premye kesyon an nan')}
             </Text>
             <Text
-              style={[displayScale.hero, {
-                color: colors.ink,
-                // Tabular figures: the digits must not shuffle sideways.
-                fontVariant: ['tabular-nums'],
-                letterSpacing: 0,
-              }]}
+              // Tabular figures (arenaType.score): the digits must not shuffle sideways.
+              style={[arenaType.score, { color: colors.ink }]}
               accessibilityLabel={t(`Compte à rebours : ${countdown}`, `Kontè : ${countdown}`)}
             >
               {countdown}
@@ -261,13 +267,13 @@ export default function ArenaLobbyScreen() {
             <View style={{
               flexDirection: 'row', alignItems: 'center', gap: 10,
               padding: 13, borderRadius: radius.card,
-              backgroundColor: colors.azureSoft, borderWidth: 1, borderColor: colors.azureBorder,
+              backgroundColor: colors.azureSoft,
             }}>
-              <SchoolIcon color={colors.azure} size={16} />
-              <Text numberOfLines={1} style={[typeScale.label, { color: colors.ink, flex: 1 }]}>
+              {schoolName ? <SchoolCrest name={mySchool?.label || schoolName} size={30} /> : <SchoolIcon color={colors.azure} size={16} />}
+              <Text numberOfLines={1} style={[arenaType.name, { color: colors.ink, flex: 1 }]}>
                 {schoolName || t('École enregistrée', 'Lekòl anrejistre')}
               </Text>
-              <Text style={[typeScale.micro, { color: colors.azure }]}>
+              <Text style={[arenaType.status, { color: colors.azure }]}>
                 {t('Inscrit', 'Enskri')}
               </Text>
             </View>
@@ -314,7 +320,7 @@ export default function ArenaLobbyScreen() {
               {/* The attestation. It costs nothing at signup and it is the whole
                   deterrent, because verification only ever touches winners. */}
               <PressableScale
-                onPress={() => { select(); setAttested((a) => !a); }}
+                onPress={() => { arenaHaptics.choose(); setAttested((a) => !a); }}
                 pressedScale={0.99}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: attested }}
@@ -329,7 +335,7 @@ export default function ArenaLobbyScreen() {
                 }}>
                   {attested ? <Check color="#fff" size={13} /> : null}
                 </View>
-                <Text style={[typeScale.caption, { color: colors.muted, flex: 1 }]}>
+                <Text style={[arenaType.status, { color: colors.ink, flex: 1 }]}>
                   {t(
                     'Je confirme que ces informations sont exactes. Si je gagne, je devrai prouver mon identité.',
                     'Mwen konfime enfòmasyon sa yo kòrèk. Si m genyen, m ap bezwen prouve idantite m.',
@@ -337,40 +343,27 @@ export default function ArenaLobbyScreen() {
                 </Text>
               </PressableScale>
 
-              <PressableScale
+              <ArenaButton
+                label={t('Je m’inscris', 'M ap enskri')}
                 onPress={doRegister}
                 disabled={!canRegister}
-                pressedScale={0.98}
-                accessibilityRole="button"
-                accessibilityState={{ disabled: !canRegister }}
-                style={{
-                  alignItems: 'center', paddingVertical: 14, borderRadius: radius.control,
-                  backgroundColor: canRegister ? colors.azureFill : colors.border,
-                }}
-              >
-                {register.isPending
-                  ? <ActivityIndicator color="#fff" size="small" />
-                  : (
-                    <Text style={[typeScale.title, { color: canRegister ? '#fff' : colors.faint }]}>
-                      {t('Je m’inscris', 'M ap enskri')}
-                    </Text>
-                  )}
-              </PressableScale>
+                busy={register.isPending}
+              />
 
               {/* Only what no row above is already saying. The class and school
                   reasons live on their own rows now, where they can be acted on. */}
               {!signedIn ? (
-                <Text style={[typeScale.caption, { color: colors.muted }]}>
+                <Text style={[arenaType.status, { color: colors.muted }]}>
                   {t('Connecte-toi pour participer.', 'Konekte pou w patisipe.')}
                 </Text>
               ) : gradeEligible && school && !attested ? (
-                <Text style={[typeScale.caption, { color: colors.muted }]}>
+                <Text style={[arenaType.status, { color: colors.muted }]}>
                   {t('Coche la case pour confirmer.', 'Tcheke kaz la pou konfime.')}
                 </Text>
               ) : null}
               {register.data && register.data.ok === false ? (
-                <Text style={[typeScale.caption, { color: colors.danger }]}>
-                  {t('Inscription impossible pour le moment.', 'Nou pa ka enskri w kounye a.')}
+                <Text style={[arenaType.status, { color: colors.danger }]}>
+                  {t('Inscription impossible pour le moment. Réessaie dans un instant.', 'Nou pa ka enskri w kounye a. Eseye ankò talè.')}
                 </Text>
               ) : null}
             </View>
@@ -407,13 +400,13 @@ export default function ArenaLobbyScreen() {
               <View style={{ gap: 10 }}>
                 <ArenaDemoLoop isCreole={isCreole} />
                 <PressableScale
-                  onPress={() => { tapMedium(); setWarming(true); }}
+                  onPress={() => { arenaHaptics.choose(); setWarming(true); }}
                   pressedScale={0.98}
                   accessibilityRole="button"
                   style={{
                     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
                     paddingVertical: 14, borderRadius: radius.card,
-                    borderWidth: 1, borderColor: colors.azureBorder, backgroundColor: colors.azureSoft,
+                    backgroundColor: colors.azureSoft,
                   }}
                 >
                   <Zap color={colors.azure} size={15} />
@@ -429,29 +422,16 @@ export default function ArenaLobbyScreen() {
         {/* ── The invite ──────────────────────────────────────────────── */}
         {registered && qualification ? (
           <StageEnter playKey="lobby" index={3}>
-            <PressableScale
+            <ArenaButton
+              variant={qualification.qualified || doorsOpen ? 'secondary' : 'primary'}
+              label={qualification.qualified
+                ? t('Invite ton école', 'Envite lekòl ou')
+                : doorsOpen
+                  ? t('Appelle-les maintenant', 'Rele yo kounye a')
+                  : t('Compléter l’équipe', 'Konplete ekip la')}
               onPress={invite}
-              pressedScale={0.98}
-              accessibilityRole="button"
-              accessibilityLabel={t('Partager l’invitation', 'Pataje envitasyon an')}
-              style={{
-                flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9,
-                paddingVertical: 14, borderRadius: radius.control,
-                backgroundColor: qualification.qualified ? colors.surface : colors.azureFill,
-                borderWidth: qualification.qualified ? 1 : 0,
-                borderColor: colors.border,
-                ...(qualification.qualified ? {} : shadow.md),
-              }}
-            >
-              <Share2 color={qualification.qualified ? colors.azure : '#fff'} size={17} />
-              <Text style={[typeScale.title, { color: qualification.qualified ? colors.azure : '#fff' }]}>
-                {qualification.qualified
-                  ? t('Invite ton école', 'Envite lekòl ou')
-                  : doorsOpen
-                    ? t('Appelle-les maintenant', 'Rele yo kounye a')
-                    : t('Compléter l’équipe', 'Konplete ekip la')}
-              </Text>
-            </PressableScale>
+              icon={<Share2 color={qualification.qualified || doorsOpen ? colors.ink : '#12213A'} size={17} />}
+            />
           </StageEnter>
         ) : null}
 
@@ -460,26 +440,11 @@ export default function ArenaLobbyScreen() {
             this becomes the primary action and sits above the invite. */}
         {doorsOpen && registered ? (
           <StageEnter playKey="lobby" index={3}>
-            <PressableScale
-              onPress={() => { tapMedium(); navigation.navigate('ArenaDoors', { tournamentId: tid }); }}
-              pressedScale={0.98}
-              accessibilityRole="button"
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 9,
-                paddingVertical: 16,
-                borderRadius: radius.control,
-                backgroundColor: colors.azure,
-                marginBottom: 14,
-              }}
-            >
-              <Trophy color="#fff" size={17} />
-              <Text style={[typeScale.title, { color: '#fff' }]}>
-                {t('Entrer dans l’Arène', 'Antre nan Arèn nan')}
-              </Text>
-            </PressableScale>
+            <ArenaButton
+              label={t('Entrer dans l’Arène', 'Antre nan Arèn nan')}
+              onPress={() => { arenaHaptics.commit(); navigation.navigate('ArenaDoors', { tournamentId: tid }); }}
+              icon={<Trophy color="#12213A" size={17} />}
+            />
           </StageEnter>
         ) : null}
 
@@ -518,7 +483,7 @@ export default function ArenaLobbyScreen() {
                   </Text>
                 </View>
               ))}
-              <Text style={[typeScale.caption, { color: colors.muted }]}>
+              <Text style={[arenaType.status, { color: colors.muted }]}>
                 {t(
                   'Les gagnants devront prouver leur identité avant le versement.',
                   'Moun ki genyen yo ap bezwen prouve idantite yo anvan yo peye.',
@@ -575,41 +540,41 @@ export default function ArenaLobbyScreen() {
         onPick={(code) => { setGrade(code); setGradeChosen(true); }}
         onClose={() => setGradeSheet(false)}
       />
-    </SafeAreaView>
+    </ArenaScreen>
   );
 }
 
 function Counter({ icon, value, label }: { icon: React.ReactNode; value: number; label: string }) {
-  const colors = useColors();
+  const colors = useArenaColors();
   const { radius } = useTheme();
   return (
     <View style={{
       flex: 1, gap: 4, padding: 11, borderRadius: radius.card,
-      backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+      backgroundColor: colors.surface,
     }}>
       {icon}
       <Text style={[typeScale.h2, { color: colors.ink, fontVariant: ['tabular-nums'] }]}>{value}</Text>
-      <Text style={[typeScale.micro, { color: colors.muted }]}>{label}</Text>
+      <Text style={[arenaType.status, { color: colors.muted }]}>{label}</Text>
     </View>
   );
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  const colors = useColors();
+  const colors = useArenaColors();
   const { radius } = useTheme();
   return (
     <View style={{
       gap: 9, padding: 14, borderRadius: radius.card,
-      backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+      backgroundColor: colors.surface,
     }}>
-      <Text style={[typeScale.overline, { color: colors.muted }]}>{title}</Text>
+      <Text style={[arenaType.name, { color: colors.ink }]}>{title}</Text>
       {children}
     </View>
   );
 }
 
 function Rule({ text }: { text: string }) {
-  const colors = useColors();
+  const colors = useArenaColors();
   return (
     <View style={{ flexDirection: 'row', gap: 8 }}>
       <Text style={[typeScale.body, { color: colors.faint }]}>·</Text>

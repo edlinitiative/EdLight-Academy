@@ -37,6 +37,8 @@ import {
   subscribeLiveQuestion,
   subscribeRegistration,
   subscribeStandings,
+  subscribeLatestFinishedTournament,
+  fetchPreviousArenaScore,
   registerForTournament,
   submitAnswer,
   markPresent,
@@ -49,18 +51,105 @@ import {
   type ArenaSchoolCounts,
   type ArenaIndividualStanding,
   type QualificationState,
+  type SnapMeta,
 } from '../services/arenaService';
 import { acceptsAnswers } from '../../../shared/arena/state';
+import {
+  classifyFirestoreError,
+  retryDelayMs,
+  deriveEventStatus,
+  deriveLivePhase,
+  type LiveSource,
+  type EventStatus,
+  type LivePhase,
+} from '../utils/arenaViewState';
+import { summarizeResult, type ResultSummary } from '../utils/arenaResultTier';
 
-/** What every live subscription hook returns. `error` never throws — it renders. */
-export interface LiveValue<T> {
-  data: T | null;
-  loading: boolean;
-  /** The listener was rejected (rules, network, missing index). Data is null. */
-  error: boolean;
+/**
+ * What every live subscription hook returns. Nothing here throws — it renders.
+ *
+ * `data` is the LAST-KNOWN value and survives a listener failure; `error`,
+ * `errorKind` and `fromCache` say how much to trust it. utils/arenaViewState.ts
+ * turns these into the screen's state so that a failure is never shown as an
+ * ordinary moment of the event.
+ */
+export interface LiveValue<T> extends LiveSource<T> {
+  /** Re-subscribe now (resets the backoff). */
+  retry: () => void;
 }
 
-const idle = <T,>(): LiveValue<T> => ({ data: null, loading: false, error: false });
+const idleSource = <T,>(): LiveSource<T> => ({
+  data: null, loading: false, error: false, errorKind: null, exists: null, fromCache: false,
+});
+const loadingSource = <T,>(): LiveSource<T> => ({ ...idleSource<T>(), loading: true });
+
+type Subscribe<T> = (
+  cb: (value: T | null, meta?: SnapMeta) => void,
+  onError: (err: unknown) => void,
+) => () => void;
+
+/**
+ * One Firestore listener with honest failure states and a reconnect loop.
+ *
+ * A Firestore listener that errors is DEAD — it never recovers by itself — so
+ * "reconnecting" has to mean re-subscribing. Transient failures retry on a
+ * backoff (utils/arenaViewState.retryDelayMs); a rules rejection waits for the
+ * student's retry, because it will not change by itself.
+ *
+ * `key` identifies what is being watched; a new key drops the old value (a
+ * different tournament's data is not "last known", it is wrong).
+ */
+export function useLiveSubscription<T>(key: string | null, subscribe: Subscribe<T>): LiveValue<T> {
+  const [value, setValue] = useState<LiveSource<T>>(() => (key ? loadingSource<T>() : idleSource<T>()));
+  const [attempt, setAttempt] = useState(0);
+  const failures = useRef(0);
+  const subscribeRef = useRef(subscribe);
+  subscribeRef.current = subscribe;
+  const keyRef = useRef<string | null>(key);
+
+  useEffect(() => {
+    if (!key) { keyRef.current = null; setValue(idleSource<T>()); return undefined; }
+    if (keyRef.current !== key) {
+      keyRef.current = key;
+      failures.current = 0;
+      setValue(loadingSource<T>());
+    }
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const unsub = subscribeRef.current(
+      (data, meta) => {
+        if (!alive) return;
+        failures.current = 0;
+        setValue({
+          data, loading: false, error: false, errorKind: null,
+          exists: data != null, fromCache: !!meta?.fromCache,
+        });
+      },
+      (err) => {
+        if (!alive) return;
+        const kind = classifyFirestoreError(err);
+        // Keep the last-known data; the view labels it stale.
+        setValue((v) => ({ ...v, loading: false, error: true, errorKind: kind }));
+        const delay = retryDelayMs(failures.current, kind);
+        failures.current += 1;
+        if (delay != null) timer = setTimeout(() => { if (alive) setAttempt((a) => a + 1); }, delay);
+      },
+    );
+    return () => {
+      alive = false;
+      if (timer) clearTimeout(timer);
+      unsub();
+    };
+  }, [key, attempt]);
+
+  const retry = useCallback(() => {
+    failures.current = 0;
+    setValue((v) => (v.error ? { ...v, loading: !v.data } : v));
+    setAttempt((a) => a + 1);
+  }, []);
+
+  return useMemo(() => ({ ...value, retry }), [value, retry]);
+}
 
 // ── The clock ───────────────────────────────────────────────────────────────
 
@@ -71,12 +160,13 @@ const idle = <T,>(): LiveValue<T> => ({ data: null, loading: false, error: false
  * clock, never from a locally-decremented counter: a counter drifts, pauses
  * when the app backgrounds, and comes back from a lock screen claiming there
  * are 40 seconds left in a question that closed. Re-deriving from `Date.now()`
- * is self-correcting by construction.
+ * is self-correcting by construction. (See utils/deadlineTimer.ts for the
+ * same rule applied to practice and duels.)
  */
 export function useNow(intervalMs = 1000, active = true): number {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (!active) return;
+    if (!active) return undefined;
     setNow(Date.now());
     const id = setInterval(() => setNow(Date.now()), intervalMs);
     return () => clearInterval(id);
@@ -88,22 +178,10 @@ export function useNow(intervalMs = 1000, active = true): number {
 
 /** The tournament document: state machine, clock, public counters. Public read. */
 export function useArenaTournament(tid: string | null | undefined): LiveValue<ArenaTournament> {
-  const [value, setValue] = useState<LiveValue<ArenaTournament>>(() =>
-    tid ? { data: null, loading: true, error: false } : idle());
-
-  useEffect(() => {
-    if (!tid) { setValue(idle()); return; }
-    setValue({ data: null, loading: true, error: false });
-    let alive = true;
-    const unsub = subscribeTournament(
-      tid,
-      (t) => { if (alive) setValue({ data: t, loading: false, error: false }); },
-      () => { if (alive) setValue({ data: null, loading: false, error: true }); },
-    );
-    return () => { alive = false; unsub(); };
-  }, [tid]);
-
-  return value;
+  return useLiveSubscription<ArenaTournament>(
+    tid || null,
+    (cb, onError) => subscribeTournament(tid as string, cb, onError),
+  );
 }
 
 /**
@@ -114,18 +192,7 @@ export function useArenaTournament(tid: string | null | undefined): LiveValue<Ar
  * `registration`/`doors` only; see `subscribeOpenTournament` for why.
  */
 export function useOpenArenaTournament(): LiveValue<ArenaTournament> {
-  const [value, setValue] = useState<LiveValue<ArenaTournament>>(() => ({ data: null, loading: true, error: false }));
-
-  useEffect(() => {
-    let alive = true;
-    const unsub = subscribeOpenTournament(
-      (t) => { if (alive) setValue({ data: t, loading: false, error: false }); },
-      () => { if (alive) setValue({ data: null, loading: false, error: true }); },
-    );
-    return () => { alive = false; unsub(); };
-  }, []);
-
-  return value;
+  return useLiveSubscription<ArenaTournament>('open', (cb, onError) => subscribeOpenTournament(cb, onError));
 }
 
 /**
@@ -136,18 +203,15 @@ export function useOpenArenaTournament(): LiveValue<ArenaTournament> {
  * which pairs this with `useArenaMyRegistration` before offering re-entry.
  */
 export function useActiveArenaTournament(): LiveValue<ArenaTournament> {
-  const [value, setValue] = useState<LiveValue<ArenaTournament>>(() => ({ data: null, loading: true, error: false }));
+  return useLiveSubscription<ArenaTournament>('active', (cb, onError) => subscribeActiveTournament(cb, onError));
+}
 
-  useEffect(() => {
-    let alive = true;
-    const unsub = subscribeActiveTournament(
-      (t) => { if (alive) setValue({ data: t, loading: false, error: false }); },
-      () => { if (alive) setValue({ data: null, loading: false, error: true }); },
-    );
-    return () => { alive = false; unsub(); };
-  }, []);
-
-  return value;
+/** The most recent provisional/final event — the hub's results row. */
+export function useLatestFinishedArenaTournament(enabled = true): LiveValue<ArenaTournament> {
+  return useLiveSubscription<ArenaTournament>(
+    enabled ? 'finished' : null,
+    (cb, onError) => subscribeLatestFinishedTournament(cb, onError),
+  );
 }
 
 /**
@@ -162,22 +226,10 @@ export function useArenaLiveQuestion(
   tid: string | null | undefined,
   index: number | null | undefined,
 ): LiveValue<ArenaLiveQuestion> {
-  const [value, setValue] = useState<LiveValue<ArenaLiveQuestion>>(idle);
-
-  useEffect(() => {
-    if (!tid || index == null) { setValue(idle()); return; }
-    setValue({ data: null, loading: true, error: false });
-    let alive = true;
-    const unsub = subscribeLiveQuestion(
-      tid,
-      index,
-      (q) => { if (alive) setValue({ data: q, loading: false, error: false }); },
-      () => { if (alive) setValue({ data: null, loading: false, error: true }); },
-    );
-    return () => { alive = false; unsub(); };
-  }, [tid, index]);
-
-  return value;
+  return useLiveSubscription<ArenaLiveQuestion>(
+    tid && index != null ? `${tid}/${index}` : null,
+    (cb, onError) => subscribeLiveQuestion(tid as string, index as number, cb, onError),
+  );
 }
 
 /**
@@ -185,45 +237,23 @@ export function useArenaLiveQuestion(
  *
  * Null covers signed out, never registered, and "the write has not landed yet".
  * All three want the same screen — register to play — so they are not
- * distinguished here.
+ * distinguished here. `eligible: false` (an integrity verdict) is different
+ * and the lobby shows it as access denied, never as "register".
  */
 export function useArenaMyRegistration(tid: string | null | undefined): LiveValue<ArenaRegistration> {
   const uid = useStore((s) => s.user?.uid) as string | undefined;
-  const [value, setValue] = useState<LiveValue<ArenaRegistration>>(idle);
-
-  useEffect(() => {
-    if (!tid || !uid) { setValue(idle()); return; }
-    setValue({ data: null, loading: true, error: false });
-    let alive = true;
-    const unsub = subscribeRegistration(
-      tid,
-      uid,
-      (r) => { if (alive) setValue({ data: r, loading: false, error: false }); },
-      () => { if (alive) setValue({ data: null, loading: false, error: true }); },
-    );
-    return () => { alive = false; unsub(); };
-  }, [tid, uid]);
-
-  return value;
+  return useLiveSubscription<ArenaRegistration>(
+    tid && uid ? `${tid}_${uid}` : null,
+    (cb, onError) => subscribeRegistration(tid as string, uid as string, cb, onError),
+  );
 }
 
 /** The single public standings document. Read-only, and shared with the broadcast. */
 export function useArenaStandings(tid: string | null | undefined, enabled = true): LiveValue<ArenaStandings> {
-  const [value, setValue] = useState<LiveValue<ArenaStandings>>(idle);
-
-  useEffect(() => {
-    if (!tid || !enabled) { setValue(idle()); return; }
-    setValue({ data: null, loading: true, error: false });
-    let alive = true;
-    const unsub = subscribeStandings(
-      tid,
-      (s) => { if (alive) setValue({ data: s, loading: false, error: false }); },
-      () => { if (alive) setValue({ data: null, loading: false, error: true }); },
-    );
-    return () => { alive = false; unsub(); };
-  }, [tid, enabled]);
-
-  return value;
+  return useLiveSubscription<ArenaStandings>(
+    tid && enabled ? tid : null,
+    (cb, onError) => subscribeStandings(tid as string, cb, onError),
+  );
 }
 
 // ── Writes ──────────────────────────────────────────────────────────────────
@@ -299,14 +329,30 @@ export function useArenaPresence(tid: string | null | undefined, state: ArenaTou
 
 // ── Composed views ──────────────────────────────────────────────────────────
 
-export interface ArenaLobbyView {
+/** What every composed view adds on top of its data: an honest status. */
+export interface ArenaStatusFields {
+  /** loading · unavailable · denied · reconnecting · ready. */
+  status: EventStatus;
+  /** Some of what is shown is last-known rather than current. Label it. */
+  stale: boolean;
+  /** Re-subscribe every listener this view depends on. */
+  retry: () => void;
+}
+
+export interface ArenaLobbyView extends ArenaStatusFields {
   tournament: ArenaTournament | null;
   loading: boolean;
-  /** No such tournament, or we were not allowed to read it. Show the calm empty state. */
+  /**
+   * The event does not exist or was voided. NOT a listener error — that is
+   * `status: 'reconnecting' | 'denied'`, which must never read as "nothing
+   * scheduled".
+   */
   absent: boolean;
   signedIn: boolean;
   registered: boolean;
   registration: ArenaRegistration | null;
+  /** Registered, but marked ineligible by integrity review. */
+  accessDenied: boolean;
   /** The student's school lane, once standings carry it. */
   mySchool: ArenaSchoolStanding | null;
   /** CODOSA when the school has a short name, the full label otherwise. */
@@ -320,6 +366,10 @@ export interface ArenaLobbyView {
   now: number;
   /** Seed the counts from a register response, so the student sees themselves in it. */
   seedCounts: (c: ArenaSchoolCounts | null) => void;
+}
+
+function retryAll(...values: Array<{ retry: () => void }>): () => void {
+  return () => values.forEach((v) => v.retry());
 }
 
 /**
@@ -339,11 +389,15 @@ export interface ArenaLobbyView {
  */
 export function useArenaLobby(tid: string | null | undefined): ArenaLobbyView {
   const signedIn = !!useStore((s) => s.user?.uid);
-  const { data: tournament, loading, error } = useArenaTournament(tid);
-  const { data: registration } = useArenaMyRegistration(tid);
-  const { data: standings } = useArenaStandings(tid);
+  const tour = useArenaTournament(tid);
+  const reg = useArenaMyRegistration(tid);
+  const stand = useArenaStandings(tid);
+  const tournament = tour.data;
+  const registration = reg.data;
+  const standings = stand.data;
   const now = useNow(1000);
 
+  const { status, stale } = deriveEventStatus(tour);
   const state = tournament?.state ?? null;
   const doorsOpen = !!tournament && (state === 'doors' || state === 'live' || state === 'grading');
   const { counts: presenceCounts } = useArenaPresence(tid, state);
@@ -375,11 +429,16 @@ export function useArenaLobby(tid: string | null | undefined): ArenaLobbyView {
 
   return {
     tournament,
-    loading,
-    absent: !loading && (error || !tournament),
+    loading: status === 'loading',
+    absent: status === 'unavailable',
+    status,
+    // A registration we could not re-read is stale too: "Inscrit" might be old.
+    stale: stale || (reg.error && !!registration),
+    retry: retryAll(tour, reg, stand),
     signedIn,
     registered: !!registration,
     registration,
+    accessDenied: !!registration && registration.eligible === false,
     mySchool,
     schoolName: mySchool?.shortName || mySchool?.label || '',
     counts,
@@ -392,7 +451,7 @@ export function useArenaLobby(tid: string | null | undefined): ArenaLobbyView {
   };
 }
 
-export interface ArenaLiveView {
+export interface ArenaLiveView extends Omit<ArenaStatusFields, 'status'> {
   tournament: ArenaTournament | null;
   question: ArenaLiveQuestion | null;
   mySchool: ArenaSchoolStanding | null;
@@ -400,11 +459,18 @@ export interface ArenaLiveView {
   me: ArenaIndividualStanding | null;
   /** The uid is in the school's counting five, per the standings document. */
   inFive: boolean;
+  /**
+   * What the screen is showing — see utils/arenaViewState.ts. Every failure
+   * has its own phase; `interval` is ONLY the real pause between questions.
+   */
+  phase: LivePhase;
   /** A question is open and the tournament will score a submission. */
   answerable: boolean;
   /** The ~10s between questions — where the school position is shown. */
   inPause: boolean;
   loading: boolean;
+  /** Registered but ineligible (integrity review). Answers would be refused. */
+  accessDenied: boolean;
   now: number;
 }
 
@@ -423,31 +489,34 @@ export interface ArenaLiveView {
  */
 export function useArenaLive(tid: string | null | undefined): ArenaLiveView {
   const uid = useStore((s) => s.user?.uid) as string | undefined;
-  const { data: tournament, loading } = useArenaTournament(tid);
+  const tour = useArenaTournament(tid);
+  const tournament = tour.data;
   const index = tournament?.currentQuestion?.index ?? null;
-  const { data: question } = useArenaLiveQuestion(tid, index);
-  const { data: registration } = useArenaMyRegistration(tid);
-  const { data: standings } = useArenaStandings(tid);
+  const live = useArenaLiveQuestion(tid, index);
+  const reg = useArenaMyRegistration(tid);
+  const stand = useArenaStandings(tid);
+  const registration = reg.data;
+  const standings = stand.data;
   useArenaPresence(tid, tournament?.state ?? null);
 
-  const open = question?.state === 'open';
+  const open = live.data?.state === 'open';
   const now = useNow(open ? 100 : 1000);
+
+  const view = deriveLivePhase(tour, live, now);
+  // Only hand the screen a question that belongs to the current index.
+  const question = live.data && index != null && live.data.index === index ? live.data : null;
 
   const mySchool = useMemo(() => {
     if (!registration?.schoolKey || !standings) return null;
     return standings.schools.find((s) => s.key === registration.schoolKey) ?? null;
   }, [registration?.schoolKey, standings]);
 
-  const answerable = !!tournament
-    && acceptsAnswers(tournament.state)
-    && !!question
-    && question.state === 'open'
-    && now < question.closesAt;
-
   const me = useMemo(
     () => (uid && standings ? standings.individuals.find((p) => p.uid === uid) ?? null : null),
     [uid, standings],
   );
+
+  const answerable = view.answerable && !!tournament && acceptsAnswers(tournament.state);
 
   return {
     tournament,
@@ -455,16 +524,20 @@ export function useArenaLive(tid: string | null | undefined): ArenaLiveView {
     mySchool,
     me,
     inFive: !!uid && !!mySchool && mySchool.top5.includes(uid),
+    phase: view.phase,
+    stale: view.stale,
+    retry: retryAll(tour, live, reg, stand),
     answerable,
-    inPause: !!tournament && acceptsAnswers(tournament.state) && !answerable,
-    loading,
+    inPause: view.phase === 'interval',
+    loading: view.phase === 'loading',
+    accessDenied: !!registration && registration.eligible === false,
     now,
   };
 }
 
 // ── Doors ───────────────────────────────────────────────────────────────────
 
-export interface ArenaDoorsView {
+export interface ArenaDoorsView extends ArenaStatusFields {
   tournament: ArenaTournament | null;
   loading: boolean;
   absent: boolean;
@@ -482,6 +555,8 @@ export interface ArenaDoorsView {
   msToStart: number;
   /** The tournament has started — the caller should hand over to Live. */
   started: boolean;
+  /** The event is already over — the caller should hand over to Result. */
+  ended: boolean;
   now: number;
 }
 
@@ -500,11 +575,14 @@ export interface ArenaDoorsView {
  * arrival costs nothing.
  */
 export function useArenaDoors(tid: string | null | undefined): ArenaDoorsView {
-  const { data: tournament, loading, error } = useArenaTournament(tid);
-  const { data: standings } = useArenaStandings(tid);
+  const tour = useArenaTournament(tid);
+  const stand = useArenaStandings(tid);
+  const tournament = tour.data;
+  const standings = stand.data;
   const { counts } = useArenaPresence(tid, tournament?.state ?? null);
   const now = useNow(1000);
   const uid = useStore((s) => s.user?.uid) ?? null;
+  const { status, stale } = deriveEventStatus(tour);
 
   const mySchool = useMemo(() => {
     if (!standings || !uid) return null;
@@ -536,8 +614,11 @@ export function useArenaDoors(tid: string | null | undefined): ArenaDoorsView {
 
   return {
     tournament,
-    loading,
-    absent: !!error || (!loading && !tournament),
+    loading: status === 'loading',
+    absent: status === 'unavailable',
+    status,
+    stale: stale || (stand.error && !!standings),
+    retry: retryAll(tour, stand),
     mySchool,
     schoolName: mySchool ? (mySchool.shortName || mySchool.label) : '',
     counts,
@@ -556,13 +637,14 @@ export function useArenaDoors(tid: string | null | undefined): ArenaDoorsView {
     roomPlayers: tournament?.counts?.players ?? 0,
     msToStart: Math.max(0, startsAt - now),
     started: state === 'live',
+    ended: state === 'grading' || state === 'provisional' || state === 'final',
     now,
   };
 }
 
 // ── Result ──────────────────────────────────────────────────────────────────
 
-export interface ArenaResultView {
+export interface ArenaResultView extends ArenaStatusFields {
   tournament: ArenaTournament | null;
   loading: boolean;
   absent: boolean;
@@ -581,6 +663,12 @@ export interface ArenaResultView {
   prizeCents: number;
   /** There is money to claim AND the window is open. */
   claimOpen: boolean;
+  /** The one achievement, contribution and next action — utils/arenaResultTier.ts. */
+  summary: ResultSummary;
+  /** The next event open for registration, when there is one. */
+  nextTournamentId: string | null;
+  /** The student's score at the previous event, when known (public slice only). */
+  previousScore: number | null;
   now: number;
 }
 
@@ -593,10 +681,14 @@ export interface ArenaResultView {
  * removal is the rule working as announced rather than a reversal.
  */
 export function useArenaResult(tid: string | null | undefined): ArenaResultView {
-  const { data: tournament, loading, error } = useArenaTournament(tid);
-  const { data: standings } = useArenaStandings(tid);
+  const tour = useArenaTournament(tid);
+  const stand = useArenaStandings(tid);
+  const nextOpen = useOpenArenaTournament();
+  const tournament = tour.data;
+  const standings = stand.data;
   const now = useNow(1000);
   const uid = useStore((s) => s.user?.uid) ?? null;
+  const { status, stale } = deriveEventStatus(tour);
 
   const me = useMemo(
     () => (standings && uid ? standings.individuals.find((i) => i.uid === uid) ?? null : null),
@@ -624,20 +716,185 @@ export function useArenaResult(tid: string | null | undefined): ArenaResultView 
     return typeof cents === 'number' && cents > 0 ? cents : 0;
   }, [me, tournament]);
 
+  // "Personal best" only against a score we can actually read.
+  const [previousScore, setPreviousScore] = useState<number | null>(null);
+  const startsAt = tournament?.startsAt ?? 0;
+  useEffect(() => {
+    if (!tid || !uid || !startsAt) return undefined;
+    let alive = true;
+    fetchPreviousArenaScore({ tournamentId: tid, startsAt, uid })
+      .then((v) => { if (alive) setPreviousScore(v); })
+      .catch(() => undefined);
+    return () => { alive = false; };
+  }, [tid, uid, startsAt]);
+
+  const inTheFive = !!(me && mySchool?.top5?.includes(me.uid));
+  const nextTournamentId = nextOpen.data && nextOpen.data.id !== tid ? nextOpen.data.id : null;
+
+  const summary = useMemo(() => summarizeResult({
+    state: tournament?.state ?? 'grading',
+    me: me ? { score: me.score, rank: me.rank } : null,
+    school: mySchool ? { rank: mySchool.rank, qualified: mySchool.qualified } : null,
+    inTheFive,
+    prizeCents,
+    previousScore,
+    nextEventOpen: !!nextTournamentId,
+  }), [tournament?.state, me, mySchool, inTheFive, prizeCents, previousScore, nextTournamentId]);
+
   return {
     tournament,
-    loading,
-    absent: !!error || (!loading && !tournament),
+    loading: status === 'loading',
+    absent: status === 'unavailable',
+    status,
+    stale: stale || (stand.error && !!standings),
+    retry: retryAll(tour, stand),
     provisional: tournament?.state !== 'final',
     me,
     mySchool,
     prizeCents,
     claimOpen: prizeCents > 0 && tournament?.state === 'provisional',
     schoolName: mySchool ? (mySchool.shortName || mySchool.label) : '',
-    inTheFive: !!(me && mySchool?.top5?.includes(me.uid)),
+    inTheFive,
     accuracyPct: me && answered > 0 ? Math.round((me.correct / answered) * 100) : null,
     avgMs: me?.avgMs ?? null,
     calculating: tournament?.state === 'grading',
+    summary,
+    nextTournamentId,
+    previousScore,
+    now,
+  };
+}
+
+// ── Hub ─────────────────────────────────────────────────────────────────────
+
+export type ArenaHubPrimary =
+  /** Registered and the event is running (doors/live) — one tap back in. */
+  | { kind: 'rejoin'; tournament: ArenaTournament }
+  /** Registered and results are out. */
+  | { kind: 'results'; tournament: ArenaTournament }
+  /** An event is open for registration or doors. */
+  | { kind: 'open'; tournament: ArenaTournament }
+  /** An event is live that this student is not in — they can watch. */
+  | { kind: 'watch'; tournament: ArenaTournament }
+  /** Nothing scheduled. Honest, with what to do meanwhile. */
+  | { kind: 'none' };
+
+export interface ArenaHubView extends ArenaStatusFields {
+  primary: ArenaHubPrimary;
+  /** A live event anyone can watch, when one is running. */
+  watchable: ArenaTournament | null;
+  /** The last finished event, for the results row. */
+  lastFinished: ArenaTournament | null;
+  /** The student's registration for the open/active event, when any. */
+  registration: ArenaRegistration | null;
+}
+
+/**
+ * The permanent Arena destination (Jeux tab segment and the ArenaHub route).
+ *
+ * Built from the same three queries Home's announcement uses plus the latest
+ * finished event, so it is never empty by accident: a failed query is
+ * `reconnecting`, not "nothing scheduled".
+ */
+export function useArenaHub(): ArenaHubView {
+  const open = useOpenArenaTournament();
+  const active = useActiveArenaTournament();
+  const finished = useLatestFinishedArenaTournament();
+  const current = open.data ?? active.data ?? null;
+  const reg = useArenaMyRegistration(current?.id ?? null);
+  const finishedReg = useArenaMyRegistration(!current && finished.data ? finished.data.id : null);
+
+  const sources = [open, active];
+  const loading = sources.some((s) => s.loading && !s.data);
+  const failing = sources.find((s) => s.error && !s.data);
+  const offlineEmpty = sources.some((s) => s.fromCache && !s.data) && !current;
+
+  let status: EventStatus = 'ready';
+  if (loading) status = 'loading';
+  else if (failing) status = failing.errorKind === 'denied' ? 'denied' : 'reconnecting';
+  else if (offlineEmpty) status = 'reconnecting';
+  const stale = sources.some((s) => s.error || s.fromCache) && !!current;
+
+  const registration = reg.data;
+  let primary: ArenaHubPrimary = { kind: 'none' };
+  if (current) {
+    const st = current.state;
+    if (registration && (st === 'doors' || st === 'live')) primary = { kind: 'rejoin', tournament: current };
+    else if (registration && (st === 'grading' || st === 'provisional')) primary = { kind: 'results', tournament: current };
+    else if (st === 'registration' || st === 'doors') primary = { kind: 'open', tournament: current };
+    else if (st === 'live') primary = { kind: 'watch', tournament: current };
+    else if (st === 'grading' || st === 'provisional') primary = { kind: 'results', tournament: current };
+  } else if (finished.data && finishedReg.data) {
+    primary = { kind: 'results', tournament: finished.data };
+  }
+
+  return {
+    status,
+    stale,
+    retry: retryAll(open, active, finished, reg),
+    primary,
+    watchable: active.data && active.data.state === 'live' ? active.data : null,
+    lastFinished: finished.data,
+    registration,
+  };
+}
+
+// ── Watch ───────────────────────────────────────────────────────────────────
+
+export interface ArenaWatchView {
+  /** The tournament being watched (the given id, or whatever is live). */
+  tournament: ArenaTournament | null;
+  /** Only for signed-in viewers (the rules require auth to read it). */
+  question: ArenaLiveQuestion | null;
+  standings: ArenaStandings | null;
+  phase: LivePhase;
+  stale: boolean;
+  signedIn: boolean;
+  /** No id was given and nothing is live right now. */
+  nothingLive: boolean;
+  /** The viewer's own registered school, the default to follow. */
+  ownSchoolKey: string | null;
+  retry: () => void;
+  now: number;
+}
+
+/**
+ * The spectator view. Read-only by construction: it never posts an answer,
+ * never sends presence (a spectator is not "in the room" for qualification),
+ * and reads only what any signed-in client may read.
+ */
+export function useArenaWatch(tid: string | null | undefined): ArenaWatchView {
+  const signedIn = !!useStore((s) => s.user?.uid);
+  const active = useActiveArenaTournament();
+  const watchId = tid || (active.data && active.data.state === 'live' ? active.data.id : null);
+  const tour = useArenaTournament(watchId);
+  const tournament = tour.data;
+  const index = tournament?.currentQuestion?.index ?? null;
+  const live = useArenaLiveQuestion(signedIn ? watchId : null, index);
+  const stand = useArenaStandings(watchId);
+  const reg = useArenaMyRegistration(watchId);
+  const open = live.data?.state === 'open';
+  const now = useNow(open ? 250 : 1000);
+
+  const view = deriveLivePhase(tour, live, now);
+  const question = live.data && index != null && live.data.index === index ? live.data : null;
+  const nothingLive = !tid && !active.loading && !active.error && !watchId;
+
+  let phase: LivePhase = view.phase;
+  if (!watchId) {
+    phase = active.loading ? 'loading' : active.error ? (active.errorKind === 'denied' ? 'denied' : 'reconnecting') : 'unavailable';
+  }
+
+  return {
+    tournament,
+    question,
+    standings: stand.data,
+    phase,
+    stale: view.stale || (stand.error && !!stand.data),
+    signedIn,
+    nothingLive,
+    ownSchoolKey: reg.data?.schoolKey ?? null,
+    retry: retryAll(active, tour, live, stand),
     now,
   };
 }
