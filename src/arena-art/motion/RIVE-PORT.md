@@ -46,6 +46,7 @@ Rive accepts these as custom cubic interpolation curves. Enter the four control 
 | `idle` | `reset` | Any State |
 | `searching` | `search` | from idle, cancelled or failed |
 | `matched` | `match` | from searching (from idle it means reconnect, so go straight to settled) |
+| `known` | `present` | from idle only: an opponent known from the start (async duel) — plays `found` → `introduce` → `settled` with no search |
 | `cancelled` | `cancel` | from searching only |
 | `failed` | `fail` | from searching only |
 | `started` | `start` | Any State. The match began, so land in settled now |

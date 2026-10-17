@@ -26,10 +26,16 @@ import { trackEvent } from '../utils/telemetry';
 import { DuelSubmitStatus, DuelTrustNote, useDuelSubmission } from '../components/arena/trust';
 import { fastestCorrect, formatSeconds, longestStreak, type RoundAnswer } from './trivia/matchStats';
 import ResultShare from './trivia/ResultShare';
+import DuelIntro from '../components/arena/DuelIntro';
+import TrophyCeremony from '../arena-art/motion/TrophyCeremony';
+import { useReducedMotion } from '../arena-art/motion/tokens';
+import { schoolColors } from '../arena-art/crest/SchoolCrest';
+import { useArenaSound } from '../arena-art/sound/useArenaSound';
+import { useTrivia } from '../hooks/useTrivia';
 import '../components/games/duels.css';
 import './TriviaGames.css';
 
-type Phase = 'card' | 'playing' | 'sending' | 'done';
+type Phase = 'card' | 'intro' | 'playing' | 'sending' | 'done';
 
 /**
  * /defi/:code — "Défi d'un ami" on the web, end to end.
@@ -65,7 +71,14 @@ export default function Defi() {
   const [myScore, setMyScore] = useState<number | null>(null);
   const [myAnswers, setMyAnswers] = useState<RoundAnswer[]>([]);
   const [reloadNonce, setReloadNonce] = useState(0);
-  useFocusMode(phase === 'playing');
+  // The win ceremony plays once, when the server confirms the win (audit X1).
+  const [ceremonyDone, setCeremonyDone] = useState(false);
+  const reduceMotion = useReducedMotion();
+  const { play: playSound } = useArenaSound();
+  const { profile } = useTrivia();
+  const myName: string = (profile?.leaderboard?.displayName || '').trim() || (isCreole ? 'Ou menm' : 'Toi');
+  const mySchool: string = profile?.leaderboard?.school || '';
+  useFocusMode(phase === 'playing' || phase === 'intro');
 
   useEffect(() => { trackEvent('duel_view', { signedIn: !!uid }); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -129,6 +142,21 @@ export default function Defi() {
       <li><RefreshCw size={15} aria-hidden="true" /> {t('Un seul essai', 'Yon sèl tantativ')}</li>
     </ul>
   ) : null;
+
+  // ── The opening: both faces, then 3-2-1, then the round ───────────────
+  if (phase === 'intro' && challenge && questions) {
+    const neutral = { primary: '#1F3456', secondary: '#FFD27A' };
+    return (
+      <div className="trivia-page defi__play">
+        <p className="defi__playhead"><Swords size={18} aria-hidden="true" /> {t('Défi', 'Defi')} · {label}</p>
+        <DuelIntro
+          me={{ name: myName, school: mySchool || t('Ton école', 'Lekòl ou'), colors: mySchool ? schoolColors(mySchool) : neutral, seed: uid || 'toi' }}
+          opponent={{ name: challengerName, school: t(`${challenge.challengerScore}/${challenge.total} à battre`, `${challenge.challengerScore}/${challenge.total} pou bat`), colors: neutral, seed: challenge.challengerUid || challengerName }}
+          onGo={() => setPhase('playing')}
+        />
+      </div>
+    );
+  }
 
   // ── Playing ────────────────────────────────────────────────────────────
   if (phase === 'playing' && challenge && questions) {
@@ -224,6 +252,23 @@ export default function Defi() {
       const revanche = phase === 'done' && !!ok && result !== 'won';
       return (
         <div className="defi__card mx-duelres" aria-live="polite">
+          {/* A confirmed win — the server recorded it — gets the trophy, once.
+              Never on a loss, a tie, an unsaved score or with reduced motion;
+              "Passer" or the end of the sequence hands back to this card. */}
+          {phase === 'done' && ok && result === 'won' && !ceremonyDone && !reduceMotion && (
+            <div className="defi__ceremony">
+              <TrophyCeremony
+                event={{ title: t('Défi d’un ami', 'Defi yon zanmi'), subtitle: label }}
+                winner={{ name: myName, colors: mySchool ? schoolColors(mySchool) : { primary: '#1F3456', secondary: '#FFD27A' }, roster: [t(`${mine} – ${theirs} contre ${challengerName}`, `${mine} – ${theirs} kont ${challengerName}`)] }}
+                status="confirmed"
+                labels={{ eyebrow: t('Défi gagné', 'Defi genyen'), tease: t('Le vainqueur du défi est…', 'Moun ki genyen defi a se…'), roster: t('Score final', 'Nòt final') }}
+                onStateChange={(st) => {
+                  if (st === 'reveal') { try { playSound('victory'); } catch { /* silent */ } }
+                  if (st === 'settled') window.setTimeout(() => setCeremonyDone(true), 1600);
+                }}
+              />
+            </div>
+          )}
           <span className="defi__eyebrow"><Swords size={14} aria-hidden="true" /> {label}</span>
           <h1 className="defi__title">{title}</h1>
           <DuelScoreboard
@@ -387,7 +432,7 @@ export default function Defi() {
               type="button"
               className="duel-pill duel-pill--primary"
               disabled={!questions}
-              onClick={() => { trackEvent('duel_start', { category: challenge.categoryId }); setPhase('playing'); }}
+              onClick={() => { trackEvent('duel_start', { category: challenge.categoryId }); setPhase('intro'); }}
             >
               <Swords size={16} /> {questions ? t('Relever le défi', 'Reponn defi a') : t('Préparation…', 'N ap prepare…')}
             </button>

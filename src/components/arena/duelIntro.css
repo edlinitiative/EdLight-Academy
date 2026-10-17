@@ -1,0 +1,10 @@
+/* The duel's opening (DuelIntro.tsx): the signature reveal and countdown,
+   then two quiet controls. Opaque tones; the coral stays with the round. */
+.duel-intro { display: grid; gap: 0.75rem; width: min(760px, 100%); margin: 0 auto; }
+.duel-intro__bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.duel-intro__skip {
+  min-height: 44px; padding: 0 1.1rem; border: 0; border-radius: 999px; background: #1F3456; color: #F5F8FF;
+  font: inherit; font-size: 0.9375rem; font-weight: 750; cursor: pointer;
+}
+.duel-intro__skip:hover { background: #284068; }
+.duel-intro__skip:focus-visible { outline: 3px solid #FFC24A; outline-offset: 2px; }

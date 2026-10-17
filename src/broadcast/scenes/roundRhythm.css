@@ -590,3 +590,10 @@
 .rb-lane__crest svg { width: clamp(22px, calc(var(--rb-lane-h) * 0.66), 48px); height: auto; }
 /* The crest identifies the school now; the hue dot would be a second mark. */
 .rb-lane:has(.rb-lane__crest) .rb-lane__edge { display: none; }
+
+/* A lane never spills into the next (2026-10-17 audit W2: the short name and
+   the full name overlapped the lane below at 61px lanes). Tight line boxes,
+   and the identity is clipped to its own lane. */
+.rb-lane__id { max-height: var(--rb-lane-h); overflow: hidden; }
+.rb-lane__short { line-height: 1.1; }
+.rb-lane__full { line-height: 1.25; }

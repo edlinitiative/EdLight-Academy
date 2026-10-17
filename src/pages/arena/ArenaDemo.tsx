@@ -17,6 +17,9 @@ import SchoolBuilding from '../../components/arena/SchoolBuilding';
 import Avatar from '../../arena-art/avatars/Avatar';
 import type { StageData, StageTournament } from '../../broadcast/sceneContract';
 import { BROADCAST_DIRECTOR_OPTIONS } from '../../broadcast/directorOptions';
+import { useArenaSound } from '../../arena-art/sound/useArenaSound';
+import type { CueName } from '../../arena-art/sound/policy';
+import SoundToggle from '../../arena-art/sound/SoundToggle';
 import '../../broadcast/stage.css';
 import '../Live.css';
 import './ArenaDemo.css';
@@ -122,6 +125,13 @@ export default function ArenaDemo() {
 
   const push = (events: ArenaEvent[]) => { if (events.length) directorRef.current.push(events); };
 
+  // Phase cues (audit X2): the shared engine, silent until the viewer turns
+  // the dock's "Son" on. Each cue lands on a beat the screen also shows.
+  const { play: playSound } = useArenaSound();
+  const cueRef = useRef(playSound);
+  cueRef.current = playSound;
+  const cue = useCallback((name: CueName) => { try { cueRef.current(name); } catch { /* silent is fine */ } }, []);
+
   /** Run every timeline step whose moment has come. */
   const advance = useCallback((now: number) => {
     const sim = simRef.current;
@@ -149,6 +159,7 @@ export default function ArenaDemo() {
           myAnswer.current = null;
           setPicked(null);
           ph.phase = 'question'; ph.openedAt = now; ph.until = now + WINDOW_MS;
+          cue('reveal');
           break;
         }
         case 'question': {
@@ -159,11 +170,13 @@ export default function ArenaDemo() {
           // answer is theirs alone.
           push(sim.close(now, youSchool ? scored : null));
           if (scored) setTally((tl) => ({ right: tl.right + (scored.correct ? 1 : 0), answered: tl.answered + 1 }));
+          cue(scored ? (scored.correct ? 'correct' : 'incorrect') : 'scoreUp');
           ph.phase = 'pause'; ph.until = now + PAUSE_MS;
           break;
         }
         case 'grading':
           push(sim.publish(now));
+          cue('championship');
           ph.phase = 'provisional'; ph.provisionalAt = now; ph.until = now + PROVISIONAL_MS;
           break;
         case 'provisional':
@@ -176,7 +189,7 @@ export default function ArenaDemo() {
       }
     }
     force((n) => n + 1);
-  }, [questions, isCreole, youSchool]);
+  }, [questions, isCreole, youSchool, cue]);
 
   // The one clock. The simulated time lives in a ref and is mirrored into
   // state for rendering — advancing the simulation inside a state updater
@@ -213,7 +226,8 @@ export default function ArenaDemo() {
     if (ph.phase !== 'question' || myAnswer.current) return;
     myAnswer.current = { choice, elapsedMs: Math.max(800, nowRef.current - ph.openedAt) };
     setPicked(choice);
-  }, []);
+    cue('submitted');
+  }, [cue]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -240,6 +254,25 @@ export default function ArenaDemo() {
     window.addEventListener('keydown', wake);
     return () => { window.removeEventListener('keydown', wake); if (dockTimer.current) window.clearTimeout(dockTimer.current); };
   }, [playing, wake]);
+
+  // The dock's real height, measured, so the question sheet always sits
+  // above it — whatever the wrap, the text size or the safe area (audit W3).
+  const rootRef = useRef<HTMLDivElement>(null);
+  const dockRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const dock = dockRef.current;
+    const root = rootRef.current;
+    if (!dock || !root) return undefined;
+    const write = () => root.style.setProperty('--demo-dock-h', `${Math.ceil(dock.getBoundingClientRect().height)}px`);
+    write();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', write);
+      return () => window.removeEventListener('resize', write);
+    }
+    const ro = new ResizeObserver(write);
+    ro.observe(dock);
+    return () => ro.disconnect();
+  }, [started]);
 
   // ── What the stage reads ──────────────────────────────────────────────────
   const sim = simRef.current;
@@ -370,7 +403,7 @@ export default function ArenaDemo() {
   const anyScored = (standings?.schools || []).some((s) => s.teamAvg > 0);
 
   return (
-    <div className={`live demo-live${youSchool ? ' demo-live--play' : ''}${openQ || revealQ ? ' has-q' : ''}${dockShown ? ' is-dock' : ''}`} onPointerMove={wake} onPointerDown={wake}>
+    <div ref={rootRef} className={`live demo-live${youSchool ? ' demo-live--play' : ''}${openQ || revealQ ? ' has-q' : ''}${dockShown ? ' is-dock' : ''}`} onPointerMove={wake} onPointerDown={wake}>
       <div className="live__rays" aria-hidden />
       <div className="live__horizon" aria-hidden />
       <div className="demo-vignette" aria-hidden />
@@ -488,7 +521,7 @@ export default function ArenaDemo() {
       )}
 
       {/* Controls — a video-player bar: hides itself while the evening plays. */}
-      <div className="demo-dock" role="toolbar" aria-label={t('Contrôles de la démo', 'Kontwòl demo a')} onFocus={wake}>
+      <div ref={dockRef} className="demo-dock" role="toolbar" aria-label={t('Contrôles de la démo', 'Kontwòl demo a')} onFocus={wake}>
         <ol className="demo-timeline" aria-label={t('Déroulé de la soirée', 'Pwogram swa a')}>
           {marks.map((m) => (
             <li key={m.key} className={`demo-mark demo-mark--${m.state}${m.key.startsWith('q') ? ' is-q' : ''}`} aria-current={m.state === 'now' ? 'step' : undefined}>
@@ -505,6 +538,7 @@ export default function ArenaDemo() {
           <button type="button" className="demo-dock__btn" onClick={skip} disabled={isFinal}>
             {t('Étape suivante', 'Pwochen etap')} <ChevronRight size={16} aria-hidden="true" />
           </button>
+          <SoundToggle compact className="demo-dock__sound" />
           <div className="demo-dock__speed" role="radiogroup" aria-label={t('Vitesse', 'Vitès')}>
             {[1, 2, 4].map((v) => (
               <button key={v} type="button" role="radio" aria-checked={speed === v} className={speed === v ? 'is-on' : ''} onClick={() => setSpeed(v)}>{v}×</button>
@@ -521,7 +555,7 @@ export default function ArenaDemo() {
               final: t('Terminé', 'Fini'),
             }[ph.phase]}
           </span>
-          <button type="button" className="demo-dock__btn" onClick={replay}>
+          <button type="button" className="demo-dock__btn demo-dock__btn--replay" onClick={replay}>
             <RefreshCw size={16} aria-hidden="true" /> {t('Nouvelle soirée', 'Nouvo aswè')}
           </button>
         </div>

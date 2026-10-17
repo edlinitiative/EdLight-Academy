@@ -149,3 +149,42 @@ body.arena-night .ah .lb-play, .ah .lb-play { min-height: 56px !important; paddi
 .lb-ladder__xp { color: #C1CFE4; }
 .lb-face { display: inline-grid; place-items: center; flex: none; width: 48px; height: 48px; border-radius: 999px; background: #1C3254; overflow: hidden; }
 .lb-face--sm { width: 30px; height: 30px; background: #13243F; }
+
+/* ══ Phone lobby (2026-10-17 audit W1) ═════════════════════════════════════
+   The friend challenge and the school race sit one tap from Play, inside the
+   first phone screen; the world stays, as a shorter window: smaller
+   buildings, no ticker (the tower tags already carry the same standings),
+   and a one-line race leader. Opaque secondary buttons, never coral — Play
+   keeps the screen's one coral action. */
+.lb-quick { display: none; }
+.lb-quick__go {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 48px; padding: 0 0.9rem; min-width: 0;
+  border-radius: 12px; background: #1F3456; color: #F5F8FF; font-weight: 750; font-size: 1rem; text-decoration: none; white-space: nowrap;
+}
+.lb-quick__go:hover { background: #284068; color: #fff; }
+.lb-quick__go:focus-visible { outline: 3px solid #FFC24A; outline-offset: 2px; }
+.lb-quick__go svg { flex: none; color: #FFD27A; }
+@media (max-width: 640px) {
+  .lb-quick { grid-area: quick; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; }
+  .lb-main { grid-template-areas: 'card' 'stats' 'hint' 'play' 'quick'; }
+  .lb--guest .lb-main { grid-template-areas: 'play' 'quick' 'quiet'; gap: 0.75rem; }
+  .lb-play__meta { font-size: 0.9375rem; }
+  .lb-quiet { padding: 0.15rem 0; font-size: 0.9375rem; }
+  /* the race leader as one compact line */
+  .lb--guest .lb-side { gap: 0.35rem; padding: 0.75rem 1rem; }
+  .lb--guest .lb-label { font-size: 0.875rem; }
+  .lb--guest .lb-school { gap: 0.6rem; }
+  .lb--guest .lb-school svg { width: 30px; height: 30px; }
+  .lb--guest .lb-school strong { font-size: 1rem; }
+  .lb--guest .lb-school span { font-size: 0.875rem; }
+  /* a smaller window on the world */
+  .lb-head { gap: 0.25rem; }
+  .ah-hero .ah-title.lb-title { font-size: 2.5rem; }
+  .lb-tagline { font-size: 1rem; }
+  .ah-hero:has(.lb-hero) { padding-top: 0.75rem; }
+  .ah-hero:has(.lb-hero) .ah-street { padding-top: 0.5rem; }
+  .ah-hero:has(.lb-hero) .ah-tower .school-building { zoom: 0.5; }
+  .ah-hero:has(.lb-hero) .ah-road { height: 22px; }
+  .ah-hero:has(.lb-hero) .ah-ticker { display: none; }
+  .lb-lanes { padding-top: 1.25rem; }
+}

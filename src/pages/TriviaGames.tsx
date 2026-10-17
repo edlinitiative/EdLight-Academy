@@ -31,6 +31,8 @@ import './trivia/triviaModes.css';
 import ArenaPageHead from '../components/arena/ArenaPageHead';
 import { useReducedMotion, motionVars } from '../arena-art/motion/tokens';
 import { useMatchSound } from './trivia/useMatchSound';
+import SoundToggle from '../arena-art/sound/SoundToggle';
+import DuelIntro from '../components/arena/DuelIntro';
 import { answerTicks, currentStreak, type RoundAnswer } from './trivia/matchStats';
 import MatchResults from './trivia/MatchResults';
 
@@ -411,6 +413,8 @@ export function TriviaQuiz({ timed = false, category, count, onFinish, onBack, i
             <span className="mx-num" aria-hidden="true">{timeLeft} s</span>
           </div>
         )}
+        {/* Sound is off until the student turns it on (audit X2). */}
+        <SoundToggle compact />
       </div>
       {/* Spoken once, at five seconds: the visible count is not announced. */}
       <span className="mx-sr" aria-live="polite">{urgent && timeLeft === 5 ? t('Plus que 5 secondes', 'Rete 5 segonn sèlman') : ''}</span>
@@ -533,7 +537,7 @@ function TriviaClassic({ isCreole, onExitHub }) {
   const roundVersion = useRef(0);
   const entryAt = useRef(Date.now());
   const resultHeading = useRef<HTMLHeadingElement>(null);
-  useFocusMode(screen === 'play' || screen === 'review');
+  useFocusMode(screen === 'play' || screen === 'ready' || screen === 'review');
 
   useEffect(() => { trackEvent('trivia_view'); }, []);
   useEffect(() => {
@@ -629,7 +633,9 @@ function TriviaClassic({ isCreole, onExitHub }) {
     setSaving(false);
     setSaveError(false);
     setPlayNonce((n) => n + 1);
-    setScreen('play');
+    // A duel is a contest: 3-2-1 before its timed round (audit X1). The
+    // opponent is not known yet — the friend plays later — so no reveal.
+    setScreen('ready');
     trackEvent('trivia_start', { category: catId, count: qs.length, timed: true, duel: true, elapsedMs: Date.now() - entryAt.current });
   };
   const pickDuel = () => {
@@ -720,7 +726,11 @@ function TriviaClassic({ isCreole, onExitHub }) {
         count={roundCount} setCount={setRoundCount} timed={timed} setTimed={setTimed} isAuthed={isAuthed} duelPick={duelPick}
         daily={daily} onStartDaily={startDaily} dailyNotice={dailyNotice} />
     </>}
-    {screen === 'play' && <TriviaQuiz key={`${category}-${playNonce}`} category={category}
+    {screen === 'ready' && <div className="mx-page">
+      <DuelIntro key={`ready-${playNonce}`} me={{ name: isCreole ? 'Ou menm' : 'Toi', school: '', colors: { primary: '#1F3456', secondary: '#FFD27A' }, seed: 'toi' }}
+        onGo={() => setScreen('play')} />
+    </div>}
+        {screen === 'play' && <TriviaQuiz key={`${category}-${playNonce}`} category={category}
       count={roundCount} timed={category === 'daily' || isDuelRound || timed}
       questions={category === 'daily' ? dailyQuestions : isDuelRound ? duelQuestions : null}
       accentColor={category === 'daily' ? '#f59e0b' : null} onFinish={handleFinish}

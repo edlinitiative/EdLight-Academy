@@ -688,3 +688,17 @@
 /* An empty seat is a solid, quieter tile — not a dashed outline. */
 .aj-seat { border: 0; background: #1C3254; color: #8FA3C8; }
 .aj-seat.is-on { background: #2FB97A; color: #04281A; box-shadow: none; }
+
+/* ══ Qualified podium + "En formation" (2026-10-17 audit W4) ═══════════════
+   Only qualified schools get a step or a number. Schools still forming their
+   five sit in their own opaque panel, with their roster count, unnumbered. */
+.ah-podium-wrap:not(:has(.ah-podium)) { grid-template-columns: minmax(0, 1fr); align-items: start; }
+.ah-forming { grid-column: 1 / -1; display: grid; gap: 0.6rem; padding: 1.1rem 1.2rem; border-radius: 22px; background: #13243F; }
+.ah-forming__title { margin: 0; font-family: var(--font-display, sans-serif); font-size: 1.25rem; font-weight: 800; letter-spacing: -0.01em; color: #F5F8FF; }
+.ah-forming__lede, .ah-forming__none { margin: 0; font-size: 0.975rem; line-height: 1.5; color: #C1CFE4; }
+.ah-forming__list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.5rem; }
+.ah-forming__list li { display: flex; align-items: center; gap: 0.75rem; min-width: 0; padding: 0.6rem 0.8rem; border-radius: 14px; background: #1C3254; }
+.ah-forming__list li.is-mine { background: #4A3610; }
+.ah-forming__list strong { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1rem; color: #fff; }
+.ah-forming__count { display: grid; justify-items: end; flex-shrink: 0; font-size: 0.95rem; font-weight: 750; color: #FFD27A; font-variant-numeric: tabular-nums; }
+.ah-forming__count small { font-size: 0.875rem; font-weight: 600; color: #C1CFE4; }

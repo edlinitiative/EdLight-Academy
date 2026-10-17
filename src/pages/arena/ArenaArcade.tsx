@@ -12,10 +12,12 @@ import { STORY_CHAPTERS, MAX_STARS, nextStage, totalStars, chapterCleared, isUnl
 import { DEMO_SCHOOLS } from '../../../shared/arena/demo';
 import { departmentPath, departmentCentroid, MAPPED_DEPARTMENTS, MAP_WIDTH, MAP_HEIGHT } from '../../data/haitiMapGeometry';
 import SchoolBuilding from '../../components/arena/SchoolBuilding';
+import SchoolCrest from '../../arena-art/crest/SchoolCrest';
 import ArenaJoin from '../../components/arena/ArenaJoin';
 import ArenaWorld from '../../arena-art/environment/ArenaWorld';
-import LobbyStrip, { DUEL_STATE, type LobbySchool } from '../../components/arena/lobby/LobbyStrip';
+import LobbyStrip, { DUEL_STATE, SCHOOL_TO, type LobbySchool } from '../../components/arena/lobby/LobbyStrip';
 import LobbyLanes from '../../components/arena/lobby/LobbyLanes';
+import { splitPodium } from '../../components/arena/lobby/podium';
 import { pickRival, schoolLadder, type WeeklyEntry } from '../../components/arena/lobby/rival';
 import '../../components/arena/lobby/lobby.css';
 import './ArenaArcade.css';
@@ -139,8 +141,9 @@ export default function ArenaArcade() {
   const teamIncomplete = !mySchool || !myTeam?.qualified;
   const showJoin = !demo && teamIncomplete;
   const storyChapter = storyNext ? STORY_CHAPTERS[storyNext.chapter] : null;
-  const ranked = standings.filter((s) => s.qualified);
-  const board = (ranked.length >= 3 ? ranked : standings).slice(0, 8);
+  // Placements are earned: only qualified schools stand on the podium or get
+  // a number; schools still forming their five are listed apart (podium.ts).
+  const board = useMemo(() => splitPodium(standings), [standings]);
 
   const champLine = open
     ? (open.state === 'doors'
@@ -155,7 +158,7 @@ export default function ArenaArcade() {
   const champTo = open?.state === 'doors' ? '/arena/jouer' : '/arena/championnat';
   const modes = useMemo(() => ([
     { key: 'duel', to: '/jeux/trivia', state: DUEL_STATE as Record<string, unknown> },
-    { key: 'school', to: '/classement' },
+    { key: 'school', to: SCHOOL_TO },
     { key: 'champ', to: champTo },
     { key: 'story', to: '/arena/histoire' },
     { key: 'room', to: '/tournois/nouveau' },
@@ -392,8 +395,12 @@ export default function ArenaArcade() {
         />
       )}
 
-      {/* ═══ The podium ═════════════════════════════════════════════════════ */}
-      {board.length >= 3 && (
+      {/* ═══ The podium ═════════════════════════════════════════════════════
+          Qualified schools only, in their official rank. With fewer than
+          three qualified, the ranked ones are a plain numbered list — no
+          ceremonial steps — and every school still short of five sits in
+          "En formation", with its roster count and no number. */}
+      {(board.ranked.length > 0 || board.forming.length > 0) && (
         <section className="ah-podium-sec" aria-labelledby="ah-podium-title">
           <div className="container">
             <header className="ah-select__head">
@@ -404,32 +411,55 @@ export default function ArenaArcade() {
               <Link to="/classement" className="ah-ghost">{t('Classement complet', 'Tout klasman an')} <ChevronRight size={18} aria-hidden="true" /></Link>
             </header>
             <div className="ah-podium-wrap">
-              <ol className="ah-podium">
-                {[board[1], board[0], board[2]].map((s, i) => {
-                  const place = [2, 1, 3][i];
-                  return (
-                    <li key={s.key} className={`ah-step ah-step--${place}`}>
-                      <SchoolBuilding name={s.label} floors={[5, 7, 4][i]} night cell={place === 1 ? 8 : 7} />
-                      <div className="ah-step__block">
-                        <span className="ah-step__place">{place === 1 && <Crown size={22} weight="fill" aria-hidden="true" />}{place}</span>
-                        <strong>{s.label}</strong>
-                        <span>{s.qualified ? `${nf(s.teamXp)} XP` : `${Math.min(s.members, TEAM_SIZE)}/${TEAM_SIZE} ${t('joueurs', 'jwè')}`}</span>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ol>
-              {board.length > 3 && (
-                <ol className="ah-rest" start={4}>
-                  {board.slice(3).map((s, i) => (
+              {board.podium.length === 3 && (
+                <ol className="ah-podium" aria-label={t('Les trois premières écoles qualifiées', 'Twa premye lekòl ki kalifye yo')}>
+                  {[board.podium[1], board.podium[0], board.podium[2]].map((s, i) => {
+                    const place = [2, 1, 3][i];
+                    return (
+                      <li key={s.key} className={`ah-step ah-step--${place}`}>
+                        <SchoolBuilding name={s.label} floors={[5, 7, 4][i]} night cell={place === 1 ? 8 : 7} />
+                        <div className="ah-step__block">
+                          <span className="ah-step__place">{place === 1 && <Crown size={22} weight="fill" aria-hidden="true" />}{s.rank}</span>
+                          <strong>{s.label}</strong>
+                          <span>{nf(s.teamXp)} XP</span>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
+              {board.rest.length > 0 && (
+                <ol className="ah-rest" aria-label={t('Écoles qualifiées', 'Lekòl ki kalifye')}>
+                  {board.rest.map((s) => (
                     <li key={s.key} className={myTeam?.key === s.key ? 'is-mine' : ''}>
-                      <span className="ah-rest__n">{i + 4}</span>
+                      <span className="ah-rest__n">{s.rank}</span>
                       <span className="ah-rest__b"><SchoolBuilding name={s.label} floors={3} night cell={3} /></span>
                       <strong>{s.label}</strong>
-                      <span>{s.qualified ? `${nf(s.teamXp)} XP` : `${Math.min(s.members, TEAM_SIZE)}/${TEAM_SIZE}`}</span>
+                      <span>{nf(s.teamXp)} XP</span>
                     </li>
                   ))}
                 </ol>
+              )}
+              {board.ranked.length === 0 && (
+                <p className="ah-forming__none">{t(`Aucune école n’a encore ses ${TEAM_SIZE} joueurs : la première place est à prendre.`, `Poko gen lekòl ki gen ${TEAM_SIZE} jwè li : premye plas la lib.`)}</p>
+              )}
+              {board.forming.length > 0 && (
+                <div className="ah-forming" data-testid="forming">
+                  <h3 className="ah-forming__title">{t('En formation', 'Ap fòme')}</h3>
+                  <p className="ah-forming__lede">{t(`Pas encore classées : une école compte à partir de ${TEAM_SIZE} joueurs.`, `Poko klase : yon lekòl konte apati ${TEAM_SIZE} jwè.`)}</p>
+                  <ul className="ah-forming__list">
+                    {board.forming.map((s) => (
+                      <li key={s.key} className={myTeam?.key === s.key ? 'is-mine' : ''}>
+                        <SchoolCrest name={s.label} size={32} />
+                        <strong>{s.label}</strong>
+                        <span className="ah-forming__count">
+                          {`${Math.min(s.members, TEAM_SIZE)}/${TEAM_SIZE} ${t('joueurs', 'jwè')}`}
+                          <small>{t(`il manque ${s.needed}`, `manke ${s.needed}`)}</small>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
           </div>

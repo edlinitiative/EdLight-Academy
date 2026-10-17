@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, Smartphone, ChevronRight, Plus, Laptop, Trophy } from '../components/icons';
+import { Check, Smartphone, ChevronRight, Plus, Laptop, Trophy, Play, Swords, LogIn } from '../components/icons';
+import { PLAY_TO, PLAY_STATE, DUEL_STATE } from '../components/arena/lobby/LobbyStrip';
 import useStore from '../contexts/store';
 import { useOpenArena } from '../hooks/useOpenArena';
 import { usePlayableArena } from '../hooks/useArenaPlay';
@@ -12,6 +13,7 @@ import SchoolRanking from '../components/SchoolRanking';
 import Avatar from '../arena-art/avatars/Avatar';
 import SchoolCrest, { schoolColors } from '../arena-art/crest/SchoolCrest';
 import SchoolBuilding from '../components/arena/SchoolBuilding';
+import { splitPodium } from '../components/arena/lobby/podium';
 import { GRADES } from '../../shared/trackConfig';
 import { useTrivia } from '../hooks/useTrivia';
 import { useStreak } from '../hooks/useStreak';
@@ -102,6 +104,8 @@ export default function Arena() {
   const mine = mySchool ? groups.find((g) => g.key === normalizeName(mySchool)) || null : null;
   const standings = useMemo(() => rankTeams(groups), [groups]);
   const myTeam = mySchool ? teamStandingFor(standings, mySchool) : null;
+  // Steps and numbers are for qualified schools only (audit W4).
+  const board = useMemo(() => splitPodium(standings, { maxRanked: 12, maxForming: 12 }), [standings]);
   const members = mine?.topMembers || [];
   const myIndex = signedIn ? members.findIndex((m) => m.uid === user?.uid) : -1;
   const fifthXp = members.length >= TEAM_SIZE ? members[TEAM_SIZE - 1].xp : null;
@@ -179,11 +183,20 @@ export default function Arena() {
             `Li manke ${myTeam.needed} jwè pou lekòl ou ka klase. Envite klas ou.`,
           );
 
+  /* No finale scheduled (and none loading): the page leads with what can be
+     done today (audit W5). The big trophy stage waits for a real event. */
+  const idle = open === null && !playNow;
+
   /* The page's one main action, in the shared title row. */
   const headAction = playNow ? (
     <Link to={playHref(playNow.id)} className="an-go">
       <Laptop size={18} aria-hidden="true" />
       {playNow.state === 'live' ? t('Jouer maintenant', 'Jwe kounye a') : t('Entrer dans la salle', 'Antre nan sal la')}
+    </Link>
+  ) : !signedIn && idle ? (
+    // Playing needs no account; signing in is offered once, in the card below.
+    <Link to={PLAY_TO} state={PLAY_STATE} className="an-go">
+      <Play size={18} aria-hidden="true" /> {t('Jouer une partie', 'Jwe yon pati')}
     </Link>
   ) : !signedIn ? (
     <button type="button" className="an-go" onClick={toggleAuthModal}>
@@ -237,18 +250,56 @@ export default function Arena() {
         />
 
         {/* ── The national finale: the real edition, or the honest wait ── */}
-        <section className={`arena-national${playNow ? ` is-${playNow.state}` : ''}`} aria-labelledby="arena-national-title">
+        <section className={`arena-national${playNow ? ` is-${playNow.state}` : ''}${idle ? ' is-idle' : ''}`} aria-labelledby="arena-national-title">
           {/* The stage: spotlights on the trophy, the crowd in the dark — the
               Arène's own art, so the one prize event on the site looks like an
               occasion rather than a paragraph. Decorative only. */}
+          {!idle && (
           <div className="arena-stage" aria-hidden="true">
             <span className="arena-stage__beam arena-stage__beam--l" />
             <span className="arena-stage__beam arena-stage__beam--r" />
             <span className="arena-stage__trophy"><Trophy size={64} weight="fill" /></span>
             <span className="arena-stage__crowd" />
           </div>
+          )}
           <div className="arena-national__body">
-          {playNow ? (
+          {idle ? (
+            <>
+              {/* Nothing scheduled: say so plainly, then the three things a
+                  student can do right now — everyday play (the title row),
+                  a friend challenge, and the finale as a labelled demo. */}
+              <p className="arena-national__tag">
+                <span className="arena-national__medal" aria-hidden="true"><Trophy size={18} weight="fill" /></span>
+                {t('Finale nationale · pas encore programmée', 'Final nasyonal · poko pwograme')}
+              </p>
+              <h2 id="arena-national-title">{t('La prochaine finale en direct sera annoncée ici.', 'N ap anonse pwochen final an dirèk la isit la.')}</h2>
+              <div className="arena-national__actions arena-national__actions--lead">
+                <Link to={PLAY_TO} state={DUEL_STATE} className="arena-national__ghost an-ghost">
+                  <Swords size={18} aria-hidden="true" /> {t('Défier un ami', 'Defye yon zanmi')}
+                </Link>
+                <Link to="/arena/demo" className="arena-national__ghost an-ghost">
+                  <span className="arena-national__badge">{t('Démo', 'Demo')}</span>
+                  {t('Voir une finale simulée', 'Gade yon final simile')} <ChevronRight size={18} aria-hidden="true" />
+                </Link>
+              </div>
+              <p>
+                {ARENA_WEB_PLAY
+                  ? t(
+                    'Une fois par mois, les écoles s’affrontent en direct, sur ordinateur ou dans l’application. En attendant, chaque partie compte au classement.',
+                    'Yon fwa pa mwa, lekòl yo afwonte an dirèk, sou òdinatè oswa nan aplikasyon an. Pandan n ap tann, chak pati konte nan klasman an.',
+                  )
+                  : t(
+                    'Une fois par mois, les écoles s’affrontent en direct dans l’application. En attendant, chaque partie compte au classement.',
+                    'Yon fwa pa mwa, lekòl yo afwonte an dirèk nan aplikasyon an. Pandan n ap tann, chak pati konte nan klasman an.',
+                  )}
+              </p>
+              {!signedIn && (
+                <button type="button" className="arena-national__signin" onClick={toggleAuthModal}>
+                  <LogIn size={18} aria-hidden="true" /> {t('Connecte-toi pour que tes points comptent pour ton école', 'Konekte pou pwen ou konte pou lekòl ou')}
+                </button>
+              )}
+            </>
+          ) : playNow ? (
             <>
               {/* The room is open or the questions are running: this card's
                   one job is now to get the student into the play room. */}
@@ -482,41 +533,54 @@ export default function Arena() {
                   </div>
                 ) : (
                   <>
-                  {/* The podium: the leading three as their school buildings. */}
-                  <ol className="arena-podium" aria-label={t('Les trois premières', 'Twa premye yo')}>
-                    {[standings[1], standings[0], standings[2]].map((s, col) => s && (
+                  {/* The podium: the three leading QUALIFIED schools. Fewer than
+                      three qualified → no ceremonial steps, just their rows. */}
+                  {board.podium.length === 3 && (
+                  <ol className="arena-podium" aria-label={t('Les trois premières écoles qualifiées', 'Twa premye lekòl ki kalifye yo')}>
+                    {[board.podium[1], board.podium[0], board.podium[2]].map((s, col) => (
                       <li key={s.key} className={`arena-podium__step arena-podium__step--${col === 1 ? 1 : col === 0 ? 2 : 3}`}>
                         <SchoolBuilding name={s.label} night cell={col === 1 ? 6 : 5} />
-                        <span className="arena-podium__place">{col === 1 ? 1 : col === 0 ? 2 : 3}</span>
+                        <span className="arena-podium__place">{s.rank}</span>
                         <span className="arena-podium__name">{s.label}</span>
                         <span className="arena-podium__xp">{nf(s.teamXp)} XP</span>
                       </li>
                     ))}
                   </ol>
-                  <ol className="arena-teams">
-                    {standings.slice(0, 12).map((s, i) => (
-                      <li
-                        key={s.key}
-                        className={`arena-teams__row${myTeam?.key === s.key ? ' is-me' : ''}${s.qualified ? '' : ' is-short'}`}
-                      >
-                        {/* A school short of five still has a place in the race (the same
-                            rule as SchoolRanking beside it); it is dimmed, and its
-                            line says it is not classed yet. A column of dashes
-                            read as a broken board. */}
-                        <span className="arena-board__pos">{s.qualified ? s.rank : i + 1}</span>
+                  )}
+                  {board.ranked.length > 0 && (
+                  <ol className="arena-teams" aria-label={t('Écoles qualifiées', 'Lekòl ki kalifye')}>
+                    {board.ranked.map((s) => (
+                      <li key={s.key} className={`arena-teams__row${myTeam?.key === s.key ? ' is-me' : ''}`}>
+                        <span className="arena-board__pos">{s.rank}</span>
                         <span className="arena-teams__crest"><SchoolCrest name={s.label} size={32} /></span>
                         <span className="arena-teams__name">
                           {s.label}
-                          <small>
-                            {s.qualified
-                              ? t(`${s.members} élèves · équipe complète`, `${s.members} elèv · ekip konplè`)
-                              : t(`${s.members}/${TEAM_SIZE} · il manque ${s.needed}`, `${s.members}/${TEAM_SIZE} · manke ${s.needed}`)}
-                          </small>
+                          <small>{t(`${s.members} élèves · équipe complète`, `${s.members} elèv · ekip konplè`)}</small>
                         </span>
                         <span className="arena-board__xp">{nf(s.teamXp)} XP</span>
                       </li>
                     ))}
                   </ol>
+                  )}
+                  {/* Still recruiting: listed, never numbered as a placement. */}
+                  {board.forming.length > 0 && (
+                    <div className="arena-forming">
+                      <h3 className="arena-block__sub">{t('En formation', 'Ap fòme')}</h3>
+                      <p className="arena-block__meta">{t(`Pas encore classées : il faut ${TEAM_SIZE} joueurs.`, `Poko klase : fòk gen ${TEAM_SIZE} jwè.`)}</p>
+                      <ul className="arena-teams arena-teams--forming">
+                        {board.forming.map((s) => (
+                          <li key={s.key} className={`arena-teams__row is-short${myTeam?.key === s.key ? ' is-me' : ''}`}>
+                            <span className="arena-teams__crest"><SchoolCrest name={s.label} size={32} /></span>
+                            <span className="arena-teams__name">
+                              {s.label}
+                              <small>{t(`il manque ${s.needed}`, `manke ${s.needed}`)}</small>
+                            </span>
+                            <span className="arena-board__xp">{`${Math.min(s.members, TEAM_SIZE)}/${TEAM_SIZE}`}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                   </>
                 )}
               </section>

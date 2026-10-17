@@ -15,7 +15,7 @@ import { DUR } from './tokens';
 export const REVEAL_TIMING = { found: 550, introduce: DUR.intro - 550 } as const;
 
 export type RevealState = 'idle' | 'searching' | 'found' | 'introduce' | 'settled' | 'cancelled' | 'failed';
-export type RevealTrigger = 'search' | 'match' | 'cancel' | 'fail' | 'start' | 'reset';
+export type RevealTrigger = 'search' | 'match' | 'present' | 'cancel' | 'fail' | 'start' | 'reset';
 export const REVEAL_STATES: RevealState[] = ['idle', 'searching', 'found', 'introduce', 'settled', 'cancelled', 'failed'];
 
 export const revealMachine = defineMachine<RevealState, RevealTrigger, Record<string, never>>({
@@ -29,7 +29,9 @@ export const revealMachine = defineMachine<RevealState, RevealTrigger, Record<st
   },
   states: {
     idle: {
-      on: { search: 'searching', match: 'settled' }, // `match` here = reconnect: recover, don't replay
+      // `match` here = reconnect: recover, don't replay. `present` = an
+      // opponent known from the start (an async duel): reveal, no search.
+      on: { search: 'searching', match: 'settled', present: 'found' },
       note: 'Own card centred. Nothing implies a search is running.',
     },
     searching: {
