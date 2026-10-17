@@ -25,6 +25,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getDb } from '../_lib/firebaseAdmin';
 import { aggregateBy, type GroupField, type LeaderboardEntry } from '../../shared/leaderboardAgg';
+import { schoolCatalogue, relabelSchoolGroups } from './_schoolNames';
 
 /** Upper bound on entries scanned per period — bounds Firestore read cost. */
 const ENTRIES_CAP = 5000;
@@ -103,9 +104,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         .filter((e) => isValidAlias(e.displayName));
 
       const generatedAtMs = Date.now();
+      const catalogue = await schoolCatalogue(db);
       await Promise.all(
         FIELDS.map((field) => {
-          const groups = aggregateBy(entries, field, MEMBER_PREVIEW).slice(0, MAX_GROUPS);
+          const raw = aggregateBy(entries, field, MEMBER_PREVIEW).slice(0, MAX_GROUPS);
+          // Schools show their official spelling (see shared/schools canonicalSchoolName).
+          const groups = field === 'school' ? relabelSchoolGroups(raw, catalogue) : raw;
           written[`${id}/${field}`] = groups.length;
           return db.doc(`leaderboards/${id}/collectives/${field}`).set({
             field,

@@ -491,3 +491,48 @@ export function mergeSchools(seed: School[], added: School[]): School[] {
   }
   return [...byKey.values()];
 }
+
+// ─── Display names on the board ──────────────────────────────────────────────
+
+const LOWER_PARTICLES = new Set(['de', 'du', 'des', 'la', 'le', 'les', 'et', 'en', 'au', 'aux', 'sur']);
+
+/**
+ * A typed name, made presentable without changing what it says: inner
+ * whitespace collapsed and, when it was typed IN CAPITALS, put into title case
+ * with French particles lowercase ("INSTITUTION SAINT LOUIS DE GONZAGUE" →
+ * "Institution Saint Louis de Gonzague"). Short all-caps acronyms (IMD, EFUB,
+ * UPNCH) are left as they are — they are acronyms, not shouting.
+ */
+export function tidySchoolName(raw: string): string {
+  const s = String(raw || '').replace(/\s+/g, ' ').trim();
+  const letters = s.replace(/[^\p{L}]/gu, '');
+  if (letters.length <= 6 || letters !== letters.toUpperCase()) return s;
+  return s
+    .toLowerCase()
+    .split(' ')
+    .map((w, i) => (i > 0 && LOWER_PARTICLES.has(w) ? w : w.replace(/^(\p{L})/u, (c) => c.toUpperCase())))
+    .join(' ')
+    .replace(/(^|[\s'’-])(\p{L})/gu, (m, sep, c) => sep + c.toUpperCase())
+    .replace(/\b(De|Du|Des|La|Le|Les|Et|En|Au|Aux|Sur)\b/g, (w, _x, off) => (off === 0 ? w : w.toLowerCase()));
+}
+
+/**
+ * The name the board shows for a school: the catalogue's official spelling
+ * when the typed name is the same school by the board's own grouping rule
+ * (`normalizeName` — case, accents, hyphens and ligatures folded), otherwise
+ * the typed name, tidied. Never a fuzzy match: a near miss ("College
+ * Sacré-Cœur" vs two different Sacré-Cœur schools) is a decision for a person,
+ * not for this function.
+ */
+export function canonicalSchoolName(raw: string, catalogue: School[] = seedSchools()): string {
+  const key = normalizeName(raw);
+  if (!key) return tidySchoolName(raw);
+  const hit = catalogue.find((s) => normalizeName(s.name) === key);
+  return hit ? hit.name : tidySchoolName(raw);
+}
+
+/** Relabel aggregated school groups (`{ key, label }`) with their display names. */
+export function relabelSchoolGroups<T extends { key: string; label: string }>(groups: T[], catalogue: School[] = seedSchools()): T[] {
+  const byKey = new Map(catalogue.map((s) => [normalizeName(s.name), s.name] as const));
+  return groups.map((g) => ({ ...g, label: byKey.get(g.key) || tidySchoolName(g.label) }));
+}

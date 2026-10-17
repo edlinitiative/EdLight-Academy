@@ -29,6 +29,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getDb } from '../_lib/firebaseAdmin';
 import { aggregateBy, type GroupField, type LeaderboardEntry } from '../../shared/leaderboardAgg';
+import { schoolCatalogue, relabelSchoolGroups } from './_schoolNames';
 
 /** Upper bound on entries scanned per request — bounds Firestore read cost. */
 const ENTRIES_CAP = 5000;
@@ -115,7 +116,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       .map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }) as LeaderboardEntry)
       .filter((e) => isValidAlias(e.displayName));
 
-    const groups = aggregateBy(entries, field, MEMBER_PREVIEW);
+    const raw = aggregateBy(entries, field, MEMBER_PREVIEW);
+    // Schools show their official spelling (see shared/schools canonicalSchoolName).
+    const groups = field === 'school' ? relabelSchoolGroups(raw, await schoolCatalogue(db)) : raw;
 
     // Identical for every viewer → cache hard at the edge. Fresh enough for a
     // board that the client itself only refetches every 2 min.

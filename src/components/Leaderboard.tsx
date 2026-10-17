@@ -20,6 +20,7 @@ import { isValidAlias } from '../services/leaderboardService';
 import { HAITI_DEPARTMENTS, OTHER_CITY, citiesOf, findCity } from '../data/haitiGeo';
 import UserAvatar from './UserAvatar';
 import { aggregateBy, normalizeName } from '../../shared/leaderboardAgg';
+import { canonicalSchoolName } from '../../shared/schools';
 import './Leaderboard.css';
 
 // First name only — the board is publicly readable, so never expose any part
@@ -406,7 +407,7 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
               seed={e.id}
               name={e.displayName || 'Élève'}
               uri={(e as any).photoURL || (e as any).picture || null}
-              school={(e as any).school || null}
+              school={(e as any).school ? canonicalSchoolName((e as any).school) : null}
               level={e.level || null}
               xp={e.xp || 0}
               isMe={e.id === user?.uid}
@@ -476,7 +477,7 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
               seed={user?.uid}
               name={myEntry.displayName}
               uri={(myEntry as any).photoURL || (myEntry as any).picture || null}
-              school={(myEntry as any).school || null}
+              school={(myEntry as any).school ? canonicalSchoolName((myEntry as any).school) : null}
               level={(myEntry as any).level || null}
               xp={myEntry.xp || 0}
               isMe
