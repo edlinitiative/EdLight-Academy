@@ -1,4 +1,5 @@
 import React from 'react';
+import PlayerFace from '../PlayerFace';
 import SceneFrame from '../SceneFrame';
 import type { SceneProps } from '../sceneContract';
 import { payloadOf } from '../sceneContract';
@@ -51,6 +52,7 @@ export default function QuestionClosed({ scene, data, elapsed, reduceMotion, t }
         cause={fastest ? (
           <span className="rq-fastest">
             <span>{t('Réponse la plus rapide', 'Repons ki pi rapid')}</span>
+            <PlayerFace uid={fastest.uid} schoolKey={fastest.schoolKey} schoolName={fastest.schoolShort} standings={data.standings} mood="celebrating" size={40} still={reduceMotion} />
             <span className="rq-fastest__name">{fastest.displayName}</span>
             {fastest.schoolShort ? <span className="rq-fastest__school">{fastest.schoolShort}</span> : null}
             <span className="rq-fastest__ms">{formatSeconds(payload?.fastestMs ?? 0)}</span>

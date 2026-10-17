@@ -1,4 +1,5 @@
 import React from 'react';
+import PlayerFace from '../PlayerFace';
 import type { SceneProps } from '../sceneContract';
 import { payloadOf } from '../sceneContract';
 import type { PlayerStreakPayload } from '../../../shared/arena/events';
@@ -43,11 +44,14 @@ export default function PlayerStreak({ scene, data, reduceMotion, t }: SceneProp
           <span className="mv-num">{payload?.streak ?? 0}</span>
           <span className="mv-card__unit">{t('DE SUITE', 'DAFILE')}</span>
         </div>
-        <div className="mv-card__line">
+        <div className="mv-card__line mv-card__who">
+          {payload ? <PlayerFace uid={payload.player.uid} schoolKey={payload.player.schoolKey} schoolName={payload.school.shortName} standings={data.standings} mood="celebrating" still={reduceMotion} /> : null}
+          <span>
           <span className="mv-name">{payload?.player.displayName}</span>
           {' · '}
           <span className="mv-short">{payload?.school.shortName || payload?.player.schoolShort}</span>
           {seconds ? <> · <span className="mv-num">{seconds}s</span> {t('en moyenne', 'an mwayèn')}</> : null}
+          </span>
         </div>
       </aside>
     </div>

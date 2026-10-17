@@ -86,3 +86,11 @@
 @media (prefers-reduced-motion: reduce) {
   .stage-scene { animation: none !important; }
 }
+
+/* Student faces on the broadcast (PlayerFace). */
+.stage-face { display: inline-flex; flex: none; vertical-align: middle; line-height: 0; }
+.mv-card__who { display: flex; align-items: center; gap: 0.75rem; }
+.rq-fastest .stage-face { margin-right: 0.25rem; }
+.finale-podium__row .stage-face { margin-right: 0.5rem; }
+.finale-champion__who { display: inline-flex; align-items: center; gap: 0.35em; }
+.finale-podium__name { display: inline-flex; align-items: center; }

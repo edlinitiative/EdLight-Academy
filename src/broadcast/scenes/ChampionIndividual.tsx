@@ -1,4 +1,5 @@
 import React from 'react';
+import PlayerFace from '../PlayerFace';
 import SceneFrame from '../SceneFrame';
 import ProvisionalNotice from '../ProvisionalNotice';
 import { payloadOf, type SceneProps } from '../sceneContract';
@@ -75,7 +76,12 @@ export default function ChampionIndividual({ scene, data, elapsed, reduceMotion,
       reduceMotion={reduceMotion}
       tone={complete ? 'gold' : 'default'}
       overline={rankLabel(rank, t)}
-      figure={current.displayName}
+      figure={(
+        <span className="finale-champion__who">
+          <PlayerFace uid={current.uid} schoolKey={current.schoolKey} schoolName={current.schoolShort} standings={data.standings} mood={complete ? 'celebrating' : 'ready'} size={112} still={reduceMotion} />
+          <span>{current.displayName}</span>
+        </span>
+      )}
       support={(
         <span className="finale-stats">
           <span>{`${Math.round(current.score)} ${t('PTS', 'PWEN')}`}</span>
@@ -91,7 +97,10 @@ export default function ChampionIndividual({ scene, data, elapsed, reduceMotion,
             {settled.map((player) => (
               <li key={player.uid} className="finale-podium__row">
                 <span>{rankLabel(player.rank, t)}</span>
-                <span className="finale-podium__name">{player.displayName}</span>
+                <span className="finale-podium__name">
+                  <PlayerFace uid={player.uid} schoolKey={player.schoolKey} schoolName={player.schoolShort} standings={data.standings} size={32} still />
+                  {player.displayName}
+                </span>
                 <span>{`${Math.round(player.score)} · ${player.schoolShort}`}</span>
               </li>
             ))}

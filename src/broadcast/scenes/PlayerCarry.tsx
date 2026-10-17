@@ -1,4 +1,5 @@
 import React from 'react';
+import PlayerFace from '../PlayerFace';
 import SceneFrame from '../SceneFrame';
 import type { SceneProps } from '../sceneContract';
 import { payloadOf } from '../sceneContract';
@@ -23,7 +24,7 @@ import './movement.css';
 
 const COUNT = { delayMs: 240, durationMs: 1200 };
 
-export default function PlayerCarry({ scene, elapsed, reduceMotion, t }: SceneProps) {
+export default function PlayerCarry({ scene, data, elapsed, reduceMotion, t }: SceneProps) {
   const payload = payloadOf<PlayerCarryPayload>(scene, 'PLAYER_CARRY');
   const share = Math.max(0, Math.min(100, payload?.sharePct ?? 0));
   const shown = countUpAt(share, elapsed, COUNT, reduceMotion);
@@ -35,13 +36,16 @@ export default function PlayerCarry({ scene, elapsed, reduceMotion, t }: ScenePr
       overline={t('PORTE SON ÉCOLE', 'L AP POTE LEKÒL LA')}
       figure={<span className="mv-num">{shown.toFixed(1)}%</span>}
       support={(
-        <>
+        <span className="mv-card__who">
+          {payload ? <PlayerFace uid={payload.player.uid} schoolKey={payload.player.schoolKey} schoolName={payload.school.shortName} standings={data.standings} mood="focused" still={reduceMotion} /> : null}
+          <span>
           <span className="mv-name">{payload?.player.displayName}</span>
           {' · '}
           <span className="mv-short">{payload?.school.shortName || payload?.player.schoolShort}</span>
           {' · '}
           {t('des points des cinq', 'nan pwen senk yo')}
-        </>
+          </span>
+        </span>
       )}
     >
       <div className="mv-share" aria-hidden="true">
