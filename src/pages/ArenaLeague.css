@@ -231,3 +231,129 @@
   .arena-champ .aph__actions { width: 100%; }
   .arena-champ .aph__actions > * { flex: 1 1 auto; }
 }
+
+/* ══ Championship as an occasion (2026-10-17) ══════════════════════════════
+   The finale leads the page as a poster — stage art + the event — then the
+   rules in three lines, then the teams (podium of school buildings). */
+.arena-champ .arena-national {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: stretch;
+  gap: 0;
+  margin: 0 0 clamp(1.5rem, 4vw, 2.25rem);
+  padding: 0;
+  overflow: hidden;
+}
+@media (min-width: 860px) {
+  .arena-champ .arena-national { grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.2fr); }
+}
+.arena-national__body { display: grid; gap: 0.6rem; align-content: center; padding: clamp(1.25rem, 3vw, 2rem); }
+.arena-stage {
+  position: relative;
+  min-height: 210px;
+  overflow: hidden;
+  background:
+    radial-gradient(60% 55% at 50% 58%, rgba(255, 185, 46, 0.22), transparent 70%),
+    linear-gradient(180deg, #0E2152 0%, #0A1838 100%);
+}
+.arena-stage__beam {
+  position: absolute;
+  top: -10%;
+  width: 34%;
+  height: 120%;
+  background: linear-gradient(180deg, rgba(255, 240, 200, 0.28), rgba(255, 240, 200, 0));
+  filter: blur(2px);
+  pointer-events: none;
+}
+.arena-stage__beam--l { left: 14%; transform: skewX(14deg); transform-origin: top; clip-path: polygon(30% 0, 70% 0, 100% 100%, 0 100%); }
+.arena-stage__beam--r { right: 14%; transform: skewX(-14deg); transform-origin: top; clip-path: polygon(30% 0, 70% 0, 100% 100%, 0 100%); }
+.arena-stage__trophy {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  transform: translate(-50%, -50%);
+  color: #FFB92E;
+  filter: drop-shadow(0 6px 18px rgba(255, 185, 46, 0.45));
+}
+.arena-stage__crowd {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 30px;
+  background: radial-gradient(circle at 10px 30px, #050C22 13px, transparent 14px) 0 0 / 24px 30px repeat-x;
+}
+
+.arena-how {
+  display: grid;
+  gap: 1rem 1.5rem;
+  margin: 0 0 clamp(1.75rem, 4vw, 2.5rem);
+  padding: 0;
+  list-style: none;
+  counter-reset: how;
+}
+@media (min-width: 760px) { .arena-how { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.arena-how li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 0.85rem;
+  row-gap: 0.2rem;
+  counter-increment: how;
+}
+.arena-how li::before {
+  content: counter(how);
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: #1B3152;
+  color: #FFD27A;
+  font-family: var(--font-display, sans-serif);
+  font-weight: 800;
+  font-size: 1rem;
+}
+.arena-how strong { color: #F5F8FF; font-size: 1.0625rem; font-weight: 700; line-height: 1.35; }
+.arena-how span { color: #A7BAD5; font-size: 0.975rem; line-height: 1.5; }
+
+.arena-seats { display: flex; gap: 0.6rem; margin: 1rem 0 0; padding: 0; list-style: none; }
+.arena-seats li { display: grid; justify-items: center; gap: 0.35rem; color: #A7BAD5; font-size: 0.875rem; font-weight: 700; }
+.arena-seats__seat {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  border: 2px dashed rgba(193, 207, 228, 0.35);
+  color: #C1CFE4;
+}
+
+.arena-podium {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 0.75rem;
+  margin: 1rem 0 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+.arena-podium__step { display: grid; justify-items: center; gap: 0.35rem; text-align: center; min-width: 0; }
+.arena-podium__step .school-building { display: block; max-width: 100%; height: auto; }
+.arena-podium__place {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.arena-podium__step--1 .arena-podium__place { background: #FFE7A8; color: #6B4A00; }
+.arena-podium__step--2 .arena-podium__place { background: #E3E8EF; color: #3D4A5C; }
+.arena-podium__step--3 .arena-podium__place { background: #F6D8C2; color: #7A3E12; }
+.arena-podium__name { color: #F5F8FF; font-size: 0.95rem; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
+.arena-podium__xp { color: #A7BAD5; font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+.arena-podium__step--1 .arena-podium__xp { color: #FFB92E; }
+@media (prefers-reduced-motion: reduce) { .arena-stage__beam { filter: none; } }
+.arena-national__body { justify-items: start; }

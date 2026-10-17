@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, Smartphone, ChevronRight, Plus, Laptop } from '../components/icons';
+import { Check, Smartphone, ChevronRight, Plus, Laptop, Trophy } from '../components/icons';
 import useStore from '../contexts/store';
 import { useOpenArena } from '../hooks/useOpenArena';
 import { usePlayableArena } from '../hooks/useArenaPlay';
@@ -10,6 +10,7 @@ import { ARENA_WEB_PLAY } from '../../shared/arena/webPlay';
 import MySchoolCard from '../components/MySchoolCard';
 import SchoolRanking from '../components/SchoolRanking';
 import UserAvatar from '../components/UserAvatar';
+import SchoolBuilding from '../components/arena/SchoolBuilding';
 import { GRADES } from '../../shared/trackConfig';
 import { useTrivia } from '../hooks/useTrivia';
 import { useStreak } from '../hooks/useStreak';
@@ -234,6 +235,133 @@ export default function Arena() {
           )}
         />
 
+        {/* ── The national finale: the real edition, or the honest wait ── */}
+        <section className={`arena-national${playNow ? ` is-${playNow.state}` : ''}`} aria-labelledby="arena-national-title">
+          {/* The stage: spotlights on the trophy, the crowd in the dark — the
+              Arène's own art, so the one prize event on the site looks like an
+              occasion rather than a paragraph. Decorative only. */}
+          <div className="arena-stage" aria-hidden="true">
+            <span className="arena-stage__beam arena-stage__beam--l" />
+            <span className="arena-stage__beam arena-stage__beam--r" />
+            <span className="arena-stage__trophy"><Trophy size={64} weight="fill" /></span>
+            <span className="arena-stage__crowd" />
+          </div>
+          <div className="arena-national__body">
+          {playNow ? (
+            <>
+              {/* The room is open or the questions are running: this card's
+                  one job is now to get the student into the play room. */}
+              <p className="arena-national__tag">
+                {playNow.state === 'live' ? t('En direct', 'An dirèk') : t('Portes ouvertes', 'Pòt yo louvri')}
+              </p>
+              <h2 id="arena-national-title">
+                {isCreole && playNow.titleHt ? playNow.titleHt : playNow.title}
+              </h2>
+              <p>
+                {playNow.state === 'live'
+                  ? t(
+                    'Les questions sont en cours. Entre dans la salle depuis cet ordinateur, ou ouvre l’application avec le même compte.',
+                    'Kesyon yo ap pase kounye a. Antre nan sal la sou òdinatè sa a, oswa louvri aplikasyon an ak menm kont lan.',
+                  )
+                  : t(
+                    'La salle est ouverte. Entre maintenant — ton école ne compte que les élèves présents avant le départ.',
+                    'Sal la louvri. Antre kounye a — lekòl ou konte sèlman elèv ki prezan anvan kòmansman an.',
+                  )}
+              </p>
+              <div className="arena-national__actions">
+                <Link to={playHref(playNow.id)} className="arena-national__cta">
+                  {t('Entrer dans la salle', 'Antre nan sal la')} <ChevronRight size={18} aria-hidden="true" />
+                </Link>
+                <Link to="/download?from=arena" className="arena-national__ghost an-ghost">
+                  <Smartphone size={18} aria-hidden="true" /> {t('L’application', 'Aplikasyon an')}
+                </Link>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="arena-national__tag">
+                {open
+                  ? (open.state === 'doors' ? t('Portes ouvertes', 'Pòt yo louvri') : t('Inscriptions ouvertes', 'Enskripsyon ouvè'))
+                  : t('Finale nationale', 'Final nasyonal')}
+              </p>
+              <h2 id="arena-national-title">
+                {open ? editionTitle : t('La prochaine finale en direct sera annoncée ici.', 'N ap anonse pwochen final an dirèk la isit la.')}
+              </h2>
+              <p>
+                {open
+                  ? `${dateLabel ? t(`Le ${dateLabel}. `, `${dateLabel}. `) : ''}${ARENA_WEB_PLAY
+                    ? t(
+                      'Les questions se jouent ici, sur ordinateur, ou dans l’application ; ton école ne compte que les élèves présents.',
+                      'Kesyon yo jwe isit la, sou òdinatè, oswa nan aplikasyon an ; lekòl ou konte sèlman elèv ki prezan.',
+                    )
+                    : t(
+                      'Les questions se jouent dans l’application ; ton école ne compte que les élèves présents.',
+                      'Kesyon yo jwe nan aplikasyon an ; lekòl ou konte sèlman elèv ki prezan.',
+                    )}`
+                  : ARENA_WEB_PLAY
+                    ? t(
+                      'Une fois par mois, les écoles s’affrontent en direct, sur ordinateur ou dans l’application. En attendant, chaque partie compte au classement.',
+                      'Yon fwa pa mwa, lekòl yo afwonte an dirèk, sou òdinatè oswa nan aplikasyon an. Pandan n ap tann, chak pati konte nan klasman an.',
+                    )
+                    : t(
+                      'Une fois par mois, les écoles s’affrontent en direct dans l’application. En attendant, chaque partie compte au classement.',
+                      'Yon fwa pa mwa, lekòl yo afwonte an dirèk nan aplikasyon an. Pandan n ap tann, chak pati konte nan klasman an.',
+                    )}
+              </p>
+              <div className="arena-national__actions">
+                {open && !done ? (
+                  <a href="#arena-inscription" className="arena-national__cta">
+                    {t('S’inscrire', 'Enskri')} <ChevronRight size={18} aria-hidden="true" />
+                  </a>
+                ) : open && done && ARENA_WEB_PLAY ? (
+                  <Link to={playHref(open.id)} className="arena-national__cta">
+                    {t('Entrer dans la salle', 'Antre nan sal la')} <ChevronRight size={18} aria-hidden="true" />
+                  </Link>
+                ) : open ? (
+                  <Link to="/jeux" className="arena-national__cta">
+                    {t('Jouer maintenant', 'Jwe kounye a')} <ChevronRight size={18} aria-hidden="true" />
+                  </Link>
+                ) : (
+                  /* No finale scheduled: the one thing worth doing here is
+                     to try the evening itself — the full simulated finale,
+                     on the real broadcast, at /arena/demo. Practice games
+                     stay one step away. */
+                  <>
+                    <Link to="/arena/demo" className="arena-national__cta">
+                      {t('Essayer la finale en démo', 'Eseye final la an demo')} <ChevronRight size={18} aria-hidden="true" />
+                    </Link>
+                    <Link to="/jeux" className="arena-national__ghost an-ghost">
+                      {t('Jouer maintenant', 'Jwe kounye a')}
+                    </Link>
+                  </>
+                )}
+                {open && (
+                  <Link to="/download?from=arena" className="arena-national__ghost an-ghost">
+                    <Smartphone size={18} aria-hidden="true" /> {t('L’application', 'Aplikasyon an')}
+                  </Link>
+                )}
+              </div>
+            </>
+          )}
+          </div>
+        </section>
+
+        {/* How the championship works — the real rules, three lines. */}
+        <ol className="arena-how" aria-label={t('Comment ça marche', 'Kijan sa mache')}>
+          <li>
+            <strong>{t('Ton école joue toute l’année', 'Lekòl ou jwe tout ane a')}</strong>
+            <span>{t('Chaque partie, quiz et examen de ses élèves compte au classement.', 'Chak pati, quiz ak egzamen elèv li yo konte nan klasman an.')}</span>
+          </li>
+          <li>
+            <strong>{t(`${TEAM_SIZE} joueurs pour être classée`, `${TEAM_SIZE} jwè pou l kalifye`)}</strong>
+            <span>{t(`L’école compte ses ${TEAM_SIZE} meilleurs : invite ta classe.`, `Lekòl la konte ${TEAM_SIZE} pi bon yo : envite klas ou.`)}</span>
+          </li>
+          <li>
+            <strong>{t('Une finale en direct par mois', 'Yon final an dirèk chak mwa')}</strong>
+            <span>{t('Les écoles s’affrontent sur les mêmes questions, au même moment.', 'Lekòl yo afwonte sou menm kesyon yo, an menm tan.')}</span>
+          </li>
+        </ol>
+
         {/* ── Two views: the student's school, or every school ─────────── */}
         <div className="arena-switch" role="tablist" aria-label={t('Vue', 'Vi')}>
           <button
@@ -270,6 +398,16 @@ export default function Arena() {
                   </h2>
                   {schoolMeta && <p className="arena-block__meta">{schoolMeta}</p>}
                   <p className="arena-block__text">{fiveLine}</p>
+
+                  {/* Until there is a team to show, show the shape of one: five
+                      seats — what "a school counts its best five" means. */}
+                  {!(mySchool && mine && members.length > 0) && (
+                    <ol className="arena-seats" aria-label={t(`${TEAM_SIZE} places dans l’équipe`, `${TEAM_SIZE} plas nan ekip la`)}>
+                      {Array.from({ length: TEAM_SIZE }, (_, i) => (
+                        <li key={i}><span className="arena-seats__seat" aria-hidden="true"><Plus size={18} /></span><span>{i + 1}</span></li>
+                      ))}
+                    </ol>
+                  )}
 
                   {mySchool && mine && members.length > 0 && (
                     <>
@@ -340,6 +478,18 @@ export default function Arena() {
                     <Link to="/jeux" className="an-go">{t('Jouer une partie', 'Jwe yon pati')}</Link>
                   </div>
                 ) : (
+                  <>
+                  {/* The podium: the leading three as their school buildings. */}
+                  <ol className="arena-podium" aria-label={t('Les trois premières', 'Twa premye yo')}>
+                    {[standings[1], standings[0], standings[2]].map((s, col) => s && (
+                      <li key={s.key} className={`arena-podium__step arena-podium__step--${col === 1 ? 1 : col === 0 ? 2 : 3}`}>
+                        <SchoolBuilding name={s.label} night cell={col === 1 ? 6 : 5} />
+                        <span className="arena-podium__place">{col === 1 ? 1 : col === 0 ? 2 : 3}</span>
+                        <span className="arena-podium__name">{s.label}</span>
+                        <span className="arena-podium__xp">{nf(s.teamXp)} XP</span>
+                      </li>
+                    ))}
+                  </ol>
                   <ol className="arena-teams">
                     {standings.slice(0, 12).map((s) => (
                       <li
@@ -359,109 +509,11 @@ export default function Arena() {
                       </li>
                     ))}
                   </ol>
+                  </>
                 )}
               </section>
             )}
 
-            {/* ── The national finale: the real edition, or the honest wait ── */}
-            <section className={`arena-national${playNow ? ` is-${playNow.state}` : ''}`} aria-labelledby="arena-national-title">
-              {playNow ? (
-                <>
-                  {/* The room is open or the questions are running: this card's
-                      one job is now to get the student into the play room. */}
-                  <p className="arena-national__tag">
-                    {playNow.state === 'live' ? t('En direct', 'An dirèk') : t('Portes ouvertes', 'Pòt yo louvri')}
-                  </p>
-                  <h2 id="arena-national-title">
-                    {isCreole && playNow.titleHt ? playNow.titleHt : playNow.title}
-                  </h2>
-                  <p>
-                    {playNow.state === 'live'
-                      ? t(
-                        'Les questions sont en cours. Entre dans la salle depuis cet ordinateur, ou ouvre l’application avec le même compte.',
-                        'Kesyon yo ap pase kounye a. Antre nan sal la sou òdinatè sa a, oswa louvri aplikasyon an ak menm kont lan.',
-                      )
-                      : t(
-                        'La salle est ouverte. Entre maintenant — ton école ne compte que les élèves présents avant le départ.',
-                        'Sal la louvri. Antre kounye a — lekòl ou konte sèlman elèv ki prezan anvan kòmansman an.',
-                      )}
-                  </p>
-                  <div className="arena-national__actions">
-                    <Link to={playHref(playNow.id)} className="arena-national__cta">
-                      {t('Entrer dans la salle', 'Antre nan sal la')} <ChevronRight size={18} aria-hidden="true" />
-                    </Link>
-                    <Link to="/download?from=arena" className="arena-national__ghost an-ghost">
-                      <Smartphone size={18} aria-hidden="true" /> {t('L’application', 'Aplikasyon an')}
-                    </Link>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <p className="arena-national__tag">
-                    {open
-                      ? (open.state === 'doors' ? t('Portes ouvertes', 'Pòt yo louvri') : t('Inscriptions ouvertes', 'Enskripsyon ouvè'))
-                      : t('Finale nationale', 'Final nasyonal')}
-                  </p>
-                  <h2 id="arena-national-title">
-                    {open ? editionTitle : t('La prochaine finale en direct sera annoncée ici.', 'N ap anonse pwochen final an dirèk la isit la.')}
-                  </h2>
-                  <p>
-                    {open
-                      ? `${dateLabel ? t(`Le ${dateLabel}. `, `${dateLabel}. `) : ''}${ARENA_WEB_PLAY
-                        ? t(
-                          'Les questions se jouent ici, sur ordinateur, ou dans l’application ; ton école ne compte que les élèves présents.',
-                          'Kesyon yo jwe isit la, sou òdinatè, oswa nan aplikasyon an ; lekòl ou konte sèlman elèv ki prezan.',
-                        )
-                        : t(
-                          'Les questions se jouent dans l’application ; ton école ne compte que les élèves présents.',
-                          'Kesyon yo jwe nan aplikasyon an ; lekòl ou konte sèlman elèv ki prezan.',
-                        )}`
-                      : ARENA_WEB_PLAY
-                        ? t(
-                          'Une fois par mois, les écoles s’affrontent en direct, sur ordinateur ou dans l’application. En attendant, chaque partie compte au classement.',
-                          'Yon fwa pa mwa, lekòl yo afwonte an dirèk, sou òdinatè oswa nan aplikasyon an. Pandan n ap tann, chak pati konte nan klasman an.',
-                        )
-                        : t(
-                          'Une fois par mois, les écoles s’affrontent en direct dans l’application. En attendant, chaque partie compte au classement.',
-                          'Yon fwa pa mwa, lekòl yo afwonte an dirèk nan aplikasyon an. Pandan n ap tann, chak pati konte nan klasman an.',
-                        )}
-                  </p>
-                  <div className="arena-national__actions">
-                    {open && !done ? (
-                      <a href="#arena-inscription" className="arena-national__cta">
-                        {t('S’inscrire', 'Enskri')} <ChevronRight size={18} aria-hidden="true" />
-                      </a>
-                    ) : open && done && ARENA_WEB_PLAY ? (
-                      <Link to={playHref(open.id)} className="arena-national__cta">
-                        {t('Entrer dans la salle', 'Antre nan sal la')} <ChevronRight size={18} aria-hidden="true" />
-                      </Link>
-                    ) : open ? (
-                      <Link to="/jeux" className="arena-national__cta">
-                        {t('Jouer maintenant', 'Jwe kounye a')} <ChevronRight size={18} aria-hidden="true" />
-                      </Link>
-                    ) : (
-                      /* No finale scheduled: the one thing worth doing here is
-                         to try the evening itself — the full simulated finale,
-                         on the real broadcast, at /arena/demo. Practice games
-                         stay one step away. */
-                      <>
-                        <Link to="/arena/demo" className="arena-national__cta">
-                          {t('Essayer la finale en démo', 'Eseye final la an demo')} <ChevronRight size={18} aria-hidden="true" />
-                        </Link>
-                        <Link to="/jeux" className="arena-national__ghost an-ghost">
-                          {t('Jouer maintenant', 'Jwe kounye a')}
-                        </Link>
-                      </>
-                    )}
-                    {open && (
-                      <Link to="/download?from=arena" className="arena-national__ghost an-ghost">
-                        <Smartphone size={18} aria-hidden="true" /> {t('L’application', 'Aplikasyon an')}
-                      </Link>
-                    )}
-                  </div>
-                </>
-              )}
-            </section>
 
             {open === undefined && (
               // Not "nothing is open" — not known yet.

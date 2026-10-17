@@ -89,18 +89,19 @@
 
 .hs-map {
   position: relative; aspect-ratio: 1072 / 832; border-radius: 30px; overflow: hidden;
+  /* A calm sea, not graph paper (Ted, 2026-10-17: "the grid behind the map
+     — not premium"): deep water, a soft light pooled under the island, the
+     edges falling away into the night. */
   background:
-    radial-gradient(70% 70% at 52% 48%, rgba(47, 209, 140, 0.16), transparent 70%),
-    radial-gradient(120% 90% at 50% 120%, rgba(61, 139, 255, 0.25), transparent 70%),
-    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 22px),
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 22px),
-    linear-gradient(180deg, #0B1A40, #061027);
+    radial-gradient(58% 62% at 54% 50%, rgba(64, 132, 230, 0.22), transparent 72%),
+    radial-gradient(140% 120% at 50% 50%, transparent 55%, rgba(2, 6, 18, 0.55) 100%),
+    linear-gradient(180deg, #0C1D44 0%, #081633 55%, #061027 100%);
   box-shadow: inset 0 0 0 1px var(--hs-line);
 }
 .hs-map__art { position: absolute; inset: 0; width: 100%; height: 100%; }
 .hs-map__glow path { fill: rgba(80, 150, 255, 0.18); stroke: rgba(110, 170, 255, 0.32); stroke-width: 24; stroke-linejoin: round; filter: blur(16px); }
 .hs-dept { cursor: pointer; }
-.hs-dept__fill { fill: #1B2D5C; stroke: #061027; stroke-width: 3; stroke-linejoin: round; transition: fill 0.25s ease, filter 0.25s ease; }
+.hs-dept__fill { fill: #22396E; stroke: #0A1836; stroke-width: 3; stroke-linejoin: round; transition: fill 0.25s ease, filter 0.25s ease; }
 .hs-dept:hover .hs-dept__fill { fill: #26407A; }
 .hs-dept.is-open .hs-dept__fill { fill: url(#hs-open); }
 .hs-dept.is-open:hover .hs-dept__fill { filter: brightness(1.12); }

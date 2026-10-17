@@ -268,9 +268,6 @@ export default function ArenaStory() {
           <div className="hs-map" role="group" aria-label={t('Carte des chapitres', 'Kat chapit yo')}>
             <svg className="hs-map__art" viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`} aria-hidden="true">
               <defs>
-                <pattern id="hs-px" width="8" height="8" patternUnits="userSpaceOnUse">
-                  <rect width="4" height="4" fill="rgba(255,255,255,0.06)" />
-                </pattern>
                 <linearGradient id="hs-open" x1="0" y1="0" x2="1" y2="1">
                   <stop offset="0" stopColor="#2FD18C" />
                   <stop offset="1" stopColor="#11895C" />
@@ -288,7 +285,6 @@ export default function ArenaStory() {
                 return (
                   <g key={c.id} className={cls} onClick={() => selectChapter(i)}>
                     <path d={CHAPTER_GEO[i].d} className="hs-dept__fill" />
-                    <path d={CHAPTER_GEO[i].d} fill="url(#hs-px)" pointerEvents="none" />
                   </g>
                 );
               })}
