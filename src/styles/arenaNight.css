@@ -336,3 +336,18 @@ body.arena-night :is(.ah-start, .aj-go, .an-go, .gx-btn, .duel-pill, .myschool__
   transform: none !important;
   cursor: not-allowed;
 }
+
+/* ══ One stage language (2026-10-17 audit W2) ═══════════════════════════════
+   Lobby (/arena), championship (/arena/championnat) and the broadcast demo
+   (/arena/demo, which repeats this ramp in ArenaDemo.css because it sits
+   outside Layout) share: the #040A1C night, ONE page-title ramp — display
+   face, 800, flat warm white, no gradient text or glow — and opaque panels
+   #13243F / raised #1C3254 with the school crest left of its name. */
+body .ah-hero .ah-title.lb-title,
+body .aph__title {
+  font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif);
+  font-size: clamp(2.25rem, 1.5rem + 2vw, 3.25rem);
+  font-weight: 800; letter-spacing: -0.04em; line-height: 1.02;
+  background: none; -webkit-background-clip: border-box; background-clip: border-box;
+  color: #FFF6E6; filter: none;
+}

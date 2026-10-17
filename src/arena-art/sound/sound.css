@@ -51,3 +51,15 @@
   .snd__vol { max-width: none; }
   .snd__grid { grid-template-columns: 1fr; }
 }
+
+/* The student-facing switch (SoundToggle.tsx): opaque night tones, never coral. */
+.snd-toggle {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; flex: none;
+  min-height: 44px; min-width: 44px; padding: 0 0.9rem; border: 0; border-radius: 999px;
+  background: #1F3456; color: #F5F8FF; font: inherit; font-size: 0.9375rem; font-weight: 700; cursor: pointer; white-space: nowrap;
+}
+.snd-toggle:hover { background: #284068; }
+.snd-toggle:focus-visible { outline: 3px solid #FFC24A; outline-offset: 2px; }
+.snd-toggle svg { flex: none; color: #A7BAD5; }
+.snd-toggle.is-on svg { color: #FFD27A; }
+.snd-toggle--compact { padding: 0; width: 44px; }

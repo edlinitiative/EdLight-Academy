@@ -53,6 +53,9 @@ async function playOnce() {
   const go = await screen.findByRole('button', { name: /Relever le défi/ });
   await waitFor(() => expect(go).not.toBeDisabled());
   fireEvent.click(go);
+  // The duel's opening (reveal → 3-2-1); "Commencer" goes straight to the round.
+  expect(await screen.findByRole('region', { name: 'Début du défi' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Commencer' }));
   fireEvent.click(screen.getByRole('button', { name: /A1/ }));
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Voir les résultats/ })); });
 }

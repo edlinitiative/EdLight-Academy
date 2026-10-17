@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Play, Swords, Share2, Check, LogIn, ChevronRight } from '../../icons';
+import { Play, Swords, Share2, Check, LogIn, ChevronRight, Users } from '../../icons';
 import PlayerCard from '../../../arena-art/cards/PlayerCard';
 import SchoolCrest from '../../../arena-art/crest/SchoolCrest';
 import Avatar from '../../../arena-art/avatars/Avatar';
@@ -31,6 +31,8 @@ export interface LobbySchool {
 export const PLAY_TO = '/jeux/trivia';
 export const PLAY_STATE = { startCategory: 'mixed' };
 export const DUEL_STATE = { duelPick: true };
+/** Where "Dans mon école" goes — the same target as the lobby's lane 2. */
+export const SCHOOL_TO = '/classement';
 
 export default function LobbyStrip({
   isCreole, signedIn, uid, name, level, totalXp, weeklyRank, weeklyXp, school, rival, leader, onSignIn,
@@ -72,6 +74,21 @@ export default function LobbyStrip({
     </p>
   );
 
+  /* The two social lanes, one tap from Play (audit W1): on a phone the lane
+     cards sit below the city, so the friend challenge and the school race
+     get a compact way in right here. Hidden on wider screens, where the
+     lanes are already in the first view. */
+  const quick = (
+    <nav className="lb-quick" aria-label={t('Jouer avec les autres', 'Jwe ak lòt yo')}>
+      <Link to={PLAY_TO} state={DUEL_STATE} className="lb-quick__go" onClick={() => trackEvent('duel_entry', { where: 'arena-lobby-quick' })}>
+        <Swords size={18} aria-hidden="true" /> {t('Défier un ami', 'Defye yon zanmi')}
+      </Link>
+      <Link to={SCHOOL_TO} className="lb-quick__go">
+        <Users size={18} aria-hidden="true" /> {t('Dans mon école', 'Nan lekòl mwen')}
+      </Link>
+    </nav>
+  );
+
   /* ── Guest ── */
   if (!signedIn) {
     return (
@@ -81,6 +98,7 @@ export default function LobbyStrip({
             {play}
             {playMeta}
           </div>
+          {quick}
           <button type="button" className="lb-quiet" onClick={onSignIn}>
             <LogIn size={18} aria-hidden="true" /> {t('Connecte-toi pour représenter ton école', 'Konekte pou reprezante lekòl ou')}
           </button>
@@ -181,6 +199,7 @@ export default function LobbyStrip({
           {play}
           {playMeta}
         </div>
+        {quick}
       </div>
       <div className="lb-side lb-rival">{rivalBox}</div>
     </div>

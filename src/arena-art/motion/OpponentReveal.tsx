@@ -5,11 +5,16 @@ import { motionVars } from './tokens';
 import { MotionPlayer, Portrait, schoolVars, useReduced, useT } from './shared';
 import './motion.css';
 
-/** The matchmaking phase as the server reports it — the authoritative input. */
-export type MatchPhase = 'idle' | 'searching' | 'matched' | 'cancelled' | 'failed' | 'started';
+/**
+ * The matchmaking phase as the server reports it — the authoritative input.
+ * `known`: the opponent was never searched for — an asynchronous duel whose
+ * challenger is already on the record — so the reveal plays without
+ * pretending a search ran.
+ */
+export type MatchPhase = 'idle' | 'searching' | 'matched' | 'known' | 'cancelled' | 'failed' | 'started';
 
 const PHASE_TRIGGER: Record<MatchPhase, RevealTrigger> = {
-  idle: 'reset', searching: 'search', matched: 'match', cancelled: 'cancel', failed: 'fail', started: 'start',
+  idle: 'reset', searching: 'search', matched: 'match', known: 'present', cancelled: 'cancel', failed: 'fail', started: 'start',
 };
 
 export interface OpponentRevealProps {

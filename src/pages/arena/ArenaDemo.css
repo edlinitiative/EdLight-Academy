@@ -398,3 +398,36 @@
   .demo-head .live__brand { min-width: 0; flex: 1 1 auto; }
   .demo-head .live__title { white-space: normal; }
 }
+
+/* ══ The dock never covers an answer (2026-10-17 audit W3) ══════════════════
+   ArenaDemo measures the dock (ResizeObserver → --demo-dock-h) and the
+   question sheet reserves exactly that much, plus the dock's gap and the
+   safe area — no fixed bottom offset. On phone/tablet the dock also folds to
+   one row while a question is up (timeline, speed and "Nouvelle soirée"
+   return at the pause), and the sheet scrolls inside itself when a long
+   prompt, four long options or large text need it. */
+.demo-live { --demo-dock-gap: calc(16px + env(safe-area-inset-bottom, 0px)); }
+.demo-dock { bottom: var(--demo-dock-gap); }
+.demo-play { max-height: calc(100dvh - 2 * (var(--demo-dock-h, 120px) + var(--demo-dock-gap) + 12px)); overflow-y: auto; overscroll-behavior: contain; }
+@media (max-width: 1099px) {
+  .demo-live.has-q .demo-timeline,
+  .demo-live.has-q .demo-dock__speed,
+  .demo-live.has-q .demo-dock__btn--replay { display: none; }
+  .demo-live.has-q .demo-dock { padding-top: 10px; }
+  .demo-live.has-q .demo-dock__row { flex-wrap: nowrap; }
+  .demo-play {
+    bottom: calc(var(--demo-dock-h, 120px) + var(--demo-dock-gap) + 12px);
+    max-height: calc(100dvh - var(--demo-dock-h, 120px) - var(--demo-dock-gap) - 12px - 12px);
+  }
+  .demo-yours { bottom: auto; }
+}
+@media (max-width: 720px) {
+  .demo-live { padding-bottom: calc(var(--demo-dock-h, 150px) + var(--demo-dock-gap) + 16px) !important; }
+  .demo-live .live__inner { padding-bottom: 0; }
+}
+
+/* ══ One stage language (audit W2; see styles/arenaNight.css) ══════════════
+   The same night as the lobby and the championship, the same title face. */
+.demo-live, .demo-intro { background: #040A1C !important; }
+.demo-live .live__title { font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif); font-weight: 800; font-size: clamp(1.125rem, 0.9rem + 0.6vw, 1.5rem); letter-spacing: -0.02em; color: #FFF6E6; }
+.demo-intro h1 { color: #FFF6E6; }

@@ -27,6 +27,11 @@ export interface TrophyCeremonyProps {
   demo?: boolean;
   reducedMotion?: boolean;
   onStateChange?: (s: CeremonyState) => void;
+  /**
+   * The ceremony's words, for a result that is not the national title (e.g.
+   * a confirmed duel win). Defaults are the championship's own.
+   */
+  labels?: { eyebrow?: string; tease?: string; roster?: string };
 }
 
 export interface TrophyCeremonyHandle {
@@ -37,7 +42,7 @@ export interface TrophyCeremonyHandle {
 const COSMETIC: CeremonyState[] = ['dark', 'anticipation', 'reveal', 'roster'];
 
 const TrophyCeremony = forwardRef<TrophyCeremonyHandle, TrophyCeremonyProps>(function TrophyCeremony({
-  event, winner, tied = [], status, resume = false, demo = false, reducedMotion, onStateChange,
+  event, winner, tied = [], status, resume = false, demo = false, reducedMotion, onStateChange, labels,
 }, ref) {
   const t = useT();
   const reduced = useReduced(reducedMotion);
@@ -102,17 +107,17 @@ const TrophyCeremony = forwardRef<TrophyCeremonyHandle, TrophyCeremonyProps>(fun
             <p className="mo-tc__note">{t('Le champion sera annoncé quand les résultats seront confirmés.', 'N ap anonse chanpyon an lè rezilta yo konfime.')}</p>
           )}
           {s === 'anticipation' && (
-            <p className="mo-tc__tease">{t('Le champion national est…', 'Chanpyon nasyonal la se…')}</p>
+            <p className="mo-tc__tease">{labels?.tease ?? t('Le champion national est…', 'Chanpyon nasyonal la se…')}</p>
           )}
           {winnerShown && (
             <>
-              <span className="mo-tc__eyebrow">{t('Champion national', 'Chanpyon nasyonal')}</span>
+              <span className="mo-tc__eyebrow">{labels?.eyebrow ?? t('Champion national', 'Chanpyon nasyonal')}</span>
               <h3 className="mo-tc__school">{winner.name}</h3>
               <span className="mo-tc__band" aria-hidden="true" />
             </>
           )}
           {(s === 'roster' || s === 'settled') && (
-            <ul className="mo-tc__roster" aria-label={t('Équipe championne', 'Ekip chanpyon an')}>
+            <ul className="mo-tc__roster" aria-label={labels?.roster ?? t('Équipe championne', 'Ekip chanpyon an')}>
               {winner.roster.map((n, i) => (
                 <li key={n} style={{ '--i': i } as React.CSSProperties}>{n}</li>
               ))}

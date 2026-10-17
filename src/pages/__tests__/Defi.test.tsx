@@ -72,6 +72,9 @@ it('plays the challenger’s exact questions once and shows the server’s resul
   const go = await screen.findByRole('button', { name: /Relever le défi/ });
   await waitFor(() => expect(go).not.toBeDisabled());
   fireEvent.click(go);
+  // The duel's opening (reveal → 3-2-1); "Commencer" goes straight to the round.
+  expect(await screen.findByRole('region', { name: 'Début du défi' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Commencer' }));
 
   // Question order is the challenger's: index 2 first, then index 0.
   expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Capitale C ?');
@@ -94,6 +97,9 @@ it('says why when the server refuses the attempt', async () => {
   const go = await screen.findByRole('button', { name: /Relever le défi/ });
   await waitFor(() => expect(go).not.toBeDisabled());
   fireEvent.click(go);
+  // The duel's opening (reveal → 3-2-1); "Commencer" goes straight to the round.
+  expect(await screen.findByRole('region', { name: 'Début du défi' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Commencer' }));
   fireEvent.click(screen.getByRole('button', { name: /B1/ }));
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Voir les résultats/ })); });
   expect(await screen.findByRole('alert')).toHaveTextContent(/déjà été relevé/);
@@ -139,6 +145,9 @@ it('puts Revanche first after a lost duel, on the same theme', async () => {
   const go = await screen.findByRole('button', { name: /Relever le défi/ });
   await waitFor(() => expect(go).not.toBeDisabled());
   fireEvent.click(go);
+  // The duel's opening (reveal → 3-2-1); "Commencer" goes straight to the round.
+  expect(await screen.findByRole('region', { name: 'Début du défi' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Commencer' }));
   fireEvent.click(screen.getByRole('button', { name: /C2/ }));
   fireEvent.click(screen.getByRole('button', { name: /Question suivante/ }));
   fireEvent.click(screen.getByRole('button', { name: /A2/ }));

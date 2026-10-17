@@ -159,7 +159,8 @@ describe('signed in', () => {
     const strip = screen.getByRole('region', { name: 'Ton lobby' });
     expect(within(strip).queryByTestId('rival-gap')).toBeNull();
     expect(within(strip).getByTestId('rival-none').textContent).toMatch(/top 50/);
-    expect(within(strip).queryByRole('link', { name: /Défier/ })).toBeNull();
+    // No "Défier <rival>" link (the generic "Défier un ami" lane button stays).
+    expect(within(strip).queryByRole('link', { name: /Défier (?!un ami)/ })).toBeNull();
     fireEvent.click(within(strip).getByRole('button', { name: /Inviter un camarade/ }));
     const { sendInvite } = jest.requireMock('../../../../utils/schoolInvite');
     await screen.findByRole('button', { name: /Inviter un camarade/ });

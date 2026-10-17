@@ -218,3 +218,6 @@ body.arena-night .duel-pickbar p { color: #C1CFE4; }
 @media (max-width: 480px) {
   .defi__vs-p > .defi__vs-face { width: 76px; height: 76px; }
 }
+
+/* The confirmed-win ceremony above the duel result (audit X1). */
+.defi__ceremony { width: 100%; margin: 0 0 0.75rem; }
