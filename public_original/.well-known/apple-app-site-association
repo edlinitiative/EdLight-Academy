@@ -4,7 +4,14 @@
     "details": [
       {
         "appID": "DCS7MLAM3X.com.edlightacademy",
-        "paths": ["/defi/*"]
+        "paths": [
+          "/defi/*",
+          "/arena",
+          "/arena/",
+          "/arena/championnat*",
+          "/arena/demo*",
+          "/arena/jouer*"
+        ]
       }
     ]
   }
