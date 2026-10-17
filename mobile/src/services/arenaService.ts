@@ -21,7 +21,7 @@
  */
 
 import { Share } from 'react-native';
-import { collection, doc, onSnapshot, query, where, Timestamp, type Unsubscribe } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, onSnapshot, query, where, Timestamp, type Unsubscribe } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { getReferralCode } from './referralService';
 import type { ArenaState } from '../../../shared/arena/state';
@@ -30,6 +30,19 @@ import { cachedDeviceHash } from '../utils/integrity';
 import { attestationToken } from '../utils/attestation';
 
 const API_BASE = 'https://academy.edlight.org/api/arena';
+
+/**
+ * What a listener knows about where its value came from. `fromCache` is true
+ * when Firestore is serving the local cache (offline or reconnecting) — the
+ * screens label such values instead of presenting them as current.
+ */
+export interface SnapMeta {
+  fromCache: boolean;
+}
+
+/** Listen with metadata changes, so a cache→server hand-off re-reports. */
+const WITH_META = { includeMetadataChanges: true } as const;
+const metaOf = (snap: { metadata?: { fromCache?: boolean } }): SnapMeta => ({ fromCache: !!snap.metadata?.fromCache });
 const REGISTER_URL = `${API_BASE}/register`;
 const ANSWER_URL = `${API_BASE}/answer`;
 const PRESENCE_URL = `${API_BASE}/presence`;
@@ -248,23 +261,25 @@ function toLiveQuestion(d: any): ArenaLiveQuestion {
  * The tournament document. One subscription per client, and the only place the
  * state machine, the clock and the public counters reach the app.
  *
- * `cb(null)` on a missing document AND on a listener error — a tournament that
- * does not exist and a rules rejection are the same thing to a screen, which
- * should show the "no event scheduled" state rather than an error nobody can
- * act on.
+ * `cb(null)` on a missing document. A listener error goes to `onError` and
+ * NOT to `cb(null)` (when an `onError` is given): a tournament that does not
+ * exist and a rules rejection or dropped connection are different things to a
+ * student mid-event, and utils/arenaViewState.ts gives each its own screen.
  */
 export function subscribeTournament(
   tid: string,
-  cb: (t: ArenaTournament | null) => void,
+  cb: (t: ArenaTournament | null, meta?: SnapMeta) => void,
   onError?: (err: unknown) => void,
 ): Unsubscribe {
   return onSnapshot(
     doc(db, 'tournaments', tid),
-    (snap) => cb(snap.exists() ? toTournament(snap.id, snap.data()) : null),
+    WITH_META,
+    (snap) => cb(snap.exists() ? toTournament(snap.id, snap.data()) : null, metaOf(snap)),
     (err) => {
       console.error('[Arena] tournament listener error:', err);
-      onError?.(err);
-      cb(null);
+      // With an onError the caller keeps its last-known value and labels it;
+      // only a caller that cannot tell errors apart gets the old null.
+      if (onError) onError(err); else cb(null);
     },
   );
 }
@@ -304,20 +319,22 @@ export function pickOpenTournament(rows: ArenaTournament[]): ArenaTournament | n
  * minute, which is more urgent than an announcement for later.
  */
 export function subscribeOpenTournament(
-  cb: (t: ArenaTournament | null) => void,
+  cb: (t: ArenaTournament | null, meta?: SnapMeta) => void,
   onError?: (err: unknown) => void,
 ): Unsubscribe {
   const q = query(collection(db, 'tournaments'), where('state', 'in', [...OPEN_STATE_PRIORITY]));
   return onSnapshot(
     q,
+    WITH_META,
     (snap) => {
       const rows = snap.docs.map((d) => toTournament(d.id, d.data()));
-      cb(pickOpenTournament(rows));
+      cb(pickOpenTournament(rows), metaOf(snap));
     },
     (err) => {
       console.error('[Arena] open-tournament listener error:', err);
-      onError?.(err);
-      cb(null);
+      // With an onError the caller keeps its last-known value and labels it;
+      // only a caller that cannot tell errors apart gets the old null.
+      if (onError) onError(err); else cb(null);
     },
   );
 }
@@ -356,22 +373,90 @@ export function pickActiveTournament(rows: ArenaTournament[]): ArenaTournament |
  * know who is asking.
  */
 export function subscribeActiveTournament(
-  cb: (t: ArenaTournament | null) => void,
+  cb: (t: ArenaTournament | null, meta?: SnapMeta) => void,
   onError?: (err: unknown) => void,
 ): Unsubscribe {
   const q = query(collection(db, 'tournaments'), where('state', 'in', [...ACTIVE_STATE_PRIORITY]));
   return onSnapshot(
     q,
+    WITH_META,
     (snap) => {
       const rows = snap.docs.map((d) => toTournament(d.id, d.data()));
-      cb(pickActiveTournament(rows));
+      cb(pickActiveTournament(rows), metaOf(snap));
     },
     (err) => {
       console.error('[Arena] active-tournament listener error:', err);
-      onError?.(err);
-      cb(null);
+      // With an onError the caller keeps its last-known value and labels it;
+      // only a caller that cannot tell errors apart gets the old null.
+      if (onError) onError(err); else cb(null);
     },
   );
+}
+
+/** Most recently started first — the last event is the one whose results matter. */
+const FINISHED_STATES = ['provisional', 'final'] as const;
+
+/**
+ * The latest finished tournament, for the hub's "results" row.
+ *
+ * Picked client-side rather than with an orderBy: `state in [...]` plus an
+ * orderBy needs a composite index, and an index that is not deployed throws
+ * at query time. The finished set is one event a month, so the read is tiny.
+ */
+export function pickLatestFinished(rows: ArenaTournament[]): ArenaTournament | null {
+  const done = rows.filter((r) => (FINISHED_STATES as readonly string[]).includes(r.state));
+  if (done.length === 0) return null;
+  return done.sort((a, b) => b.startsAt - a.startsAt)[0];
+}
+
+export function subscribeLatestFinishedTournament(
+  cb: (t: ArenaTournament | null, meta?: SnapMeta) => void,
+  onError?: (err: unknown) => void,
+): Unsubscribe {
+  const q = query(collection(db, 'tournaments'), where('state', 'in', [...FINISHED_STATES]));
+  return onSnapshot(
+    q,
+    WITH_META,
+    (snap) => {
+      const rows = snap.docs.map((d) => toTournament(d.id, d.data()));
+      cb(pickLatestFinished(rows), metaOf(snap));
+    },
+    (err) => {
+      console.error('[Arena] finished-tournament listener error:', err);
+      if (onError) onError(err); else cb(null);
+    },
+  );
+}
+
+/**
+ * The student's score in the Arena event BEFORE this one, or null.
+ *
+ * Only for the results screen's "personal best" line, and only ever from the
+ * public standings slice: `players/{uid}` is server-only (integrity rule 3).
+ * Null means unknown — no previous finished event, or the student was not in
+ * its ranked slice — and an unknown previous score never yields a "best".
+ * One-shot reads (no listener): a finished event does not change.
+ */
+export async function fetchPreviousArenaScore(opts: {
+  tournamentId: string;
+  startsAt: number;
+  uid: string;
+}): Promise<number | null> {
+  try {
+    const snap = await getDocs(query(collection(db, 'tournaments'), where('state', 'in', [...FINISHED_STATES])));
+    const prev = snap.docs
+      .map((d) => toTournament(d.id, d.data()))
+      .filter((t) => t.id !== opts.tournamentId && t.startsAt > 0 && t.startsAt < opts.startsAt)
+      .sort((a, b) => b.startsAt - a.startsAt)[0];
+    if (!prev) return null;
+    const st = await getDoc(doc(db, 'tournaments', prev.id, 'standings', 'current'));
+    if (!st.exists()) return null;
+    const rows: any[] = Array.isArray((st.data() as any)?.individuals) ? (st.data() as any).individuals : [];
+    const mine = rows.find((r) => r?.uid === opts.uid);
+    return mine && typeof mine.score === 'number' ? mine.score : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -383,16 +468,18 @@ export function subscribeActiveTournament(
 export function subscribeLiveQuestion(
   tid: string,
   index: number,
-  cb: (q: ArenaLiveQuestion | null) => void,
+  cb: (q: ArenaLiveQuestion | null, meta?: SnapMeta) => void,
   onError?: (err: unknown) => void,
 ): Unsubscribe {
   return onSnapshot(
     doc(db, 'tournaments', tid, 'live', String(index)),
-    (snap) => cb(snap.exists() ? toLiveQuestion(snap.data()) : null),
+    WITH_META,
+    (snap) => cb(snap.exists() ? toLiveQuestion(snap.data()) : null, metaOf(snap)),
     (err) => {
       console.error('[Arena] live question listener error:', err);
-      onError?.(err);
-      cb(null);
+      // With an onError the caller keeps its last-known value and labels it;
+      // only a caller that cannot tell errors apart gets the old null.
+      if (onError) onError(err); else cb(null);
     },
   );
 }
@@ -405,13 +492,14 @@ export function subscribeLiveQuestion(
 export function subscribeRegistration(
   tid: string,
   uid: string,
-  cb: (r: ArenaRegistration | null) => void,
+  cb: (r: ArenaRegistration | null, meta?: SnapMeta) => void,
   onError?: (err: unknown) => void,
 ): Unsubscribe {
   return onSnapshot(
     doc(db, 'tournamentRegistrations', `${tid}_${uid}`),
+    WITH_META,
     (snap) => {
-      if (!snap.exists()) { cb(null); return; }
+      if (!snap.exists()) { cb(null, metaOf(snap)); return; }
       const d: any = snap.data();
       cb({
         uid: str(d?.uid, uid),
@@ -420,12 +508,13 @@ export function subscribeRegistration(
         grade: str(d?.grade),
         eligible: d?.eligible !== false,
         attestedAt: ms(d?.attestedAt),
-      });
+      }, metaOf(snap));
     },
     (err) => {
       console.error('[Arena] registration listener error:', err);
-      onError?.(err);
-      cb(null);
+      // With an onError the caller keeps its last-known value and labels it;
+      // only a caller that cannot tell errors apart gets the old null.
+      if (onError) onError(err); else cb(null);
     },
   );
 }
@@ -445,13 +534,14 @@ export function subscribeRegistration(
  */
 export function subscribeStandings(
   tid: string,
-  cb: (s: ArenaStandings | null) => void,
+  cb: (s: ArenaStandings | null, meta?: SnapMeta) => void,
   onError?: (err: unknown) => void,
 ): Unsubscribe {
   return onSnapshot(
     doc(db, 'tournaments', tid, 'standings', 'current'),
+    WITH_META,
     (snap) => {
-      if (!snap.exists()) { cb(null); return; }
+      if (!snap.exists()) { cb(null, metaOf(snap)); return; }
       const d: any = snap.data();
       const schools: ArenaSchoolStanding[] = Array.isArray(d?.schools)
         ? d.schools.map((s: any) => {
@@ -483,12 +573,13 @@ export function subscribeStandings(
           streak: num(p?.streak),
         }))
         : [];
-      cb({ seq: num(d?.seq), schools, individuals });
+      cb({ seq: num(d?.seq), schools, individuals }, metaOf(snap));
     },
     (err) => {
       console.error('[Arena] standings listener error:', err);
-      onError?.(err);
-      cb(null);
+      // With an onError the caller keeps its last-known value and labels it;
+      // only a caller that cannot tell errors apart gets the old null.
+      if (onError) onError(err); else cb(null);
     },
   );
 }

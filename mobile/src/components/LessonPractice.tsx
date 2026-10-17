@@ -1,11 +1,16 @@
 import React, { useMemo, useState } from 'react';
 import { Modal, View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { X, Check, RotateCcw, Lightbulb, ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { X, RotateCcw, ChevronLeft, ChevronRight, Info } from 'lucide-react-native';
 import { useAppData } from '../hooks/useData';
 import useStore from '../contexts/store';
 import { useColors, type Palette } from '../theme/theme';
-import { selectCards, toInt, type PracticeCard as Card } from '../utils/practiceCards';
+import { selectCardsScoped, toInt, type PracticeCard as Card } from '../utils/practiceCards';
+import PracticeRunner from './journey/practice/PracticeRunner';
+import { AnswerStatus, Rich } from './journey/practice/Answer';
+import { itemFromCard, tally, type Tally } from './journey/practice/session';
+import { trackJourney } from '../utils/learningJourney';
+import Button from './ui/Button';
 import {
   lessonMastery, masteryLabel, masteryColor, masteryNextStep, applyExerciseScore, type MasteryLevel,
 } from '../utils/mastery';
@@ -15,10 +20,14 @@ import { MasteryMeter } from './MasteryMeter';
 // Cards come from the shared quiz bank (Firestore `quizzes`), keyed by
 // subject_code + unit_no + lesson_no — the same source the web flashcards /
 // Exercices read. See utils/practiceCards for the field-shape quirks.
-function useLessonCards(subjectCode?: string, unitNo?: any, lessonNo?: any): Card[] {
-  const { data } = useAppData();
+function useLessonCards(subjectCode?: string, unitNo?: any, lessonNo?: any): { cards: Card[]; scope: 'lesson' | 'chapter' | 'none'; isLoading: boolean } {
+  const { data, isLoading } = useAppData();
   const raw: any[] = data?.quizBank?.raw ?? [];
-  return useMemo(() => selectCards(raw, subjectCode, unitNo, lessonNo), [raw, subjectCode, unitNo, lessonNo]);
+  const res = useMemo(
+    () => selectCardsScoped(raw, subjectCode, unitNo, lessonNo, { includeUngradable: true }),
+    [raw, subjectCode, unitNo, lessonNo],
+  );
+  return { ...res, isLoading };
 }
 
 // ─── Flashcards ───────────────────────────────────────────────────────────────
@@ -44,9 +53,9 @@ function Flashcards({ cards, isCreole }: { cards: Card[]; isCreole: boolean }) {
         accessibilityHint={isCreole ? 'Tape pou vire kat la' : 'Touchez pour retourner la carte'}
       >
         <Text style={styles.cardLabel}>{flipped ? (isCreole ? 'Repons' : 'Réponse') : 'Question'}</Text>
-        <Text style={styles.cardText}>{flipped ? card.answer : card.question}</Text>
+        <Rich text={flipped ? card.answer : card.question} style={styles.cardText} />
         {flipped && card.explanation ? (
-          <Text style={styles.cardExpl}>{card.explanation}</Text>
+          <Rich text={card.explanation} style={styles.cardExpl} />
         ) : null}
         <View style={styles.flipHint}>
           <RotateCcw color={colors.faint} size={13} />
@@ -78,131 +87,111 @@ function Flashcards({ cards, isCreole }: { cards: Card[]; isCreole: boolean }) {
 }
 
 // ─── Exercices (MCQ) ──────────────────────────────────────────────────────────
+//
+// The same runner, answer anatomy and tally as the quiz bank and Révision
+// (components/journey/practice): one try, then result · your answer · the
+// expected one · the authored explanation (or an honest "none" line). A card
+// whose key matches no option is shown as "non corrigée automatiquement" —
+// never marked wrong, never sent to Révision, never counted in the score.
 
 export function Exercices({
-  cards, isCreole, onFinish, onAnswer, resultLevel,
+  cards, isCreole, onFinish, onAnswer, resultLevel, renderDone, onStart,
 }: {
   cards: Card[];
   isCreole: boolean;
+  /** Percent right among the GRADED cards; not called when none could be graded. */
   onFinish?: (pct: number) => void;
-  /** Fired as each answer is checked — feeds the missed-question review map. */
+  /** Fired for each graded answer — feeds the missed-question review map. */
   onAnswer?: (card: Card, correct: boolean) => void;
   /** The lesson's mastery level after the score was recorded. */
   resultLevel?: MasteryLevel;
+  /** Replace the default end screen (Révision draws its own). */
+  renderDone?: (args: { tally: Tally; restart: () => void }) => React.ReactNode;
+  onStart?: () => void;
 }) {
   const colors = useColors();
-  const styles = makeStyles(colors);
-  const [idx, setIdx] = useState(0);
-  const [selected, setSelected] = useState<number | null>(null);
-  const [checked, setChecked] = useState(false);
-  const [score, setScore] = useState(0);
-  const [done, setDone] = useState(false);
-  const card = cards[idx];
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  const items = useMemo(() => cards.map((c) => itemFromCard(c)), [cards]);
+  const byId = useMemo(() => new Map(cards.map((c) => [c.id, c])), [cards]);
+  const [round, setRound] = useState(0);
+  const [done, setDone] = useState<Tally | null>(null);
+  const restart = () => { setDone(null); setRound((r) => r + 1); };
+
+  React.useEffect(() => { if (items.length > 0) onStart?.(); }, [round]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (done) {
+    if (renderDone) return <>{renderDone({ tally: done, restart })}</>;
     const nextStep = resultLevel ? masteryNextStep(resultLevel, isCreole) : null;
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-        <Text style={{ fontSize: 40, fontWeight: '800', color: colors.azure }}>{score}/{cards.length}</Text>
+      <ScrollView contentContainerStyle={{ padding: 24, gap: 14 }}>
+        {done.scored > 0 ? (
+          <View style={{ alignItems: 'center', gap: 2 }}>
+            <Text style={{ fontSize: 40, fontWeight: '800', color: colors.ink, fontVariant: ['tabular-nums'] }}>{done.correct}/{done.scored}</Text>
+            <Text style={{ fontSize: 15, color: colors.muted }}>{t('bonnes réponses', 'bon repons')}</Text>
+          </View>
+        ) : (
+          <Text style={{ fontSize: 15, color: colors.ink, textAlign: 'center' }}>
+            {t('Aucune de ces questions ne se corrige automatiquement : pas de score ici.', 'Okenn nan kesyon sa yo pa korije otomatikman : pa gen nòt isit la.')}
+          </Text>
+        )}
+        <View style={{ gap: 6 }}>
+          <TallyRow kind="correct" n={done.correct} label={t('Correctes', 'Kòrèk')} t={t} />
+          <TallyRow kind="incorrect" n={done.incorrect} label={t('Ratées', 'Rate')} t={t} />
+          {done.ungraded > 0 ? <TallyRow kind="ungraded" n={done.ungraded} label={t('Non corrigées automatiquement', 'Pa korije otomatikman')} t={t} /> : null}
+        </View>
+        {done.incorrect > 0 ? (
+          <Text style={{ fontSize: 14, color: colors.muted, lineHeight: 20 }}>
+            {t('Les questions ratées sont dans ta Révision.', 'Kesyon ou rate yo nan Revizyon ou.')}
+          </Text>
+        ) : null}
         {/* The score alone says nothing lasting — the level is what was earned. */}
         {resultLevel ? (
-          <View style={{ alignItems: 'center', marginTop: 14, gap: 8 }}>
+          <View style={{ alignItems: 'center', marginTop: 4, gap: 8 }}>
             <MasteryMeter level={resultLevel} />
-            <Text style={{ fontSize: 13, color: masteryColor(resultLevel, colors), fontWeight: '600' }}>
+            <Text style={{ fontSize: 14, color: masteryColor(resultLevel, colors), fontWeight: '600' }}>
               {masteryLabel(resultLevel, isCreole)}
             </Text>
           </View>
         ) : null}
         {nextStep ? (
-          <Text style={{ fontSize: 14, color: colors.muted, marginTop: 10, textAlign: 'center' }}>
-            {isCreole ? 'Pwochen etap' : 'Prochaine étape'} : {nextStep}
+          <Text style={{ fontSize: 14, color: colors.ink, textAlign: 'center' }}>
+            {t('Prochaine étape', 'Pwochen etap')} : {nextStep}
           </Text>
-        ) : (
-          <Text style={{ fontSize: 15, color: colors.muted, marginTop: 8 }}>
-            {isCreole ? 'Byen fèt !' : 'Bien joué !'}
-          </Text>
-        )}
-        <TouchableOpacity
-          onPress={() => { setIdx(0); setSelected(null); setChecked(false); setScore(0); setDone(false); }}
-          style={[styles.primaryBtn, { marginTop: 20, paddingHorizontal: 28 }]}
-        >
-          <Text style={styles.primaryBtnText}>{isCreole ? 'Rekòmanse' : 'Recommencer'}</Text>
-        </TouchableOpacity>
-      </View>
+        ) : null}
+        <Button label={t('Recommencer ces questions', 'Rekòmanse kesyon sa yo')} onPress={restart} variant="secondary" size="lg" fullWidth />
+      </ScrollView>
     );
   }
-  if (!card) return null;
-
-  const check = () => {
-    if (selected == null) return;
-    setChecked(true);
-    const ok = selected === card.correctIndex;
-    if (ok) setScore((s) => s + 1);
-    onAnswer?.(card, ok);
-  };
-  const nextQ = () => {
-    if (idx + 1 >= cards.length) {
-      // `score` already includes this question — check() ran on the previous tap.
-      onFinish?.(cards.length > 0 ? (score / cards.length) * 100 : 0);
-      return setDone(true);
-    }
-    setIdx((i) => i + 1); setSelected(null); setChecked(false);
-  };
+  if (items.length === 0) return null;
 
   return (
-    <View style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 12 }}>
-        <Text style={styles.counter}>{idx + 1} / {cards.length}</Text>
-        <View style={styles.questionBox}>
-          <Text style={styles.questionText}>{card.question}</Text>
-        </View>
-        <View style={{ gap: 10, marginTop: 14 }}>
-          {card.options.map((opt, i) => {
-            const isSel = selected === i;
-            const isCorrect = i === card.correctIndex;
-            // Neutral option is themed; correct/incorrect keep their green/red.
-            let border = colors.border; let bg = colors.surface; let color = colors.ink;
-            if (checked) {
-              if (isCorrect) { border = colors.success; bg = colors.successSoft; color = colors.success; }
-              else if (isSel) { border = colors.danger; bg = colors.dangerSoft; color = colors.danger; }
-            } else if (isSel) { border = colors.azure; bg = colors.azureSoft; }
-            return (
-              <TouchableOpacity
-                key={i}
-                disabled={checked}
-                onPress={() => setSelected(i)}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: border, backgroundColor: bg, borderRadius: 14, padding: 14 }}
-              >
-                <View style={{ width: 26, height: 26, borderRadius: 999, backgroundColor: isSel && !checked ? colors.azure : colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: isSel && !checked ? '#fff' : colors.muted }}>{String.fromCharCode(65 + i)}</Text>
-                </View>
-                <Text style={{ flex: 1, fontSize: 14.5, color, lineHeight: 20 }}>{opt}</Text>
-                {checked && isCorrect ? <Check color={colors.success} size={18} /> : null}
-                {checked && isSel && !isCorrect ? <X color={colors.danger} size={18} /> : null}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-        {checked && (card.explanation || card.hint) ? (
-          <View style={styles.explBox}>
-            <Lightbulb color={colors.warn} size={15} />
-            <Text style={styles.explText}>{card.explanation || card.hint}</Text>
-          </View>
-        ) : null}
-      </ScrollView>
-      <View style={styles.footer}>
-        {!checked ? (
-          <TouchableOpacity onPress={check} disabled={selected == null} style={[styles.primaryBtn, selected == null && styles.disabled]}>
-            <Text style={styles.primaryBtnText}>{isCreole ? 'Verifye' : 'Vérifier'}</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity onPress={nextQ} style={styles.primaryBtn}>
-            <Text style={styles.primaryBtnText}>
-              {idx + 1 >= cards.length ? (isCreole ? 'Fini' : 'Terminer') : (isCreole ? 'Swivan' : 'Suivant')}
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
+    <PracticeRunner
+      key={round}
+      items={items}
+      mode="quiz"
+      chrome="minimal"
+      title=""
+      t={t}
+      onAnswer={(item, _entry, outcome) => {
+        const card = byId.get(item.id);
+        if (card && outcome != null) onAnswer?.(card, outcome);
+      }}
+      onFinish={(log) => {
+        const tl = tally(items, log);
+        if (tl.scored > 0) onFinish?.((tl.correct / tl.scored) * 100);
+        setDone(tl);
+      }}
+      onExit={() => {}}
+    />
+  );
+}
+
+function TallyRow({ kind, n, label, t }: { kind: 'correct' | 'incorrect' | 'ungraded' | 'unanswered'; n: number; label: string; t: (fr: string, ht: string) => string }) {
+  const colors = useColors();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+      <AnswerStatus kind={kind} t={t} label={label} />
+      <Text style={{ fontSize: 16, fontWeight: '700', color: colors.ink, fontVariant: ['tabular-nums'] }}>{n}</Text>
     </View>
   );
 }
@@ -226,7 +215,11 @@ export default function LessonPractice({
   const colors = useColors();
   const styles = makeStyles(colors);
   const [mode, setMode] = useState<'flashcards' | 'exercices'>(initialMode);
-  const cards = useLessonCards(subjectCode, unitNo, lessonNo);
+  const { cards, scope, isLoading } = useLessonCards(subjectCode, unitNo, lessonNo);
+  // Flashcards need an answer to flip to: a card with no usable key is
+  // exercise-only, where it is shown as "non corrigée automatiquement".
+  const flashCards = useMemo(() => cards.filter((c) => c.gradable !== false), [cards]);
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const recordLessonScore = useStore((s) => s.recordLessonScore);
   const recordReviewOutcome = useStore((s) => s.recordReviewOutcome);
   const lessonProgress = useStore((s) => (lessonId ? s.progress[lessonId] : undefined));
@@ -260,24 +253,45 @@ export default function LessonPractice({
               </TouchableOpacity>
             ))}
           </View>
-          <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ padding: 4 }}>
+          <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ padding: 4 }} accessibilityRole="button" accessibilityLabel={t('Fermer', 'Fèmen')}>
             <X color={colors.muted} size={24} />
           </TouchableOpacity>
         </View>
 
+        {cards.length > 0 ? (
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+            <Info color={colors.muted} size={16} style={{ marginTop: 2 }} />
+            <Text style={{ flex: 1, fontSize: 14, lineHeight: 20, color: colors.ink }}>
+              {scope === 'lesson'
+                ? t(`${cards.length} question${cards.length > 1 ? 's' : ''} liée${cards.length > 1 ? 's' : ''} à cette leçon.`, `${cards.length} kesyon ki mache ak leson sa a.`)
+                : t(`${cards.length} question${cards.length > 1 ? 's' : ''} sur tout le chapitre : elles ne sont pas encore classées leçon par leçon.`,
+                  `${cards.length} kesyon sou tout chapit la : yo poko klase leson pa leson.`)}
+            </Text>
+          </View>
+        ) : null}
+
         {cards.length === 0 ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
             <Text style={{ fontSize: 15, color: colors.muted, textAlign: 'center' }}>
-              {isCreole ? 'Pa gen egzèsis pou leson sa a pou kounye a.' : 'Aucun exercice disponible pour cette leçon pour le moment.'}
+              {isLoading
+                ? t('Chargement des questions…', 'N ap chaje kesyon yo…')
+                : t('Aucun exercice disponible pour ce chapitre pour le moment.', 'Pa gen egzèsis pou chapit sa a pou kounye a.')}
             </Text>
           </View>
         ) : mode === 'flashcards' ? (
-          <Flashcards cards={cards} isCreole={isCreole} />
+          flashCards.length > 0 ? <Flashcards cards={flashCards} isCreole={isCreole} /> : (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+              <Text style={{ fontSize: 15, color: colors.muted, textAlign: 'center' }}>
+                {t('Pas de flashcards : ces questions n’ont pas de corrigé enregistré. Essaie les Exercices.', 'Pa gen kat etid : kesyon sa yo pa gen koreksyon anrejistre. Eseye Egzèsis yo.')}
+              </Text>
+            </View>
+          )
         ) : (
           <Exercices
             cards={cards}
             isCreole={isCreole}
             resultLevel={lessonId ? level : undefined}
+            onStart={() => trackJourney('practice_started', { source: 'lesson_sheet', mode: 'exercices', count: cards.length, scope })}
             onAnswer={(card, ok) =>
               recordReviewOutcome(card.id, ok, {
                 subjectCode,
@@ -295,6 +309,7 @@ export default function LessonPractice({
                 applyExerciseScore(lessonProgress, pct, Date.now()) ?? lessonProgress,
               );
               if (after !== before) success();
+              trackJourney('practice_completed', { source: 'lesson_sheet', mode: 'exercices', pct: Math.round(pct) });
             }}
           />
         )}
@@ -315,7 +330,7 @@ const makeStyles = (colors: Palette) => StyleSheet.create({
   segBtnActive: { backgroundColor: colors.surface, shadowColor: '#0f172a', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: 1 },
   segText: { fontSize: 13.5, fontWeight: '600', color: colors.muted },
   segTextActive: { color: colors.azure, fontWeight: '700' },
-  counter: { fontSize: 12, fontWeight: '600', color: colors.faint, marginBottom: 10 },
+  counter: { fontSize: 14, fontWeight: '600', color: colors.muted, marginBottom: 10 },
   card: {
     flex: 1, backgroundColor: colors.surface, borderRadius: 20, borderWidth: 1, borderColor: colors.border,
     padding: 24, alignItems: 'center', justifyContent: 'center',
@@ -325,7 +340,7 @@ const makeStyles = (colors: Palette) => StyleSheet.create({
   cardText: { fontSize: 20, fontWeight: '700', color: colors.ink, textAlign: 'center', lineHeight: 28 },
   cardExpl: { fontSize: 14, color: colors.muted, textAlign: 'center', marginTop: 14, lineHeight: 20 },
   flipHint: { position: 'absolute', bottom: 16, flexDirection: 'row', alignItems: 'center', gap: 5 },
-  flipHintText: { fontSize: 11, color: colors.faint },
+  flipHintText: { fontSize: 13, color: colors.faint },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 },
   navBtn: { width: 52, height: 44, borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   questionBox: { backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16 },

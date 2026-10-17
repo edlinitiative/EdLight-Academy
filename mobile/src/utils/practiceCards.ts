@@ -19,6 +19,13 @@ export type PracticeCard = {
   explanation?: string;
   /** Which lesson of the unit this question belongs to, when known. */
   lessonNo: number | null;
+  /**
+   * False when the row's answer key matches no option (`correctIndex` is -1).
+   * Such a card is shown but never marked right or wrong, and never sent to
+   * Révision — guessing a key used to mark every answer wrong (LJ-08).
+   * Absent on hand-built cards, which are treated as gradable.
+   */
+  gradable?: boolean;
 };
 
 export const toInt = (v: any): number | null => {
@@ -38,9 +45,28 @@ export function parseOptions(raw: any): string[] {
   return [];
 }
 
-/** Resolve the correct option from a letter, a 1-based number, or the answer text. */
+/** Case/whitespace/edge-punctuation-insensitive; accents stay significant (FR). */
+export function normKey(s: unknown): string {
+  return String(s ?? '')
+    .toLowerCase().replace(/\s+/g, ' ').trim()
+    .replace(/^[\s.,;:!?'"()[\]]+|[\s.,;:!?'"()[\]]+$/g, '');
+}
+
+/**
+ * Resolve the correct option, or -1 when the key matches nothing.
+ *
+ * Order matters: the answer TEXT wins first, because live keys are mostly the
+ * option text, and a one-character text answer ("d" for the d orbital) would
+ * otherwise be misread as the letter D. Then a letter, then a 1-based number.
+ * There is no "first option" fallback any more: an unresolvable key means the
+ * question cannot be auto-graded, which is said as such rather than guessed.
+ */
 export function resolveCorrectIndex(raw: any, options: string[]): number {
   const val = String(raw ?? '').trim();
+  if (!val || !Array.isArray(options) || options.length === 0) return -1;
+  const target = normKey(val);
+  const byText = options.findIndex((o) => normKey(o) === target);
+  if (byText >= 0) return byText;
   if (/^[A-Za-z]$/.test(val)) {
     const i = val.toUpperCase().charCodeAt(0) - 65;
     if (i >= 0 && i < options.length) return i;
@@ -49,8 +75,7 @@ export function resolveCorrectIndex(raw: any, options: string[]): number {
     const i = parseInt(val, 10) - 1;
     if (i >= 0 && i < options.length) return i;
   }
-  const byText = options.findIndex((o) => String(o).trim() === val);
-  return byText >= 0 ? byText : 0;
+  return -1;
 }
 
 export function toPracticeCard(row: any, index: number): PracticeCard | null {
@@ -63,10 +88,13 @@ export function toPracticeCard(row: any, index: number): PracticeCard | null {
     question,
     options,
     correctIndex,
-    answer: options[correctIndex] ?? '',
+    answer: correctIndex >= 0 ? options[correctIndex] ?? '' : '',
     hint: row?.hint || undefined,
-    explanation: row?.good_response || row?.explanation || undefined,
+    // The authored explanation first; `good_response` ("Exactement ! …") is
+    // praise for a right answer and only stands in when nothing else exists.
+    explanation: row?.explanation || row?.good_response || undefined,
     lessonNo: toInt(row?.lesson_no ?? row?.Subchapter_Number),
+    gradable: correctIndex >= 0,
   };
 }
 
@@ -81,20 +109,42 @@ export function selectCards(
   subjectCode?: string,
   unitNo?: any,
   lessonNo?: any,
+  { includeUngradable = false }: { includeUngradable?: boolean } = {},
 ): PracticeCard[] {
-  if (!subjectCode || unitNo == null) return [];
+  return selectCardsScoped(raw, subjectCode, unitNo, lessonNo, { includeUngradable }).cards;
+}
+
+/**
+ * `selectCards` plus WHICH scope the cards really came from, so a sheet opened
+ * from a lesson can say "questions de cette leçon" only when the rows were
+ * actually tagged with that lesson — otherwise it is the whole chapter (LJ-06).
+ * Ungradable rows are left out unless asked for: a chapter test must only hold
+ * questions it can score.
+ */
+export function selectCardsScoped(
+  raw: any[],
+  subjectCode?: string,
+  unitNo?: any,
+  lessonNo?: any,
+  { includeUngradable = false }: { includeUngradable?: boolean } = {},
+): { cards: PracticeCard[]; scope: 'lesson' | 'chapter' | 'none' } {
+  if (!subjectCode || unitNo == null) return { cards: [], scope: 'none' };
   const u = toInt(unitNo);
   const chapter = (raw ?? []).filter(
     (r) => String(r?.subject_code) === String(subjectCode)
       && toInt(r?.unit_no ?? r?.Chapter_Number) === u,
   );
   let rows = chapter;
+  let scope: 'lesson' | 'chapter' = 'chapter';
   const l = toInt(lessonNo);
   if (l != null) {
     const lessonRows = chapter.filter((r) => toInt(r?.lesson_no ?? r?.Subchapter_Number) === l);
-    if (lessonRows.length > 0) rows = lessonRows;
+    if (lessonRows.length > 0) { rows = lessonRows; scope = 'lesson'; }
   }
-  return rows.map(toPracticeCard).filter((c): c is PracticeCard => c != null);
+  const cards = rows
+    .map(toPracticeCard)
+    .filter((c): c is PracticeCard => c != null && (includeUngradable || c.gradable !== false));
+  return { cards, scope: cards.length > 0 ? scope : 'none' };
 }
 
 /**

@@ -1,6 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, View, useColorScheme } from 'react-native';
-import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
+import {
+  NavigationContainer,
+  createNavigationContainerRef,
+  getStateFromPath as defaultGetStateFromPath,
+} from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import useStore from '../contexts/store';
 import TabNavigator from './TabNavigator';
@@ -18,6 +22,10 @@ import ArenaLobbyScreen from '../screens/arena/ArenaLobbyScreen';
 import ArenaLiveScreen from '../screens/arena/ArenaLiveScreen';
 import ArenaDoorsScreen from '../screens/arena/ArenaDoorsScreen';
 import ArenaResultScreen from '../screens/arena/ArenaResultScreen';
+import ArenaHubScreen from '../screens/arena/ArenaHubScreen';
+import ArenaWatchScreen from '../screens/arena/ArenaWatchScreen';
+import { useReduceMotion } from '../utils/motion';
+import { resolveAppPath, stateForTarget, type ArenaHubSection } from './arenaLinks';
 
 export type RootParamList = {
   Loading: undefined;
@@ -36,6 +44,10 @@ export type RootParamList = {
    * takes the screen the way the exam runner already does — which is the
    * precedent for a takeover screen in this app.
    */
+  /** The permanent Arena destination (also the Jeux tab's Arène segment). */
+  ArenaHub: { section?: ArenaHubSection } | undefined;
+  /** Portrait spectator view; with no id it watches whatever is live. */
+  ArenaWatch: { tournamentId?: string } | undefined;
   ArenaLobby: { tournamentId: string };
   ArenaDoors: { tournamentId: string };
   ArenaLive: { tournamentId: string };
@@ -119,30 +131,34 @@ function ChallengeModal({ navigation, route }: any) {
   return <ChallengeScreen code={String(route.params?.code ?? '')} onClose={() => navigation.goBack()} />;
 }
 
-// Deep links: duel invites arrive as edlight://defi/<code> (from the share
-// message) or https://academy.edlight.org/defi/<code> (the web landing's
-// "Ouvrir dans l'app" button). Other routes are deliberately unmapped — in-app
-// navigation for them already flows through navigationRef / notifications.
+// Deep links. ONE URL contract shared with the web routes — see
+// navigation/arenaLinks.ts for the table, the reserved Arena words
+// (championnat, demo, histoire, studio…) that can never parse as a tournament
+// id, the id-shape check, and the hub fallback for every unsupported Arena
+// destination. Duel invites (`/defi/<code>`) go through the same resolver so
+// a malformed code opens the Jeux tab instead of a dead challenge screen.
 //
-// CORRECTION, from an external audit: Arena's own share message
-// (buildArenaInviteMessage in services/arenaService.ts) hands out
-// https://academy.edlight.org/arena — and until this fix, that path matched
-// nothing here, so a friend with the app already installed who tapped an
-// Arena invite fell through to whatever screen the app happened to open on,
-// same as if the link had done nothing at all. It carries no tournament id
-// (the invite is "come play", not "open this specific tournament" — school
-// registration links a student to their school, not a single event), so it
-// resolves to Main: the Home tab is exactly where ArenaAnnounceCard lives for
-// whatever tournament is actually open right now, the same resolution the
-// web /direct page does for a viewer with no id in hand either.
+// The `config` below is what React Navigation uses to BUILD paths (and the
+// fallback parser for paths arenaLinks.ts does not own); parsing for every
+// Arena and duel path goes through `resolveAppPath` first.
+//
+// Native delivery is separate from this table: Android only hands the app the
+// https paths listed in app.json's intent filters, iOS only those in the
+// apple-app-site-association file on academy.edlight.org.
 const linking = {
   prefixes: ['edlight://', 'https://academy.edlight.org'],
   config: {
     screens: {
       Defi: 'defi/:code',
-      Main: 'arena',
-      ArenaLobby: 'arena/:tournamentId',
+      ArenaHub: 'arena',
+      ArenaWatch: 'arena/demo',
+      ArenaLobby: 'arena/jouer/:tournamentId',
     },
+  },
+  getStateFromPath(path: string, options: any) {
+    const target = resolveAppPath(path);
+    if (target) return stateForTarget(target) as any;
+    return defaultGetStateFromPath(path, options);
   },
 };
 
@@ -178,17 +194,28 @@ const SPLASH_LOGO_SIZE = 98;
 function LoadingScreen() {
   const splash = useColorScheme() === 'dark' ? SPLASH.dark : SPLASH.light;
   const zoom = useRef(new Animated.Value(0)).current;
+  const reduceMotion = useReduceMotion();
 
   useEffect(() => {
+    // Reduced motion: the logo simply holds still — same asset, same size,
+    // so the native-splash handoff is still invisible.
+    if (reduceMotion) {
+      zoom.stopAnimation();
+      zoom.setValue(0);
+      return undefined;
+    }
     // A slow in-and-out, not a pulse: 6% is enough to read as alive at this
     // size, and anything faster starts to look like a loading spinner.
-    Animated.loop(
+    const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(zoom, { toValue: 1, duration: 1400, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
         Animated.timing(zoom, { toValue: 0, duration: 1400, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
       ]),
-    ).start();
-  }, [zoom]);
+    );
+    loop.start();
+    // The loop must not outlive the screen (auth resolves → Loading unmounts).
+    return () => loop.stop();
+  }, [zoom, reduceMotion]);
 
   const scale = zoom.interpolate({ inputRange: [0, 1], outputRange: [1, 1.06] });
 
@@ -203,14 +230,28 @@ function LoadingScreen() {
   );
 }
 
+/**
+ * Stack transitions, through the shared reduced-motion hook. With reduce
+ * motion on, travel (slides) becomes an immediate change — the same screens,
+ * the same order, no movement — and fades are kept short.
+ */
+type StackAnimation = 'fade' | 'slide_from_right' | 'slide_from_bottom' | 'none';
+function useTransition() {
+  const reduceMotion = useReduceMotion();
+  return (animation: StackAnimation, animationDuration?: number) => (reduceMotion
+    ? { animation: 'none' as const }
+    : animationDuration != null ? { animation, animationDuration } : { animation });
+}
+
 export default function AppNavigator() {
   const authConfirmed = useStore((s) => s.authConfirmed);
+  const tx = useTransition();
 
   return (
     <>
       <NetworkStatus />
       <NavigationContainer ref={navigationRef} linking={linking}>
-        <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
+        <Stack.Navigator screenOptions={{ headerShown: false, ...tx('fade') }}>
           {!authConfirmed ? (
             <Stack.Screen name="Loading" component={LoadingScreen} />
           ) : (
@@ -219,7 +260,7 @@ export default function AppNavigator() {
               <Stack.Screen
                 name="Search"
                 component={SearchModal}
-                options={{ animation: 'fade', animationDuration: 120 }}
+                options={tx('fade', 120)}
               />
               <Stack.Screen
                 name="Sandra"
@@ -228,38 +269,48 @@ export default function AppNavigator() {
                 // iOS break KeyboardAvoidingView (chat input hid behind the
                 // keyboard) and layer the auth modal underneath. A card that
                 // slides up keeps the same feel and fixes both.
-                options={{ animation: 'slide_from_bottom' }}
+                options={tx('slide_from_bottom')}
               />
               <Stack.Screen
                 name="StudyPlan"
                 component={StudyPlanModal}
-                options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+                options={{ presentation: 'modal', ...tx('slide_from_bottom') }}
               />
               <Stack.Screen
                 name="Leaderboard"
                 component={LeaderboardModal}
-                options={{ animation: 'slide_from_right' }}
+                options={tx('slide_from_right')}
               />
               <Stack.Screen
                 name="ArenaLobby"
                 component={ArenaLobbyScreen}
-                options={{ animation: 'slide_from_right' }}
+                options={tx('slide_from_right')}
+              />
+              <Stack.Screen
+                name="ArenaHub"
+                component={ArenaHubScreen}
+                options={tx('slide_from_right')}
+              />
+              <Stack.Screen
+                name="ArenaWatch"
+                component={ArenaWatchScreen}
+                options={tx('slide_from_right')}
               />
               <Stack.Screen
                 name="ArenaDoors"
                 component={ArenaDoorsScreen}
-                options={{ animation: 'fade' }}
+                options={tx('fade')}
               />
               <Stack.Screen
                 name="ArenaResult"
                 component={ArenaResultScreen}
-                options={{ animation: 'slide_from_bottom' }}
+                options={tx('slide_from_bottom')}
               />
               <Stack.Screen
                 name="ArenaLive"
                 component={ArenaLiveScreen}
                 options={{
-                  animation: 'fade',
+                  ...tx('fade'),
                   // No swipe-back and no header: a student cannot gesture
                   // themselves out of a live question by accident, and there is
                   // nowhere to go until the round ends anyway.
@@ -269,12 +320,12 @@ export default function AppNavigator() {
               <Stack.Screen
                 name="Teach"
                 component={TeachModal}
-                options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+                options={{ presentation: 'modal', ...tx('slide_from_bottom') }}
               />
               <Stack.Screen
                 name="Defi"
                 component={ChallengeModal}
-                options={{ animation: 'slide_from_bottom' }}
+                options={tx('slide_from_bottom')}
               />
             </>
           )}

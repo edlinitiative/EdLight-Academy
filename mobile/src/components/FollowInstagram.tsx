@@ -54,7 +54,7 @@ export function FollowInstagramPrompt() {
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[typeScale.titleSm, { color: colors.ink }]}>
-          {t('Tu progresses bien 🎉', 'W ap pwogrese byen 🎉')}
+          {t('Tu progresses bien', 'W ap pwogrese byen')}
         </Text>
         <Text style={[typeScale.caption, { color: colors.muted, marginTop: 1 }]} numberOfLines={2}>
           {t('Rejoins la communauté EdLight sur Instagram : astuces et annonces.',

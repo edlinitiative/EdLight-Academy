@@ -5,7 +5,6 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Platform } from 'react-native';
 import { popToRootOnTabPress } from './tabPressBehaviour';
 import NativeTabNavigator from './NativeTabNavigator';
-import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import TabIcon, { type TabIconName } from './TabIcon';
@@ -14,6 +13,7 @@ import { gradeProfile } from '../config/trackConfig';
 import { tapLight } from '../utils/haptics';
 import { useReduceMotion } from '../utils/motion';
 import { lightColors, darkColors } from '../theme/theme';
+import { JS_TAB_BAR } from '../onboarding/tourGeometry';
 
 import DashboardScreen from '../screens/DashboardScreen';
 import CoursesNavigator from './CoursesNavigator';
@@ -41,15 +41,14 @@ const Tab = createBottomTabNavigator<TabParamList>();
 const ACTIVE = lightColors.azure; // '#1B6FE0'
 const INACTIVE = lightColors.ink; // '#0f172a'
 
-// Floating bar, Ledger-style: a detached TRANSLUCENT capsule. A light-mode
-// screenshot of the reference looked solid white, so an earlier pass made this
-// opaque — wrong: it only looked solid because it was blurring a near-white
-// ground. In dark mode the reference is visibly see-through (page text reads
-// through it), so it is glass in both themes.
+// Floating bar: a detached OPAQUE capsule. It was glass (blur + translucent
+// tint + light rim) until Oct 17, when Ted rejected hairline-on-translucent
+// surfaces app-wide; it now lifts off the page with a soft shadow only.
 // 58 with 5pt padding leaves a 48pt touch height: tighter than the old 60, still
 // clear of Apple's 44pt floor on the control every user touches every session.
-const BAR_HEIGHT = 58;
-const BAR_MARGIN = 20;
+// Shared with the onboarding tour so its arrow always lands on the real tab.
+const BAR_HEIGHT = JS_TAB_BAR.height;
+const BAR_MARGIN = JS_TAB_BAR.margin;
 // 23, up from 20, to match the reference's optical size. The glyphs themselves
 // are now real filled SF Symbols on iOS (see TabIcon.tsx) rather than Lucide
 // outlines, which is what actually closed the gap to the reference.
@@ -92,7 +91,7 @@ function TabItem({
 
   // A neutral step off the bar's own surface — darker in light mode, lighter in
   // dark. No border and no shadow: the reference capsule is a flat tonal shift.
-  const lensBg = dark ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)';
+  const lensBg = dark ? '#24314A' : '#EEF1F5';
 
   return (
     <View style={styles.item}>
@@ -133,7 +132,7 @@ function JsTabNavigator() {
 
   return (
     <Tab.Navigator
-      // No paddingBottom here: content scrolls UNDER the translucent floating bar
+      // No paddingBottom here: content scrolls UNDER the floating bar
       // (each screen adds its own bottom padding so nothing is permanently hidden).
       // React Navigation 7 removed the `sceneContainerStyle` prop in favour of the
       // `sceneStyle` screen option.
@@ -163,21 +162,16 @@ function JsTabNavigator() {
         // Icon+label are rendered together inside TabItem so the focused lens
         // capsule can wrap both — hide the navigator's own labels.
         tabBarShowLabel: false,
-        // Translucent capsule: a strong blur with only a whisper of tint, so page
-        // content genuinely shows through the bar the way the reference does.
+        // OPAQUE capsule (Ted, Oct 17): no blur, no translucent tint, no rim —
+        // a hairline over a see-through fill read as generic. Depth is the
+        // diffuse shadow below, which needs the bar itself unclipped.
         tabBarBackground: () => (
-          <BlurView
-            intensity={dark ? 60 : 80}
-            tint={dark ? 'dark' : 'light'}
-            style={[StyleSheet.absoluteFill, { borderRadius: BAR_HEIGHT / 2, overflow: 'hidden' }]}
-          >
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                { backgroundColor: dark ? 'rgba(17,24,39,0.30)' : 'rgba(255,255,255,0.45)' },
-              ]}
-            />
-          </BlurView>
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              { borderRadius: BAR_HEIGHT / 2, backgroundColor: dark ? '#162238' : '#FFFFFF' },
+            ]}
+          />
         ),
         // Focus mode (exam-taking, trivia gameplay) hides the floating bar so it
         // never overlaps a screen's own bottom actions (e.g. the Submit button).
@@ -192,17 +186,13 @@ function JsTabNavigator() {
               borderRadius: BAR_HEIGHT / 2,
               backgroundColor: 'transparent',
               borderTopWidth: 0,
-              // A thin light rim reads as the glass edge on a translucent pill.
-              borderWidth: 1,
-              borderColor: dark ? 'rgba(148,163,184,0.18)' : 'rgba(255,255,255,0.55)',
-              overflow: 'hidden',
               paddingTop: 5,
               paddingBottom: 5,
               // Softer and lower than the old glass bar: an opaque pill needs a
               // diffuse lift, not a hard drop.
               shadowColor: '#0f172a',
               shadowOffset: { width: 0, height: 6 },
-              shadowOpacity: dark ? 0.45 : 0.10,
+              shadowOpacity: dark ? 0.45 : 0.12,
               shadowRadius: 14,
               elevation: 10,
             },

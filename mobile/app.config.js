@@ -5,6 +5,12 @@
 //
 // IMPORTANT: spread config.extra so static app.json extras (notably
 // extra.eas.projectId, the EAS project link) survive this override.
+//
+// The same spread is what carries android.intentFilters (the /defi and Arena
+// App Links, see src/navigation/arenaLinks.ts for the URL contract) and
+// ios.associatedDomains into the native build. Never rebuild `android` or `ios`
+// from scratch here: a dropped intent filter only shows up as a link that
+// opens the browser instead of the app, in a store build, weeks later.
 
 module.exports = ({ config }) => ({
   ...config,

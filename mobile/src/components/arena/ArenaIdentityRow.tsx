@@ -2,7 +2,8 @@ import React from 'react';
 import { Text, View } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
 import PressableScale from '../ui/PressableScale';
-import { useColors, typeScale, radius } from '../../theme/theme';
+import { typeScale, radius } from '../../theme/theme';
+import { useArenaColors, arenaType } from '../../theme/arenaTheme';
 import { select } from '../../utils/haptics';
 
 /**
@@ -35,7 +36,7 @@ export default function ArenaIdentityRow({
   problem?: string | null;
   onPress: () => void;
 }) {
-  const colors = useColors();
+  const colors = useArenaColors();
   const blocking = !!problem;
 
   return (
@@ -57,7 +58,7 @@ export default function ArenaIdentityRow({
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         {icon}
         <View style={{ flex: 1, gap: 1 }}>
-          <Text style={[typeScale.micro, { color: colors.muted }]}>{label}</Text>
+          <Text style={[arenaType.label, { color: colors.muted }]}>{label}</Text>
           <Text numberOfLines={1} style={[typeScale.label, { color: value ? colors.ink : colors.faint }]}>
             {value ?? placeholder}
           </Text>
@@ -66,7 +67,7 @@ export default function ArenaIdentityRow({
       </View>
 
       {problem ? (
-        <Text style={[typeScale.caption, { color: colors.danger }]}>{problem}</Text>
+        <Text style={[arenaType.status, { color: colors.danger }]}>{problem}</Text>
       ) : null}
     </PressableScale>
   );

@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Users, School as SchoolIcon, Share2, Zap } from 'lucide-react-native';
-import { useColors, useTheme, typeScale } from '../../theme/theme';
+import { useTheme, typeScale } from '../../theme/theme';
+import { useArenaColors, arenaType } from '../../theme/arenaTheme';
+import { ArenaScreen, ArenaButton, ArenaStateView, StaleBanner } from '../../components/arena/ArenaKit';
+import arenaHaptics from '../../components/arena/arenaHaptics';
 import useStore from '../../contexts/store';
 import { useArenaDoors } from '../../hooks/useArena';
 import { formatCountdown, shareArenaInvite } from '../../services/arenaService';
@@ -13,7 +15,6 @@ import QualificationBar from '../../components/arena/QualificationBar';
 import ArenaWarmUp from '../../components/arena/ArenaWarmUp';
 import ArenaDemoLoop from '../../components/arena/ArenaDemoLoop';
 import PressableScale from '../../components/ui/PressableScale';
-import { tapMedium } from '../../utils/haptics';
 import StageEnter from '../../components/trivia/StageEnter';
 import ScoreCounter from '../../components/trivia/ScoreCounter';
 import type { RootParamList } from '../../navigation/AppNavigator';
@@ -37,7 +38,7 @@ type Nav = NativeStackNavigationProp<RootParamList, 'ArenaDoors'>;
 type Route = RouteProp<RootParamList, 'ArenaDoors'>;
 
 export default function ArenaDoorsScreen() {
-  const colors = useColors();
+  const colors = useArenaColors();
   const { radius } = useTheme();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
@@ -59,7 +60,7 @@ export default function ArenaDoorsScreen() {
    */
   const invite = useCallback(async () => {
     if (!doors.qualification) return;
-    tapMedium();
+    arenaHaptics.commit();
     // Same bucket as the lobby's Arena invite — one surface in the
     // referral counters, not two that have to be added up later.
     logInviteSent('champion');
@@ -76,38 +77,37 @@ export default function ArenaDoorsScreen() {
   // the ante-room they came from.
   useEffect(() => {
     if (started) navigation.replace('ArenaLive', { tournamentId });
-  }, [started, navigation, tournamentId]);
+    // Arrived late (a notification, a deep link): the event is already over.
+    else if (doors.ended) navigation.replace('ArenaResult', { tournamentId });
+  }, [started, doors.ended, navigation, tournamentId]);
 
-  if (!tournamentId || doors.absent) {
+  // Each failure its own state, with retry and a way back to the hub —
+  // never a blank "not available" for a connection that dropped.
+  if (!tournamentId || doors.status !== 'ready' && doors.status !== 'reconnecting' || !doors.tournament) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-          <Text style={[typeScale.body, { color: colors.muted, textAlign: 'center' }]}>
-            {t('Ce tournoi n’est pas disponible.', 'Tounwa sa a pa disponib.')}
-          </Text>
-        </View>
-      </SafeAreaView>
+      <ArenaScreen>
+        <ArenaStateView
+          status={!tournamentId ? 'unavailable' : doors.status === 'ready' ? 'unavailable' : doors.status}
+          t={t}
+          onRetry={doors.retry}
+          onReturn={() => navigation.navigate('ArenaHub')}
+        />
+      </ArenaScreen>
     );
   }
 
   const short = !!qualification && !qualification.qualified;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
+    <ArenaScreen occasion="match">
       <ScrollView contentContainerStyle={{ padding: 20, gap: 18, paddingBottom: 40 }}>
+        {doors.stale ? <StaleBanner t={t} onRetry={doors.retry} /> : null}
 
         <StageEnter playKey="doors" index={0} springy>
-          <Text style={[typeScale.overline, { color: colors.muted }]}>
-            {t('L’Arène ouvre dans', 'Arèn nan ap louvri nan')}
+          <Text style={[arenaType.label, { color: colors.muted }]}>
+            {t('Première question dans', 'Premye kesyon an nan')}
           </Text>
-          <Text style={{
-            fontSize: 56,
-            fontWeight: '800',
-            color: colors.ink,
-            fontVariant: ['tabular-nums'],
-            letterSpacing: -1.5,
-            marginTop: 2,
-          }}>
+          <Text style={[arenaType.score, { color: colors.ink, fontSize: 56, lineHeight: 60, marginTop: 2 }]}>
             {formatCountdown(msToStart)}
           </Text>
         </StageEnter>
@@ -137,7 +137,7 @@ export default function ArenaDoorsScreen() {
                   value={value}
                   style={{ ...typeScale.title, color: colors.ink, fontVariant: ['tabular-nums'] }}
                 />
-                <Text style={[typeScale.caption, { color: colors.muted }]}>{label}</Text>
+                <Text style={[arenaType.status, { color: colors.muted }]}>{label}</Text>
               </View>
             ))}
           </View>
@@ -158,26 +158,17 @@ export default function ArenaDoorsScreen() {
             />
             {short ? (
               <View style={{ gap: 8, marginTop: 8 }}>
-                <Text style={[typeScale.caption, { color: colors.warn }]}>
+                <Text style={[arenaType.status, { color: colors.warn }]}>
                   {t(
                     'Dis-leur d’ouvrir l’app maintenant — il reste quelques minutes.',
                     'Di yo louvri app la kounye a — gen kèk minit ki rete.',
                   )}
                 </Text>
-                <PressableScale
+                <ArenaButton
+                  label={t('Appeler mon école', 'Rele lekòl mwen')}
                   onPress={() => { void invite(); }}
-                  pressedScale={0.98}
-                  accessibilityRole="button"
-                  style={{
-                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    paddingVertical: 12, borderRadius: radius.card, backgroundColor: colors.azure,
-                  }}
-                >
-                  <Share2 color="#fff" size={15} />
-                  <Text style={[typeScale.label, { color: '#fff' }]}>
-                    {t('Appeler mon école', 'Rele lekòl mwen')}
-                  </Text>
-                </PressableScale>
+                  icon={<Share2 color="#12213A" size={15} />}
+                />
               </View>
             ) : null}
           </StageEnter>
@@ -199,13 +190,13 @@ export default function ArenaDoorsScreen() {
             <View style={{ gap: 10 }}>
               <ArenaDemoLoop isCreole={language === 'ht'} />
               <PressableScale
-                onPress={() => { tapMedium(); setWarming(true); }}
+                onPress={() => { arenaHaptics.choose(); setWarming(true); }}
                 pressedScale={0.98}
                 accessibilityRole="button"
                 style={{
                   flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
                   paddingVertical: 14, borderRadius: radius.card,
-                  borderWidth: 1, borderColor: colors.azureBorder, backgroundColor: colors.azureSoft,
+                  backgroundColor: colors.azureSoft,
                 }}
               >
                 <Zap color={colors.azure} size={15} />
@@ -220,7 +211,7 @@ export default function ArenaDoorsScreen() {
         {/* Arrivals. A number climbing is data; a name arriving is an event. */}
         {arrivals.length > 0 ? (
           <StageEnter playKey="doors" index={4}>
-            <Text style={[typeScale.overline, { color: colors.muted, marginBottom: 8 }]}>
+            <Text style={[arenaType.label, { color: colors.muted, marginBottom: 8 }]}>
               {t('Ils viennent d’entrer', 'Yo fèk antre')}
             </Text>
             <View style={{ gap: 6 }}>
@@ -236,6 +227,6 @@ export default function ArenaDoorsScreen() {
           </StageEnter>
         ) : null}
       </ScrollView>
-    </SafeAreaView>
+    </ArenaScreen>
   );
 }

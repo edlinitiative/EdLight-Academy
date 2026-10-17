@@ -59,7 +59,9 @@ export default function ArenaAnnounceCard() {
   const title = tournament.title;
 
   let dateStr = '';
-  if (tournament.startsAt) {
+  // A start date already behind us (a test event left open for sign-up) would
+  // read "Inscris ton école pour le 18 septembre" in October — drop the date.
+  if (tournament.startsAt && new Date(tournament.startsAt).getTime() > Date.now()) {
     try {
       dateStr = new Intl.DateTimeFormat(isCreole ? 'fr-HT' : 'fr-FR', {
         day: 'numeric', month: 'long',

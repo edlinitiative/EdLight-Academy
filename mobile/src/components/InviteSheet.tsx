@@ -149,7 +149,7 @@ export default function InviteSheet({ visible, onClose, lang }: InviteSheetProps
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 }}>
                   <Copy color={colors.faint} size={13} />
-                  <Text style={[typeScale.caption, { color: colors.faint }]}>{t('Appuyez pour partager le code', 'Peze pou pataje kòd la')}</Text>
+                  <Text style={[typeScale.body, { color: colors.muted }]}>{t('Appuyez pour partager le code', 'Peze pou pataje kòd la')}</Text>
                 </View>
               </TouchableOpacity>
 

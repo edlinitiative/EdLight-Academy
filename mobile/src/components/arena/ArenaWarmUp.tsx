@@ -4,7 +4,8 @@ import { Check, X, Zap } from 'lucide-react-native';
 import PressableScale from '../ui/PressableScale';
 import { TIER_FULL_MS, TIER_HALF_MS } from '../../../../shared/arena/scoring';
 import { pickWarmUpQuestions, type WarmUpQuestion } from '../../utils/warmUpQuestions';
-import { useColors, useTheme, typeScale } from '../../theme/theme';
+import { useTheme, typeScale } from '../../theme/theme';
+import { useArenaColors, arenaType } from '../../theme/arenaTheme';
 import { select, success, warn } from '../../utils/haptics';
 
 /**
@@ -35,7 +36,7 @@ import { select, success, warn } from '../../utils/haptics';
  */
 
 export default function ArenaWarmUp({ isCreole, onExit }: { isCreole: boolean; onExit?: () => void }) {
-  const colors = useColors();
+  const colors = useArenaColors();
   const { radius } = useTheme();
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -88,28 +89,28 @@ export default function ArenaWarmUp({ isCreole, onExit }: { isCreole: boolean; o
   return (
     <View style={{
       padding: 16, borderRadius: radius.card, gap: 12,
-      backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+      backgroundColor: colors.surface,
     }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <Zap color={colors.azure} size={14} />
-        <Text style={[typeScale.overline, { color: colors.muted, flex: 1 }]}>
+        <Text style={[arenaType.label, { color: colors.muted, flex: 1 }]}>
           {t('Échauffement', 'Chofe kò w')}
         </Text>
-        <Text style={[typeScale.caption, { color: colors.muted }]}>
+        <Text style={[arenaType.status, { color: colors.muted }]}>
           {right}/{index + (locked ? 1 : 0)}
         </Text>
       </View>
 
       {/* Says what it is, every time. A practice round that looks like the
           tournament must never be mistaken for the tournament. */}
-      <Text style={[typeScale.caption, { color: colors.muted }]}>
+      <Text style={[arenaType.status, { color: colors.muted }]}>
         {t(
           'Pour s’entraîner — ça ne compte pas au classement.',
           'Se pou antrene — li pa konte nan klasman an.',
         )}
       </Text>
 
-      <View style={{ height: 4, borderRadius: 2, backgroundColor: colors.border, overflow: 'hidden' }}>
+      <View style={{ height: 4, borderRadius: 2, backgroundColor: colors.hairline, overflow: 'hidden' }}>
         <View style={{
           width: `${Math.max(2, (1 - ratio) * 100)}%`, height: '100%', backgroundColor: tierColor,
         }} />
@@ -171,11 +172,11 @@ export default function ArenaWarmUp({ isCreole, onExit }: { isCreole: boolean; o
             pressedScale={0.98}
             accessibilityRole="button"
             style={{
-              flex: 1, paddingVertical: 12, borderRadius: radius.card,
-              backgroundColor: colors.azure, alignItems: 'center',
+              flex: 1, paddingVertical: 14, borderRadius: 999,
+              backgroundColor: colors.coral, alignItems: 'center',
             }}
           >
-            <Text style={[typeScale.label, { color: '#fff' }]}>
+            <Text style={[arenaType.action, { color: '#12213A' }]}>
               {t('Question suivante', 'Kesyon swivan')}
             </Text>
           </PressableScale>

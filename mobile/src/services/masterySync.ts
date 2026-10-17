@@ -100,10 +100,23 @@ export async function pushReview(uid: string, review: ReviewMap): Promise<void> 
  * This is what restores a student's mastery on a new phone, and what backfills
  * the server for everyone who earned mastery before this shipped.
  */
+/**
+ * True while the store is still signed in as `uid`. A sign-in sync awaits the
+ * network twice; if the account switched meanwhile (A → B), applying A's
+ * merged map would put A's mastery on B's device state — so every apply and
+ * push re-checks this first and drops the result otherwise.
+ */
+export function isSameAccount(uid: string, state: { user?: any; isAuthenticated?: boolean } | null | undefined): boolean {
+  return !!uid && !!state?.isAuthenticated && state?.user?.uid === uid;
+}
+
 export async function syncMasteryOnLogin(uid: string): Promise<void> {
   if (!uid) return;
+  const still = () => isSameAccount(uid, useStore.getState());
+  if (!still()) return;
   const local = useStore.getState().progress as ProgressMap;
   const remote = await fetchRemoteMastery(uid);
+  if (!still()) return;
   const merged = mergeProgress(local, remote);
 
   if (!sameProgress(local, merged)) useStore.getState().mergeRemoteProgress(merged);
@@ -112,8 +125,10 @@ export async function syncMasteryOnLogin(uid: string): Promise<void> {
   if (!sameProgress(remote, merged)) await pushMastery(uid, merged);
 
   // Same dance for the review map — independent doc, independent verdicts.
+  if (!still()) return;
   const localReview = useStore.getState().review as ReviewMap;
   const remoteReview = await fetchRemoteReview(uid);
+  if (!still()) return;
   const mergedReview = mergeReview(localReview, remoteReview);
   if (!sameReview(localReview, mergedReview)) useStore.getState().mergeRemoteReview(mergedReview);
   if (!sameReview(remoteReview, mergedReview)) await pushReview(uid, mergedReview);

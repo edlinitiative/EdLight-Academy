@@ -58,6 +58,41 @@
             "BROWSABLE",
             "DEFAULT"
           ]
+        },
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "academy.edlight.org",
+              "path": "/arena"
+            },
+            {
+              "scheme": "https",
+              "host": "academy.edlight.org",
+              "path": "/arena/"
+            },
+            {
+              "scheme": "https",
+              "host": "academy.edlight.org",
+              "pathPrefix": "/arena/championnat"
+            },
+            {
+              "scheme": "https",
+              "host": "academy.edlight.org",
+              "pathPrefix": "/arena/demo"
+            },
+            {
+              "scheme": "https",
+              "host": "academy.edlight.org",
+              "pathPrefix": "/arena/jouer"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ],
       "blockedPermissions": [

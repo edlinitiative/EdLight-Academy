@@ -38,7 +38,7 @@ export default function LeaderboardScreen({ onClose }: { onClose: () => void }) 
   const nudge = !showMeBar
     ? ''
     : myRank === 1
-      ? t('En tête ! 🏆', 'Ou an tèt ! 🏆')
+      ? t('En tête !', 'Ou an tèt !')
       : above
         ? t(`${gap} XP → rang ${myRank! - 1}`, `${gap} XP → ran ${myRank! - 1}`)
         : '';

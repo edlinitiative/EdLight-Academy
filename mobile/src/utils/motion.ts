@@ -32,4 +32,12 @@ export function useReduceMotion(): boolean {
   return reduce;
 }
 
+/**
+ * `animationType` for a React Native <Modal>: the system fade/slide is motion
+ * too, so reduced motion presents the sheet instantly.
+ */
+export function modalAnimation(reduce: boolean, preferred: 'fade' | 'slide' = 'fade'): 'none' | 'fade' | 'slide' {
+  return reduce ? 'none' : preferred;
+}
+
 export default useReduceMotion;

@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Line } from 'react-native-svg';
@@ -18,7 +17,11 @@ import { tierRing } from '../../services/arenaService';
 import { useFocusLossCounter, useBlockScreenCapture, useScreenshotNotice } from '../../utils/integrity';
 import { classifyAnswerResult, type AnswerReceiptStatus } from '../../utils/arenaAnswerReceipt';
 import { useColors, useTheme, typeScale, radius } from '../../theme/theme';
-import { success, warn, tapMedium } from '../../utils/haptics';
+import { useArenaColors, arenaType } from '../../theme/arenaTheme';
+import { warn } from '../../utils/haptics';
+import arenaHaptics from '../../components/arena/arenaHaptics';
+import { ArenaScreen, ArenaStateView, ArenaPanel, StaleBanner } from '../../components/arena/ArenaKit';
+import { phaseLine } from '../../components/arena/arenaPhaseCopy';
 import { useReduceMotion } from '../../utils/motion';
 import { spring, duration, easing } from '../../theme/motion';
 
@@ -48,7 +51,9 @@ export default function ArenaLiveScreen() {
   const route = useRoute<any>();
   const tid: string | null = route?.params?.tournamentId ?? null;
 
-  const colors = useColors();
+  const colors = useArenaColors();
+  // The question itself sits on the calm reading surface, like a lesson.
+  const calm = useColors();
   const { shadow } = useTheme();
   const language = useStore((s) => s.language);
   const setFocusMode = useStore((s) => s.setFocusMode);
@@ -58,7 +63,8 @@ export default function ArenaLiveScreen() {
 
   // The presence heartbeat runs inside useArenaLive: a student watching the
   // round IS in the room, and qualification is decided on who is.
-  const { tournament, question, mySchool, me, inFive, answerable, inPause, loading, now } = useArenaLive(tid);
+  const live = useArenaLive(tid);
+  const { tournament, question, mySchool, me, inFive, answerable, inPause, phase, stale, accessDenied, now } = live;
   const navigation = useNavigation<any>();
 
   /*
@@ -148,7 +154,7 @@ export default function ArenaLiveScreen() {
 
   useEffect(() => {
     if (revealed == null || choice == null) return;
-    if (choice === revealed) success(); else warn();
+    if (choice === revealed) arenaHaptics.correct(); else arenaHaptics.wrong();
   }, [revealed, choice]);
 
   /**
@@ -161,7 +167,7 @@ export default function ArenaLiveScreen() {
    */
   const pick = (i: number) => {
     if (locked || !answerable || index == null) return;
-    tapMedium();
+    arenaHaptics.commit();
     setChoice(i);
     setLocked(true);
     setReceipt('sending');
@@ -209,16 +215,25 @@ export default function ArenaLiveScreen() {
     };
   }, [mySchool, inFive, tournament?.teamSize]);
 
-  if (loading) {
+  // Faults with nothing to show get their own screen; a fault with a
+  // tournament on screen keeps the round visible under a reconnecting label.
+  if (phase === 'loading' || phase === 'unavailable' || phase === 'denied' || (phase === 'reconnecting' && !tournament)) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator color={colors.azure} />
-      </SafeAreaView>
+      <ArenaScreen edges={['top', 'bottom']}>
+        <ArenaStateView
+          status={phase}
+          t={t}
+          onRetry={live.retry}
+          onReturn={() => navigation.navigate('ArenaHub')}
+        />
+      </ArenaScreen>
     );
   }
 
+  const qNumber = tournament?.currentQuestion ? tournament.currentQuestion.index + 1 : null;
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
+    <ArenaScreen world={false} edges={['top', 'bottom']}>
       {/* ── Head: where we are, and what this answer is worth ───────────── */}
       <View style={{
         paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12,
@@ -230,7 +245,7 @@ export default function ArenaLiveScreen() {
               {t('Question', 'Kesyon')} {(index ?? 0) + 1} / {tournament?.questionCount ?? '—'}
             </Text>
             {question?.category ? (
-              <Text numberOfLines={1} style={[typeScale.micro, { color: colors.muted }]}>
+              <Text numberOfLines={1} style={[arenaType.label, { color: colors.muted }]}>
                 {question.category}
               </Text>
             ) : null}
@@ -256,15 +271,46 @@ export default function ArenaLiveScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 30 }} showsVerticalScrollIndicator={false}>
+        {stale || phase === 'reconnecting' ? (
+          <View style={{ marginBottom: 12 }}><StaleBanner t={t} onRetry={live.retry} /></View>
+        ) : null}
+
+        {accessDenied ? (
+          <View style={{ marginBottom: 12 }}>
+            <ArenaPanel tone="warn">
+              <Text style={[arenaType.status, { color: colors.ink }]}>
+                {t(
+                  'Après vérification, ton compte ne peut pas marquer de points dans ce championnat. Tu peux suivre la partie.',
+                  'Apre verifikasyon, kont ou pa ka make pwen nan chanpyona sa a. Ou ka swiv pati a.',
+                )}
+              </Text>
+            </ArenaPanel>
+          </View>
+        ) : null}
+
+        {/* Not an interval: the question exists on the server and is on its
+            way, or the room has not started. Said as such. */}
+        {phase === 'questionLoading' || phase === 'waitingStart' ? (
+          <View style={{ alignItems: 'center', paddingVertical: 32, gap: 12 }} accessibilityLiveRegion="polite">
+            <ActivityIndicator color={colors.coral} />
+            <Text style={[arenaType.status, { color: colors.muted, textAlign: 'center' }]}>
+              {phaseLine({
+                phase, state: tournament?.state ?? null, questionNumber: qNumber,
+                questionCount: tournament?.questionCount ?? 0, secondsLeft: null, revealed: false, t,
+              })}
+            </Text>
+          </View>
+        ) : null}
+
         {question && (answerable || locked || question.state === 'closed') ? (
           <>
             <StageEnter playKey={index ?? 0} index={0} springy style={{ marginBottom: 16 }}>
               <View style={{
                 borderRadius: radius.card, overflow: 'hidden',
-                borderWidth: 1, borderColor: colors.border, ...shadow.md,
+                borderWidth: 1, borderColor: calm.border, ...shadow.md,
               }}>
                 <LinearGradient
-                  colors={[colors.surface, colors.surfaceAlt]}
+                  colors={[calm.surface, calm.surfaceAlt]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 0, y: 1 }}
                   style={{ padding: 18 }}
@@ -300,7 +346,7 @@ export default function ArenaLiveScreen() {
                 would read as an accusation to the overwhelming majority who
                 were never going to screenshot anything. */}
             {captureBlocked ? (
-              <Text style={[typeScale.caption, {
+              <Text style={[arenaType.status, {
                 color: colors.muted, marginTop: 14, textAlign: 'center',
               }]}>
                 {t(
@@ -313,13 +359,13 @@ export default function ArenaLiveScreen() {
         ) : null}
 
         {/* ── Between questions: your school, and your five. Nothing else. ── */}
-        {inPause || question?.state !== 'open' ? (
+        {inPause ? (
           <StageEnter playKey={`pause-${index ?? 0}`} index={0} style={{ marginTop: 18 }}>
             <SchoolPosition line={schoolLine} isCreole={isCreole} />
           </StageEnter>
         ) : null}
       </ScrollView>
-    </SafeAreaView>
+    </ArenaScreen>
   );
 }
 
@@ -340,7 +386,7 @@ function TierRing({ ring, active, isCreole }: {
   active: boolean;
   isCreole: boolean;
 }) {
-  const colors = useColors();
+  const colors = useArenaColors();
   const reduceMotion = useReduceMotion();
   const tone = ring.tier === 'full' ? colors.success : ring.tier === 'half' ? colors.warn : colors.danger;
 
@@ -417,11 +463,11 @@ function AnswerReceiptLine({ receipt, onRetry, t }: {
   onRetry: () => void;
   t: (fr: string, ht: string) => string;
 }) {
-  const colors = useColors();
+  const colors = useArenaColors();
 
   if (receipt === 'accepted' || receipt === null) {
     return (
-      <Text style={[typeScale.caption, { color: colors.muted, marginTop: 14, textAlign: 'center' }]}>
+      <Text style={[arenaType.status, { color: colors.muted, marginTop: 14, textAlign: 'center' }]}>
         {t('Réponse envoyée. Pas de retour en arrière.', 'Repons ou ale. Pa gen retounen.')}
       </Text>
     );
@@ -431,7 +477,7 @@ function AnswerReceiptLine({ receipt, onRetry, t }: {
     return (
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 14 }}>
         <ActivityIndicator size="small" color={colors.muted} />
-        <Text style={[typeScale.caption, { color: colors.muted }]}>
+        <Text style={[arenaType.status, { color: colors.muted }]}>
           {t('Envoi en cours…', 'N ap voye li…')}
         </Text>
       </View>
@@ -440,7 +486,7 @@ function AnswerReceiptLine({ receipt, onRetry, t }: {
 
   if (receipt === 'rejected') {
     return (
-      <Text style={[typeScale.caption, { color: colors.danger, marginTop: 14, textAlign: 'center' }]}>
+      <Text style={[arenaType.status, { color: colors.danger, marginTop: 14, textAlign: 'center' }]}>
         {t(
           'Cette question est fermée — ta réponse n’a pas été comptée.',
           'Kesyon sa a fèmen — repons ou pa konte.',
@@ -455,7 +501,7 @@ function AnswerReceiptLine({ receipt, onRetry, t }: {
   // that never arrived.
   return (
     <View style={{ alignItems: 'center', marginTop: 14, gap: 8 }}>
-      <Text style={[typeScale.caption, { color: colors.danger, textAlign: 'center' }]}>
+      <Text style={[arenaType.status, { color: colors.danger, textAlign: 'center' }]}>
         {t('Ta réponse n’est pas passée. Vérifie ta connexion.', 'Repons ou pa pase. Tcheke koneksyon ou.')}
       </Text>
       <TouchableOpacity
@@ -463,7 +509,7 @@ function AnswerReceiptLine({ receipt, onRetry, t }: {
         accessibilityRole="button"
         style={{
           paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999,
-          backgroundColor: colors.dangerSoft, borderWidth: 1, borderColor: colors.danger,
+          backgroundColor: colors.dangerSoft,
         }}
       >
         <Text style={[typeScale.label, { color: colors.danger }]}>
@@ -492,7 +538,7 @@ function AnswerOption({
   onPress: () => void;
   reduceMotion: boolean;
 }) {
-  const colors = useColors();
+  const colors = useArenaColors();
   const scale = useSharedValue(1);
   const shake = useSharedValue(0);
 
@@ -525,7 +571,7 @@ function AnswerOption({
     if (isCorrectOpt) {
       borderColor = colors.success; bgColor = colors.successSoft; labelBg = colors.successFill; labelText = '#fff';
     } else if (isSelected) {
-      borderColor = colors.danger; bgColor = colors.dangerSoft; labelBg = colors.danger; labelText = '#fff';
+      borderColor = colors.danger; bgColor = colors.dangerSoft; labelBg = colors.danger; labelText = '#12213A';
     }
   } else if (isSelected) {
     // Locked, not "selected": the tap already committed it.
@@ -575,7 +621,7 @@ function SchoolPosition({ line, isCreole }: {
   line: { rank: number; short: string; teamAvg: number; inFive: boolean; teamSize: number; qualified: boolean } | null;
   isCreole: boolean;
 }) {
-  const colors = useColors();
+  const colors = useArenaColors();
   const { radius: r } = useTheme();
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -592,9 +638,9 @@ function SchoolPosition({ line, isCreole }: {
   return (
     <View style={{
       gap: 10, padding: 16, borderRadius: r.card,
-      backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: 'center',
+      backgroundColor: colors.surface, alignItems: 'center',
     }}>
-      <Text style={[typeScale.overline, { color: colors.muted }]}>
+      <Text style={[arenaType.label, { color: colors.muted }]}>
         {t('Ton école', 'Lekòl ou')}
       </Text>
       <Text numberOfLines={1} style={[typeScale.h1, { color: colors.ink }]}>{line.short}</Text>
@@ -631,7 +677,7 @@ function SchoolPosition({ line, isCreole }: {
           individually and nobody is turned away. Saying so here is the
           difference between "we are out" and "we are still in this". */}
       {!line.qualified ? (
-        <Text style={[typeScale.caption, { color: colors.muted, textAlign: 'center' }]}>
+        <Text style={[arenaType.status, { color: colors.muted, textAlign: 'center' }]}>
           {t(
             'Ton école n\u2019est pas qualifiée ce soir — tu continues en individuel.',
             'Lekòl ou pa kalifye aswè a — ou kontinye pou kont ou.',

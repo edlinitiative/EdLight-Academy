@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { listMyChallenges, type Challenge } from '../services/challengeService';
 import { returnedDuels, unseenDuels } from '../utils/duels';
+import useStore from '../contexts/store';
+import { queryKeys } from '../lifecycle/queryKeys';
 
 /**
  * The duels you sent, and which of their results you have not seen yet.
@@ -26,8 +28,11 @@ async function readSeen(): Promise<string[]> {
 }
 
 export function useMyChallenges() {
+  // listMyChallenges reads auth.currentUser — the key must name that student,
+  // or the next account on this device is shown the previous one's duels.
+  const uid = useStore((s) => s.user?.uid ?? null);
   const { data, isPending, refetch } = useQuery({
-    queryKey: ['my-challenges'],
+    queryKey: queryKeys.myChallenges(uid),
     queryFn: () => listMyChallenges(),
     staleTime: 60 * 1000,
   });

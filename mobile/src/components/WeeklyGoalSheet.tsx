@@ -9,7 +9,7 @@
 
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity } from 'react-native';
-import { X, Zap } from 'lucide-react-native';
+import { X, Zap, Snowflake } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import PressableScale from './ui/PressableScale';
 import ProgressRing from './ui/ProgressRing';
@@ -112,11 +112,12 @@ export default function WeeklyGoalSheet({
             padding: 12, marginTop: 18,
           }}
         >
-          <Text style={{ fontSize: 22 }}>🧊</Text>
-          <Text style={[typeScale.caption, { color: colors.muted, flex: 1 }]}>
+          <Snowflake color={colors.azure} size={22} />
+          {/* The rule that earns a freeze — an instruction, so ≥14pt. */}
+          <Text style={[typeScale.body, { color: colors.muted, flex: 1 }]}>
             {t(
-              `Termine ${WEEKLY_QUIZ_GOAL} quiz dans la semaine et gagne 1 gel. Il protège ta série 🔥 si tu rates un jour.`,
-              `Fini ${WEEKLY_QUIZ_GOAL} quiz nan semèn nan epi genyen 1 jèl. Li pwoteje seri w 🔥 si w rate yon jou.`,
+              `Termine ${WEEKLY_QUIZ_GOAL} quiz dans la semaine et gagne 1 gel. Il protège ta série si tu rates un jour.`,
+              `Fini ${WEEKLY_QUIZ_GOAL} quiz nan semèn nan epi genyen 1 jèl. Li pwoteje seri w si w rate yon jou.`,
             )}
           </Text>
         </View>

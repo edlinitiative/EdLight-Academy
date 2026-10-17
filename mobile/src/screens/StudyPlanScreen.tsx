@@ -19,6 +19,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -41,13 +42,22 @@ import {
   Clock,
   BarChart3,
   ChevronRight,
+  Bell,
 } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { auth } from '../services/firebase';
 import { TRACKS, currentPlanSeason, gradeProfile } from '../config/trackConfig';
 import { resetTabToRoot } from '../navigation/navHelpers';
 import { subjectColor } from '../utils/examUtils';
-import { useColors, useTheme, radius, typeScale, type Palette } from '../theme/theme';
+import { useColors, useTheme, radius, typeScale, touch, type Palette } from '../theme/theme';
+import {
+  getStudyReminderHour,
+  setStudyReminder,
+  getNotificationPermissionAction,
+  openNotificationSettings,
+  type NotificationAskResult,
+} from '../services/notificationService';
+import { STUDY_REMINDER_HOURS, formatHour } from '../settings/notificationPermission';
 import PressableScale from '../components/ui/PressableScale';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import { ErrorState, Skeleton } from '../components/StateViews';
@@ -147,16 +157,19 @@ function OptionChips<T extends string | number>({
             key={String(opt)}
             onPress={() => onChange(opt)}
             activeOpacity={0.75}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: active, checked: active }}
             style={{
               paddingHorizontal: 14,
-              paddingVertical: 8,
+              minHeight: touch.min,
+              justifyContent: 'center',
               borderRadius: 999,
               borderWidth: 1,
-              borderColor: active ? colors.azure : colors.border,
-              backgroundColor: active ? colors.azure : colors.surface,
+              borderColor: active ? colors.azureFill : colors.border,
+              backgroundColor: active ? colors.azureFill : colors.surface,
             }}
           >
-            <Text style={{ fontSize: 13, fontWeight: '700', color: active ? '#ffffff' : colors.muted }}>
+            <Text style={[typeScale.bodyMd, { color: active ? '#ffffff' : colors.muted }]}>
               {labelOf(opt)}
             </Text>
           </TouchableOpacity>
@@ -182,8 +195,8 @@ function StatPill({ icon, value, label }: { icon: React.ReactNode; value: string
       }}
     >
       {icon}
-      <Text maxFontSizeMultiplier={1.3} style={{ fontSize: 16, fontWeight: '800', color: colors.ink }}>{value}</Text>
-      <Text style={{ fontSize: 10, color: colors.muted }}>{label}</Text>
+      <Text maxFontSizeMultiplier={1.6} style={{ fontSize: 16, fontWeight: '800', color: colors.ink }}>{value}</Text>
+      <Text style={[typeScale.label, { color: colors.muted, textAlign: 'center' }]}>{label}</Text>
     </View>
   );
 }
@@ -238,12 +251,12 @@ function TaskRow({
       <View style={{ flex: 1, gap: 2 }}>
         <View className="flex-row items-center" style={{ gap: 6 }}>
           <TypeIcon size={13} color={meta.color} />
-          <Text style={{ fontSize: 11, fontWeight: '700', color: subjectColor(task.subject) }}>
+          <Text style={{ fontSize: 12, fontWeight: '700', color: subjectColor(task.subject) }}>
             {task.subject}
           </Text>
           {typeof task.scheduledWeek === 'number' && (
             <View style={{ backgroundColor: colors.azureSoft, borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1 }}>
-              <Text style={{ fontSize: 10, fontWeight: '700', color: colors.azure }}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: colors.azure }}>
                 {isCreole ? 'Semèn' : 'Sem.'} {task.scheduledWeek}
                 {typeof task.scheduledDay === 'number'
                   ? ` · ${isCreole ? 'Jou' : 'Jour'} ${task.scheduledDay}`
@@ -251,27 +264,28 @@ function TaskRow({
               </Text>
             </View>
           )}
-          {overdue && (
-            <Text style={{ fontSize: 10, fontWeight: '700', color: colors.danger }}>
-              {isCreole ? 'Anreta' : 'En retard'}
-            </Text>
-          )}
         </View>
 
         <Text
-          numberOfLines={2}
-          style={{
-            fontSize: 13,
-            fontWeight: '600',
-            color: colors.ink,
-            textDecorationLine: mastered ? 'line-through' : 'none',
-          }}
+          numberOfLines={3}
+          style={[
+            typeScale.titleSm,
+            { color: colors.ink, textDecorationLine: mastered ? 'line-through' : 'none' },
+          ]}
         >
           {taskDisplayTitle(task, isCreole)}
         </Text>
 
+        {/* Status is essential (it changes what to do first), so it gets its own
+            14pt line instead of a 10pt tag squeezed into the meta row. */}
+        {overdue && (
+          <Text style={[typeScale.status, { color: colors.danger }]}>
+            {isCreole ? 'Anreta' : 'En retard'}
+          </Text>
+        )}
+
         {!!secondary && (
-          <Text numberOfLines={1} style={{ fontSize: 11, color: colors.muted }}>
+          <Text numberOfLines={2} style={[typeScale.label, { color: colors.muted }]}>
             {secondary}
           </Text>
         )}
@@ -279,14 +293,17 @@ function TaskRow({
 
       <View style={{ alignItems: 'flex-end', gap: 2 }}>
         {lastScore !== null && lastScore !== undefined && (
-          <Text style={{ fontSize: 12, fontWeight: '800', color: colors.ink }}>{lastScore}%</Text>
+          <Text style={{ fontSize: 13, fontWeight: '800', color: colors.ink }}>{lastScore}%</Text>
         )}
         {task.type === 'exam' && (
-          <Text style={{ fontSize: 10, color: difficultyColor(task.difficulty) }}>
+          <Text
+            style={{ fontSize: 11, color: difficultyColor(task.difficulty) }}
+            accessibilityLabel={`${isCreole ? 'Difikilte' : 'Difficulté'} ${Math.max(1, Math.min(5, task.difficulty || 3))}/5`}
+          >
             {'★'.repeat(Math.max(1, Math.min(5, task.difficulty || 3)))}
           </Text>
         )}
-        <Text style={{ fontSize: 10, color: colors.faint }}>{formatDate(task.nextReviewMs, isCreole)}</Text>
+        <Text style={[typeScale.caption, { color: colors.faint }]}>{formatDate(task.nextReviewMs, isCreole)}</Text>
       </View>
 
       {onPress && !mastered && <ChevronRight size={16} color={colors.faint} />}
@@ -299,8 +316,8 @@ function MasteryRow({ subject, pct }: { subject: string; pct: number }) {
   return (
     <View style={{ gap: 4, marginBottom: 10 }}>
       <View className="flex-row items-center justify-between">
-        <Text style={{ fontSize: 12, fontWeight: '700', color: subjectColor(subject) }}>{subject}</Text>
-        <Text style={{ fontSize: 12, fontWeight: '700', color: colors.ink }}>{pct}%</Text>
+        <Text style={{ fontSize: 13, fontWeight: '700', color: subjectColor(subject) }}>{subject}</Text>
+        <Text style={{ fontSize: 13, fontWeight: '700', color: colors.ink }}>{pct}%</Text>
       </View>
       <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.border, overflow: 'hidden' }}>
         <View style={{ width: `${Math.min(100, Math.max(0, pct))}%`, height: 6, borderRadius: 3, backgroundColor: colors.azure }} />
@@ -325,7 +342,7 @@ function PlanSkeleton({ label }: { label?: string }) {
           style={{ gap: 8, backgroundColor: colors.azureSoft, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 }}
         >
           <Sparkles size={15} color={colors.azure} />
-          <Text style={[typeScale.caption, { flex: 1, color: colors.ink }]}>{label}</Text>
+          <Text accessibilityLiveRegion="polite" style={[typeScale.status, { flex: 1, color: colors.ink }]}>{label}</Text>
         </View>
       ) : null}
 
@@ -367,6 +384,144 @@ function PlanSkeleton({ label }: { label?: string }) {
         ))}
       </Card>
     </ScrollView>
+  );
+}
+
+// ─── Study reminder ───────────────────────────────────────────────────────────
+
+/**
+ * "Rappel d'étude" — the student picks a time (or none). Picking a time is the
+ * moment notification permission is requested (audit #9): askForNotifications
+ * explains the benefit first, asks the OS at most once, and after a denial we
+ * show "Ouvrir les réglages" instead of asking again.
+ */
+function StudyReminderCard({ isCreole }: { isCreole: boolean }) {
+  const colors = useColors();
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  // undefined = never chosen, null = off
+  const [hour, setHour] = useState<number | null | undefined>(undefined);
+  const [result, setResult] = useState<NotificationAskResult | 'off' | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  // Load the saved choice + whether it can actually fire.
+  const refresh = useCallback(async () => {
+    const [h, action] = await Promise.all([getStudyReminderHour(), getNotificationPermissionAction()]);
+    setHour(h);
+    if (h === null) setResult('off');
+    else if (typeof h === 'number') setResult(action === 'granted' ? 'granted' : action === 'settings' ? 'blocked' : 'declined');
+    else setResult(null);
+    return { h, action };
+  }, []);
+
+  useEffect(() => { refresh().catch(() => {}); }, [refresh]);
+
+  // Back from the system settings with permission now on → schedule the saved time.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') return;
+      refresh()
+        .then(({ h, action }) => {
+          if (typeof h === 'number' && action === 'granted') setStudyReminder(h).catch(() => {});
+        })
+        .catch(() => {});
+    });
+    return () => sub.remove();
+  }, [refresh]);
+
+  const choose = async (next: number | null) => {
+    if (busy) return;
+    setBusy(true);
+    setHour(next);
+    try {
+      setResult(await setStudyReminder(next));
+    } catch {
+      setResult(null);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const options: (number | null)[] = [...STUDY_REMINDER_HOURS, null];
+
+  let status: string | null = null;
+  if (result === 'granted' && typeof hour === 'number') {
+    status = t(`Rappel chaque jour à ${formatHour(hour, false)}.`, `Rapèl chak jou a ${formatHour(hour, true)}.`);
+  } else if (result === 'off') {
+    status = t('Pas de rappel d’étude.', 'Pa gen rapèl etid.');
+  } else if (result === 'declined' || result === 'denied') {
+    status = t(
+      'Rappel enregistré, mais les notifications ne sont pas activées.',
+      'Rapèl la anrejistre, men notifikasyon yo pa aktive.',
+    );
+  } else if (result === 'blocked') {
+    status = t(
+      'Les notifications sont coupées dans les réglages du téléphone.',
+      'Notifikasyon yo fèmen nan paramèt telefòn nan.',
+    );
+  }
+
+  return (
+    <Card style={{ marginBottom: 14 }}>
+      <SectionTitle icon={<Bell size={16} color={colors.azure} />} label={t("Rappel d'étude", 'Rapèl etid')} />
+      <Text style={[typeScale.body, { color: colors.muted, marginBottom: 12 }]}>
+        {t('À quelle heure veux-tu réviser ?', 'Ki lè ou vle revize ?')}
+      </Text>
+      <View className="flex-row flex-wrap" style={{ gap: 8 }} accessibilityRole="radiogroup">
+        {options.map((h) => {
+          const active = hour === h;
+          const label = h == null ? t('Aucun', 'Okenn') : formatHour(h, isCreole);
+          return (
+            <TouchableOpacity
+              key={String(h)}
+              onPress={() => choose(h)}
+              disabled={busy}
+              activeOpacity={0.75}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: active, checked: active, disabled: busy }}
+              accessibilityLabel={h == null ? t('Aucun rappel', 'Okenn rapèl') : t(`Rappel à ${label}`, `Rapèl a ${label}`)}
+              style={{
+                minHeight: touch.min,
+                minWidth: touch.min + 12,
+                paddingHorizontal: 14,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: active ? colors.azureFill : colors.border,
+                backgroundColor: active ? colors.azureFill : colors.surface,
+              }}
+            >
+              <Text style={[typeScale.bodyMd, { color: active ? '#ffffff' : colors.ink }]}>{label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      {status ? (
+        <Text accessibilityLiveRegion="polite" style={[typeScale.status, { color: result === 'granted' || result === 'off' ? colors.muted : colors.danger, marginTop: 12 }]}>
+          {status}
+        </Text>
+      ) : null}
+      {result === 'blocked' ? (
+        <TouchableOpacity
+          onPress={openNotificationSettings}
+          accessibilityRole="button"
+          accessibilityLabel={t('Ouvrir les réglages', 'Louvri paramèt yo')}
+          style={{ alignSelf: 'flex-start', minHeight: touch.min, justifyContent: 'center', marginTop: 4 }}
+        >
+          <Text style={[typeScale.action, { color: colors.azure }]}>{t('Ouvrir les réglages', 'Louvri paramèt yo')}</Text>
+        </TouchableOpacity>
+      ) : null}
+      {result === 'declined' && typeof hour === 'number' ? (
+        <TouchableOpacity
+          onPress={() => choose(hour)}
+          accessibilityRole="button"
+          accessibilityLabel={t('Activer les notifications', 'Aktive notifikasyon yo')}
+          style={{ alignSelf: 'flex-start', minHeight: touch.min, justifyContent: 'center', marginTop: 4 }}
+        >
+          <Text style={[typeScale.action, { color: colors.azure }]}>{t('Activer les notifications', 'Aktive notifikasyon yo')}</Text>
+        </TouchableOpacity>
+      ) : null}
+    </Card>
   );
 }
 
@@ -555,6 +710,8 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
           <TouchableOpacity
             onPress={handleRegenerate}
             activeOpacity={0.7}
+            hitSlop={touch.slop36}
+            accessibilityRole="button"
             style={{
               width: 36,
               height: 36,
@@ -574,6 +731,8 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
           <TouchableOpacity
             onPress={onClose}
             activeOpacity={0.7}
+            hitSlop={touch.slop36}
+            accessibilityRole="button"
             style={{
               width: 36,
               height: 36,
@@ -603,7 +762,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
           <Text style={{ fontSize: 18, fontWeight: '800', color: colors.ink, textAlign: 'center' }}>
             {t('Connectez-vous pour voir votre plan', 'Konekte pou wè plan ou')}
           </Text>
-          <Text style={{ fontSize: 13, color: colors.muted, textAlign: 'center' }}>
+          <Text style={[typeScale.instruction, { color: colors.muted, textAlign: 'center' }]}>
             {t(
               "Vous devez être connecté pour créer un plan d'étude personnalisé.",
               'Ou bezwen konekte pou kreye yon plan etid pèsonalize.',
@@ -612,9 +771,10 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
           <TouchableOpacity
             onPress={toggleAuthModal}
             activeOpacity={0.8}
-            style={{ backgroundColor: colors.azure, borderRadius: 999, paddingHorizontal: 28, paddingVertical: 12, marginTop: 6 }}
+            accessibilityRole="button"
+            style={{ backgroundColor: colors.azureFill, borderRadius: 999, paddingHorizontal: 28, minHeight: touch.min + 4, justifyContent: 'center', marginTop: 6 }}
           >
-            <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 14 }}>
+            <Text style={[typeScale.action, { color: '#ffffff' }]}>
               {t('Se connecter', 'Konekte')}
             </Text>
           </TouchableOpacity>
@@ -671,7 +831,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
           <WifiOff size={18} color={colors.danger} />
         )}
         <View style={{ flex: 1, gap: 8 }}>
-          <Text style={{ fontSize: 13, color: colors.danger, fontWeight: '600' }}>
+          <Text accessibilityRole="alert" style={[typeScale.status, { color: colors.danger }]}>
             {genError.kind === 'limit'
               ? genError.message ||
                 t(
@@ -696,9 +856,10 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
                   : handleGenerateFromForm
               }
               activeOpacity={0.8}
-              style={{ alignSelf: 'flex-start', backgroundColor: colors.danger, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 7 }}
+              accessibilityRole="button"
+              style={{ alignSelf: 'flex-start', backgroundColor: colors.danger, borderRadius: 999, paddingHorizontal: 18, minHeight: touch.min, justifyContent: 'center' }}
             >
-              <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 12 }}>
+              <Text style={[typeScale.action, { color: '#ffffff' }]}>
                 {t('Réessayer', 'Eseye ankò')}
               </Text>
             </TouchableOpacity>
@@ -707,9 +868,10 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
             <TouchableOpacity
               onPress={toggleAuthModal}
               activeOpacity={0.8}
-              style={{ alignSelf: 'flex-start', backgroundColor: colors.danger, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 7 }}
+              accessibilityRole="button"
+              style={{ alignSelf: 'flex-start', backgroundColor: colors.danger, borderRadius: 999, paddingHorizontal: 18, minHeight: touch.min, justifyContent: 'center' }}
             >
-              <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 12 }}>
+              <Text style={[typeScale.action, { color: '#ffffff' }]}>
                 {t('Se connecter', 'Konekte')}
               </Text>
             </TouchableOpacity>
@@ -732,7 +894,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
             <Text style={{ fontSize: 17, fontWeight: '800', color: colors.ink, textAlign: 'center' }}>
               {t("Pas encore de plan d'étude", 'Pa gen plan etid ankò')}
             </Text>
-            <Text style={{ fontSize: 13, color: colors.muted, textAlign: 'center' }}>
+            <Text style={[typeScale.instruction, { color: colors.muted, textAlign: 'center' }]}>
               {t(
                 'Créez un plan personnalisé basé sur votre filière et vos performances.',
                 'Kreye yon plan pèsonalize baze sou filiyè ou ak pèfòmans ou.',
@@ -741,7 +903,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
           </View>
 
           <Card style={{ marginBottom: 14 }}>
-            <Text style={{ fontSize: 13, fontWeight: '800', color: colors.ink, marginBottom: 10 }}>
+            <Text style={[typeScale.titleSm, { color: colors.ink, marginBottom: 10 }]}>
               {t('Votre filière', 'Filiyè ou')}
             </Text>
             <View className="flex-row flex-wrap gap-2">
@@ -752,12 +914,15 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
                     key={trk.code}
                     onPress={() => setSelTrack(trk.code)}
                     activeOpacity={0.75}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: active, checked: active }}
+                    accessibilityLabel={trk.shortLabel}
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
                       gap: 6,
                       paddingHorizontal: 12,
-                      paddingVertical: 9,
+                      minHeight: touch.min,
                       borderRadius: 999,
                       borderWidth: 1.5,
                       borderColor: active ? trk.color : colors.border,
@@ -765,7 +930,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
                     }}
                   >
                     <Text style={{ fontSize: 14 }}>{trk.icon}</Text>
-                    <Text style={{ fontSize: 12, fontWeight: '800', color: active ? trk.color : colors.muted }}>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: active ? trk.color : colors.muted }}>
                       {trk.shortLabel}
                     </Text>
                   </TouchableOpacity>
@@ -775,7 +940,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
           </Card>
 
           <Card style={{ marginBottom: 14 }}>
-            <Text style={{ fontSize: 13, fontWeight: '800', color: colors.ink, marginBottom: 10 }}>
+            <Text style={[typeScale.titleSm, { color: colors.ink, marginBottom: 10 }]}>
               {t('Durée du plan', 'Dire plan an')}
             </Text>
             <OptionChips
@@ -787,7 +952,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
           </Card>
 
           <Card style={{ marginBottom: 20 }}>
-            <Text style={{ fontSize: 13, fontWeight: '800', color: colors.ink, marginBottom: 10 }}>
+            <Text style={[typeScale.titleSm, { color: colors.ink, marginBottom: 10 }]}>
               {t("Temps d'étude par jour", 'Tan etid pa jou')}
             </Text>
             <OptionChips
@@ -819,7 +984,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
           </TouchableOpacity>
 
           {!selTrack && (
-            <Text style={{ fontSize: 12, color: colors.faint, textAlign: 'center', marginTop: 10 }}>
+            <Text style={[typeScale.instruction, { color: colors.muted, textAlign: 'center', marginTop: 10 }]}>
               {t("Choisissez votre filière d'abord.", 'Chwazi filiyè ou anvan.')}
             </Text>
           )}
@@ -858,7 +1023,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
             <View style={{ width: `${progressPct}%`, height: 8, borderRadius: 4, backgroundColor: colors.azure }} />
           </View>
           {!!plan.description && (
-            <Text style={{ fontSize: 12, color: colors.muted, marginTop: 10 }}>{plan.description}</Text>
+            <Text style={[typeScale.body, { color: colors.muted, marginTop: 10 }]}>{plan.description}</Text>
           )}
         </Card>
 
@@ -868,7 +1033,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
           style={{ gap: 8, backgroundColor: colors.azureSoft, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 }}
         >
           <Sparkles size={15} color={colors.azure} />
-          <Text style={{ flex: 1, fontSize: 12, color: colors.ink, lineHeight: 17 }}>
+          <Text style={[typeScale.body, { flex: 1, color: colors.ink }]}>
             {t(
               'Touchez une tâche pour la commencer. Votre progression se met à jour automatiquement.',
               'Peze yon travay pou kòmanse l. Pwogrè ou ap mete ajou otomatikman.',
@@ -914,7 +1079,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
           ) : (
             <View className="flex-row items-center" style={{ gap: 8 }}>
               <CheckCircle2 size={16} color={colors.success} />
-              <Text style={{ fontSize: 13, color: colors.muted }}>
+              <Text style={[typeScale.body, { color: colors.muted, flex: 1 }]}>
                 {t(
                   "Vous êtes à jour, rien de prévu aujourd'hui !",
                   'Ou ajou, pa gen anyen pou jodi a!',
@@ -923,6 +1088,10 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
             </View>
           )}
         </Card>
+
+        {/* Study reminder — the ONLY place a study reminder (and therefore the
+            notification permission) is offered from a choice the student makes. */}
+        <StudyReminderCard isCreole={isCreole} />
 
         {/* Upcoming week */}
         <Card style={{ marginBottom: 14 }}>
@@ -941,7 +1110,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
               />
             ))
           ) : (
-            <Text style={{ fontSize: 13, color: colors.muted }}>
+            <Text style={[typeScale.body, { color: colors.muted }]}>
               {t('Aucune tâche cette semaine.', 'Pa gen travay pou semèn kap vini an.')}
             </Text>
           )}
@@ -969,8 +1138,8 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
             />
             {plan.tips.slice(0, 3).map((tip, i) => (
               <View key={i} className="flex-row" style={{ gap: 8, marginBottom: 8 }}>
-                <Text style={{ fontSize: 13, color: colors.warn }}>•</Text>
-                <Text style={{ flex: 1, fontSize: 13, color: colors.ink, lineHeight: 19 }}>{tip}</Text>
+                <Text style={[typeScale.body, { color: colors.warn }]}>•</Text>
+                <Text style={[typeScale.body, { flex: 1, color: colors.ink }]}>{tip}</Text>
               </View>
             ))}
           </Card>

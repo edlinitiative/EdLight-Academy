@@ -94,6 +94,52 @@ export interface AppState {
   logout: () => void;
 }
 
+/**
+ * What sign-out / account deletion / an account switch clears.
+ * ────────────────────────────────────────────────────────────
+ * A phone in Haiti is often shared by siblings or classmates, so the rule is:
+ * anything that describes THE STUDENT is cleared; anything that describes THE
+ * DEVICE or its owner's reading preferences is kept.
+ *
+ * Cleared (student-owned):
+ *   user / isAuthenticated, track, grade + gradeChosen, onboardingCompleted,
+ *   dismissedSuggestionKey, enrolledCourses, progress (mastery), review,
+ *   quizAttempts, lastActivity, currentCourse, pendingDailyChallenge.
+ *   grade is cleared deliberately (it used to survive logout): AuthGate
+ *   backfills a device grade into a server profile that has none, so a kept
+ *   grade would be written onto the NEXT student's account.
+ *
+ * Kept (device preferences / device facts):
+ *   language + languageChosen, theme, tourCompleted, practiceTipSeen,
+ *   igPromptSeen (one-time UI intros on this device), focusMode, activeTab,
+ *   hydrated, authConfirmed (auth has resolved — clearing it would put the app
+ *   back on the loading screen), freeVideoIds + guestInteractionCount (guest
+ *   gating is per device; resetting them on logout would hand out free videos
+ *   on every sign-out).
+ *
+ * Returned as a fresh object so callers can spread it into one `set()` — the
+ * mastery sync listens to the store, and clearing progress in the SAME update
+ * that drops the user keeps it from pushing an empty map to anyone.
+ */
+export function studentStateReset() {
+  return {
+    user: null,
+    isAuthenticated: false,
+    track: null,
+    grade: null,
+    gradeChosen: false,
+    onboardingCompleted: false,
+    dismissedSuggestionKey: null,
+    currentCourse: null,
+    enrolledCourses: [] as any[],
+    progress: {} as Record<string, any>,
+    review: {} as ReviewMap,
+    quizAttempts: {} as Record<string, any[]>,
+    lastActivity: null,
+    pendingDailyChallenge: false,
+  } satisfies Partial<AppState>;
+}
+
 const useStore = create<AppState>()(
   persist(
     (set, _get) => ({
@@ -231,20 +277,7 @@ const useStore = create<AppState>()(
       setFocusMode: (focus) => set({ focusMode: !!focus }),
       setPendingDailyChallenge: (pending) => set({ pendingDailyChallenge: !!pending }),
 
-      logout: () =>
-        set({
-          user: null,
-          isAuthenticated: false,
-          track: null,
-          onboardingCompleted: false,
-          currentCourse: null,
-          enrolledCourses: [],
-          progress: {},
-          review: {},
-          quizAttempts: {},
-          lastActivity: null,
-          showAuthModal: false,
-        }),
+      logout: () => set({ ...studentStateReset(), showAuthModal: false }),
     }),
     {
       name: 'edlight-mobile-storage',
@@ -284,6 +317,24 @@ if (useStore.persist.hasHydrated()) {
   useStore.setState({ hydrated: true });
 } else {
   useStore.persist.onFinishHydration(() => useStore.setState({ hydrated: true }));
+}
+
+/**
+ * Resolves once the persisted store has been read back from AsyncStorage.
+ * The auth gate waits on this before comparing accounts: deciding "is this a
+ * different student?" against the pre-hydration defaults would miss a switch,
+ * and the later rehydration would then restore the previous student's state
+ * over the new one. Never rejects; gives up waiting after `maxMs`.
+ */
+export function waitForStoreHydration(maxMs = 3000): Promise<void> {
+  if (useStore.persist.hasHydrated()) return Promise.resolve();
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = () => { if (!done) { done = true; clearTimeout(id); unsub(); resolve(); } };
+    const id = setTimeout(finish, maxMs);
+    const unsub = useStore.persist.onFinishHydration(finish);
+    if (useStore.persist.hasHydrated()) finish();
+  });
 }
 
 export default useStore;

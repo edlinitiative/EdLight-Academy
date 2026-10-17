@@ -258,7 +258,7 @@ export default function SchoolPicker({ visible, commune, onSelect, onClose }: {
               </Text>
 
               {problem && !problem.ok ? (
-                <Text style={[typeScale.caption, { color: colors.danger }]}>
+                <Text accessibilityRole="alert" style={[typeScale.status, { color: colors.danger }]}>
                   {problem.reason === 'duplicate'
                     ? t(`Déjà dans la liste : ${problem.existing.name}`, `Deja nan lis la : ${problem.existing.name}`)
                     : problem.reason === 'short-name'

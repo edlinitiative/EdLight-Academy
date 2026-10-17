@@ -376,7 +376,7 @@ export default function ChapterTest({
                     flexDirection: 'row', alignItems: 'center', gap: 12,
                     borderRadius: 16, padding: 15,
                   }, glass, isSel ? {
-                    backgroundColor: 'rgba(255,255,255,0.24)',
+                    backgroundColor: '#2B4470',
                     borderColor: 'rgba(255,255,255,0.8)',
                   } : null]}
                 >

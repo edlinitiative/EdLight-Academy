@@ -2,24 +2,43 @@ import './global.css';
 import React, { useEffect, useRef, useState } from 'react';
 import { colorScheme } from 'nativewind';
 import { StatusBar } from 'expo-status-bar';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { registerRootComponent } from 'expo';
 import * as Linking from 'expo-linking';
 import * as Notifications from 'expo-notifications';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
-import { onAuthStateChange, upsertUserDocument, getUserProfile, updateUserGrade } from './src/services/firebase';
-import useStore from './src/contexts/store';
+import { onAuthStateChange } from './src/services/firebase';
+import useStore, { waitForStoreHydration } from './src/contexts/store';
 import AppNavigator, { navigationRef, navigateToTab } from './src/navigation/AppNavigator';
 import {
   areNotificationsEnabled,
-  requestPermissions,
   scheduleEngagementReminders,
 } from './src/services/notificationService';
 import { registerForPushNotifications } from './src/services/pushService';
-import { syncMasteryOnLogin, startMasterySync, stopMasterySync, disposeMasterySync } from './src/services/masterySync';
+import { syncMasteryOnLogin, startMasterySync, disposeMasterySync } from './src/services/masterySync';
 import { hydrateQueryCache, persistQueryCacheOnChange } from './src/services/queryPersistence';
+import { installGlobalErrorHandlers, reportError } from './src/services/telemetry';
+import AppErrorBoundary from './src/components/AppErrorBoundary';
+import { queryClient } from './src/lifecycle/queryClient';
+import { installQueryLifecycle } from './src/lifecycle/queryLifecycle';
+import { classifyAuthTransition, shouldClearStudentState } from './src/lifecycle/sessionLogic';
+import {
+  sessionGuard,
+  syncProfile,
+  syncGradeAndTrack,
+  clearStudentSession,
+  installAccountIsolation,
+} from './src/lifecycle/session';
+
+// Report errors nothing else caught (JS exceptions, unhandled rejections in
+// release), tagged with the build / OTA update that produced them.
+installGlobalErrorHandlers();
+// NetInfo → onlineManager, AppState → focusManager (see lifecycle/queryLifecycle).
+installQueryLifecycle();
+// Any change of the store's account drops the query caches (lifecycle/session).
+installAccountIsolation();
 
 // Hold the native splash until the app can actually show its first real screen.
 //
@@ -37,87 +56,102 @@ SplashScreen.preventAutoHideAsync().catch(() => {
 /** Never leave a user staring at a splash because auth never resolved. */
 const SPLASH_MAX_MS = 4000;
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000,
-      gcTime: 30 * 60 * 1000,
-    },
-  },
-});
-
-// Throttle passive user-doc upserts. onAuthStateChange fires on every ID-token
-// refresh (~hourly) and app resume, not just sign-in — writing the user doc on
-// each was wasteful (getDoc + setDoc, and bumped last_seen far more than
-// intended). Upsert at most once per hour per uid from the passive listener
-// (explicit sign-in paths in authService still upsert immediately).
-let lastPassiveUpsertUid: string | null = null;
-let lastPassiveUpsertAt = 0;
-const PASSIVE_UPSERT_INTERVAL_MS = 60 * 60 * 1000;
-
+/**
+ * Resolves who is signed in and shows the app — never waiting on Firestore.
+ *
+ * Before, the listener awaited `upsertUserDocument` (a Firestore read + write)
+ * before `setUser`/`setAuthConfirmed`, with no catch: offline, with Firestore
+ * blocked, or on a rejected write, a signed-in student sat on the loading
+ * screen indefinitely. Now:
+ *   - the session is confirmed from Firebase Auth alone (restored offline from
+ *     its AsyncStorage persistence), in a `finally`, so it always happens;
+ *   - profile sync, grade/track reconciliation, reminders/push and mastery
+ *     sync are fire-and-forget, each with its own error handling; profile sync
+ *     keeps its own retryable state (lifecycle/session);
+ *   - results of async work are applied only if the same account is still
+ *     signed in (sessionGuard);
+ *   - a different account than the one this device last knew — with or
+ *     without an explicit logout — first clears the previous student's state.
+ * Events are handled strictly in order, so a quick sign-out/sign-in can never
+ * be applied out of sequence.
+ */
 function AuthGate() {
-  const { setUser, setAuthConfirmed, logout } = useStore();
-
   useEffect(() => {
-    const unsubscribe = onAuthStateChange(async (firebaseUser) => {
-      if (firebaseUser) {
-        const now = Date.now();
-        if (firebaseUser.uid !== lastPassiveUpsertUid || now - lastPassiveUpsertAt > PASSIVE_UPSERT_INTERVAL_MS) {
-          lastPassiveUpsertUid = firebaseUser.uid;
-          lastPassiveUpsertAt = now;
-          await upsertUserDocument(firebaseUser, false);
+    let chain = Promise.resolve();
+    let active = true;
+
+    const handle = async (firebaseUser: any) => {
+      // Compare against the persisted account, so wait until it is loaded.
+      await waitForStoreHydration();
+      if (!active) return;
+      const store = useStore.getState();
+      try {
+        const nextUid: string | null = firebaseUser?.uid ?? null;
+        const transition = classifyAuthTransition(store.user?.uid ?? null, nextUid);
+        const token = sessionGuard.begin(nextUid);
+
+        if (shouldClearStudentState(transition)) {
+          clearStudentSession(transition === 'account-switch' ? 'account-switch' : 'signed-out');
         }
-        setUser({
-          uid: firebaseUser.uid,
+
+        if (!firebaseUser) {
+          // Signed out. Nothing else to do: 'still-signed-out' (a guest's cold
+          // launch) deliberately keeps the guest's local work and grade, which
+          // sign-up carries into the new account.
+          return;
+        }
+
+        const uid: string = firebaseUser.uid;
+        useStore.getState().setUser({
+          uid,
           name: firebaseUser.displayName || '',
           email: firebaseUser.email || '',
           picture: firebaseUser.photoURL || '',
         });
-        // Sync grade/track with the user doc. Local state was the only home
-        // for these (lost on reinstall, invisible to the server), so:
-        //   server has it, device doesn't → restore (reinstall / new device);
-        //   device has it, server doesn't → backfill (pre-persistence users,
-        //   and guests who picked a grade before signing up).
-        // Best-effort; never blocks auth.
-        getUserProfile(firebaseUser.uid)
-          .then((profile) => {
-            const s = useStore.getState();
-            const serverGrade = typeof profile?.grade === 'string' && profile.grade ? profile.grade : null;
-            if (serverGrade && !s.grade) {
-              s.setGrade(serverGrade);
-              s.setGradeChosen(true);
-            } else if (!serverGrade && s.grade && s.gradeChosen) {
-              updateUserGrade(firebaseUser.uid, s.grade);
-            }
-            const serverTrack = typeof profile?.track === 'string' && profile.track ? profile.track : null;
-            if (serverTrack && !s.track) s.setTrack(serverTrack);
-          })
-          .catch(() => {});
-        // Request notification permission after sign-in, then schedule the
-        // daily study reminder and register the Expo push token — but only
-        // when the user's Notifications toggle allows it. Best-effort — never
-        // blocks the auth flow.
-        requestPermissions()
-          .then(async (granted) => {
-            if (!granted || !(await areNotificationsEnabled())) return;
+
+        // ── Best-effort follow-ups. None of these may block or throw. ──
+        syncProfile(firebaseUser, { reason: transition }).catch(() => {});
+        syncGradeAndTrack(uid, token).catch(() => {});
+
+        // Reminders + push token ONLY for students who already granted
+        // permission and kept the in-app toggle on. This never prompts: the
+        // permission ask belongs to a moment where its value is clear (a
+        // chosen study reminder, a followed event — see notificationService
+        // callers), not to a passive auth event.
+        areNotificationsEnabled()
+          .then(async (enabled) => {
+            if (!enabled || !sessionGuard.isCurrent(token)) return;
             await scheduleEngagementReminders();
-            await registerForPushNotifications(firebaseUser.uid);
+            await registerForPushNotifications(uid);
           })
           .catch(() => {});
+
         // Mastery lives on the device (AsyncStorage) for offline use, but it is
         // the app's core signal — losing a term's work to a reinstall is not
         // acceptable. Pull the server's copy, join it with this device's, and
         // write back if the device was ahead. Monotonic merge, so it is safe on
-        // every token refresh, not just a fresh sign-in.
-        syncMasteryOnLogin(firebaseUser.uid).catch(() => {});
-      } else {
-        lastPassiveUpsertUid = null; // re-upsert on next sign-in
-        stopMasterySync();
-        logout();
+        // every auth event. Runs after any account-switch wipe above, so the
+        // previous student's map is never merged into this account.
+        syncMasteryOnLogin(uid).catch(() => {});
+      } catch (error) {
+        reportError(error, { flow: 'auth_gate' });
+      } finally {
+        // Always: a signed-out, signed-in or failed handling must still let
+        // the navigator leave the loading screen.
+        useStore.getState().setAuthConfirmed();
       }
-      setAuthConfirmed();
+    };
+
+    const unsubscribe = onAuthStateChange((firebaseUser) => {
+      chain = chain.then(() => handle(firebaseUser)).catch((error) => {
+        reportError(error, { flow: 'auth_gate_chain' });
+        useStore.getState().setAuthConfirmed();
+      });
     });
-    return unsubscribe;
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, []);
 
   // Mirror mastery upward as it changes (debounced, signed-in only). Registered
@@ -278,7 +312,9 @@ function App() {
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
-        <AuthGate />
+        <AppErrorBoundary>
+          <AuthGate />
+        </AppErrorBoundary>
       </QueryClientProvider>
     </SafeAreaProvider>
   );

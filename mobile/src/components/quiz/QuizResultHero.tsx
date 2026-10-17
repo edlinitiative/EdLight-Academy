@@ -42,11 +42,16 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 // Unique gradient id per mounted ring so two rings never collide on their <Defs>.
 let ringSeq = 0;
 
-/** Shared translucent "glass" surface — reads on any deep gradient ground. */
+/**
+ * Shared surface on the deep gradient ground. Name kept for its callers, but it
+ * is no longer glass: an OPAQUE raised navy with no visible outline (Ted, Oct 17
+ * — a hairline over a translucent fill read as generic). The 1px transparent
+ * border stays so a selected state can draw its outline without a layout jump.
+ */
 export const glass = {
-  backgroundColor: 'rgba(255,255,255,0.12)',
+  backgroundColor: '#1C3254',
   borderWidth: 1,
-  borderColor: 'rgba(255,255,255,0.2)',
+  borderColor: 'transparent',
 } as const;
 
 // ── colour helpers (derive an accent-tinted aurora from one hex) ───────────────

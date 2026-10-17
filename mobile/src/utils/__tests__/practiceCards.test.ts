@@ -3,6 +3,7 @@ import {
   resolveCorrectIndex,
   toPracticeCard,
   selectCards,
+  selectCardsScoped,
   buildChapterTest,
   chapterTestVerdicts,
   type PracticeCard,
@@ -45,10 +46,20 @@ describe('resolveCorrectIndex', () => {
   it('falls back to matching the answer text', () => {
     expect(resolveCorrectIndex('two', opts)).toBe(2);
   });
-  it('falls back to the first option rather than grading everything wrong', () => {
-    expect(resolveCorrectIndex('Z', opts)).toBe(0);
-    expect(resolveCorrectIndex('99', opts)).toBe(0);
-    expect(resolveCorrectIndex(undefined, opts)).toBe(0);
+  // The old fallback guessed option A, which silently marked a correct answer
+  // wrong (and a wrong "A" right). An unresolvable key is now -1: the question
+  // is shown as "non corrigée automatiquement" instead (LJ-08).
+  it('reports an unresolvable key as -1 instead of guessing the first option', () => {
+    expect(resolveCorrectIndex('Z', opts)).toBe(-1);
+    expect(resolveCorrectIndex('99', opts)).toBe(-1);
+    expect(resolveCorrectIndex(undefined, opts)).toBe(-1);
+    expect(resolveCorrectIndex('A', [])).toBe(-1);
+  });
+  it('prefers the answer text over a letter reading (the live "d" orbital key)', () => {
+    expect(resolveCorrectIndex('d', ['s', 'p', 'd', 'f'])).toBe(2);
+  });
+  it('matches text without caring about case or edge punctuation', () => {
+    expect(resolveCorrectIndex(' Two. ', opts)).toBe(2);
   });
 });
 
@@ -62,6 +73,17 @@ describe('toPracticeCard', () => {
   it('rejects rows with no question or too few options', () => {
     expect(toPracticeCard(row({ question: '' }), 0)).toBeNull();
     expect(toPracticeCard(row({ options: '["only"]' }), 0)).toBeNull();
+  });
+  it('marks a card with an unresolvable key as not gradable', () => {
+    const card = toPracticeCard(row({ correct_answer: 'Z' }), 0)!;
+    expect(card.gradable).toBe(false);
+    expect(card.correctIndex).toBe(-1);
+    expect(card.answer).toBe('');
+    expect(toPracticeCard(row(), 0)!.gradable).toBe(true);
+  });
+  it('prefers the authored explanation over the praise line', () => {
+    expect(toPracticeCard(row({ explanation: 'Parce que.', good_response: 'Bravo !' }), 0)!.explanation).toBe('Parce que.');
+    expect(toPracticeCard(row({ good_response: 'Bravo !' }), 0)!.explanation).toBe('Bravo !');
   });
   it('reads the legacy Subchapter_Number spelling', () => {
     const card = toPracticeCard(row({ lesson_no: undefined, Subchapter_Number: '3' }), 0)!;
@@ -87,6 +109,19 @@ describe('selectCards', () => {
 
   it('falls back to the whole chapter when a lesson has no questions', () => {
     expect(selectCards(bank, 'CHIM', 1, 9).map((c) => c.id)).toEqual(['a', 'b']);
+  });
+
+  it('says whether the cards really belong to the lesson', () => {
+    expect(selectCardsScoped(bank, 'CHIM', 1, 2).scope).toBe('lesson');
+    expect(selectCardsScoped(bank, 'CHIM', 1, 9).scope).toBe('chapter');
+    expect(selectCardsScoped(bank, 'CHIM', 1).scope).toBe('chapter');
+    expect(selectCardsScoped(bank, 'CHIM', 7).scope).toBe('none');
+  });
+
+  it('leaves ungradable rows out unless asked (a chapter test must score them)', () => {
+    const withBad = [...bank, row({ id: 'bad', correct_answer: 'Z' })];
+    expect(selectCards(withBad, 'CHIM', 1).map((c) => c.id)).toEqual(['a', 'b']);
+    expect(selectCards(withBad, 'CHIM', 1, undefined, { includeUngradable: true }).map((c) => c.id)).toEqual(['a', 'b', 'bad']);
   });
 
   it('returns nothing without a subject or unit', () => {

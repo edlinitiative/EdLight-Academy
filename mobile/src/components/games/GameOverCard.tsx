@@ -65,28 +65,32 @@ export default function GameOverCard({
   const pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
   const shareRef = useRef<ShareCardCaptureHandle>(null);
 
-  // Celebrate the game-over reveal once on mount (kept here so the haptic fires
-  // for every game; the hero's own celebrateHaptic stays off to avoid doubling).
-  useEffect(() => { success(); }, []);
+  // One haptic on the reveal, and only when it is worth one: a new personal
+  // record or a strong round. A routine game over is not a celebration — the
+  // same buzz on every ending teaches the student to ignore it (audit #19).
+  const recordRound = highScore != null && score > 0 && score >= highScore;
+  useEffect(() => {
+    if (recordRound || pct >= 80) success();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   let IconCmp: typeof Trophy;
   let message: string;
   let messageHt: string;
   if (pct >= 90) {
     IconCmp = Trophy;
-    message = 'Excellent ! Vous êtes un champion !';
+    message = 'Excellent ! Tu es un champion !';
     messageHt = 'Ekselan! Ou se yon chanpyon!';
   } else if (pct >= 70) {
     IconCmp = Star;
-    message = 'Très bien ! Continuez comme ça !';
+    message = 'Très bien ! Continue comme ça !';
     messageHt = 'Trè byen! Kontinye konsa!';
   } else if (pct >= 50) {
     IconCmp = ThumbsUp;
-    message = 'Pas mal ! Vous pouvez vous améliorer.';
+    message = 'Pas mal ! Tu peux encore progresser.';
     messageHt = 'Pa mal! Ou ka amelyore.';
   } else {
     IconCmp = Dumbbell;
-    message = 'Courage ! Réessayez pour progresser.';
+    message = 'Courage ! Réessaie pour progresser.';
     messageHt = 'Kouraj! Eseye ankò pou pwogrese.';
   }
 

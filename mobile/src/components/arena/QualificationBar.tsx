@@ -2,7 +2,8 @@ import React, { useEffect } from 'react';
 import { Text, View } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withDelay, withTiming, withSpring } from 'react-native-reanimated';
 import { Check } from 'lucide-react-native';
-import { useColors, useTheme, typeScale } from '../../theme/theme';
+import { useTheme, typeScale } from '../../theme/theme';
+import { useArenaColors, arenaType } from '../../theme/arenaTheme';
 import { duration, easing, spring, stagger } from '../../theme/motion';
 import { useReduceMotion } from '../../utils/motion';
 import type { QualificationState } from '../../services/arenaService';
@@ -43,7 +44,7 @@ export default function QualificationBar({
   minPlayers: number;
   isCreole: boolean;
 }) {
-  const colors = useColors();
+  const colors = useArenaColors();
   const { radius } = useTheme();
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const { counted, needed, qualified, showBoth, shortOnTheNight } = qualification;
@@ -110,13 +111,13 @@ export default function QualificationBar({
       {/* Both numbers, from doors open. A school qualified on paper and short on
           the night must see the gap here, not discover it at kick-off. */}
       {showBoth ? (
-        <Text style={[typeScale.caption, { color: colors.muted, fontVariant: ['tabular-nums'] }]}>
+        <Text style={[arenaType.status, { color: colors.muted, fontVariant: ['tabular-nums'] }]}>
           {t(
             `${registered} inscrit${registered > 1 ? 's' : ''} · ${present} présent${present > 1 ? 's' : ''}`,
             `${registered} enskri · ${present} prezan`,
           )}
           {'  '}
-          <Text style={[typeScale.caption, { color: colors.faint }]}>
+          <Text style={[arenaType.status, { color: colors.faint }]}>
             {t('les présents comptent', 'se prezan yo ki konte')}
           </Text>
         </Text>
@@ -127,7 +128,7 @@ export default function QualificationBar({
 
 /** One of the five. Fills with a short spring, staggered along the row. */
 function Segment({ index, filled, color }: { index: number; filled: boolean; color: string }) {
-  const colors = useColors();
+  const colors = useArenaColors();
   const reduceMotion = useReduceMotion();
   const fill = useSharedValue(reduceMotion ? (filled ? 1 : 0) : 0);
 

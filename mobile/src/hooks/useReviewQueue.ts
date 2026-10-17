@@ -4,6 +4,7 @@ import useStore from '../contexts/store';
 import { TRACK_COEFFICIENTS } from '../config/trackConfig';
 import { loadDueReviews } from '../services/reviewService';
 import type { ReviewItem } from '../services/adaptiveEngine';
+import { queryKeys } from '../lifecycle/queryKeys';
 
 /**
  * Reviews due today, priority-sorted (Adaptive Engine, Slice 2). Coefficient-
@@ -22,7 +23,8 @@ export function useReviewQueue(): { reviewQueue: ReviewItem[]; isLoading: boolea
   );
 
   const { data, isLoading } = useQuery({
-    queryKey: ['review-queue', uid],
+    // Track is part of the key: the priority order is weighted by its coefficients.
+    queryKey: [...queryKeys.reviewQueue(uid), track ?? null],
     queryFn: () => loadDueReviews(uid as string, coefficients),
     enabled: !!uid,
     staleTime: 5 * 60 * 1000,

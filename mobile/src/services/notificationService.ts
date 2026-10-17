@@ -1,7 +1,15 @@
 import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
+import { Platform, Alert, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useStore from '../contexts/store';
+import {
+  decidePermissionAction, prePromptCopy, parseStudyReminder,
+  type NotificationAskReason, type NotificationAskResult, type PermissionAction,
+} from '../settings/notificationPermission';
+import { hasPromptHost, showPrePrompt } from '../settings/notificationPrompt';
+import { registerForPushNotifications } from './pushService';
+
+export type { NotificationAskReason, NotificationAskResult } from '../settings/notificationPermission';
 
 // ─── Foreground handler ───────────────────────────────────────────────────────
 // Controls how notifications appear when the app is in the foreground.
@@ -17,6 +25,10 @@ Notifications.setNotificationHandler({
 
 const DAILY_REMINDER_KEY = '@edlight:daily_reminder_id';
 const NOTIF_ENABLED_KEY = '@edlight:notifications_enabled';
+/** Set the moment the OS dialog is shown — it is never shown a second time. */
+const OS_PROMPT_SHOWN_KEY = '@edlight:notif_os_prompt_shown';
+/** The student's chosen study-reminder hour ('7', '19', …) or 'off'. */
+const STUDY_REMINDER_KEY = '@edlight:study_reminder_hour';
 
 // Bilingual copy — same inline t(fr, ht) house pattern as the screens, but we
 // read the language from the store directly since we're outside React.
@@ -67,13 +79,10 @@ async function canNotify(): Promise<boolean> {
 
 // ─── Permissions ─────────────────────────────────────────────────────────────
 
-/**
- * Request notification permission and configure Android channels.
- * Returns true when permission is granted (or was already granted).
- * Safe to call multiple times — idempotent.
- */
-export async function requestPermissions(): Promise<boolean> {
-  if (Platform.OS === 'android') {
+/** Android channels must exist before scheduling (and before the Android 13 dialog). */
+async function ensureChannels(): Promise<void> {
+  if (Platform.OS !== 'android') return;
+  try {
     await Promise.all([
       Notifications.setNotificationChannelAsync('default', {
         name: 'EdLight Academy',
@@ -92,14 +101,188 @@ export async function requestPermissions(): Promise<boolean> {
         description: 'Notifications pour vos accomplissements',
       }),
     ]);
+  } catch {
+    // best-effort
+  }
+}
+
+async function osPromptShown(): Promise<boolean> {
+  try { return (await AsyncStorage.getItem(OS_PROMPT_SHOWN_KEY)) === '1'; } catch { return false; }
+}
+
+/**
+ * Where the permission stands, as the UI should treat it:
+ * 'granted' | 'preprompt' (can still be asked, with our explanation first) |
+ * 'settings' (refused — only the system settings can change it).
+ */
+export async function getNotificationPermissionAction(): Promise<PermissionAction> {
+  try {
+    const os = await Notifications.getPermissionsAsync();
+    return decidePermissionAction(
+      { status: os.status, canAskAgain: (os as any).canAskAgain },
+      { osPromptShown: await osPromptShown() },
+    );
+  } catch {
+    return 'settings';
+  }
+}
+
+/**
+ * NON-PROMPTING since 2026-10-17 (audit #9). Ensures channels and reports
+ * whether permission is already granted; it no longer opens the OS dialog,
+ * so the legacy call in App.tsx's auth listener can never surprise a student
+ * at sign-in. To ask, use `askForNotifications(reason)`.
+ * @deprecated use getNotificationPermissionAction() / askForNotifications().
+ */
+export async function requestPermissions(): Promise<boolean> {
+  await ensureChannels();
+  try {
+    const { status } = await Notifications.getPermissionsAsync();
+    return status === 'granted';
+  } catch {
+    return false;
+  }
+}
+
+/** Open this app's page in the system settings (iOS + Android). */
+export async function openNotificationSettings(): Promise<void> {
+  try { await Linking.openSettings(); } catch { /* nothing else to try */ }
+}
+
+async function confirmWithStudent(reason: NotificationAskReason, mode: 'ask' | 'settings'): Promise<boolean> {
+  if (hasPromptHost()) return showPrePrompt(reason, mode);
+  // No sheet mounted (e.g. very early in launch) — a native alert carries the same copy.
+  const copy = prePromptCopy(reason, mode, useStore.getState().language === 'ht');
+  return new Promise((resolve) => {
+    Alert.alert(copy.title, copy.body, [
+      { text: copy.cancel, style: 'cancel', onPress: () => resolve(false) },
+      { text: copy.confirm, onPress: () => resolve(true) },
+    ], { cancelable: true, onDismiss: () => resolve(false) });
+  });
+}
+
+/**
+ * THE way to ask for notification permission — call it only from a choice the
+ * student just made (audit #9):
+ *   - 'study-reminder'  they picked a reminder time (StudyPlanScreen)
+ *   - 'arena-event'     they followed an Arena event (Arena screens)
+ *   - 'profile'         they switched notifications on in Profile
+ *
+ * Flow: already granted → 'granted'. Otherwise a short explanation sheet
+ * (FR/HT, reason-specific) comes first; the OS dialog is shown only after
+ * "Activer", and at most once in the app's life. If permission was refused
+ * before, the sheet offers "Ouvrir les réglages" instead and the OS is never
+ * re-prompted.
+ *
+ * On 'granted' the device preference is switched on and this device's push
+ * token is registered for the signed-in student. Reminder scheduling stays
+ * with the caller (study reminder / Arena alerts / engagement bundle).
+ *
+ * @param options.offerSettings  default true. Pass false to get 'blocked'
+ *   back silently (no sheet) when permission was refused before.
+ */
+export async function askForNotifications(
+  reason: NotificationAskReason,
+  options: { offerSettings?: boolean } = {},
+): Promise<NotificationAskResult> {
+  await ensureChannels();
+  const action = await getNotificationPermissionAction();
+
+  if (action === 'granted') {
+    await onPermissionGranted();
+    return 'granted';
   }
 
-  const { status } = await Notifications.getPermissionsAsync();
-  if (status === 'granted') return true;
-  if (status === 'denied') return false; // user explicitly denied — don't ask again
+  if (action === 'settings') {
+    if (options.offerSettings === false) return 'blocked';
+    const open = await confirmWithStudent(reason, 'settings');
+    if (open) await openNotificationSettings();
+    return 'blocked';
+  }
 
-  const { status: requested } = await Notifications.requestPermissionsAsync();
-  return requested === 'granted';
+  const yes = await confirmWithStudent(reason, 'ask');
+  if (!yes) return 'declined';
+
+  try { await AsyncStorage.setItem(OS_PROMPT_SHOWN_KEY, '1'); } catch { /* still never re-asked this session */ }
+  let granted = false;
+  try {
+    const res = await Notifications.requestPermissionsAsync();
+    granted = res.status === 'granted';
+  } catch {
+    granted = false;
+  }
+  if (!granted) return 'denied';
+  await onPermissionGranted();
+  return 'granted';
+}
+
+async function onPermissionGranted(): Promise<void> {
+  try { await setNotificationsEnabled(true); } catch { /* best-effort */ }
+  const uid = useStore.getState().user?.uid;
+  if (uid) {
+    registerForPushNotifications(uid).catch(() => {});
+  }
+}
+
+// ─── Study reminder (the student's own choice of time) ──────────────────────
+
+/**
+ * The chosen study-reminder hour: a number, null when explicitly off, or
+ * undefined when never chosen (the engagement bundle then uses its 18h default).
+ */
+export async function getStudyReminderHour(): Promise<number | null | undefined> {
+  try { return parseStudyReminder(await AsyncStorage.getItem(STUDY_REMINDER_KEY)); } catch { return undefined; }
+}
+
+async function cancelStudyReminders(): Promise<void> {
+  try {
+    const all = await Notifications.getAllScheduledNotificationsAsync();
+    await Promise.all(
+      all
+        .filter((n) => (n.content.data as any)?.type === 'study-reminder')
+        .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier)),
+    );
+    await AsyncStorage.removeItem(DAILY_REMINDER_KEY);
+  } catch {
+    // best-effort
+  }
+}
+
+async function scheduleStudyReminderAt(hour: number): Promise<void> {
+  const id = await Notifications.scheduleNotificationAsync({
+    content: {
+      title: t("C'est l'heure de réviser", 'Li lè pou revize'),
+      body: t(
+        'Ton plan du jour t’attend. Quelques minutes suffisent pour garder ta série.',
+        'Plan jodi a ap tann ou. Kèk minit ase pou kenbe seri ou.',
+      ),
+      sound: true,
+      data: { type: 'study-reminder' },
+      ...(Platform.OS === 'android' ? { channelId: 'reminders' } : {}),
+    },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute: 0 } as any,
+  });
+  await AsyncStorage.setItem(DAILY_REMINDER_KEY, id);
+}
+
+/**
+ * Save the student's study-reminder choice and (re)schedule it.
+ * `hour` null = off. Asks for permission through askForNotifications when
+ * needed; returns that outcome ('granted' when the reminder is now scheduled).
+ * The choice is saved even when permission is not granted, so it applies the
+ * moment notifications are enabled later.
+ */
+export async function setStudyReminder(hour: number | null): Promise<NotificationAskResult | 'off'> {
+  try { await AsyncStorage.setItem(STUDY_REMINDER_KEY, hour == null ? 'off' : String(hour)); } catch { /* keep going */ }
+  await cancelStudyReminders();
+  if (hour == null) return 'off';
+  const result = await askForNotifications('study-reminder');
+  if (result !== 'granted') return result;
+  // The student explicitly asked for this reminder — it is an opt-in even if
+  // the Profile switch had been off.
+  try { await AsyncStorage.setItem(NOTIF_ENABLED_KEY, 'true'); } catch { /* best-effort */ }
+  await scheduleStudyReminderAt(hour);
+  return 'granted';
 }
 
 // ─── Immediate notifications ──────────────────────────────────────────────────
@@ -222,7 +405,6 @@ export async function scheduleEngagementReminders(): Promise<void> {
   await cancelEngagementReminders();
 
   const WEEKLY = Notifications.SchedulableTriggerInputTypes.WEEKLY;
-  const DAILY = Notifications.SchedulableTriggerInputTypes.DAILY;
 
   // 1 · Daily quiz/défi — one weekly trigger per day so the copy can rotate.
   //     Fires early (06:00) so students see it first thing, per user request.
@@ -234,21 +416,12 @@ export async function scheduleEngagementReminders(): Promise<void> {
     });
   }
 
-  // 2 · Daily study reminder — evening.
-  const studyId = await Notifications.scheduleNotificationAsync({
-    content: {
-      title: t("C'est l'heure de réviser ! 📚", 'Li lè pou revize ! 📚'),
-      body: t(
-        'Continuez vos révisions et gardez votre série active.',
-        'Kontinye revizyon ou yo epi kenbe seri ou aktif.',
-      ),
-      sound: true,
-      data: { type: 'study-reminder' },
-      ...android('reminders'),
-    },
-    trigger: { type: DAILY, hour: 18, minute: 0 } as any,
-  });
-  await AsyncStorage.setItem(DAILY_REMINDER_KEY, studyId);
+  // 2 · Daily study reminder — at the student's chosen hour (StudyPlan), 18:00
+  //     by default, or not at all when they switched it off.
+  const chosen = await getStudyReminderHour();
+  if (chosen !== null) {
+    await scheduleStudyReminderAt(chosen ?? 18);
+  }
 
   // 3 · Weekly leaderboard hooks — Monday kickoff + Sunday last-chance.
   await Notifications.scheduleNotificationAsync({

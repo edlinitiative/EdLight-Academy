@@ -8,7 +8,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
-import { Mail, Lock, User, Eye, EyeOff, Check, AlertCircle, Gift, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { Mail, Lock, User, Eye, EyeOff, Check, AlertCircle, Gift, ChevronDown, ChevronUp, PartyPopper, ThumbsUp } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { useColors, useColorScheme } from '../theme/theme';
 import {
@@ -291,7 +291,7 @@ export default function AuthScreen() {
               EdLight Academy
             </Text>
             <Text style={{ fontSize: 25, fontWeight: '800', color: INK, letterSpacing: -0.4, textAlign: 'center' }}>
-              {isSignIn ? t('Bon retour \u{1F44B}', 'Byenveni tounen \u{1F44B}') : t('Crée ton compte', 'Kreye kont ou')}
+              {isSignIn ? t('Bon retour', 'Byenveni tounen') : t('Crée ton compte', 'Kreye kont ou')}
             </Text>
             <Text style={{ fontSize: 14.5, color: MUTED, marginTop: 5, textAlign: 'center', lineHeight: 20 }}>
               {isSignIn
@@ -565,7 +565,9 @@ export default function AuthScreen() {
           {celebration.result.kind === 'ok' && <Confetti fireKey={String(celebration.result.reward.xp)} />}
           <PopIn>
             <View style={{ alignItems: 'center', gap: 10 }}>
-              <Text style={{ fontSize: 44 }}>{celebration.result.kind === 'ok' ? '🎉' : '👍'}</Text>
+              {celebration.result.kind === 'ok'
+                ? <PartyPopper color="#ffffff" size={44} strokeWidth={1.75} />
+                : <ThumbsUp color="#ffffff" size={44} strokeWidth={1.75} />}
               {celebration.result.kind === 'ok' ? (
                 <>
                   <Text style={{ color: '#fff', fontSize: 20, fontWeight: '800', textAlign: 'center' }}>
