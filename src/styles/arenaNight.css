@@ -80,7 +80,7 @@ body.arena-night .navbar .nav-actions__signin:hover, body.arena-night .navbar .n
 }
 .an-go:hover { transform: translateY(2px); box-shadow: 0 3px 0 #A8300F, 0 10px 26px -12px rgba(255, 92, 57, 0.85); }
 .an-go:active { transform: translateY(5px); box-shadow: 0 0 0 #A8300F; }
-.an-go:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.an-go:disabled { background: #1F3456; color: #A7BAD5; opacity: 1; cursor: not-allowed; transform: none; }
 .an-ghost {
   display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; min-height: 48px; padding: 0 1.2rem; border: 0; border-radius: 999px;
   background: #1F3456; box-shadow: none; color: #fff !important;
@@ -271,3 +271,68 @@ body.arena-night .trivia-settings > summary:hover { background: rgba(255, 255, 2
    on a phone the back arrow stays on the title's line rather than wrapping. */
 .aph__text { flex: 1 1 0; min-width: 0; }
 @media (max-width: 600px) { .aph__actions { flex-basis: 100%; } }
+
+/* ══ The night itself (2026-10-17 audit) ═══════════════════════════════════
+   Ted, on the phone: "the background not premium". The night was a flat
+   near-black with two soft radial glows. It is now an opaque layered sky —
+   deep marine at the top settling into the ground colour — with the mornes
+   as a still, low-contrast silhouette at the foot of the screen: the Arène's
+   own horizon, behind every page of the area. Fixed layers on their own
+   compositor plane (no blur, no noise, no background-attachment: fixed, so
+   nothing repaints on scroll; nothing animates, so reduced motion is moot).
+   Every fill is darker than the surfaces (#13243F) that sit on it, so text
+   contrast is unchanged or better. */
+body.arena-night { background: #050B1A; }
+body.arena-night::before,
+body.arena-night::after {
+  content: '';
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 0;
+  pointer-events: none;
+  transform: translateZ(0);
+}
+body.arena-night::before {
+  top: 0;
+  bottom: 0;
+  background: linear-gradient(180deg, #0C1B3A 0%, #091631 30%, #07112A 58%, #050B1A 100%);
+}
+body.arena-night::after {
+  bottom: 0;
+  height: clamp(140px, 30vh, 300px);
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 300' preserveAspectRatio='none'%3E%3Cpath fill='%230B1834' d='M0 300V150C110 104 210 96 330 130C430 158 500 92 620 82C740 72 820 140 930 132C1040 124 1100 66 1220 70C1340 74 1400 136 1500 122C1550 115 1580 106 1600 108V300Z'/%3E%3Cpath fill='%23081329' d='M0 300V214C140 186 250 182 380 204C500 224 580 176 720 170C860 164 930 214 1060 210C1190 206 1260 168 1390 174C1480 178 1550 198 1600 196V300Z'/%3E%3C/svg%3E") bottom / 100% 100% no-repeat;
+}
+body.arena-night > #root { position: relative; z-index: 1; }
+
+/* The phone tab bar on the night: an OPAQUE marine bar, no hairline, no
+   frosted glass. The active tab keeps its lifted pill and top mark. */
+@media (max-width: 767px) {
+  body.arena-night .bottom-nav {
+    background: #0B1730 !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    border-top: 0 !important;
+    box-shadow: none !important;
+  }
+  body.arena-night .bottom-nav__item { color: #A7BAD5; }
+  body.arena-night .bottom-nav__item.is-active { color: #FFFFFF; }
+  body.arena-night .bottom-nav__item.is-active .bottom-nav__icon { background: #1F3456; color: #9DC4FF; }
+  body.arena-night .bottom-nav__item.is-active::before { background: #9DC4FF; }
+}
+/* The desktop bar joins the same rule: opaque, no hairline. */
+body.arena-night .navbar { background: #07112A !important; border-bottom: 0 !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+
+/* Disabled actions (2026-10-17): a SOLID muted fill, not a half-transparent
+   coral — a washed-out primary still reads as the primary. */
+body.arena-night :is(.ah-start, .aj-go, .an-go, .demo-go, .arc-btn--lg, .arc-btn--go, .gx-btn, .duel-pill, .hs-go, .arena-national__cta, .trivia-daily__cta, .trivia-mix, .myschool__cta, main .button--primary, main .button--ghost, main .button--secondary):disabled,
+body.arena-night :is(.ah-start, .aj-go, .an-go, .gx-btn, .duel-pill, .myschool__cta, main .button--primary)[aria-disabled="true"] {
+  background: #1F3456 !important;
+  color: #A7BAD5 !important;
+  opacity: 1 !important;
+  filter: none !important;
+  box-shadow: none !important;
+  transform: none !important;
+  cursor: not-allowed;
+}

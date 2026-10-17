@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Printer } from '../components/icons';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
+import './ArenaClaim.css';
 import useStore from '../contexts/store';
 
 /**
@@ -88,14 +89,14 @@ export default function ArenaConsentForm() {
       <div className="arena-consent__noprint" style={{ marginBottom: 24 }}>
         <button
           type="button"
-          className="btn btn--primary"
+          className="claim__btn claim__btn--primary"
           onClick={() => window.print()}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
+          style={{ gap: 8 }}
         >
           <Printer size={16} aria-hidden="true" />
           {t('Imprimer ou enregistrer en PDF', 'Enprime oswa anrejistre an PDF')}
         </button>
-        <p style={{ fontSize: 13, color: '#5B6572', marginTop: 10 }}>
+        <p style={{ fontSize: 14, color: '#5B6572', marginTop: 10 }}>
           {t(
             'Imprimez cette page, signez-la à la main, puis photographiez-la ou scannez-la. Vous pouvez aussi l’enregistrer en PDF, la signer sur écran, et déposer le fichier sur la page de réclamation.',
             'Enprime paj sa a, siyen l ak men ou, apre sa pran yon foto oswa eskane l. Ou ka tou anrejistre l an PDF, siyen l sou ekran an, epi depoze fichye a sou paj reklamasyon an.',
@@ -103,7 +104,7 @@ export default function ArenaConsentForm() {
         </p>
       </div>
 
-      <article style={{ background: '#fff', borderRadius: 12, padding: '36px 40px', color: '#141A21' }}>
+      <article className="arena-consent__sheet" style={{ background: '#fff', borderRadius: 16, color: '#141A21' }}>
         <h1 style={{ fontSize: 22, margin: '0 0 4px' }}>
           {t('Autorisation parentale', 'Otorizasyon paran')}
         </h1>
@@ -119,14 +120,14 @@ export default function ArenaConsentForm() {
           )}
         </p>
 
-        <h2 style={{ fontSize: 14, textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 16px' }}>
+        <h2 style={{ fontSize: 16, fontWeight: 800, margin: '0 0 16px' }}>
           {t('L’élève', 'Elèv la')}
         </h2>
         <Field label={t('Nom complet', 'Non konplè')} />
         <Field label={t('École', 'Lekòl')} />
         <Field label={t('Date de naissance', 'Dat nesans')} width={180} />
 
-        <h2 style={{ fontSize: 14, textTransform: 'uppercase', letterSpacing: 1, margin: '24px 0 16px' }}>
+        <h2 style={{ fontSize: 16, fontWeight: 800, margin: '24px 0 16px' }}>
           {t('Le parent ou tuteur', 'Paran an oswa responsab la')}
         </h2>
         <Field label={t('Nom complet', 'Non konplè')} />
@@ -134,7 +135,7 @@ export default function ArenaConsentForm() {
         <Field label={t('Téléphone', 'Telefòn')} width={200} />
         <Field label={t('Email', 'Imel')} />
 
-        <h2 style={{ fontSize: 14, textTransform: 'uppercase', letterSpacing: 1, margin: '24px 0 16px' }}>
+        <h2 style={{ fontSize: 16, fontWeight: 800, margin: '24px 0 16px' }}>
           {t('Déclaration', 'Deklarasyon')}
         </h2>
         <ul style={{ fontSize: 14, lineHeight: 1.8, paddingLeft: 20, margin: '0 0 28px' }}>
@@ -159,19 +160,19 @@ export default function ArenaConsentForm() {
         <div style={{ display: 'flex', gap: 40, flexWrap: 'wrap', marginTop: 36 }}>
           <div style={{ flex: '1 1 240px' }}>
             <div style={{ borderBottom: '1px solid #141A21', height: 48 }} />
-            <p style={{ fontSize: 12, color: '#5B6572', margin: '6px 0 0' }}>
+            <p style={{ fontSize: 14, color: '#5B6572', margin: '6px 0 0' }}>
               {t('Signature du parent ou tuteur', 'Siyati paran an oswa responsab la')}
             </p>
           </div>
           <div style={{ flex: '0 1 180px' }}>
             <div style={{ borderBottom: '1px solid #141A21', height: 48 }} />
-            <p style={{ fontSize: 12, color: '#5B6572', margin: '6px 0 0' }}>{t('Date', 'Dat')}</p>
+            <p style={{ fontSize: 14, color: '#5B6572', margin: '6px 0 0' }}>{t('Date', 'Dat')}</p>
           </div>
         </div>
 
         <p style={{
           marginTop: 36, padding: '12px 14px', borderRadius: 8, background: '#FFF6E8',
-          fontSize: 13, lineHeight: 1.6,
+          fontSize: 14, lineHeight: 1.6,
         }}>
           {t(
             'EdLight Academy ne vous demandera jamais une photo de pièce d’identité, un numéro de document, des informations bancaires, ni un paiement. Si un message vous demande cela en notre nom, il ne vient pas de nous.',

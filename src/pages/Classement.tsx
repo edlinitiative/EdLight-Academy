@@ -73,7 +73,7 @@ export default function Classement() {
           </div>
 
           <div className="classement__main">
-            <Leaderboard variant="full" periodToggle max={50} />
+            <Leaderboard variant="full" periodToggle max={50} arenaFaces />
             {/* The weekly turnover, said once, quietly, under the board. */}
             <p className="classement__reset">
               {t(`La semaine se termine dans ${left} — le classement de la semaine repart à zéro lundi.`,

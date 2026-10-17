@@ -19,6 +19,8 @@ import { useTrivia } from '../hooks/useTrivia';
 import { isValidAlias } from '../services/leaderboardService';
 import { HAITI_DEPARTMENTS, OTHER_CITY, citiesOf, findCity } from '../data/haitiGeo';
 import UserAvatar from './UserAvatar';
+import Avatar from '../arena-art/avatars/Avatar';
+import { schoolColors } from '../arena-art/crest/SchoolCrest';
 import { aggregateBy, normalizeName } from '../../shared/leaderboardAgg';
 import { canonicalSchoolName } from '../../shared/schools';
 import './Leaderboard.css';
@@ -56,7 +58,7 @@ function RankBadge({ rank }: { rank: number | null | undefined }) {
  * invented when it is absent.
  */
 function BoardRow({
-  rank, seed, name, uri = null, school, level, xp, isMe, youLabel, levelLabel, fmt, compact, sample = false,
+  rank, seed, name, uri = null, school, level, xp, isMe, youLabel, levelLabel, fmt, compact, sample = false, arenaFaces = false,
 }: {
   rank: number | null | undefined;
   seed: string;
@@ -71,13 +73,22 @@ function BoardRow({
   fmt: (n: number) => string;
   compact: boolean;
   sample?: boolean;
+  /** The Arène's generated face (seeded by uid, in the school's colours) — the
+   *  same face the broadcast and the lobby show for this student. */
+  arenaFaces?: boolean;
 }) {
   const sub = [school || null, level ? `${levelLabel} ${level}` : null].filter(Boolean).join(' · ');
   return (
     <li className={`leaderboard__row ${isMe ? 'is-me' : ''}`} aria-current={isMe ? 'true' : undefined}>
       <RankBadge rank={rank} />
       {/* The same face the app shows: their photo, else the robot seeded by uid. */}
-      <UserAvatar seed={seed} name={name} uri={sample ? null : uri} size={compact ? 32 : 40} className="leaderboard__avatar" />
+      {arenaFaces ? (
+        <span className="leaderboard__avatar leaderboard__avatar--face" aria-hidden="true">
+          <Avatar seed={seed} size={compact ? 36 : 44} still colors={school ? schoolColors(school) : undefined} />
+        </span>
+      ) : (
+        <UserAvatar seed={seed} name={name} uri={sample ? null : uri} size={compact ? 32 : 40} className="leaderboard__avatar" />
+      )}
       <span className="leaderboard__who">
         <span className="leaderboard__name">
           <span className="leaderboard__name-text">{name}</span>
@@ -93,7 +104,7 @@ function BoardRow({
   );
 }
 
-export default function Leaderboard({ variant = 'full', max = 25, periodToggle = false }) {
+export default function Leaderboard({ variant = 'full', max = 25, periodToggle = false, arenaFaces = false }) {
   const navigate = useNavigate();
   const { user, language } = useStore();
   const isCreole = language === 'ht';
@@ -415,6 +426,7 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
               levelLabel={levelLabel}
               fmt={fmt}
               compact={compact}
+              arenaFaces={arenaFaces}
             />
           ))}
         </ol>
@@ -456,6 +468,7 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
                 levelLabel={levelLabel}
                 fmt={fmt}
                 compact={compact}
+              arenaFaces={arenaFaces}
                 sample
               />
             ))}
@@ -485,6 +498,7 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
               levelLabel={levelLabel}
               fmt={fmt}
               compact={compact}
+              arenaFaces={arenaFaces}
             />
           </ol>
         </div>

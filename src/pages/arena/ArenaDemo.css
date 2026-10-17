@@ -202,7 +202,7 @@
 }
 
 /* Leave the play-along card its own column on wide screens. */
-@media (min-width: 1100px) { .demo-live--play .live__inner { padding-right: 440px; } }
+/* (The play-along column is reserved only while a question is up: .has-q below.) */
 @media (prefers-reduced-motion: reduce) {
   .demo-beam, .demo-dot, .demo-play { animation: none !important; }
   .demo-dock { transition: none; }
@@ -311,4 +311,90 @@
 .demo-yours__again { min-height: 48px !important; font-size: 1rem !important; }
 @media (max-width: 1099px) {
   .demo-yours { bottom: 128px; right: 12px; left: 12px; width: auto; }
+}
+
+/* ══ Solid surfaces (2026-10-17 audit) ════════════════════════════════════
+   Ted: "border with transparent fill — looks too AI". The demo loses its
+   glass, gradient edges, beams, gradient text and glows: one flat night,
+   opaque tonal surfaces (surface #13243F, raised #1C3254, secondary #1F3456
+   → #284068 on hover), one flat coral action, answer states as solid fills
+   with an icon and words. */
+.demo-live, .demo-intro { background: #050B1A !important; }
+.demo-beam, .demo-vignette { display: none !important; }
+.demo-intro__card { background: #13243F; box-shadow: none; backdrop-filter: none; border-radius: 28px; }
+.demo-intro__card::before { display: none; }
+.demo-intro h1 { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: #F5F8FF; letter-spacing: -0.035em; line-height: 1.05; }
+.demo-intro__lede { color: #C1CFE4; }
+.demo-intro__tag, .demo-pick__label { font-family: var(--font-heading, sans-serif); letter-spacing: 0; text-transform: none; font-size: 0.9375rem; }
+.demo-intro__tag { color: #FFD27A; }
+.demo-pick__label { color: #C1CFE4; }
+.demo-dot { animation: none; }
+.demo-back { min-height: 40px; background: #1F3456; box-shadow: none; color: #F5F8FF; }
+.demo-back:hover { background: #284068; }
+.demo-acts li { background: #1C3254; box-shadow: none; }
+.demo-acts b { background: #4A3610; color: #FFD27A; }
+.demo-acts small, .demo-intro__hint { color: #A7BAD5; }
+.demo-school { background: #1C3254; box-shadow: none; transition: background-color 0.15s ease; }
+.demo-school:hover { background: #284068; transform: none; }
+.demo-school.is-on { background: #4A3610; box-shadow: none; }
+.demo-school.is-on .school-building { filter: none; }
+.demo-school small { color: #A7BAD5; }
+.demo-school.is-on small { color: #FFD27A; }
+.demo-school__spectate { background: #1D3D70; color: #CFE2FF; }
+.demo-school__check { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; align-self: center; color: #FFD27A; font-size: 0.875rem; font-weight: 750; }
+.demo-tower.is-lead .school-building { filter: none; }
+.demo-play { background: #13243F; box-shadow: 0 30px 70px -30px rgba(0, 0, 0, 0.8); }
+.demo-opt { background: #1F3456; box-shadow: none; color: #F5F8FF; }
+.demo-opt:hover:not(:disabled) { background: #284068; box-shadow: none; }
+.demo-opt__key { background: #13243F; color: #F5F8FF; }
+.demo-opt.is-picked { background: #1D3D70; box-shadow: none; }
+.demo-opt.is-picked .demo-opt__key { background: #5B9DFF; color: #08142B; }
+.demo-opt.is-right { background: #0E3A2C; box-shadow: none; }
+.demo-opt.is-right .demo-opt__key { background: #3DDC97; color: #062217; }
+.demo-opt.is-wrong { background: #46192A; box-shadow: none; }
+.demo-opt.is-wrong .demo-opt__key { background: #FF6B81; color: #2A0710; }
+.demo-opt__mark { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; flex-shrink: 0; font-size: 0.875rem; font-weight: 750; white-space: nowrap; }
+.demo-opt.is-picked .demo-opt__mark { color: #CFE2FF; }
+.demo-opt.is-right .demo-opt__mark { color: #8BF0C4; }
+.demo-opt.is-wrong .demo-opt__mark { color: #FFB8C3; }
+.demo-opt:disabled:not(.is-picked):not(.is-right):not(.is-wrong) { background: #0E1A30; color: #A7BAD5; }
+.demo-play__reveal { background: #0E3A2C; color: #8BF0C4; }
+.demo-play__note { color: #C1CFE4; }
+.demo-ring circle { stroke: #24395A; }
+.demo-yours { background: #13243F; box-shadow: 0 30px 70px -30px rgba(0, 0, 0, 0.8); }
+.demo-dock { background: #0D1A30; box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.85); backdrop-filter: none; }
+.demo-mark__bar { background: #24395A; }
+.demo-mark--now .demo-mark__bar { background: #FF6A45; box-shadow: none; }
+.demo-mark--done .demo-mark__bar { background: #5B9DFF; }
+.demo-mark__label { color: #A7BAD5; }
+.demo-dock__btn { background: #1F3456; }
+.demo-dock__btn:hover:not(:disabled) { background: #284068; }
+.demo-dock__btn:disabled { opacity: 1; background: #13243F; color: #6F82A3; }
+.demo-dock__btn--main { background: #FF6A45; color: #12213A; box-shadow: none; }
+.demo-dock__btn--main:hover:not(:disabled) { background: #FF7D5C; }
+.demo-dock__speed { background: #13243F; }
+.demo-dock__speed button { color: #C1CFE4; }
+.demo-dock__speed button.is-on { background: #284068; color: #FFFFFF; }
+/* The viewer's own evening: a compact row card in the champions' left
+   column (under the school), never over the podium. */
+.demo-yours {
+  grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 16px; row-gap: 2px;
+  width: min(380px, calc(100vw - 24px)); padding: 16px 18px; left: 64px; bottom: 132px;
+}
+.demo-yours > svg, .demo-yours > .av { grid-row: 1 / span 3; }
+.demo-yours__label, .demo-yours__score, .demo-yours__line { grid-column: 2; }
+.demo-yours__score b { font-size: 2.5rem; }
+.demo-yours__line { margin: 0; font-size: 0.9375rem; }
+.demo-yours__again { grid-column: 1 / -1; justify-self: start; margin-top: 10px; }
+
+.demo-school { position: relative; }
+.demo-school__check { position: absolute; top: 8px; right: 10px; }
+@media (max-width: 1099px) {
+  /* Phone/tablet: the viewer's evening sits under the podium, in the flow. */
+  .demo-yours { position: relative; z-index: 1; left: auto; right: auto; bottom: auto; width: auto; margin: 16px 12px 0; }
+}
+@media (max-width: 720px) {
+  .demo-head { flex-wrap: wrap; row-gap: 8px; }
+  .demo-head .live__brand { min-width: 0; flex: 1 1 auto; }
+  .demo-head .live__title { white-space: normal; }
 }

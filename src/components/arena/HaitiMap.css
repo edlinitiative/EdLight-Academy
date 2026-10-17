@@ -19,8 +19,8 @@
 .hmap {
 	--hmap-ground: #060E1C;
 	--hmap-ink: #EEF3FB;
-	--hmap-dim: #7C8EAC;
-	--hmap-faint: #3C4B67;
+	--hmap-dim: #9AABC6;
+	--hmap-faint: #6A7C9C;
 	--hmap-rule: rgba(160, 190, 235, 0.14);
 	--hmap-azure: #2F80ED;
 	--hmap-azure-lit: #6FB0FF;
@@ -43,7 +43,7 @@
 
 	display: flex;
 	flex-direction: column;
-	gap: clamp(10px, 1.6vh, 20px);
+	gap: clamp(14px, 1.6vh, 20px);
 	min-width: 0;
 	color: var(--hmap-ink);
 	font-family: var(--font-sans, 'Source Sans 3', system-ui, sans-serif);
@@ -174,20 +174,21 @@
 
 .hmap__school-label {
 	fill: var(--hmap-ink);
-	font-size: 17px;
+	/* viewBox units: the map renders ~400–700px wide, so 28 lands at ~11–20px. */
+	font-size: 28px;
 	font-weight: 700;
 	letter-spacing: 0.02em;
-	text-transform: uppercase;
+	text-transform: none;
 	paint-order: stroke;
 	stroke: var(--hmap-ground);
-	stroke-width: 3.5;
+	stroke-width: 6;
 	stroke-linejoin: round;
 }
 
 .hmap__school.is-active .hmap__school-label { fill: var(--hmap-coral); }
 
 /* Spotlight: the focused school is the only one at full weight. */
-.hmap--spotlight .hmap__school-label { font-size: 20px; }
+.hmap--spotlight .hmap__school-label { font-size: 32px; }
 
 /* ── Entrances ──────────────────────────────────────────────────────────── */
 
@@ -232,7 +233,7 @@
 	padding-bottom: 5px;
 	border-bottom: 1px solid var(--hmap-rule);
 	color: var(--hmap-dim);
-	font-size: clamp(10px, 1.05vw, 14px);
+	font-size: clamp(14px, 1.05vw, 14px);
 	letter-spacing: 0.02em;
 	white-space: nowrap;
 }
@@ -277,10 +278,10 @@
 }
 
 .hmap__figure-label {
-	font-size: clamp(11px, 1.15vw, 15px);
+	font-size: clamp(14px, 1.15vw, 15px);
 	font-weight: 700;
-	letter-spacing: 0.16em;
-	text-transform: uppercase;
+	letter-spacing: 0.01em;
+	text-transform: none;
 	color: var(--hmap-dim);
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -289,23 +290,23 @@
 
 .hmap--spotlight .hmap__figure-label {
 	color: var(--hmap-ink);
-	font-size: clamp(13px, 1.6vw, 24px);
-	letter-spacing: 0.06em;
+	font-size: clamp(14px, 1.6vw, 24px);
+	letter-spacing: 0.01em;
 }
 
 .hmap__facts {
 	display: flex;
 	flex-wrap: wrap;
-	gap: clamp(12px, 2.4vw, 34px);
+	gap: clamp(14px, 2.4vw, 34px);
 	margin: 0;
 	min-width: 0;
 }
 
 .hmap__fact dt {
-	font-size: clamp(9px, 0.85vw, 11px);
+	font-size: clamp(14px, 0.85vw, 11px);
 	font-weight: 700;
-	letter-spacing: 0.14em;
-	text-transform: uppercase;
+	letter-spacing: 0.01em;
+	text-transform: none;
 	color: var(--hmap-faint);
 }
 
@@ -313,7 +314,7 @@
 	margin: 3px 0 0;
 	font-family: var(--font-mono, 'Geist Mono', ui-monospace, monospace);
 	font-variant-numeric: tabular-nums;
-	font-size: clamp(13px, 1.3vw, 18px);
+	font-size: clamp(14px, 1.3vw, 18px);
 	letter-spacing: -0.02em;
 	color: var(--hmap-ink);
 }
@@ -341,8 +342,8 @@
    mark and there is not one here. */
 .hmap__swatch {
 	display: block;
-	width: clamp(12px, 1.3vw, 18px);
-	height: clamp(12px, 1.3vw, 18px);
+	width: clamp(14px, 1.3vw, 18px);
+	height: clamp(14px, 1.3vw, 18px);
 	background: var(--hmap-s1);
 }
 
@@ -355,7 +356,7 @@
 .hmap__legend-step b {
 	font-family: var(--font-mono, 'Geist Mono', ui-monospace, monospace);
 	font-variant-numeric: tabular-nums;
-	font-size: clamp(10px, 1vw, 13px);
+	font-size: clamp(14px, 1vw, 13px);
 	font-weight: 500;
 	color: var(--hmap-dim);
 }
@@ -405,10 +406,10 @@
 		gap: 6px 14px;
 		list-style: none;
 		white-space: normal;
-		font-size: 12px;
+		font-size: 14px;
 		font-weight: 700;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
+		letter-spacing: 0.01em;
+		text-transform: none;
 		color: var(--hmap-dim);
 	}
 

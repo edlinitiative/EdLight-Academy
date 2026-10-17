@@ -85,3 +85,12 @@ body.arena-night .classement__race .school-rank {
 @media (max-width: 999px) {
   .classement__layout { gap: 2rem; }
 }
+
+/* ══ 2026-10-17 audit ══════════════════════════════════════════════════════
+   Segmented switches and the viewer's row are opaque tonal fills with no
+   outline (Ted: outlines read as "too AI"). Students carry their Arène face. */
+body.arena-night .classement .leaderboard__scopes,
+body.arena-night .classement .leaderboard__periods { background: #13243F; box-shadow: none; }
+body.arena-night .classement .leaderboard__row.is-me,
+body.arena-night .classement .leaderboard__group.is-me { background: #1C3254; box-shadow: none; }
+.classement .leaderboard__avatar--face { display: inline-flex; line-height: 0; border-radius: 50%; }

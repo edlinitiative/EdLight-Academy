@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Play, Pause, RefreshCw, ChevronRight, ArrowLeft, Check, X } from '../../components/icons';
+import { Play, Pause, RefreshCw, ChevronRight, ArrowLeft, Check, X, Lock } from '../../components/icons';
 import useStore from '../../contexts/store';
 import { createDirector, type Director } from '../../../shared/arena/director';
 import type { ArenaEvent } from '../../../shared/arena/events';
@@ -330,11 +330,13 @@ export default function ArenaDemo() {
               <button type="button" role="radio" aria-checked={youSchool === ''} className={`demo-school demo-school--watch${youSchool === '' ? ' is-on' : ''}`} onClick={() => setYouSchool('')}>
                 <span className="demo-school__spectate" aria-hidden="true"><Play size={20} /></span>
                 <span>{t('Regarder seulement', 'Gade sèlman')}<small>{t('comme le public', 'tankou piblik la')}</small></span>
+                {youSchool === '' && <span className="demo-school__check"><Check size={15} aria-hidden="true" />{t('Choisi', 'Chwazi')}</span>}
               </button>
               {DEMO_SCHOOLS.map((s) => (
                 <button key={s.key} type="button" role="radio" aria-checked={youSchool === s.key} className={`demo-school${youSchool === s.key ? ' is-on' : ''}`} onClick={() => setYouSchool(s.key)}>
                   <SchoolBuilding name={s.label} cell={3} night />
                   <span>{s.label}<small>{s.commune}</small></span>
+                  {youSchool === s.key && <span className="demo-school__check"><Check size={15} aria-hidden="true" />{t('Ton camp', 'Kan ou')}</span>}
                 </button>
               ))}
             </div>
@@ -457,8 +459,9 @@ export default function ArenaDemo() {
                       className={`demo-opt${picked === i ? ' is-picked' : ''}${isAnswer ? ' is-right' : ''}${isMineWrong ? ' is-wrong' : ''}`}
                     >
                       <span className="demo-opt__key">{i + 1}</span> <span className="demo-opt__text">{o}</span>
-                      {isAnswer && <Check size={18} aria-hidden="true" />}
-                      {isMineWrong && <X size={18} aria-hidden="true" />}
+                      {isAnswer && <span className="demo-opt__mark"><Check size={16} aria-hidden="true" />{picked === i ? t('Juste', 'Bon') : t('Bonne réponse', 'Bon repons')}</span>}
+                      {isMineWrong && <span className="demo-opt__mark"><X size={16} aria-hidden="true" />{t('Ta réponse', 'Repons ou')}</span>}
+                      {!revealQ && picked === i && <span className="demo-opt__mark"><Lock size={15} aria-hidden="true" />{t('Envoyée', 'Voye')}</span>}
                     </button>
                   </li>
                 );

@@ -37,7 +37,7 @@ export default function TournamentOpen({ scene, data, reduceMotion, t }: ScenePr
       reduceMotion={reduceMotion}
       overline={t('Les portes sont ouvertes', 'Pòt yo louvri')}
       figure={players.toLocaleString('fr-FR')}
-      support={t('joueurs inscrits', 'jouè ki enskri')}
+      support={t('joueurs inscrits', 'jwè ki enskri')}
     >
       <div className="ro-counts">
         <span className="ro-count">

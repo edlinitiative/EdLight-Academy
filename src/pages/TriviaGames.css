@@ -1632,3 +1632,216 @@ body.arena-night .mx-page .myschool__cta {
 .mx-opt.is-rest { background: var(--mx-rest); box-shadow: none; }
 body.arena-night .mx-page .myschool__cta { background: #1F3456 !important; box-shadow: none !important; }
 .mx-duelres__facts li { background: #1A2D4D; box-shadow: none; }
+
+/* ══ Arcade games on the Arène's night (2026-10-17 audit) ═══════════════════
+   Vrai ou Faux, Mémoire, Mo Kaché, Calcul éclair and Suites logiques were
+   still on the old light arcade skin (hairlines on translucent fills, dot
+   gradients, 3D press slabs, colour-only feedback, 12px labels). Now: opaque
+   tonal surfaces, one coral primary, solid answer states with an icon and
+   words, 14px floor. Scoped to .trivia-page--arcade. */
+.trivia-page--arcade {
+  --ag-page: #050B1A;
+  --ag-surface: #13243F;
+  --ag-raised: #1C3254;
+  --ag-btn: #1F3456;
+  --ag-btn-hover: #284068;
+  --ag-text: #F5F8FF;
+  --ag-text-2: #C1CFE4;
+  --ag-muted: #A7BAD5;
+  --ag-good: #3DDC97;
+  --ag-good-fill: #0E3A2C;
+  --ag-good-ink: #8BF0C4;
+  --ag-bad: #FF6B81;
+  --ag-bad-fill: #46192A;
+  --ag-bad-ink: #FFB8C3;
+  --ag-gold: #FFB92E;
+  --ag-gold-fill: #4A3610;
+  --ag-lock: #1D3D70;
+  max-width: 640px;
+  padding: 12px 16px 32px;
+  color: var(--ag-text);
+  font-size: 1rem;
+}
+.trivia-page--arcade .arcade__header { gap: 10px; margin-bottom: 16px; }
+.trivia-page--arcade .arcade__glyph {
+  display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 10px;
+  background: var(--ag-raised); color: color-mix(in srgb, var(--cat, #1B6FE0) 55%, #FFFFFF);
+}
+.trivia-page--arcade .arcade__title { color: var(--ag-text); font-family: var(--font-heading, sans-serif); font-size: 1.25rem; font-weight: 800; letter-spacing: -0.01em; }
+.trivia-page--arcade .go-page { padding: 0; }
+.trivia-page--arcade :is(button, a):focus-visible { outline: 3px solid #FFC24A; outline-offset: 2px; }
+
+/* HUD: three solid chips. */
+.trivia-page--arcade :is(.vf-game__hud, .mem-game__hud, .seq-game__hud) { gap: 8px; margin-bottom: 12px; font-size: 0.9375rem; font-weight: 800; }
+.trivia-page--arcade :is(.vf-game__hud, .mem-game__hud, .seq-game__hud) > span {
+  min-height: 40px; padding: 0 12px; border-radius: 999px; background: var(--ag-surface); color: var(--ag-text);
+  font-variant-numeric: tabular-nums;
+}
+.trivia-page--arcade .vf-game__timer svg, .trivia-page--arcade .mem-game__hud svg { color: #9DC4FF; }
+.trivia-page--arcade .vf-game__timer { color: var(--ag-text); }
+.trivia-page--arcade .vf-game__timer.is-urgent { color: var(--ag-gold); background: var(--ag-gold-fill); animation: none; }
+.trivia-page--arcade .vf-game__timer.is-urgent svg { color: var(--ag-gold); }
+.trivia-page--arcade .vf-game__streak, .trivia-page--arcade .vf-game__streak svg { color: var(--ag-gold); }
+.trivia-page--arcade .vf-game__streak[data-hot] { padding: 0 12px; background: var(--ag-gold-fill); }
+.trivia-page--arcade .mem-game__hint { color: var(--ag-text-2) !important; font-weight: 650 !important; }
+.trivia-page--arcade .seq-game__points { color: var(--ag-gold) !important; }
+.trivia-page--arcade .vf-game__timebar { height: 6px; margin-bottom: 16px; background: var(--ag-raised); }
+.trivia-page--arcade .vf-game__timebar i { background: #5B9DFF; }
+
+/* Vrai ou Faux */
+.trivia-page--arcade .vf-game__card {
+  min-height: 230px; padding: 24px 18px; border: 0; border-radius: 20px; background: var(--ag-surface); box-shadow: none;
+}
+.trivia-page--arcade .vf-game__card--right { background: var(--ag-good-fill); }
+.trivia-page--arcade .vf-game__card--wrong { background: var(--ag-bad-fill); }
+.trivia-page--arcade .vf-game__flag-img { box-shadow: none; border-radius: 8px; }
+.trivia-page--arcade .vf-game__question { color: var(--ag-text-2); font-size: 1.0625rem; line-height: 1.45; }
+.trivia-page--arcade .vf-game__proposed { color: var(--ag-text); font-family: var(--font-heading, sans-serif); font-size: clamp(1.5rem, 1.3rem + 1vw, 1.875rem); line-height: 1.2; }
+.trivia-page--arcade .vf-game__verdict { display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; min-height: 24px; margin: 0; font-size: 1rem; font-weight: 750; }
+.trivia-page--arcade .vf-game__verdict.is-right { color: var(--ag-good-ink); }
+.trivia-page--arcade .vf-game__verdict.is-wrong { color: var(--ag-bad-ink); }
+.trivia-page--arcade .vf-game__verdict strong { color: var(--ag-text); }
+.trivia-page--arcade .vf-game__btn {
+  min-height: 56px; border-radius: 14px; box-shadow: none; font-size: 1.125rem; transition: background-color 0.15s ease;
+}
+.trivia-page--arcade .vf-game__btn:hover { filter: none; }
+.trivia-page--arcade .vf-game__btn:active { transform: scale(0.985); box-shadow: none; }
+.trivia-page--arcade .vf-game__btn:disabled { opacity: 1; }
+.trivia-page--arcade .vf-game__btn--faux { background: #5A1F33; color: #FFD9E0; }
+.trivia-page--arcade .vf-game__btn--faux:hover:not(:disabled) { background: #6C2740; }
+.trivia-page--arcade .vf-game__btn--vrai { background: #11473A; color: #C9F8E2; }
+.trivia-page--arcade .vf-game__btn--vrai:hover:not(:disabled) { background: #155646; }
+.trivia-page--arcade .vf-game__help { margin-top: 12px; color: var(--ag-muted); font-size: 0.875rem; }
+.trivia-page--arcade .vf-game__keys { display: none; }
+@media (hover: hover) and (pointer: fine) { .trivia-page--arcade .vf-game__keys { display: inline; } }
+
+/* Mémoire: solid card backs, the face one step up, a matched pair says so. */
+.trivia-page--arcade .mem-game__grid { gap: 8px; }
+.trivia-page--arcade .mem-card {
+  position: relative; min-height: 88px; border-radius: 14px; box-shadow: none;
+  background: var(--ag-btn); color: var(--ag-muted); font-size: 1.375rem; transition: background-color 0.15s ease;
+}
+.trivia-page--arcade .mem-card:hover { transform: none; background: var(--ag-btn-hover); }
+.trivia-page--arcade .mem-card.is-up { background: #2A4670; color: var(--ag-text); font-size: 0.9375rem; font-weight: 750; }
+.trivia-page--arcade .mem-card.is-matched { background: var(--ag-good-fill); color: var(--ag-text); }
+.trivia-page--arcade .mem-card__done {
+  position: absolute; left: 0; right: 0; bottom: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  color: var(--ag-good-ink); font-size: 0.875rem; font-weight: 750;
+}
+.trivia-page--arcade .mem-card.is-matched .mem-card__face { margin-bottom: 14px; }
+
+/* Mo Kaché */
+.trivia-page--arcade .mk-game { gap: 14px; }
+.trivia-page--arcade .mk-game__modes { gap: 4px; padding: 4px; border-radius: 999px; background: #0D1A30; }
+.trivia-page--arcade .mk-mode {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 16px; border: 0; border-radius: 999px;
+  background: none; color: var(--ag-text-2); font: inherit; font-size: 0.9375rem; font-weight: 700; cursor: pointer;
+}
+.trivia-page--arcade .mk-mode:hover { color: var(--ag-text); }
+.trivia-page--arcade .mk-mode.is-on { background: #24395E; color: var(--ag-text); }
+.trivia-page--arcade .mk-tile { position: relative; border: 0; border-radius: 10px; background: var(--ag-surface); color: var(--ag-text); }
+.trivia-page--arcade .mk-tile--filled { background: var(--ag-raised); }
+.trivia-page--arcade .mk-tile--correct { background: #1E8A5C; color: #FFFFFF; }
+.trivia-page--arcade .mk-tile--present { background: #B7791F; color: #FFFFFF; }
+.trivia-page--arcade .mk-tile--absent { background: #0D1A30; color: #8093B3; }
+.trivia-page--arcade .mk-tile__mark { position: absolute; top: 4px; right: 4px; }
+.trivia-page--arcade .mk-tile__mark--dot { width: 7px; height: 7px; border-radius: 50%; background: #FFFFFF; }
+.trivia-page--arcade .mk-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; margin: 0; color: var(--ag-text-2); font-size: 0.875rem; }
+.trivia-page--arcade .mk-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.trivia-page--arcade .mk-legend__sw { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 5px; color: #fff; }
+.trivia-page--arcade .mk-legend__sw b { width: 5px; height: 5px; border-radius: 50%; background: #fff; }
+.trivia-page--arcade .mk-legend__sw--correct { background: #1E8A5C; }
+.trivia-page--arcade .mk-legend__sw--present { background: #B7791F; }
+.trivia-page--arcade .mk-legend__sw--absent { background: #0D1A30; box-shadow: none; }
+.trivia-page--arcade .mk-game__hint { color: #FFD27A; font-size: 1rem; text-align: center; }
+.trivia-page--arcade .mk-game__hint-btn {
+  min-height: 44px; padding: 0 16px; border: 0; border-radius: 12px; background: var(--ag-btn); color: var(--ag-text); font-size: 0.9375rem; font-weight: 700;
+}
+.trivia-page--arcade .mk-game__hint-btn:hover { background: var(--ag-btn-hover); }
+.trivia-page--arcade .mk-game__hint-btn svg { color: #FFD27A; }
+.trivia-page--arcade .mk-key {
+  height: 52px; border-radius: 8px; background: var(--ag-btn); color: var(--ag-text); font-size: 1rem;
+}
+.trivia-page--arcade .mk-key:hover { background: var(--ag-btn-hover); }
+.trivia-page--arcade .mk-key--correct { background: #1E8A5C; color: #fff; }
+.trivia-page--arcade .mk-key--present { background: #B7791F; color: #fff; }
+.trivia-page--arcade .mk-key--absent { background: #0D1A30; color: #6F82A3; }
+.trivia-page--arcade .mk-game__end { gap: 8px; width: 100%; padding: 18px 16px; border-radius: 20px; background: var(--ag-surface); }
+.trivia-page--arcade .mk-game__verdict { margin: 0; color: var(--ag-text); font-family: var(--font-heading, sans-serif); font-size: 1.375rem; font-weight: 800; }
+.trivia-page--arcade .mk-game__answer { color: var(--ag-text-2); font-size: 1rem; }
+.trivia-page--arcade .mk-game__answer strong { color: var(--ag-text); }
+.trivia-page--arcade .mk-game__def { color: var(--ag-muted); }
+.trivia-page--arcade .mk-game__xp { color: var(--ag-gold); font-size: 1rem; }
+.trivia-page--arcade .mk-game__tomorrow { color: var(--ag-muted); font-size: 0.9375rem; }
+.trivia-page--arcade .mk-game__end-actions { gap: 10px; margin-top: 6px; }
+
+/* Calcul éclair */
+.trivia-page--arcade .calc-game__problem { min-height: 96px; align-items: center; border: 0; border-radius: 20px; background: var(--ag-surface); margin-bottom: 8px; }
+.trivia-page--arcade .calc-game__problem--right { background: var(--ag-good-fill); }
+.trivia-page--arcade .calc-game__problem--wrong { background: var(--ag-bad-fill); }
+.trivia-page--arcade .calc-game__expr { color: var(--ag-text); font-family: var(--font-heading, sans-serif); font-size: 2rem; }
+.trivia-page--arcade .calc-game__input { min-width: 84px; border-bottom-color: #5B9DFF; color: var(--ag-text); font-family: var(--font-heading, sans-serif); font-size: 2rem; }
+.trivia-page--arcade .calc-game__verdict { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 24px; margin: 0 0 10px; font-size: 1rem; font-weight: 750; }
+.trivia-page--arcade .calc-game__verdict.is-right { color: var(--ag-good-ink); }
+.trivia-page--arcade .calc-game__verdict.is-wrong { color: var(--ag-bad-ink); }
+.trivia-page--arcade .calc-game__pad { gap: 8px; max-width: 360px; }
+.trivia-page--arcade .calc-game__key { height: 58px; border: 0; border-radius: 14px; background: var(--ag-btn); color: var(--ag-text); box-shadow: none; font-size: 1.375rem; }
+.trivia-page--arcade .calc-game__key:hover { background: var(--ag-btn-hover); }
+.trivia-page--arcade .calc-game__key:active { background: #2F4B78; transform: scale(0.98); box-shadow: none; }
+.trivia-page--arcade .calc-game__actions { gap: 10px; max-width: 360px; margin: 14px auto 0; }
+.trivia-page--arcade .calc-game__actions > * { flex: 1 1 0; }
+.trivia-page--arcade .calc-game__ok:disabled { background: var(--ag-btn) !important; color: var(--ag-muted) !important; opacity: 1 !important; }
+
+/* Suites logiques */
+.trivia-page--arcade .seq-game__prompt { color: var(--ag-text); font-family: var(--font-heading, sans-serif); font-size: 1.25rem; }
+.trivia-page--arcade .seq-game__term { min-width: 58px; border: 0; border-radius: 12px; background: var(--ag-surface); color: var(--ag-text); font-size: 1.25rem; }
+.trivia-page--arcade .seq-game__term--unknown { border: 0; background: var(--ag-lock); color: #CFE2FF; }
+.trivia-page--arcade .seq-game__options { gap: 10px; }
+.trivia-page--arcade .seq-game__option {
+  display: grid; justify-items: center; gap: 2px; min-height: 64px; border: 0; border-radius: 16px;
+  background: var(--ag-btn); color: var(--ag-text); box-shadow: none; font-size: 1.375rem; transition: background-color 0.15s ease;
+}
+.trivia-page--arcade .seq-game__option:hover:not(:disabled) { background: var(--ag-btn-hover); transform: none; }
+.trivia-page--arcade .seq-game__option:active:not(:disabled) { transform: scale(0.985); box-shadow: none; }
+.trivia-page--arcade .seq-game__option.is-correct { background: var(--ag-good-fill); color: var(--ag-text); }
+.trivia-page--arcade .seq-game__option.is-wrong { background: var(--ag-bad-fill); color: var(--ag-text); }
+.trivia-page--arcade .seq-game__option.is-dimmed { opacity: 1; background: #0E1A30; color: var(--ag-muted); }
+.trivia-page--arcade .seq-game__mark { display: inline-flex; align-items: center; gap: 4px; font-size: 0.875rem; font-weight: 750; }
+.trivia-page--arcade .is-correct .seq-game__mark { color: var(--ag-good-ink); }
+.trivia-page--arcade .is-wrong .seq-game__mark { color: var(--ag-bad-ink); }
+
+/* Game over: the match results' layout; the arcade page gives the gutter. */
+.go-head { position: relative; overflow: hidden; }
+.go-page .mx-res__score .mx-res__cap { margin-top: 10px; }
+.go-page .mx-xp__why { display: inline-flex; align-items: center; gap: 6px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .trivia-page--arcade * { transition: none !important; animation: none !important; }
+}
+
+/* ── Solid surfaces, second pass (2026-10-17 audit) ── the last translucent
+   fills and inset rings in the match and results become opaque tones. */
+.mx-close { background: #1F3456; }
+.mx-close:hover { background: #284068; }
+.jz-mode:hover { background: #1A2D4D; }
+.mx-points { background: #1F3456; }
+.mx-points.is-plus { background: #0E3A2C; }
+.mx-feedback__run { border-top: 0; padding-top: 0; margin-top: 12px !important; }
+.mx-miss__why { border-top: 0; padding-top: 4px; }
+.mx-flag__img { box-shadow: none; }
+.mx-next-wrap { background: none; }
+.mx-res__medal { background: #4A3610; box-shadow: none; }
+.mx-tick.is-correct { background: #0E3A2C; box-shadow: none; }
+.mx-tick.is-wrong { background: #46192A; box-shadow: none; }
+.mx-tick.is-timeout { background: #1F3456; box-shadow: none; }
+.mx-fact__icon { background: #4A3610; }
+.mx-fact--fast .mx-fact__icon { background: #1D3D70; }
+.mx-school { background: #1C3254; }
+.mx-opt.is-locked .mx-opt__mark { color: #CFE2FF; }
+.mx-score, .mx-timer { box-shadow: none; }
+.mx-timer.is-urgent { background: #4A3610; box-shadow: none; color: #FFD27A; }
+.jz-daily.is-done { background: #13243F; }
+.trivia-page--arcade .seq-game__hud > span { display: inline-flex; align-items: center; }
+body.arena-night .trivia-page--arcade .calc-game__ok:disabled { background: #1F3456 !important; color: #A7BAD5 !important; opacity: 1 !important; filter: none !important; }
+.trivia-page--arcade .go-page .mx-res__eyebrow { display: none; }
+.jz .jz-duelbar { max-width: none; background: #13243F; }

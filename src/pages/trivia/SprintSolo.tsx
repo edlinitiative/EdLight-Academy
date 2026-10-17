@@ -379,7 +379,10 @@ export default function SprintSolo({ isCreole, categories, questionsMap, onPlayi
                   <button key={i} type="button" className={`sprint-option${state ? ` is-${state}` : ''}`} disabled={checked || paused} onClick={() => setSelected(i)}>
                     <span className="sprint-option__key">{String.fromCharCode(65 + i)}</span>
                     <span>{o}</span>
-                    <kbd>{i + 1}</kbd>
+                    {state === 'right' ? <span className="sprint-option__mark"><Check size={15} aria-hidden="true" />{selected === i ? t('Juste', 'Bon') : t('Bonne réponse', 'Bon repons')}</span>
+                      : state === 'wrong' ? <span className="sprint-option__mark"><X size={15} aria-hidden="true" />{t('Ta réponse', 'Repons ou')}</span>
+                        : state === 'picked' ? <span className="sprint-option__mark">{t('Choisie', 'Chwazi')}</span>
+                          : <kbd>{i + 1}</kbd>}
                   </button>
                 );
               })}

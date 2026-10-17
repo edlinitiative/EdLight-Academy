@@ -92,7 +92,7 @@ export default function VraiFauxGame({ questionsMap, isCreole, onExit, onRecord,
             ? 'Pa gen ase kesyon pou jwe kounye a.'
             : 'Pas assez de questions pour jouer pour le moment.'}
         </p>
-        <button className="button button--ghost" onClick={onExit}>
+        <button type="button" className="an-ghost" onClick={onExit}>
           ← {isCreole ? 'Jwèt yo' : 'Les jeux'}
         </button>
       </div>
@@ -105,9 +105,11 @@ export default function VraiFauxGame({ questionsMap, isCreole, onExit, onRecord,
         score={correct}
         maxScore={Math.max(answered, MIN_DENOMINATOR)}
         stats={[
-          { label: isCreole ? 'Bon repons' : 'Bonnes réponses', value: `${correct}/${answered}` },
+          { label: isCreole ? 'Repons bay' : 'Réponses données', value: answered },
           { label: isCreole ? 'Pi long seri' : 'Meilleure série', value: bestStreak },
         ]}
+        unit={isCreole ? 'bon repons' : 'bonnes réponses'}
+        gameName={isCreole ? 'Vre oswa Fo' : 'Vrai ou Faux'}
         reward={reward}
         onReplay={replay}
         onExit={onExit}
@@ -124,7 +126,7 @@ export default function VraiFauxGame({ questionsMap, isCreole, onExit, onRecord,
         <span className={`vf-game__timer ${timeLeft <= 10 ? 'is-urgent' : ''}`}>
           <Timer size={15} /> {timeLeft}s
         </span>
-        <span className="vf-game__score">{correct}/{answered}</span>
+        <span className="vf-game__score" aria-label={isCreole ? `${correct} bon sou ${answered}` : `${correct} justes sur ${answered}`}>{correct}/{answered}</span>
         <span className="vf-game__streak" data-hot={streak >= 3 ? 'true' : undefined}>
           <Flame size={15} /> {streak}
         </span>
@@ -151,11 +153,10 @@ export default function VraiFauxGame({ questionsMap, isCreole, onExit, onRecord,
         )}
         <p className="vf-game__question">{isCreole ? item.qHt : item.q}</p>
         <p className="vf-game__proposed">{item.proposed}</p>
-        {feedback === 'wrong' && (
-          <p className="vf-game__correction">
-            {isCreole ? 'Repons kòrèk la:' : 'La bonne réponse :'} <strong>{item.correctAnswer}</strong>
-          </p>
-        )}
+        <p className={`vf-game__verdict${feedback ? ` is-${feedback}` : ''}`} role="status">
+          {feedback === 'right' && <><Check size={16} aria-hidden="true" /> {isCreole ? 'Bon !' : 'Juste !'}</>}
+          {feedback === 'wrong' && <><X size={16} aria-hidden="true" /> {isCreole ? 'Non. Bon repons lan :' : 'Raté. La bonne réponse :'} <strong>{item.correctAnswer}</strong></>}
+        </p>
       </div>
 
       <div className="vf-game__actions">
@@ -166,8 +167,9 @@ export default function VraiFauxGame({ questionsMap, isCreole, onExit, onRecord,
           <Check size={20} /> {isCreole ? 'Vre' : 'Vrai'}
         </button>
       </div>
-      <p className="vf-game__help text-muted">
+      <p className="vf-game__help">
         {isCreole ? 'Èske repons ki pwopoze a kòrèk ?' : 'La réponse proposée est-elle correcte ?'}
+        <span className="vf-game__keys" aria-hidden="true"> {isCreole ? '· Flèch ← Fo, → Vre' : '· Flèches ← Faux, → Vrai'}</span>
       </p>
     </div>
   );

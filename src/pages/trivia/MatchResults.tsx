@@ -53,6 +53,7 @@ export default function MatchResults(p: MatchResultsProps) {
   const { answers, score, total, isAuthed, isCreole, saving, saveError, reward, mode } = p;
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const { profile, level } = useTrivia();
+  const uid: string | null = useStore((s) => s.user?.uid) || null;
   const reduced = useReducedMotion();
   const sound = useMatchSound();
   const played = React.useMemo(() => answers.map((a) => a.question), [answers]);
@@ -124,6 +125,7 @@ export default function MatchResults(p: MatchResultsProps) {
     ticks,
     facts: facts.slice(0, 2).map((f) => `${f.label} : ${f.value}`),
     pseudo,
+    faceSeed: isAuthed ? uid : null,
     school: isAuthed ? school : null,
     level: isAuthed ? level?.level || null : null,
   };

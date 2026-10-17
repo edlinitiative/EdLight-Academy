@@ -259,3 +259,26 @@
 @media (prefers-reduced-motion: reduce) {
   .hs-sky, .hs-dept__edge, .hs-pin.is-next .hs-pin__dot, .hs-result__card, .hs-result__rays, .hs-bigstar.is-on { animation: none !important; }
 }
+
+/* ══ 2026-10-17 audit: opaque surfaces, no glows ═══════════════════════════
+   Ted: outlines over translucent fills and soft glows "look too AI". The map,
+   its labels, the arrows, chips and the result card are opaque tonal fills
+   (#13243F / #1C3254); the island's blurred halo and the route's glow go. */
+.hs-back, .hs-ghost { background: #1F3456; box-shadow: none; }
+.hs-back:hover, .hs-ghost:hover { background: #284068; }
+.hs-map { background: #0F1D36; box-shadow: none; }
+.hs-map__glow { display: none; }
+.hs-dept__edge, .hs-route { filter: none; }
+.hs-pin__label { background: #13243F; box-shadow: none; }
+.hs-pin.is-done .hs-pin__dot { box-shadow: 0 3px 0 #A06E0D; }
+.hs-arrow { background: #1F3456; box-shadow: none; }
+.hs-arrow:hover:not(:disabled) { background: #284068; }
+.hs-node__mark { box-shadow: none; }
+.hs-node.is-locked .hs-node__mark { background: #1C3254; box-shadow: none; }
+.hs-play__chip { background: #1C3254; box-shadow: none; }
+.hs-play__chip.is-boss { background: #3A2433; box-shadow: none; }
+.hs-play__stage { box-shadow: none; }
+.hs-result__card, .hs-result__card.is-won { background: #13243F; box-shadow: none; }
+.hs-result__boss { box-shadow: none; }
+.hs-bigstar.is-on { filter: none; }
+.hs-result__xp { background: #3A3220; box-shadow: none; }

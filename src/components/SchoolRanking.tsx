@@ -14,6 +14,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight } from './icons';
+import SchoolCrest from '../arena-art/crest/SchoolCrest';
 import useStore from '../contexts/store';
 import { useTriviaProfile } from '../hooks/useTriviaProfile';
 import { useSchoolRace } from '../hooks/useSchoolRace';
@@ -41,6 +42,7 @@ export default function SchoolRanking({ max: _max = 10, showAllLink = true }: { 
   const row = (s: RaceStanding, extra = '') => (
     <li key={s.key} className={`school-rank__row${s.key === mineKey ? ' is-mine' : ''}${extra}`}>
       <span className={`school-rank__pos${s.place <= 3 ? ` school-rank__pos--${s.place}` : ''}`}>{s.place}</span>
+      <span className="school-rank__crest"><SchoolCrest name={s.label} size={36} /></span>
       <span className="school-rank__name">
         <span className="school-rank__label">{s.label}{s.key === mineKey && <em>{t('Ton école', 'Lekòl ou')}</em>}</span>
         <small>{meta(s)}</small>

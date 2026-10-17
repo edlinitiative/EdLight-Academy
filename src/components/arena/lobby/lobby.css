@@ -129,3 +129,23 @@ body.arena-night .ah .lb-play, .ah .lb-play { min-height: 56px !important; paddi
   .lb-world__wide { display: none; }
   .lb-world__tall { display: block; }
 }
+
+/* ══ Solid surfaces (2026-10-17 audit) ═════════════════════════════════════
+   No glass, no hairlines on translucent fills, no gradient lanes: the strip
+   and the lanes are opaque tonal surfaces on the night; "you" in a ladder is
+   a gold wash plus the word "Toi", never an outline. Students show their
+   generated faces. */
+.lb { gap: 2px; background: transparent; box-shadow: none; }
+.lb-lanes { background: transparent; }
+.lb > * { background: #13243F; backdrop-filter: none; }
+.lb-stats > div { background: #1C3254; box-shadow: none; }
+.lb-stats dt, .lb-hint, .lb-play__meta, .lb-rival__who span, .lb-school span { color: #C1CFE4; }
+.lb-lane { background: #13243F; box-shadow: none; }
+.lb-lane.is-open { background: #1C3254; }
+.lb-lane__text { color: #C1CFE4; }
+.lb-ladder li { grid-template-columns: 1.6rem auto minmax(0, 1fr) auto; background: #1C3254; }
+.lb-ladder li.is-me { background: #4A3610; box-shadow: none; }
+.lb-ladder li.is-me .lb-ladder__xp { color: #FFD27A; }
+.lb-ladder__xp { color: #C1CFE4; }
+.lb-face { display: inline-grid; place-items: center; flex: none; width: 48px; height: 48px; border-radius: 999px; background: #1C3254; overflow: hidden; }
+.lb-face--sm { width: 30px; height: 30px; background: #13243F; }

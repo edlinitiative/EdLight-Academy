@@ -121,6 +121,10 @@ export default function PreShow({ data, elapsed, reduceMotion, t, mapSlot }: Pre
   const remaining = startsAt > 0 ? startsAt - data.now : 0;
   const { done } = countdownParts(remaining);
   const knownStart = startsAt > 0;
+  // Past the scheduled start by more than two minutes: the clock is not
+  // "imminent" any more — it is waiting for the doors to close. A frozen
+  // 00:00 under "Début imminent" would be a claim the screen cannot back.
+  const overdue = knownStart && done && remaining < -2 * 60_000;
 
   const index = introIndexAt(elapsed, schools.length);
   const current = index >= 0 ? schools[index] : null;
@@ -138,8 +142,9 @@ export default function PreShow({ data, elapsed, reduceMotion, t, mapSlot }: Pre
     // with the first. See roundRhythm.css's header comment for the rest of
     // this story.
     <div className="rp">
+      {/* The page's own header already names the tournament (it is the
+          page's h1); repeating it here put the title on screen twice. */}
       <header className="rp__head">
-        <h1 className="rp__title">{tournament?.title || t('L’Arène', 'Arèn nan')}</h1>
         <span className="rp__doors">{t('Les portes sont ouvertes', 'Pòt yo louvri')}</span>
       </header>
 
@@ -151,13 +156,15 @@ export default function PreShow({ data, elapsed, reduceMotion, t, mapSlot }: Pre
               overline={
                 !knownStart
                   ? t('Début à confirmer', 'Lè kòmansman an poko fikse')
-                  : done
-                    ? t('Début imminent', 'L ap kòmanse kounye a')
-                    : t('Début dans', 'Kòmanse nan')
+                  : overdue
+                    ? t('En attente du départ', 'N ap tann depa a')
+                    : done
+                      ? t('Début imminent', 'L ap kòmanse kounye a')
+                      : t('Début dans', 'Kòmanse nan')
               }
               figure={
                 <span role="timer" aria-live="off">
-                  {knownStart ? formatCountdown(remaining) : '—'}
+                  {knownStart && !overdue ? formatCountdown(remaining) : '—'}
                 </span>
               }
               support={t(
@@ -168,11 +175,11 @@ export default function PreShow({ data, elapsed, reduceMotion, t, mapSlot }: Pre
               <div className="rp__counts">
                 <span className="ro-count">
                   <span className="ro-count__value">{schoolCount}</span>
-                  <span className="ro-count__label">{t('écoles', 'lekòl')}</span>
+                  <span className="ro-count__label">{schoolCount === 1 ? t('école', 'lekòl') : t('écoles', 'lekòl')}</span>
                 </span>
                 <span className="ro-count">
                   <span className="ro-count__value">{players.toLocaleString('fr-FR')}</span>
-                  <span className="ro-count__label">{t('joueurs', 'jouè')}</span>
+                  <span className="ro-count__label">{players === 1 ? t('joueur', 'jwè') : t('joueurs', 'jwè')}</span>
                 </span>
                 {data.unplacedSchools > 0 ? (
                   // Never hidden. A school the map cannot place is still here,
@@ -246,7 +253,7 @@ function SchoolIntroduction({
           <span>
             <span className="rp-intro__players">{school.players}</span>
             {' '}
-            {t('joueurs', 'jouè')}
+            {school.players > 1 ? t('joueurs', 'jwè') : t('joueur', 'jwè')}
           </span>
         ) : null}
         {school.place ? <span>{school.place}</span> : null}

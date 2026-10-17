@@ -25,7 +25,8 @@
  */
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { School as SchoolIcon, Share2, Copy, Check, Plus, ChevronRight } from './icons';
+import { Share2, Copy, Check, Plus, ChevronRight } from './icons';
+import SchoolCrest from '../arena-art/crest/SchoolCrest';
 import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
 import { useLeaderboard } from '../hooks/useLeaderboard';
@@ -159,7 +160,7 @@ export default function MySchoolCard({ where }: { where: string }) {
               <span>{t(`sur ${race.length} écoles`, `sou ${race.length} lekòl`)}</span>
             </div>
           ) : null}
-          <p className="myschool__school"><SchoolIcon size={15} aria-hidden="true" /> {mine?.label || school}</p>
+          <p className="myschool__school"><SchoolCrest name={mine?.label || school} size={28} /> <span>{mine?.label || school}</span></p>
           <p className="myschool__line">
             {alone && mine ? t('Tu es le seul élève de ton école ici. Invite ta classe.', 'Se ou sèl elèv lekòl ou isit la. Envite klas ou.') : schoolLine}
           </p>

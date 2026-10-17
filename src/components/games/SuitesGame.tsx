@@ -5,7 +5,7 @@
  */
 
 import React, { useMemo, useRef, useState } from 'react';
-import { HelpCircle } from '../icons';
+import { HelpCircle, Check, X } from '../icons';
 import { buildSequenceRounds } from '../../utils/gameGen';
 import GameOverCard from './GameOverCard';
 
@@ -56,7 +56,9 @@ export default function SuitesGame({ isCreole, onExit, onRecord, highScore = nul
       <GameOverCard
         score={score}
         maxScore={ROUNDS}
-        stats={[{ label: isCreole ? 'Sekans jwenn' : 'Suites trouvées', value: `${score}/${ROUNDS}` }]}
+        stats={[{ label: isCreole ? 'Sekans' : 'Suites jouées', value: ROUNDS }]}
+        unit={isCreole ? `sekans jwenn sou ${ROUNDS}` : `suites trouvées sur ${ROUNDS}`}
+        gameName={isCreole ? 'Sekans lojik' : 'Suites logiques'}
         reward={reward}
         onReplay={replay}
         onExit={onExit}
@@ -71,7 +73,7 @@ export default function SuitesGame({ isCreole, onExit, onRecord, highScore = nul
     <div className="seq-game" style={{ '--cat-color': '#0e7490' } as React.CSSProperties}>
       <div className="seq-game__hud">
         <span>{idx + 1} / {ROUNDS}</span>
-        <span className="seq-game__points">{score} {isCreole ? 'pwen' : 'points'}</span>
+        <span className="seq-game__points">{score} {isCreole ? 'pwen' : score > 1 ? 'points' : 'point'}</span>
       </div>
 
       <p className="seq-game__prompt">
@@ -88,14 +90,15 @@ export default function SuitesGame({ isCreole, onExit, onRecord, highScore = nul
       <div className="seq-game__options" translate="no">
         {round.options.map((opt) => {
           let cls = 'seq-game__option';
+          let mark: React.ReactNode = null;
           if (picked != null) {
-            if (opt === round.answer) cls += ' is-correct';
-            else if (opt === picked) cls += ' is-wrong';
+            if (opt === round.answer) { cls += ' is-correct'; mark = <span className="seq-game__mark"><Check size={16} aria-hidden="true" />{opt === picked ? (isCreole ? 'Bon' : 'Juste') : (isCreole ? 'Bon repons' : 'Bonne réponse')}</span>; }
+            else if (opt === picked) { cls += ' is-wrong'; mark = <span className="seq-game__mark"><X size={16} aria-hidden="true" />{isCreole ? 'Repons ou' : 'Ta réponse'}</span>; }
             else cls += ' is-dimmed';
           }
           return (
             <button key={opt} className={cls} onClick={() => pick(opt)} disabled={picked != null}>
-              {opt}
+              <span>{opt}</span>{mark}
             </button>
           );
         })}

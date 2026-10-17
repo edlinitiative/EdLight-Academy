@@ -21,7 +21,7 @@
   min-height: 0;
   display: grid;
   grid-template-rows: auto 1fr auto;
-  gap: clamp(12px, 2.2vh, 30px);
+  gap: clamp(14px, 2.2vh, 30px);
   overflow: hidden;
 }
 
@@ -38,7 +38,7 @@
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: clamp(10px, 1.6vw, 24px);
+  gap: clamp(14px, 1.6vw, 24px);
   padding-bottom: clamp(8px, 1.2vh, 16px);
   border-bottom: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
 }
@@ -52,9 +52,9 @@
 }
 
 .rp__doors {
-  font-size: clamp(10px, 0.9vw, 14px);
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+  font-size: clamp(14px, 0.9vw, 14px);
+  letter-spacing: 0.01em;
+  text-transform: none;
   color: var(--stage-coral, #FF5C39);
 }
 
@@ -122,7 +122,7 @@
   position: relative;
   display: grid;
   gap: clamp(4px, 0.8vh, 10px);
-  padding: clamp(12px, 1.8vh, 24px) 0 0 clamp(12px, 1.2vw, 22px);
+  padding: clamp(14px, 1.8vh, 24px) 0 0 clamp(14px, 1.2vw, 22px);
   border-top: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
   overflow: hidden;
 }
@@ -131,7 +131,7 @@
   position: absolute;
   left: 0;
   /* A dot, not an edge stripe (Ted: no coloured left-border accents). */
-  top: calc(clamp(12px, 1.8vh, 24px) + 0.6em);
+  top: calc(clamp(14px, 1.8vh, 24px) + 0.6em);
   width: 10px;
   height: 10px;
   border-radius: 999px;
@@ -148,7 +148,7 @@
 }
 
 .rp-intro__full {
-  font-size: clamp(13px, 1.3vw, 21px);
+  font-size: clamp(14px, 1.3vw, 21px);
   color: var(--stage-dim, #7C8EAC);
 }
 
@@ -157,7 +157,7 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: clamp(8px, 1.2vw, 20px);
-  font-size: clamp(11px, 1vw, 16px);
+  font-size: clamp(14px, 1vw, 16px);
   color: var(--stage-faint, #3C4B67);
 }
 
@@ -168,8 +168,8 @@
 }
 
 .rp-intro__badge {
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  text-transform: none;
 }
 
 .rp-intro__badge--qualified { color: var(--stage-azure-lit, #6FB0FF); }
@@ -224,7 +224,7 @@
 }
 
 .rp__arrival {
-  font-size: clamp(11px, 1.05vw, 17px);
+  font-size: clamp(14px, 1.05vw, 17px);
   color: var(--stage-dim, #7C8EAC);
 }
 
@@ -233,7 +233,7 @@
 
 .rp__empty {
   margin: 0;
-  font-size: clamp(12px, 1.1vw, 17px);
+  font-size: clamp(14px, 1.1vw, 17px);
   color: var(--stage-dim, #7C8EAC);
 }
 
@@ -255,3 +255,16 @@
   .rp-intro__sweep { animation: none !important; }
   .rp-intro__sweep { display: none; }
 }
+
+/* ── Fit the box (2026-10-17 audit) ────────────────────────────────────────
+ * In a fixed-height page (/direct landscape, the demo) `.rp__body` is a size
+ * container (stage.css): the clock, the introduction and the map all scale
+ * with its height, so the readout under the map and the intro card no
+ * longer run under the arrivals ticker at 1280×720. */
+.rp { height: 100%; }
+.rp__head { justify-content: flex-start; }
+.rp__body { overflow: hidden; }
+.rp__left { min-height: 0; overflow: hidden; }
+.rp-intro__short { font-size: clamp(28px, min(4.2vw, 11cqh), 76px); }
+.rp__clock .stage-scene__figure { font-size: clamp(38px, min(7.5vw, 18cqh), 132px); }
+.rp__map .hmap { --hmap-height: max(150px, calc(100cqh - 120px)); }

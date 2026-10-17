@@ -5,6 +5,7 @@ import { useReduceMotion } from '../broadcast/useReduceMotion';
 import { useOnAir } from '../broadcast/useOnAir';
 import { useStage } from '../broadcast/useStage';
 import { useMapPlaces } from '../broadcast/useMapPlaces';
+import { stageTranslator } from '../broadcast/sentenceCase';
 import Stage from '../broadcast/Stage';
 import PreShow from '../broadcast/segments/PreShow';
 import PostGame from '../broadcast/segments/PostGame';
@@ -64,6 +65,8 @@ export default function Direct() {
   const [params] = useSearchParams();
   const isCreole = useStore((s) => s.language) === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  // The scenes' strings, in sentence case (see broadcast/sentenceCase.ts).
+  const tStage = stageTranslator(isCreole);
 
   const reduceMotion = useReduceMotion();
   const { tid, none, loading } = useOnAir(params.get('tid'));
@@ -104,16 +107,16 @@ export default function Direct() {
     switch (tournament?.state) {
       case 'live':
       case 'grading':
-        return t('EN DIRECT', 'AN DIRÈK');
+        return t('En direct', 'An dirèk');
       case 'doors':
       case 'registration':
-        return t('BIENTÔT', 'BYENTO');
+        return t('Bientôt', 'Byento');
       case 'provisional':
-        return t('RÉSULTATS PROVISOIRES', 'REZILTA PWOVIZWA');
+        return t('Résultats provisoires', 'Rezilta pwovizwa');
       case 'final':
-        return t('TERMINÉ', 'FINI');
+        return t('Terminé', 'Fini');
       default:
-        return t('EN DIRECT', 'AN DIRÈK');
+        return t('En direct', 'An dirèk');
     }
   })();
 
@@ -134,7 +137,7 @@ export default function Direct() {
   const stageData = { ...stage.data, places: map.places, unplacedSchools: map.schoolsWithoutLocation };
 
   return (
-    <div className="live">
+    <div className="live live--stage">
       <div className="live__rays" aria-hidden />
       <div className="live__horizon" aria-hidden />
 
@@ -170,7 +173,7 @@ export default function Direct() {
             data={stageData}
             elapsed={Math.max(0, stage.data.now - (tournament?.doorsAt || stage.data.now))}
             reduceMotion={reduceMotion}
-            t={t}
+            t={tStage}
             mapSlot={mapElement}
           />
         ) : isFinal ? (
@@ -183,11 +186,11 @@ export default function Direct() {
             // than restarting it from zero.
             elapsed={Math.max(0, stage.data.now - (tournament?.finalAt || stage.data.now))}
             reduceMotion={reduceMotion}
-            t={t}
+            t={tStage}
             mapSlot={mapElement}
           />
         ) : (
-          <Stage scene={stage.scene} elapsed={stage.elapsed} data={stageData} t={t} />
+          <Stage scene={stage.scene} elapsed={stage.elapsed} data={stageData} t={tStage} />
         )}
       </div>
     </div>

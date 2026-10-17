@@ -10,7 +10,8 @@
  * so the card and the screen show the same marks.
  */
 import { createElement } from 'react';
-import SchoolCrest from '../../arena-art/crest/SchoolCrest';
+import SchoolCrest, { schoolColors } from '../../arena-art/crest/SchoolCrest';
+import Avatar from '../../arena-art/avatars/Avatar';
 import RankEmblem, { emblemForLevel } from '../../arena-art/emblems/RankEmblem';
 import type { Tick } from './matchStats';
 
@@ -27,6 +28,9 @@ export interface ResultCardData {
   /** Up to two short facts, already worded ("Plus longue série : 4 de suite"). */
   facts?: string[];
   pseudo?: string | null;
+  /** Stable id (uid) for the student's generated face — the Arène's avatar,
+      never a photo. Drawn only when a pseudo is shown. */
+  faceSeed?: string | null;
   school?: string | null;
   level?: number | null;
 }
@@ -278,7 +282,12 @@ export async function drawResultCard(d: ResultCardData): Promise<Blob | null> {
   ctx.fillStyle = '#10213F';
   ctx.fill();
   let x = PAD + 32;
-  if (d.school) {
+  let crestInline: HTMLImageElement | null = null;
+  if (d.faceSeed && d.pseudo) {
+    const face = await svgImage(createElement(Avatar, { seed: d.faceSeed, size: 112, still: true, mood: 'idle', colors: d.school ? schoolColors(d.school) : undefined }));
+    if (face) { ctx.drawImage(face, x - 4, footY + 19, 112, 112); x += 136; }
+    if (d.school) crestInline = await svgImage(createElement(SchoolCrest, { name: d.school, size: 40 }));
+  } else if (d.school) {
     const crest = await svgImage(createElement(SchoolCrest, { name: d.school, size: 104 }));
     if (crest) { ctx.drawImage(crest, x, footY + 23, 104, 104); x += 132; }
   } else if (d.level) {
@@ -294,9 +303,11 @@ export async function drawResultCard(d: ResultCardData): Promise<Blob | null> {
   // One line sits on the panel's centre; two lines share it.
   ctx.fillText(wrap(ctx, who, maxW, 1)[0], x, footY + (second ? 68 : 91));
   if (second) {
+    let sx = x;
+    if (crestInline) { ctx.drawImage(crestInline, x, footY + 84, 40, 40); sx += 52; }
     ctx.fillStyle = INK_2;
     ctx.font = `600 32px ${FONT}`;
-    ctx.fillText(wrap(ctx, second, maxW, 1)[0], x, footY + 114);
+    ctx.fillText(wrap(ctx, second, PAD + W - 32 - sx, 1)[0], sx, footY + 114);
   }
 
   ctx.fillStyle = MUTED;

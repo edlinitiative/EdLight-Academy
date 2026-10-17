@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Timer, Delete, CornerDownLeft, Flame } from '../icons';
+import { Timer, Delete, CornerDownLeft, Flame, Check, X } from '../icons';
 import { nextCalcProblem } from '../../utils/gameGen';
 import GameOverCard from './GameOverCard';
 
@@ -105,9 +105,11 @@ export default function CalculGame({ isCreole, onExit, onRecord, highScore = nul
         score={solved}
         maxScore={Math.max(attempts, MIN_DENOMINATOR)}
         stats={[
-          { label: isCreole ? 'Rezoud' : 'Résolus', value: `${solved}/${attempts}` },
+          { label: isCreole ? 'Tantativ' : 'Essais', value: attempts },
           { label: isCreole ? 'Pi long seri' : 'Meilleure série', value: bestStreak },
         ]}
+        unit={isCreole ? 'operasyon rezoud' : 'opérations résolues'}
+        gameName={isCreole ? 'Kalkil eklè' : 'Calcul éclair'}
         reward={reward}
         onReplay={replay}
         onExit={onExit}
@@ -137,6 +139,10 @@ export default function CalculGame({ isCreole, onExit, onRecord, highScore = nul
         <span className="calc-game__expr" translate="no">{problem.text} =</span>
         <span className="calc-game__input">{input || ' '}</span>
       </div>
+      <p className={`calc-game__verdict${flash ? ` is-${flash}` : ''}`} role="status">
+        {flash === 'right' && <><Check size={16} aria-hidden="true" /> {isCreole ? 'Bon !' : 'Juste !'}</>}
+        {flash === 'wrong' && <><X size={16} aria-hidden="true" /> {isCreole ? 'Pa bon' : 'Raté'}</>}
+      </p>
 
       <div className="calc-game__pad" translate="no">
         {['7', '8', '9', '4', '5', '6', '1', '2', '3', '−', '0', '⌫'].map((k) => (
@@ -146,10 +152,10 @@ export default function CalculGame({ isCreole, onExit, onRecord, highScore = nul
         ))}
       </div>
       <div className="calc-game__actions">
-        <button className="button button--ghost" onClick={() => advance(false)}>
+        <button type="button" className="an-ghost" onClick={() => advance(false)}>
           {isCreole ? 'Sote' : 'Passer'}
         </button>
-        <button className="button button--primary calc-game__ok" onClick={submit} disabled={input === '' || input === '-'}>
+        <button type="button" className="an-go calc-game__ok" onClick={submit} disabled={input === '' || input === '-'}>
           <CornerDownLeft size={16} /> OK
         </button>
       </div>

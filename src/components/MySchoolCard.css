@@ -373,3 +373,27 @@ body.arena-night .myschool__place { background: rgba(255, 255, 255, 0.05); }
 .school-rank__all { font-size: 0.925rem; }
 .school-rank__count, .school-rank__rule { font-size: 0.875rem; }
 .school-rank__subline { font-size: 0.9rem; }
+
+/* ══ 2026-10-17 audit: crests + opaque night surfaces ══════════════════════
+   Each school in the race carries its crest (arena-art SchoolCrest, seeded
+   by the name — the same one the broadcast shows). On the Arène's night the
+   card is an OPAQUE tonal fill: no hairline over a translucent "glass". */
+.school-rank__list li { grid-template-columns: 2rem auto minmax(0, 1fr) auto; }
+.school-rank__crest { display: inline-flex; line-height: 0; }
+.school-rank__list li { font-size: 1rem; }
+.school-rank__label { font-size: 1rem; }
+.school-rank__label em { font-size: 0.875rem; }
+body.arena-night .school-rank,
+body.arena-night .myschool {
+  border: 0 !important;
+  background: #13243F !important;
+}
+body.arena-night .school-rank__pos { background: #1F3456; }
+body.arena-night .school-rank__list--bottom .school-rank__pos { background: #3A2433; }
+body.arena-night .school-rank__list li.is-mine { background: #1C3254; }
+body.arena-night .school-rank__list--mine { border-top: 0; }
+body.arena-night .myschool__place { background: #1C3254; }
+.myschool__eyebrow { font-size: 0.875rem; letter-spacing: 0; text-transform: none; }
+.myschool__school span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.myschool__school .crest { flex: none; }
+.myschool__line { font-size: 0.9375rem; }
