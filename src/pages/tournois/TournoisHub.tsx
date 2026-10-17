@@ -2,6 +2,10 @@
  * /tournois — the tournaments hub.
  *
  * Create one, join one with a PIN, watch the public ones, find your own.
+ * Premium pass (2026-10-17): the shared title row, then plain sections on
+ * the night — tiles are the only cards, because they are the only things
+ * you tap. The empty list is an invitation, the PIN a labelled field, and
+ * a guest is asked to sign in once.
  * Ted, 2026-09-23: "allow people to create their own tournament and play …
  * people can loop in to see the game, they can decide to make the visibility
  * public or not." Only PUBLIC tournaments are listed here; unlisted and
@@ -9,7 +13,7 @@
  */
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Radio, Users, KeyRound, Eye } from '../../components/icons';
+import { Plus, Radio, Users } from '../../components/icons';
 import useStore from '../../contexts/store';
 import {
   formatLabel,
@@ -20,7 +24,6 @@ import {
 } from '../../services/tournoisService';
 import { formatWhen, useLang } from './parts';
 import ArenaPageHead from '../../components/arena/ArenaPageHead';
-import { PinArt } from '../../components/arena/ArenaGate';
 import './Tournois.css';
 
 function StatePill({ t: tour }: { t: Pick<Tournament, 'state' | 'startsAt'> }) {
@@ -87,71 +90,82 @@ export default function TournoisHub() {
     else navigate('/tournois/nouveau');
   };
 
+  const signedIn = !!user?.uid;
+  // With no public tournament, the empty list itself carries the create
+  // button — so the title row does not repeat it.
+  const listEmpty = open !== null && open.length === 0 && !loadError;
+
   return (
-    <section className="tn">
+    <section className="tn tn--hub">
       <div className="tn__wrap">
         <ArenaPageHead
           title={t('Tournois', 'Tounwa')}
-          actions={(
+          sub={t(
+            'Monte un tournoi pour ta classe ou ton école, ou entre dans celui d’un ami avec son PIN.',
+            'Monte yon tounwa pou klas ou oswa lekòl ou, oswa antre nan tounwa yon zanmi ak PIN li.',
+          )}
+          actions={listEmpty ? undefined : (
             <button type="button" className="an-go" onClick={create}>
               <Plus size={18} aria-hidden="true" /> {t('Créer un tournoi', 'Kreye yon tounwa')}
             </button>
           )}
         />
 
-        <div className="tn-split tn-section">
-          <div>
-            <div className="tn-section__head">
-              <h2>{t('Tournois publics', 'Tounwa piblik')}</h2>
-              <span><Eye size={13} aria-hidden="true" /> {t('ouverts aux spectateurs', 'louvri pou espektatè')}</span>
-            </div>
-            {open === null ? (
-              <p className="tn-muted">{t('Chargement…', 'Ap chaje…')}</p>
-            ) : open.length === 0 ? (
-              <div className="tn-empty tn-empty--rich">
-                <span className="tn-empty__icon" aria-hidden="true"><Radio size={26} /></span>
-                <p>
-                  {loadError
-                    ? t('Impossible de charger la liste pour l’instant.', 'Nou pa ka chaje lis la kounye a.')
-                    : t('Aucun tournoi public pour l’instant — lance le premier, toute la salle pourra le suivre.', 'Pa gen tounwa piblik kounye a — lanse premye a, tout sal la ap ka swiv li.')}
-                </p>
-                {!loadError && (
-                  <button type="button" className="an-go" onClick={create}>
-                    <Plus size={18} aria-hidden="true" /> {t('Lancer le premier', 'Lanse premye a')}
-                  </button>
-                )}
+        <div className="tn-split tn-hub">
+          <div className="tn-hub__main">
+            <section aria-labelledby="tn-public-title">
+              <div className="tn-section__head tn-section__head--stack">
+                <h2 id="tn-public-title">{t('Tournois publics', 'Tounwa piblik')}</h2>
+                {!listEmpty && <span>{t('Tout le monde peut les regarder.', 'Tout moun ka gade yo.')}</span>}
               </div>
-            ) : (
-              <div className="tn-grid">
-                {open.map((x) => <TournamentTile key={x.id} tour={x} />)}
-              </div>
-            )}
+              {open === null ? (
+                <p className="tn-muted">{t('Chargement…', 'Ap chaje…')}</p>
+              ) : open.length === 0 ? (
+                /* An empty list is an invitation, not a panel announcing nothing. */
+                <div className="tn-hub__empty">
+                  <p>
+                    {loadError
+                      ? t('Impossible de charger la liste pour l’instant. Réessaie dans un moment.', 'Nou pa ka chaje lis la kounye a. Eseye ankò talè.')
+                      : t('Aucun tournoi public en ce moment. Lance le premier : toute l’Arène pourra le suivre.', 'Pa gen tounwa piblik kounye a. Lanse premye a : tout Arèn nan ap ka swiv li.')}
+                  </p>
+                  {!loadError && (
+                    <button type="button" className="an-go" onClick={create}>
+                      <Plus size={18} aria-hidden="true" /> {t('Créer un tournoi', 'Kreye yon tounwa')}
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="tn-grid">
+                  {open.map((x) => <TournamentTile key={x.id} tour={x} />)}
+                </div>
+              )}
+            </section>
 
             {finished.length > 0 && (
-              <div className="tn-section">
-                <div className="tn-section__head"><h2>{t('Récemment terminés', 'Fèk fini')}</h2></div>
+              <section className="tn-section" aria-labelledby="tn-finished-title">
+                <div className="tn-section__head"><h2 id="tn-finished-title">{t('Récemment terminés', 'Fèk fini')}</h2></div>
                 <div className="tn-grid">
                   {finished.map((x) => <TournamentTile key={x.id} tour={x} />)}
                 </div>
-              </div>
+              </section>
             )}
           </div>
 
-          <aside style={{ display: 'grid', gap: '1rem' }}>
-            <form className="tn-card tn-card--pin an-panel an-panel--edge" onSubmit={goPin}>
-              <div className="tn-pinart"><PinArt /></div>
-              <div className="tn-section__head" style={{ marginBottom: '0.6rem' }}>
-                <h2><KeyRound size={17} aria-hidden="true" /> {t('Rejoindre avec un PIN', 'Antre ak yon PIN')}</h2>
-              </div>
+          <aside className="tn-hub__side">
+            <form className="tn-hub__pin" onSubmit={goPin} aria-labelledby="tn-pin-title">
+              <h2 id="tn-pin-title" className="tn-hub__title">{t('Rejoindre avec un PIN', 'Antre ak yon PIN')}</h2>
+              <label htmlFor="tn-pin-input" className="tn-hub__label">
+                {t('Le PIN à six chiffres que l’organisateur a partagé', 'PIN sis chif òganizatè a pataje a')}
+              </label>
               <div className="tn-pinform">
                 <input
+                  id="tn-pin-input"
                   inputMode="numeric"
                   autoComplete="off"
                   maxLength={7}
                   placeholder="000 000"
                   value={pin}
                   onChange={(e) => setPin(e.target.value.replace(/[^\d ]/g, ''))}
-                  aria-label={t('PIN du tournoi', 'PIN tounwa a')}
                 />
                 <button type="submit" className="an-go" disabled={pin.replace(/\D/g, '').length !== 6}>
                   {t('Rejoindre', 'Antre')}
@@ -159,11 +173,10 @@ export default function TournoisHub() {
               </div>
             </form>
 
-            <div className="tn-card an-panel">
-              <div className="tn-section__head" style={{ marginBottom: '0.6rem' }}>
-                <h2>{t('Mes tournois', 'Tounwa mwen')}</h2>
-              </div>
-              {!user?.uid ? (
+            <section className="tn-hub__mine" aria-labelledby="tn-mine-title">
+              <h2 id="tn-mine-title" className="tn-hub__title">{t('Mes tournois', 'Tounwa mwen')}</h2>
+              {!signedIn ? (
+                /* The page's one sign-in ask. */
                 <div className="tn-signin">
                   <p className="tn-muted">{t('Connecte-toi pour retrouver les tournois que tu as créés ou rejoints.', 'Konekte pou w jwenn tounwa ou te kreye oswa antre ladan yo.')}</p>
                   <button type="button" className="an-ghost" onClick={toggleAuthModal}>{t('Se connecter', 'Konekte')}</button>
@@ -171,7 +184,7 @@ export default function TournoisHub() {
               ) : mine.length === 0 ? (
                 <p className="tn-muted">{t('Tu n’as encore créé ni rejoint aucun tournoi.', 'Ou poko kreye ni antre nan okenn tounwa.')}</p>
               ) : (
-                <ul className="tn-timeline">
+                <ul className="tn-hub__list">
                   {mine.map((m) => (
                     <li key={m.tid}>
                       <Link to={`/tournois/${m.tid}`}>{m.title}</Link>
@@ -182,7 +195,7 @@ export default function TournoisHub() {
                   ))}
                 </ul>
               )}
-            </div>
+            </section>
           </aside>
         </div>
       </div>

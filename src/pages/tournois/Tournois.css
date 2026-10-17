@@ -1038,41 +1038,81 @@
 [data-theme="dark"] .tn-head h1 { color: var(--text-900); }
 
 /* ═══ In the Arène's night (body.arena-night is always on for /tournois) ═══
-   Night panels with hairline edges, display headings, gold over-labels, a
-   big LED PIN field. The header is the shared ArenaPageHead. */
-body.arena-night .tn { --tn-navy: #F1F5FF; background: transparent; }
+   Premium pass (2026-10-17): flat night surfaces with one hairline, no
+   gradients, glows or hover lifts. The header is the shared ArenaPageHead;
+   the hub's sections sit on the canvas and only the tiles (things you tap)
+   are cards. Floor 14px, body 16–17px, sentence case. */
+body.arena-night .tn {
+  --tn-navy: #F5F8FF;
+  --tn-text: #F5F8FF;
+  --tn-text-2: #C1CFE4;
+  --tn-muted: #A7BAD5;
+  --tn-surface: #12223B;
+  --tn-surface-2: #1B3152;
+  --tn-border: #365171;
+  --tn-link: #9DC4FF;
+  background: transparent;
+  color: var(--tn-text);
+}
 body.arena-night .tn-card,
 body.arena-night .tn-tile {
   border: 0;
-  background: linear-gradient(180deg, rgba(18, 36, 84, 0.85), rgba(9, 19, 48, 0.9));
-  box-shadow: inset 0 0 0 1px rgba(160, 190, 255, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 30px 60px -40px rgba(0, 0, 0, 0.9);
-  border-radius: 24px;
+  background: var(--tn-surface);
+  box-shadow: inset 0 0 0 1px var(--tn-border);
+  border-radius: 16px;
 }
-body.arena-night .tn-tile { transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease; }
-body.arena-night .tn-tile:hover { transform: translateY(-4px); box-shadow: inset 0 0 0 1px rgba(255, 194, 74, 0.5), 0 0 40px -10px rgba(255, 194, 74, 0.35), 0 30px 60px -40px rgba(0, 0, 0, 0.9); }
-body.arena-night .tn-tile__title { color: #fff; font-family: var(--font-display, sans-serif); font-weight: 800; font-size: 1.15rem; letter-spacing: -0.01em; }
-body.arena-night .tn-section__head h2 { color: #fff; font-family: var(--font-display, sans-serif); font-weight: 800; letter-spacing: -0.02em; }
-body.arena-night .tn-section__head span { color: #8599C4; }
-body.arena-night .tn-muted { color: #A3B5DC; }
+body.arena-night .tn-tile { gap: 0.65rem; padding: 1.1rem 1.2rem; transition: background 0.15s ease, box-shadow 0.15s ease; }
+body.arena-night .tn-tile:hover { transform: none; background: var(--tn-surface-2); box-shadow: inset 0 0 0 1px #4A6A8F; }
+body.arena-night .tn-tile:focus-visible { outline: 3px solid var(--tn-link); outline-offset: 2px; }
+body.arena-night .tn-tile__title { color: var(--tn-text); font-family: var(--font-display, sans-serif); font-weight: 800; font-size: 1.15rem; letter-spacing: -0.01em; }
+body.arena-night .tn-tile__meta { color: var(--tn-muted); font-size: 0.9375rem; }
+body.arena-night .tn-pill { font-size: 0.875rem; background: var(--tn-surface-2); color: var(--tn-text-2); }
+body.arena-night .tn-pill--azure { background: rgba(157, 196, 255, 0.14); color: var(--tn-link); }
+body.arena-night .tn-pill--live { background: rgba(255, 106, 69, 0.16); color: #FF9A80; }
+body.arena-night .tn-pill--done { background: rgba(47, 209, 140, 0.14); color: #7FE3B7; }
+body.arena-night .tn-pill--warn { background: rgba(255, 185, 46, 0.14); color: #FFCF70; }
+body.arena-night .tn-section__head h2 { color: var(--tn-text); font-family: var(--font-display, sans-serif); font-size: clamp(1.25rem, 1.1rem + 0.5vw, 1.45rem); font-weight: 800; letter-spacing: -0.02em; }
+body.arena-night .tn-section__head span { color: var(--tn-muted); font-size: 0.9375rem; }
+body.arena-night .tn-muted { color: var(--tn-text-2); font-size: 1rem; line-height: 1.5; }
 body.arena-night .tn-empty {
-  border: 0; border-radius: 22px; background: rgba(255, 255, 255, 0.03); box-shadow: inset 0 0 0 1px rgba(160, 190, 255, 0.14);
-  color: #A3B5DC; font-size: 1rem;
+  border: 0; border-radius: 16px; background: var(--tn-surface); box-shadow: inset 0 0 0 1px var(--tn-border);
+  color: var(--tn-text-2); font-size: 1rem;
 }
-.tn-empty--rich { display: grid; justify-items: center; gap: 0.9rem; padding: clamp(1.75rem, 5vw, 3rem) 1.25rem !important; text-align: center; }
-.tn-empty--rich p { margin: 0; max-width: 42ch; }
-.tn-empty__icon { display: grid; place-items: center; width: 60px; height: 60px; border-radius: 18px; background: rgba(255, 92, 57, 0.14); color: #FF8A62; box-shadow: inset 0 0 0 1px rgba(255, 120, 80, 0.4), 0 0 30px -6px rgba(255, 92, 57, 0.5); }
-body.arena-night .tn-card--pin { display: grid; gap: 0.75rem; }
-.tn-pinart { display: grid; place-items: center; padding: 1.1rem 0 0.4rem; border-radius: 18px; background: radial-gradient(70% 90% at 50% 40%, rgba(64, 210, 190, 0.18), transparent 70%); }
+/* PIN: a calm, clearly labelled field and its button. */
 body.arena-night .tn-pinform input {
-  border: 0; border-radius: 16px; background: #050C22; color: #7DE6D6;
-  box-shadow: inset 0 0 0 1px rgba(125, 230, 214, 0.35);
-  font-family: var(--font-display, sans-serif); font-size: 1.6rem; font-weight: 800; letter-spacing: 0.25em; text-align: center;
-  text-shadow: 0 0 12px rgba(64, 210, 190, 0.6);
+  min-height: 52px;
+  border: 0; border-radius: 12px; background: var(--tn-surface); color: var(--tn-text);
+  box-shadow: inset 0 0 0 1px var(--tn-border);
+  font-family: var(--font-display, sans-serif); font-size: 1.4rem; font-weight: 750; letter-spacing: 0.2em;
 }
-body.arena-night .tn-pinform input::placeholder { color: rgba(125, 230, 214, 0.3); text-shadow: none; }
-body.arena-night .tn-pinform input:focus { outline: none; box-shadow: inset 0 0 0 2px #40D2BE, 0 0 24px -6px rgba(64, 210, 190, 0.6); }
+body.arena-night .tn-pinform input::placeholder { color: #6F86A6; }
+body.arena-night .tn-pinform input:focus { outline: none; box-shadow: inset 0 0 0 2px var(--tn-link); }
+body.arena-night .tn-pinform .an-go { min-height: 52px !important; }
 .tn-signin { display: grid; gap: 0.75rem; justify-items: start; }
 .tn-signin .tn-muted { margin: 0; }
+
+/* ── Hub layout: sections on the canvas ───────────────────────────────── */
+.tn-hub { margin-top: 0.5rem; gap: clamp(2rem, 4vw, 3rem); }
+.tn-hub__main, .tn-hub__side { display: grid; gap: clamp(2rem, 4vw, 2.5rem); align-content: start; min-width: 0; }
+.tn-hub__title { margin: 0; color: var(--tn-text, var(--text-900)); font-family: var(--font-display, sans-serif); font-size: clamp(1.25rem, 1.1rem + 0.5vw, 1.45rem); font-weight: 800; letter-spacing: -0.02em; }
+.tn-hub__label { display: block; color: var(--tn-text-2, var(--text-600)); font-size: 1rem; line-height: 1.45; }
+.tn-hub__pin { display: grid; gap: 0.6rem; }
+.tn-hub__mine { display: grid; gap: 0.6rem; }
+.tn-section__head--stack { flex-direction: column; align-items: flex-start; gap: 0.25rem; }
+.tn-hub__empty { display: grid; justify-items: start; gap: 0.9rem; }
+.tn-hub__empty p { margin: 0; max-width: 52ch; color: var(--tn-text-2, var(--text-600)); font-size: 1.0625rem; line-height: 1.55; }
+.tn-hub__list { display: grid; margin: 0; padding: 0; list-style: none; }
+.tn-hub__list li {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.25rem 1rem;
+  min-height: 52px; padding: 0.75rem 0; border-bottom: 1px solid rgba(54, 81, 113, 0.6);
+}
+.tn-hub__list a { color: var(--tn-link, var(--primary-600)); font-size: 1.0625rem; font-weight: 700; text-decoration: none; }
+.tn-hub__list a:hover { text-decoration: underline; }
+.tn-hub__list .tn-muted { font-size: 0.9375rem; }
+
+/* ── Join page ────────────────────────────────────────────────────────── */
+.tn-joinform { display: grid; gap: 0.75rem; }
+.tn-joinform .tn-field label { font-size: 1rem; }
 body.arena-night .tn-steps span { background: rgba(255, 255, 255, 0.12); }
 body.arena-night .tn-steps span.is-on { background: linear-gradient(90deg, #FF7A52, #FF5C39); box-shadow: 0 0 10px rgba(255, 92, 57, 0.6); }
 body.arena-night .tn-choice { background: rgba(255, 255, 255, 0.04); border-color: rgba(160, 190, 255, 0.16); color: #EAF0FF; }

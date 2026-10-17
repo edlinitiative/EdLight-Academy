@@ -8,7 +8,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import ArenaPageHead from '../../components/arena/ArenaPageHead';
-import { PinArt } from '../../components/arena/ArenaGate';
 import useStore from '../../contexts/store';
 import { useTrivia } from '../../hooks/useTrivia';
 import { GRADES } from '../../../shared/trackConfig';
@@ -67,19 +66,19 @@ export default function TournoisJoin() {
           back="/tournois"
           backLabel={t('Tournois', 'Tounwa')}
           title={t('Rejoindre un tournoi', 'Antre nan yon tounwa')}
+          sub={t('Entre le PIN à six chiffres que l’organisateur a partagé.', 'Antre PIN sis chif òganizatè a pataje a.')}
         />
-        <form className="tn-card tn-card--pin an-panel an-panel--edge" style={{ display: 'grid', gap: '0.9rem' }} onSubmit={(e) => { e.preventDefault(); join(); }}>
-          <div className="tn-pinart"><PinArt /></div>
-          <p className="tn-muted" style={{ margin: 0, textAlign: 'center' }}>{t('Entre le PIN à six chiffres que l’organisateur a partagé.', 'Antre PIN sis chif òganizatè a pataje a.')}</p>
+        <form className="tn-joinform" onSubmit={(e) => { e.preventDefault(); join(); }}>
+          <label htmlFor="tnj-pin" className="tn-hub__label">{t('PIN du tournoi', 'PIN tounwa a')}</label>
           <div className="tn-pinform">
             <input
+              id="tnj-pin"
               inputMode="numeric"
               autoComplete="off"
               maxLength={7}
               placeholder="000 000"
               value={pin}
               onChange={(e) => setPin(e.target.value.replace(/[^\d ]/g, ''))}
-              aria-label={t('PIN du tournoi', 'PIN tounwa a')}
               autoFocus
             />
             <button type="submit" className="an-go" disabled={clean.length !== 6 || busy}>

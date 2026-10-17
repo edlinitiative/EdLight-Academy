@@ -11,9 +11,11 @@ import useStore from '../../contexts/store';
  * Styles live in styles/arenaNight.css, which Layout loads app-wide.
  */
 export default function ArenaPageHead({
-  title, actions, back = '/arena', backLabel,
+  title, sub, actions, back = '/arena', backLabel,
 }: {
   title: React.ReactNode;
+  /** One plain sentence under the title — what this page is for. Optional. */
+  sub?: React.ReactNode;
   actions?: React.ReactNode;
   back?: string | null;
   backLabel?: string;
@@ -27,7 +29,10 @@ export default function ArenaPageHead({
           <ArrowLeft size={18} aria-hidden="true" />
         </Link>
       )}
-      <h1 className="aph__title">{title}</h1>
+      <div className="aph__text">
+        <h1 className="aph__title">{title}</h1>
+        {sub && <p className="aph__sub">{sub}</p>}
+      </div>
       {actions && <div className="aph__actions">{actions}</div>}
     </header>
   );

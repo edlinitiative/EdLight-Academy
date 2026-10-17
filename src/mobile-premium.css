@@ -971,3 +971,33 @@
   .dashboard-grid .section { padding: 0.85rem 0 !important; }
 }
 
+
+/* ── Cours | Pratiquer (phones only; the bottom bar has five tabs) ── */
+.learn-switch { display: none; }
+@media (max-width: 767px) {
+  .learn-switch {
+    display: flex;
+    gap: 4px;
+    margin: 0 0 1rem;
+    padding: 4px;
+    border-radius: 999px;
+    background: var(--surface-muted, #EDF2F8);
+  }
+  .learn-switch a {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    min-height: 40px;
+    border-radius: 999px;
+    color: var(--text-600);
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .learn-switch a.is-on {
+    background: var(--surface, #fff);
+    color: var(--text-900);
+    box-shadow: 0 1px 3px rgba(15, 30, 56, 0.12);
+  }
+  [data-theme="dark"] .learn-switch a.is-on { background: #24395A; color: #F2F6FC; }
+}

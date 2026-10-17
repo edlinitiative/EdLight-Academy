@@ -618,3 +618,21 @@
   .ah-player__empty p { margin-bottom: 0.75rem; font-size: 0.95rem; }
   .ah-player { padding: 1rem; }
 }
+
+/* ══ Lobby premium pass (2026-10-17) ═══════════════════════════════════════
+   One small uppercase eyebrow per page (the hero chip); every other label is
+   sentence case at a readable size — the learning side's rule. */
+.ah-over,
+.ah-game__over,
+.ah-player__label,
+.aj-over,
+.aj-school__label {
+  font-family: var(--font-sans, inherit) !important;
+  font-size: 0.975rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+.ah-game__over { color: #C1CFE4 !important; }
+.ah-game__body > p:not(.ah-game__over) { font-size: 1.0625rem; color: #C1CFE4; }
+.ah-keys-hint { font-size: 0.925rem; }

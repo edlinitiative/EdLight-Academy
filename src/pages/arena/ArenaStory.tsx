@@ -8,6 +8,7 @@ import { useFocusMode } from '../../hooks/useFocusMode';
 import { useStoryProgress } from '../../hooks/useStoryProgress';
 import { drawAndRemember } from '../../utils/questionRotation';
 import PixelAvatar from '../../components/PixelAvatar';
+import ArenaPageHead from '../../components/arena/ArenaPageHead';
 import { TriviaQuiz } from '../TriviaGames';
 import {
   STORY_CHAPTERS, STAGES_PER_CHAPTER, MAX_STARS, isUnlocked, nextStage, starsFor, totalStars, chapterCleared,
@@ -88,9 +89,18 @@ export default function ArenaStory() {
   const [nonce, setNonce] = useState(0);
   const [result, setResult] = useState<{ score: number; total: number; stars: number; xp: number | null } | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
+  // The map screen's title is the shared ArenaPageHead h1, reached through
+  // its wrapper so focus can still land on the page heading after a screen
+  // change (screen readers announce where they are).
+  const headWrapRef = useRef<HTMLDivElement>(null);
   useFocusMode(screen === 'play');
 
-  useEffect(() => { if (screen !== 'play') { window.scrollTo(0, 0); headingRef.current?.focus(); } }, [screen, chapterIdx]);
+  useEffect(() => {
+    if (screen === 'play') return;
+    window.scrollTo(0, 0);
+    const h = headingRef.current || headWrapRef.current?.querySelector('h1');
+    if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); }
+  }, [screen, chapterIdx]);
 
   const stageOf = (i: number): StoryStage => (i === STAGES_PER_CHAPTER - 1 ? chapter.bossStage : chapter.stages[i]);
   const themeName = (id: string) => {
@@ -242,13 +252,17 @@ export default function ArenaStory() {
   const prevDept = STORY_CHAPTERS[Math.max(0, chapterIdx - 1)].dept;
   return (
     <section className="hs">
-      <div className="hs-sky" aria-hidden="true" />
       <div className="container hs-wrap">
-        {/* One title row, then the map. Progress lives in the level panel. */}
-        <header className="hs-head">
-          <Link to="/arena" className="hs-backicon" aria-label={t('Arène', 'Arèn')} title={t('Arène', 'Arèn')}><ArrowLeft size={18} aria-hidden="true" /></Link>
-          <h1 ref={headingRef} tabIndex={-1} className="hs-title">{t('Le tour d’Ayiti', 'Tou Ayiti a')}</h1>
-        </header>
+        {/* The shared title row, then the map. Progress lives beside it. */}
+        <div ref={headWrapRef}>
+          <ArenaPageHead
+            title={t('Le tour d’Ayiti', 'Tou Ayiti a')}
+            sub={t(
+              'Traverse les dix départements, étape par étape : chaque bonne réponse compte aussi pour ton école.',
+              'Travèse dis depatman yo, etap pa etap : chak bon repons konte pou lekòl ou tou.',
+            )}
+          />
+        </div>
 
         <div className="hs-grid">
           <div className="hs-map" role="group" aria-label={t('Carte des chapitres', 'Kat chapit yo')}>
@@ -310,23 +324,28 @@ export default function ArenaStory() {
 
           <article className="hs-level" aria-labelledby="hs-chapter-title">
             <div className="hs-level__nav">
-              <button type="button" className="hs-arrow" disabled={chapterIdx === 0} onClick={() => selectChapter(chapterIdx - 1)} aria-label={t('Chapitre précédent', 'Chapit anvan')}><ChevronLeft size={18} /></button>
-              <p className="hs-over">{t(`Chapitre ${chapterIdx + 1} / ${STORY_CHAPTERS.length}`, `Chapit ${chapterIdx + 1} / ${STORY_CHAPTERS.length}`)} · {chapter.capital}</p>
-              <button type="button" className="hs-arrow" disabled={chapterIdx === STORY_CHAPTERS.length - 1} onClick={() => selectChapter(chapterIdx + 1)} aria-label={t('Chapitre suivant', 'Pwochen chapit')}><ChevronRight size={18} /></button>
+              <div className="hs-level__heading">
+                <p className="hs-level__over">
+                  {t(`Chapitre ${chapterIdx + 1} sur ${STORY_CHAPTERS.length}`, `Chapit ${chapterIdx + 1} sou ${STORY_CHAPTERS.length}`)} · {chapter.capital}
+                </p>
+                <h2 id="hs-chapter-title" className="hs-level__title">{chapter.dept}</h2>
+              </div>
+              <div className="hs-level__arrows">
+                <button type="button" className="hs-arrow" disabled={chapterIdx === 0} onClick={() => selectChapter(chapterIdx - 1)} aria-label={t('Chapitre précédent', 'Chapit anvan')}><ChevronLeft size={20} /></button>
+                <button type="button" className="hs-arrow" disabled={chapterIdx === STORY_CHAPTERS.length - 1} onClick={() => selectChapter(chapterIdx + 1)} aria-label={t('Chapitre suivant', 'Pwochen chapit')}><ChevronRight size={20} /></button>
+              </div>
             </div>
-            <h2 id="hs-chapter-title" className="hs-level__title">{chapter.dept}</h2>
-            <dl className="hs-meter">
-              <div className="hs-meter__item">
-                <dt>{t('Étoiles', 'Zetwal')}</dt>
-                <dd><Star size={18} weight="fill" aria-hidden="true" /> {stars}<small>/{MAX_STARS}</small></dd>
-                <span className="hs-meter__bar" aria-hidden="true"><span style={{ width: `${(stars / MAX_STARS) * 100}%` }} /></span>
-              </div>
-              <div className="hs-meter__item">
-                <dt>{t('Conquis', 'Konkeri')}</dt>
-                <dd className="is-green"><Crown size={18} weight="fill" aria-hidden="true" /> {conquered}<small>/{STORY_CHAPTERS.length}</small></dd>
-                <span className="hs-meter__bar hs-meter__bar--green" aria-hidden="true"><span style={{ width: `${(conquered / STORY_CHAPTERS.length) * 100}%` }} /></span>
-              </div>
-            </dl>
+            {/* Progress as one quiet line: earned stars in gold, nothing boxed. */}
+            <p className="hs-progress">
+              <span><Star size={18} weight="fill" aria-hidden="true" className="hs-progress__star" /> {t(`${stars} étoile${stars === 1 ? '' : 's'} sur ${MAX_STARS}`, `${stars} zetwal sou ${MAX_STARS}`)}</span>
+              <span aria-hidden="true">·</span>
+              <span>
+                {t(
+                  `${conquered} département${conquered === 1 ? '' : 's'} conquis sur ${STORY_CHAPTERS.length}`,
+                  `${conquered} depatman konkeri sou ${STORY_CHAPTERS.length}`,
+                )}
+              </span>
+            </p>
             <p className="hs-level__intro">{isCreole ? chapter.intro.ht : chapter.intro.fr}</p>
 
             <ol className="hs-path">
@@ -362,7 +381,6 @@ export default function ArenaStory() {
 
             {!chapterOpen ? (
               <div className="hs-locked">
-                <Lock size={18} aria-hidden="true" />
                 <span>{t(`Bats le boss de ${prevDept} pour ouvrir ce chapitre.`, `Bat bòs ${prevDept} pou w louvri chapit sa a.`)}</span>
                 {next && <button type="button" className="hs-ghost" onClick={() => selectChapter(next.chapter)}>{t('Chapitre en cours', 'Chapit k ap fèt la')}</button>}
               </div>

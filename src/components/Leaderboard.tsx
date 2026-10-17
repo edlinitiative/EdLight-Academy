@@ -12,7 +12,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trophy, Crown, Medal, Flame, ChevronRight, ChevronDown, ShieldCheck, Pencil, WifiOff, RotateCw } from './icons';
+import { Trophy, ChevronRight, ChevronDown, ShieldCheck, Pencil, WifiOff, RotateCw } from './icons';
 import useStore from '../contexts/store';
 import { useLeaderboard, useCollectives } from '../hooks/useLeaderboard';
 import { useTrivia } from '../hooks/useTrivia';
@@ -42,11 +42,54 @@ const SAMPLE_LEADERBOARD = [
   { rank: 5, displayName: 'Wideline', level: 4, xp: 640 },
 ];
 
-function RankBadge({ rank }) {
-  if (rank === 1) return <span className="lb-rank lb-rank--gold"><Crown size={14} /></span>;
-  if (rank === 2) return <span className="lb-rank lb-rank--silver"><Medal size={14} /></span>;
-  if (rank === 3) return <span className="lb-rank lb-rank--bronze"><Medal size={14} /></span>;
-  return <span className="lb-rank">{rank}</span>;
+// Rank as a number in a fixed-width column (tabular figures); the podium gets
+// metal tiles so the top three read at a glance without an icon.
+function RankBadge({ rank }: { rank: number | null | undefined }) {
+  const tier = rank === 1 ? ' lb-rank--gold' : rank === 2 ? ' lb-rank--silver' : rank === 3 ? ' lb-rank--bronze' : '';
+  return <span className={`lb-rank${tier}`}>{rank ?? '—'}</span>;
+}
+
+/**
+ * One learner on the board: rank · face · name (+ school under it) · XP.
+ * The school line only shows a field the entry really carries; nothing is
+ * invented when it is absent.
+ */
+function BoardRow({
+  rank, seed, name, uri = null, school, level, xp, isMe, youLabel, levelLabel, fmt, compact, sample = false,
+}: {
+  rank: number | null | undefined;
+  seed: string;
+  name: string;
+  uri?: string | null;
+  school?: string | null;
+  level?: number | null;
+  xp: number;
+  isMe?: boolean;
+  youLabel: string;
+  levelLabel: string;
+  fmt: (n: number) => string;
+  compact: boolean;
+  sample?: boolean;
+}) {
+  const sub = [school || null, level ? `${levelLabel} ${level}` : null].filter(Boolean).join(' · ');
+  return (
+    <li className={`leaderboard__row ${isMe ? 'is-me' : ''}`} aria-current={isMe ? 'true' : undefined}>
+      <RankBadge rank={rank} />
+      {/* The same face the app shows: their photo, else the robot seeded by uid. */}
+      <UserAvatar seed={seed} name={name} uri={sample ? null : uri} size={compact ? 32 : 40} className="leaderboard__avatar" />
+      <span className="leaderboard__who">
+        <span className="leaderboard__name">
+          <span className="leaderboard__name-text">{name}</span>
+          {isMe && <span className="leaderboard__you">{youLabel}</span>}
+        </span>
+        {sub && <span className="leaderboard__sub">{sub}</span>}
+      </span>
+      <span className="leaderboard__xp">
+        <span className="leaderboard__xp-num">{fmt(xp)}</span>
+        <span className="leaderboard__xp-unit">XP</span>
+      </span>
+    </li>
+  );
 }
 
 export default function Leaderboard({ variant = 'full', max = 25, periodToggle = false }) {
@@ -54,6 +97,9 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
   const { user, language } = useStore();
   const isCreole = language === 'ht';
   const t = (fr, ht) => (isCreole ? ht : fr);
+  const fmt = (n: number) => new Intl.NumberFormat('fr-FR').format(Number(n) || 0);
+  const youLabel = t('Toi', 'Ou');
+  const levelLabel = t('Niv.', 'Niv.');
 
   const [period, setPeriod] = useState('week'); // 'week' | 'all'
   const { entries, myEntry, myRank, isLoading, isError, refetch } = useLeaderboard(
@@ -172,7 +218,7 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
     <div className={`leaderboard ${compact ? 'leaderboard--compact' : ''}`}>
       <div className="leaderboard__header">
         <h3 className="leaderboard__title">
-          <Trophy size={17} />{' '}
+          <Trophy size={17} aria-hidden="true" />{' '}
           {periodToggle && period === 'all'
             /*
              * "XP" belongs IN the title, not only in the copy around it. This
@@ -193,8 +239,10 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
         )}
       </div>
 
+      {(periodToggle || !compact) && (
+      <div className="leaderboard__controls">
       {periodToggle && (
-        <div className="leaderboard__periods" role="tablist">
+        <div className="leaderboard__periods" role="tablist" aria-label={t('Période', 'Peryòd')}>
           <button
             role="tab"
             aria-selected={period === 'week'}
@@ -215,7 +263,7 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
       )}
 
       {!compact && (
-        <div className="leaderboard__scopes" role="tablist">
+        <div className="leaderboard__scopes" role="tablist" aria-label={t('Portée', 'Nivo klasman')}>
           <button
             role="tab"
             aria-selected={scope === 'school'}
@@ -250,11 +298,13 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
           </button>
         </div>
       )}
+      </div>
+      )}
 
       {isLoading || (collectiveField && collLoading && groups.length === 0) ? (
         <div className="leaderboard__loading">
           {Array.from({ length: compact ? 3 : 5 }).map((_, i) => (
-            <div key={i} className="skeleton" style={{ height: 44, borderRadius: 10, marginBottom: 8 }} />
+            <div key={i} className="skeleton leaderboard__skeleton" style={{ height: compact ? 48 : 60, borderRadius: 14, marginBottom: 8 }} />
           ))}
         </div>
       ) : collectiveField ? (
@@ -275,17 +325,20 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
                       onClick={() => setExpandedKey(open ? null : g.key)}
                     >
                       <RankBadge rank={g.rank} />
-                      <span className="leaderboard__name">
-                        {g.label}
-                        {isMine && <span className="leaderboard__you">{t('vous', 'ou')}</span>}
-                      </span>
-                      <span className="leaderboard__group-meta">
-                        {g.members} {memberWord}
+                      <span className="leaderboard__who">
+                        <span className="leaderboard__name">
+                          <span className="leaderboard__name-text">{g.label}</span>
+                          {isMine && <span className="leaderboard__you">{youLabel}</span>}
+                        </span>
+                        <span className="leaderboard__sub leaderboard__group-meta">
+                          {g.members} {memberWord}
+                        </span>
                       </span>
                       <span className="leaderboard__xp">
-                        <Flame size={12} /> {g.totalXp}
+                        <span className="leaderboard__xp-num">{fmt(g.totalXp)}</span>
+                        <span className="leaderboard__xp-unit">XP</span>
                       </span>
-                      <ChevronDown size={15} className={`leaderboard__chevron ${open ? 'is-open' : ''}`} />
+                      <ChevronDown size={18} aria-hidden="true" className={`leaderboard__chevron ${open ? 'is-open' : ''}`} />
                     </button>
                     {open && (
                       <ol className="leaderboard__members">
@@ -295,11 +348,12 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
                             <li key={m.uid || i} className={`leaderboard__member ${isMe ? 'is-me' : ''}`}>
                               <span className="leaderboard__member-rank">{i + 1}</span>
                               <span className="leaderboard__name">
-                                {m.displayName || 'Élève'}
-                                {isMe && <span className="leaderboard__you">{t('vous', 'ou')}</span>}
+                                <span className="leaderboard__name-text">{m.displayName || 'Élève'}</span>
+                                {isMe && <span className="leaderboard__you">{youLabel}</span>}
                               </span>
                               <span className="leaderboard__xp">
-                                <Flame size={12} /> {m.xp || 0}
+                                <span className="leaderboard__xp-num">{fmt(m.xp || 0)}</span>
+                                <span className="leaderboard__xp-unit">XP</span>
                               </span>
                             </li>
                           );
@@ -345,27 +399,23 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
       ) : entries.length > 0 ? (
         // ── National board: individual learners ──
         <ol className="leaderboard__list">
-          {entries.map((e) => {
-            const isMe = e.id === user?.uid;
-            return (
-              <li key={e.id} className={`leaderboard__row ${isMe ? 'is-me' : ''}`}>
-                <RankBadge rank={e.rank} />
-                {/* The same face the app shows: their photo, else the
-                    robot seeded by uid. */}
-                <UserAvatar seed={e.id} name={e.displayName} uri={(e as any).photoURL || (e as any).picture || null} size={28} className="leaderboard__avatar" />
-                <span className="leaderboard__name">
-                  {e.displayName || 'Élève'}
-                  {isMe && <span className="leaderboard__you">{t('vous', 'ou')}</span>}
-                </span>
-                <span className="leaderboard__level" title={t('Niveau', 'Nivo')}>
-                  {t('Niv.', 'Niv.')} {e.level || 1}
-                </span>
-                <span className="leaderboard__xp">
-                  <Flame size={12} /> {e.xp || 0}
-                </span>
-              </li>
-            );
-          })}
+          {entries.map((e) => (
+            <BoardRow
+              key={e.id}
+              rank={e.rank}
+              seed={e.id}
+              name={e.displayName || 'Élève'}
+              uri={(e as any).photoURL || (e as any).picture || null}
+              school={(e as any).school || null}
+              level={e.level || null}
+              xp={e.xp || 0}
+              isMe={e.id === user?.uid}
+              youLabel={youLabel}
+              levelLabel={levelLabel}
+              fmt={fmt}
+              compact={compact}
+            />
+          ))}
         </ol>
       ) : (
         isError ? (
@@ -394,12 +444,19 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
         <div className="leaderboard__empty leaderboard__empty--sample">
           <ol className="leaderboard__list leaderboard__list--sample" aria-hidden="true">
             {SAMPLE_LEADERBOARD.slice(0, compact ? 3 : 5).map((e) => (
-              <li key={e.rank} className="leaderboard__row">
-                <RankBadge rank={e.rank} />
-                <span className="leaderboard__name">{e.displayName}</span>
-                <span className="leaderboard__level">{t('Niv.', 'Niv.')} {e.level}</span>
-                <span className="leaderboard__xp"><Flame size={12} /> {e.xp}</span>
-              </li>
+              <BoardRow
+                key={e.rank}
+                rank={e.rank}
+                seed={`sample-${e.rank}`}
+                name={e.displayName}
+                level={e.level}
+                xp={e.xp}
+                youLabel={youLabel}
+                levelLabel={levelLabel}
+                fmt={fmt}
+                compact={compact}
+                sample
+              />
             ))}
           </ol>
           <p className="leaderboard__sample-note text-muted">
@@ -412,12 +469,23 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
       {/* Viewer's own rank line (national board only) when off-slice */}
       {!compact && scope === 'national' && optedIn && myEntry && !entries.some((e) => e.id === user?.uid) && (
         <div className="leaderboard__self">
-          <RankBadge rank={myRank} />
-          <UserAvatar seed={user?.uid} name={myEntry.displayName} size={28} className="leaderboard__avatar" />
-          <span className="leaderboard__name">
-            {myEntry.displayName} <span className="leaderboard__you">{t('vous', 'ou')}</span>
-          </span>
-          <span className="leaderboard__xp"><Flame size={12} /> {myEntry.xp || 0}</span>
+          <p className="leaderboard__self-label">{t('Ta place', 'Plas ou')}</p>
+          <ol className="leaderboard__list">
+            <BoardRow
+              rank={myRank}
+              seed={user?.uid}
+              name={myEntry.displayName}
+              uri={(myEntry as any).photoURL || (myEntry as any).picture || null}
+              school={(myEntry as any).school || null}
+              level={(myEntry as any).level || null}
+              xp={myEntry.xp || 0}
+              isMe
+              youLabel={youLabel}
+              levelLabel={levelLabel}
+              fmt={fmt}
+              compact={compact}
+            />
+          </ol>
         </div>
       )}
 

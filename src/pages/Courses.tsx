@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import LearnSwitch from '../components/LearnSwitch';
 import {
   ChevronRight, ChevronDown, ArrowRight, Check, Search, X,
   Sigma, Atom, FlaskConical, LineChart, BookOpen, RefreshCw, WifiOff, PlayCircle,
@@ -759,6 +760,7 @@ export default function Courses({ mode = 'catalog' }: { mode?: 'catalog' | 'work
   return (
     <section className="section pf lrn lrn--clean">
       <div className="container">
+        <LearnSwitch />
         {/* The catalogue only. The signed-in workspace lives on "/" and
             /dashboard; repeating it here made /courses open on the same screen
             as "/". */}

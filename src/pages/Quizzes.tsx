@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Check, ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal, RotateCcw } from '../components/icons';
 import DirectBankQuiz, { MAX_ATTEMPTS } from '../components/DirectBankQuiz';
 import QuizResult, { type QuizLogEntry } from '../components/QuizResult';
+import LearnSwitch from '../components/LearnSwitch';
 import { ErrorState } from '../components/StateViews';
 import { Skeleton, SkeletonText } from '../components/Skeleton';
 import { useAppData } from '../hooks/useData';
@@ -711,6 +712,7 @@ const Quizzes = () => {
   return (
     <section className={`section qz${bankDirectItem ? ' qz--taking' : ''}`}>
       <div className="container qz__container">
+        {!bankDirectItem && <LearnSwitch />}
         {bankDirectItem ? (
           /* ── In practice (§6.5): the question owns the column. The page
                 header steps aside — it survives as a visually hidden <h1> so

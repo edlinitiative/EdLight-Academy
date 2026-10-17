@@ -1,13 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  Swords, Check, Smartphone, School as SchoolIcon, Trophy, Globe, Sparkles, Flame,
-  ChevronRight, Users, Plus, Gamepad2, Laptop,
-} from '../components/icons';
+import { Check, Smartphone, ChevronRight, Plus, Laptop } from '../components/icons';
 import useStore from '../contexts/store';
 import { useOpenArena } from '../hooks/useOpenArena';
 import { usePlayableArena } from '../hooks/useArenaPlay';
 import ArenaRegisterForm from '../components/arena/ArenaRegisterForm';
+import ArenaPageHead from '../components/arena/ArenaPageHead';
 import { ARENA_WEB_PLAY } from '../../shared/arena/webPlay';
 import MySchoolCard from '../components/MySchoolCard';
 import SchoolRanking from '../components/SchoolRanking';
@@ -43,15 +41,17 @@ import './ArenaLeague.css';
  * never opens the app is a no-show who contributes nothing to their school's
  * five. The app requirement is stated before the button and again after it.
  *
- * Layout (Ted's sixth mockup, 2026-09-23), wired to real data only: identity
- * bar (the student's school, département, class), a stats ribbon (rank inside
- * the school and the school's national rank, both from the all-time school
- * board; the student's XP and streak), two tabs — "Mon école" with the school's
- * own board and the Cinq Majeur line (a school scores on its best five, the
- * rule `rankTeams` applies) and "Entre écoles" with best-five standings — then
- * the national panel for the real open edition, or an honest wait. The
- * mockup's live rooms, class pools, opponents, captains, prizes, tickets and
- * multipliers do not exist and are not drawn.
+ * Layout (premium pass, 2026-10-17), wired to real data only: the shared
+ * ArenaPageHead title row (no boxed header, no stat strip above the content),
+ * a two-way switch — "Mon école" with the school's own board and the Cinq
+ * Majeur line (a school scores on its best five, the rule `rankTeams`
+ * applies) and "Entre écoles" with best-five standings — then the national
+ * finale card for the real open edition, or an honest wait that leads to the
+ * demo. The side column holds the school race and the student's own record
+ * (ranks from the all-time school board, XP, streak). Content sits on the
+ * night; the finale is the one card, because it is the thing you act on. The
+ * old mockup's live rooms, class pools, opponents, captains, prizes, tickets
+ * and multipliers do not exist and are not drawn.
  */
 export default function Arena() {
   const language = useStore((s) => s.language);
@@ -161,7 +161,8 @@ export default function Arena() {
 
 
   const fiveLine = !signedIn
-    ? t('Connecte-toi et choisis ton école pour voir son équipe.', 'Konekte epi chwazi lekòl ou pou wè ekip li.')
+    // The sign-in ask lives once, in the title row; this line only explains.
+    ? t(`Une école est classée sur ses ${TEAM_SIZE} meilleurs élèves. Une fois connecté, l’équipe de la tienne s’affiche ici.`, `Yon lekòl klase sou ${TEAM_SIZE} pi bon elèv li yo. Lè w konekte, ekip lekòl ou ap parèt isit la.`)
     : !mySchool
       ? t('Ajoute ton école pour voir son équipe.', 'Ajoute lekòl ou pou wè ekip li.')
       : !myTeam
@@ -176,130 +177,82 @@ export default function Arena() {
             `Li manke ${myTeam.needed} jwè pou lekòl ou ka klase. Envite klas ou.`,
           );
 
+  /* The page's one main action, in the shared title row. */
+  const headAction = playNow ? (
+    <Link to={playHref(playNow.id)} className="an-go">
+      <Laptop size={18} aria-hidden="true" />
+      {playNow.state === 'live' ? t('Jouer maintenant', 'Jwe kounye a') : t('Entrer dans la salle', 'Antre nan sal la')}
+    </Link>
+  ) : !signedIn ? (
+    <button type="button" className="an-go" onClick={toggleAuthModal}>
+      {t('Se connecter', 'Konekte')}
+    </button>
+  ) : !mySchool ? (
+    <button type="button" className="an-go" onClick={() => setSchoolChosen(false)}>
+      <Plus size={18} aria-hidden="true" /> {t('Ajouter mon école', 'Ajoute lekòl mwen')}
+    </button>
+  ) : open && !done ? (
+    <a href="#arena-inscription" className="an-go">
+      {t('Inscrire mon école', 'Enskri lekòl mwen')}
+    </a>
+  ) : (
+    <Link to="/jeux" className="an-go">
+      {t('Gagner des points', 'Genyen pwen')}
+    </Link>
+  );
+
+  /* One sentence under the title: the open edition when there is one,
+     otherwise what the championship is. */
+  const headSub = open
+    ? (dateLabel
+      ? t(`${editionTitle} — le ${dateLabel}.`, `${editionTitle} — ${dateLabel}.`)
+      : open.state === 'doors'
+        ? t(`${editionTitle} — les portes sont ouvertes.`, `${editionTitle} — pòt yo louvri.`)
+        : t(`${editionTitle} — les inscriptions sont ouvertes.`, `${editionTitle} — enskripsyon yo ouvè.`))
+    : t(
+      'Ton école contre les autres, tous les jours : chaque partie, quiz et examen compte.',
+      'Lekòl ou kont lòt yo, chak jou : chak pati, quiz ak egzamen konte.',
+    );
+
+  const schoolMeta = mySchool
+    ? [myDept, gradeRow ? (isCreole ? gradeRow.labelHt : gradeRow.label) : null].filter(Boolean).join(' · ')
+    : '';
+
   return (
-    <section className="section arena-page">
+    <section className="section arena-page arena-champ">
       <div className="container arena-page__container">
-        {/* ── Identity bar ─────────────────────────────────────────────── */}
-        <header className="arena-id">
-          <span className="arena-id__icon" aria-hidden="true"><SchoolIcon size={26} /></span>
-          <div className="arena-id__body">
-            <div className="arena-id__pills">
-              <span className="arena-pill arena-pill--eyebrow">
-                <Swords size={13} aria-hidden="true" /> {t('Championnat interscolaire', 'Chanpyona ant lekòl yo')}
-              </span>
-              {mySchool && myDept && <span className="arena-pill">{myDept}</span>}
-              {mySchool && gradeRow && (
-                <span className="arena-pill arena-pill--azure">{isCreole ? gradeRow.labelHt : gradeRow.label}</span>
-              )}
-            </div>
-            <h1 className="arena-id__title">{mySchool || editionTitle || t('L’Arène', 'Arèn nan')}</h1>
-            <p className="arena-id__sub">
-              {open
-                ? (dateLabel
-                  ? t(`${editionTitle} — le ${dateLabel}.`, `${editionTitle} — ${dateLabel}.`)
-                  : open.state === 'doors'
-                    ? t(`${editionTitle} — les portes sont ouvertes.`, `${editionTitle} — pòt yo louvri.`)
-                    : t(`${editionTitle} — les inscriptions sont ouvertes.`, `${editionTitle} — enskripsyon yo ouvè.`))
-                : t(
-                  'Ton école contre les autres, tous les jours. Chaque partie, quiz et examen compte ; une fois par mois, la finale se joue en direct.',
-                  'Lekòl ou kont lòt yo, chak jou. Chak pati, quiz ak egzamen konte ; yon fwa pa mwa, final la jwe an dirèk.',
-                )}
-            </p>
-          </div>
-          <div className="arena-id__actions">
-            {playNow ? (
-              <Link to={playHref(playNow.id)} className="button button--primary">
-                <Laptop size={16} aria-hidden="true" />{' '}
-                {playNow.state === 'live' ? t('Jouer maintenant', 'Jwe kounye a') : t('Entrer dans la salle', 'Antre nan sal la')}
+        <ArenaPageHead
+          title={t('Championnat', 'Chanpyona')}
+          sub={headSub}
+          actions={(
+            <>
+              {headAction}
+              <Link to="/classement" className="an-ghost">
+                {t('Classement complet', 'Tout klasman an')}
               </Link>
-            ) : !signedIn ? (
-              <button type="button" className="button button--primary" onClick={toggleAuthModal}>
-                {t('Se connecter', 'Konekte')}
-              </button>
-            ) : !mySchool ? (
-              <button type="button" className="button button--primary" onClick={() => setSchoolChosen(false)}>
-                <Plus size={16} aria-hidden="true" /> {t('Ajouter mon école', 'Ajoute lekòl mwen')}
-              </button>
-            ) : open && !done ? (
-              <a href="#arena-inscription" className="button button--primary">
-                {t('Inscrire mon école', 'Enskri lekòl mwen')}
-              </a>
-            ) : (
-              <Link to="/jeux" className="button button--primary">
-                <Gamepad2 size={16} aria-hidden="true" /> {t('Gagner des points', 'Genyen pwen')}
-              </Link>
-            )}
-            <Link to="/classement" className="button button--ghost">
-              {t('Classement complet', 'Tout klasman an')}
-            </Link>
-          </div>
-        </header>
+            </>
+          )}
+        />
 
-        {/* ── Stats ribbon — only what the board and profile hold ─────── */}
-        {signedIn && (
-          <dl className="arena-stats">
-            <div className="arena-stat">
-              <span className="arena-stat__icon arena-stat__icon--amber" aria-hidden="true"><Trophy size={20} /></span>
-              <div>
-                <dt>{t('Rang dans ton école', 'Plas ou nan lekòl ou')}</dt>
-                <dd>
-                  {myIndex >= 0 ? `#${myIndex + 1}` : '—'}
-                  {mine && <small> / {mine.members} {mine.members === 1 ? t('élève', 'elèv') : t('élèves', 'elèv')}</small>}
-                </dd>
-              </div>
-            </div>
-            <div className="arena-stat">
-              <span className="arena-stat__icon arena-stat__icon--azure" aria-hidden="true"><Globe size={20} /></span>
-              <div>
-                <dt>{t('Rang national de l’école', 'Plas lekòl la nan peyi a')}</dt>
-                <dd>
-                  {mine ? `#${mine.rank}` : '—'}
-                  {groups.length > 0 && <small> / {groups.length} {t('écoles', 'lekòl')}</small>}
-                </dd>
-              </div>
-            </div>
-            <div className="arena-stat">
-              <span className="arena-stat__icon arena-stat__icon--violet" aria-hidden="true"><Sparkles size={20} /></span>
-              <div>
-                <dt>{t('Tes points', 'Pwen ou')}</dt>
-                <dd>{nf(profile?.xp || 0)} XP <small>· {t('niv.', 'niv.')} {level?.level || 1}</small></dd>
-              </div>
-            </div>
-            <div className="arena-stat">
-              <span className="arena-stat__icon arena-stat__icon--orange" aria-hidden="true"><Flame size={20} /></span>
-              <div>
-                <dt>{t('Série', 'Seri')}</dt>
-                <dd>{days} <small>{t(days === 1 ? 'jour' : 'jours', 'jou')}</small></dd>
-              </div>
-            </div>
-          </dl>
-        )}
-
-        {/* ── Tabs ─────────────────────────────────────────────────────── */}
-        <div className="arena-tabs" role="tablist" aria-label={t('Vue', 'Vi')}>
+        {/* ── Two views: the student's school, or every school ─────────── */}
+        <div className="arena-switch" role="tablist" aria-label={t('Vue', 'Vi')}>
           <button
             type="button"
             role="tab"
             aria-selected={tab === 'school'}
-            className={`arena-tab${tab === 'school' ? ' is-on' : ''}`}
+            className={`arena-switch__tab${tab === 'school' ? ' is-on' : ''}`}
             onClick={() => setTab('school')}
           >
-            <span className="arena-tab__title"><Trophy size={18} aria-hidden="true" /> {t('Mon école', 'Lekòl mwen')}</span>
-            <span className="arena-tab__sub">
-              {t(`Les ${TEAM_SIZE} meilleurs de ton école forment son équipe.`, `${TEAM_SIZE} pi bon elèv lekòl ou fòme ekip li.`)}
-            </span>
+            {t('Mon école', 'Lekòl mwen')}
           </button>
           <button
             type="button"
             role="tab"
             aria-selected={tab === 'inter'}
-            className={`arena-tab${tab === 'inter' ? ' is-on' : ''}`}
+            className={`arena-switch__tab${tab === 'inter' ? ' is-on' : ''}`}
             onClick={() => setTab('inter')}
           >
-            <span className="arena-tab__title"><Globe size={18} aria-hidden="true" /> {t('Entre écoles', 'Ant lekòl yo')}</span>
-            <span className="arena-tab__sub">
-              {t(`Chaque école est classée sur ses ${TEAM_SIZE} meilleurs.`, `Chak lekòl klase sou ${TEAM_SIZE} pi bon li yo.`)}
-            </span>
+            {t('Entre écoles', 'Ant lekòl yo')}
           </button>
         </div>
 
@@ -309,75 +262,83 @@ export default function Arena() {
               <>
                 {/* The Cinq Majeur: a school scores on its best five, so the
                     number worth chasing is how many players are missing. */}
-                <div className="arena-five">
-                  <span className="arena-five__badge" aria-hidden="true">{TEAM_SIZE}</span>
-                  <div>
-                    <h2>{t('Le « Cinq Majeur » de ton école', '« Senk Majè » lekòl ou')}</h2>
-                    <p>{fiveLine}</p>
-                  </div>
-                </div>
+                <section className="arena-block" aria-labelledby="arena-five-title">
+                  <h2 id="arena-five-title" className="arena-block__title">
+                    {mySchool
+                      ? t(`Le Cinq Majeur de ${mySchool}`, `Senk Majè ${mySchool}`)
+                      : t('Le Cinq Majeur de ton école', 'Senk Majè lekòl ou')}
+                  </h2>
+                  {schoolMeta && <p className="arena-block__meta">{schoolMeta}</p>}
+                  <p className="arena-block__text">{fiveLine}</p>
 
-                {mySchool && mine && members.length > 0 && (
-                  <section className="arena-card" aria-labelledby="arena-mine-title">
-                    <div className="arena-card__head">
-                      <h2 id="arena-mine-title">{t('Top de ton école', 'Tèt lekòl ou')}</h2>
-                      <span className="arena-pill">
-                        {mine.members} {mine.members === 1 ? t('élève', 'elèv') : t('élèves', 'elèv')}
-                      </span>
-                    </div>
-                    <ol className="arena-board">
-                      {members.slice(0, Math.max(TEAM_SIZE + 3, myIndex + 1)).map((m, i) => (
-                        <React.Fragment key={m.uid || `${m.displayName}-${i}`}>
-                          {i === TEAM_SIZE && (
-                            <li className="arena-board__line" aria-hidden="true">
-                              {t('— Seuil du Cinq Majeur —', '— Limit Senk Majè a —')}
+                  {mySchool && mine && members.length > 0 && (
+                    <>
+                      <div className="arena-block__row">
+                        <h3 className="arena-block__sub">{t('Top de ton école', 'Tèt lekòl ou')}</h3>
+                        <span className="arena-block__meta">
+                          {mine.members} {mine.members === 1 ? t('élève', 'elèv') : t('élèves', 'elèv')}
+                        </span>
+                      </div>
+                      <ol className="arena-board">
+                        {members.slice(0, Math.max(TEAM_SIZE + 3, myIndex + 1)).map((m, i) => (
+                          <React.Fragment key={m.uid || `${m.displayName}-${i}`}>
+                            {i === TEAM_SIZE && (
+                              <li className="arena-board__line" aria-hidden="true">
+                                {t('Seuil du Cinq Majeur', 'Limit Senk Majè a')}
+                              </li>
+                            )}
+                            <li className={`arena-board__row${i < TEAM_SIZE ? ' is-five' : ''}${m.uid && m.uid === user?.uid ? ' is-me' : ''}`}>
+                              <span className="arena-board__pos">{i + 1}</span>
+                              <UserAvatar seed={m.uid} name={m.displayName} size={32} className="arena-board__avatar" />
+                              <span className="arena-board__name">
+                                {m.displayName}
+                                {m.uid && m.uid === user?.uid && <em>{t('toi', 'ou')}</em>}
+                              </span>
+                              <span className="arena-board__xp">{nf(m.xp)} XP</span>
                             </li>
+                          </React.Fragment>
+                        ))}
+                      </ol>
+                      {gapToFive !== null && (
+                        <p className="arena-block__foot">
+                          {t(
+                            `Encore ${nf(gapToFive)} XP pour entrer dans le Cinq Majeur.`,
+                            `Ou bezwen ${nf(gapToFive)} XP ankò pou antre nan Senk Majè a.`,
                           )}
-                          <li className={`arena-board__row${i < TEAM_SIZE ? ' is-five' : ''}${m.uid && m.uid === user?.uid ? ' is-me' : ''}`}>
-                            <span className="arena-board__pos">{i + 1}</span>
-                            <UserAvatar seed={m.uid} name={m.displayName} size={30} className="arena-board__avatar" />
-                            <span className="arena-board__name">
-                              {m.displayName}
-                              {m.uid && m.uid === user?.uid && <em>{t('toi', 'ou')}</em>}
-                            </span>
-                            <span className="arena-board__xp">{nf(m.xp)} XP</span>
-                          </li>
-                        </React.Fragment>
-                      ))}
-                    </ol>
-                    {gapToFive !== null && (
-                      <p className="arena-card__foot">
-                        {t(
-                          `Encore ${nf(gapToFive)} XP pour entrer dans le Cinq Majeur.`,
-                          `Ou bezwen ${nf(gapToFive)} XP ankò pou antre nan Senk Majè a.`,
-                        )}
-                      </p>
-                    )}
-                    {myIndex < 0 && (
-                      <p className="arena-card__foot">
-                        {t(
-                          'Tu n’apparais pas encore ici : choisis un pseudo et joue une partie.',
-                          'Ou poko parèt isit la : chwazi yon ti non epi jwe yon pati.',
-                        )}{' '}
-                        <Link to="/profile#reglages">{t('Choisir un pseudo', 'Chwazi yon ti non')}</Link>
-                      </p>
-                    )}
-                  </section>
-                )}
+                        </p>
+                      )}
+                      {myIndex < 0 && (
+                        <p className="arena-block__foot">
+                          {t(
+                            'Tu n’apparais pas encore ici : choisis un pseudo et joue une partie.',
+                            'Ou poko parèt isit la : chwazi yon ti non epi jwe yon pati.',
+                          )}{' '}
+                          <Link to="/profile#reglages">{t('Choisir un pseudo', 'Chwazi yon ti non')}</Link>
+                        </p>
+                      )}
+                    </>
+                  )}
+                </section>
                 {signedIn && <MySchoolCard where="arena" />}
               </>
             ) : (
-              <section className="arena-card" aria-labelledby="arena-teams-title">
-                <div className="arena-card__head">
-                  <h2 id="arena-teams-title">{t('Classement des équipes', 'Klasman ekip yo')}</h2>
-                  <span className="arena-pill">{t(`Score = ${TEAM_SIZE} meilleurs`, `Nòt = ${TEAM_SIZE} pi bon`)}</span>
-                </div>
+              <section className="arena-block" aria-labelledby="arena-teams-title">
+                <h2 id="arena-teams-title" className="arena-block__title">{t('Classement des équipes', 'Klasman ekip yo')}</h2>
+                <p className="arena-block__text">
+                  {t(
+                    `Chaque école est classée sur ses ${TEAM_SIZE} meilleurs joueurs : c’est pour ça qu’inviter sa classe compte.`,
+                    `Chak lekòl klase sou ${TEAM_SIZE} pi bon jwè li yo : se pou sa envite klas ou enpòtan.`,
+                  )}
+                </p>
                 {boardLoading ? (
-                  <p className="arena-card__foot">{t('Chargement…', 'N ap chaje…')}</p>
+                  <p className="arena-block__foot">{t('Chargement…', 'N ap chaje…')}</p>
                 ) : standings.length === 0 ? (
-                  <p className="arena-card__foot">
-                    {t('Aucune école classée pour l’instant — la première place est libre.', 'Poko gen lekòl nan klasman an — premye plas la lib.')}
-                  </p>
+                  <div className="arena-block__empty">
+                    <p className="arena-block__text">
+                      {t('Aucune école classée pour l’instant — la première place est libre.', 'Poko gen lekòl nan klasman an — premye plas la lib.')}
+                    </p>
+                    <Link to="/jeux" className="an-go">{t('Jouer une partie', 'Jwe yon pati')}</Link>
+                  </div>
                 ) : (
                   <ol className="arena-teams">
                     {standings.slice(0, 12).map((s) => (
@@ -399,25 +360,18 @@ export default function Arena() {
                     ))}
                   </ol>
                 )}
-                <p className="arena-card__foot">
-                  <Users size={15} aria-hidden="true" />{' '}
-                  {t(
-                    `Une école n’est classée qu’avec ${TEAM_SIZE} joueurs : c’est pour ça qu’inviter sa classe compte.`,
-                    `Yon lekòl klase sèlman ak ${TEAM_SIZE} jwè : se pou sa envite klas ou enpòtan.`,
-                  )}
-                </p>
               </section>
             )}
 
-            {/* ── The national panel: the real edition, or the honest wait ── */}
-            <section className="arena-national" aria-labelledby="arena-national-title">
+            {/* ── The national finale: the real edition, or the honest wait ── */}
+            <section className={`arena-national${playNow ? ` is-${playNow.state}` : ''}`} aria-labelledby="arena-national-title">
               {playNow ? (
                 <>
-                  {/* The room is open or the questions are running: this panel's
+                  {/* The room is open or the questions are running: this card's
                       one job is now to get the student into the play room. */}
-                  <span className="arena-national__tag">
+                  <p className="arena-national__tag">
                     {playNow.state === 'live' ? t('En direct', 'An dirèk') : t('Portes ouvertes', 'Pòt yo louvri')}
-                  </span>
+                  </p>
                   <h2 id="arena-national-title">
                     {isCreole && playNow.titleHt ? playNow.titleHt : playNow.title}
                   </h2>
@@ -434,22 +388,22 @@ export default function Arena() {
                   </p>
                   <div className="arena-national__actions">
                     <Link to={playHref(playNow.id)} className="arena-national__cta">
-                      {t('Entrer dans la salle', 'Antre nan sal la')} <ChevronRight size={16} aria-hidden="true" />
+                      {t('Entrer dans la salle', 'Antre nan sal la')} <ChevronRight size={18} aria-hidden="true" />
                     </Link>
-                    <Link to="/download?from=arena" className="arena-national__ghost">
-                      <Smartphone size={16} aria-hidden="true" /> {t('L’application', 'Aplikasyon an')}
+                    <Link to="/download?from=arena" className="arena-national__ghost an-ghost">
+                      <Smartphone size={18} aria-hidden="true" /> {t('L’application', 'Aplikasyon an')}
                     </Link>
                   </div>
                 </>
               ) : (
                 <>
-                  <span className="arena-national__tag">
+                  <p className="arena-national__tag">
                     {open
                       ? (open.state === 'doors' ? t('Portes ouvertes', 'Pòt yo louvri') : t('Inscriptions ouvertes', 'Enskripsyon ouvè'))
-                      : t('Rendez-vous national', 'Randevou nasyonal')}
-                  </span>
+                      : t('Finale nationale', 'Final nasyonal')}
+                  </p>
                   <h2 id="arena-national-title">
-                    {open ? editionTitle : t('Prochaine finale en direct : annoncée ici.', 'Pwochen final an dirèk : n ap anonse l isit la.')}
+                    {open ? editionTitle : t('La prochaine finale en direct sera annoncée ici.', 'N ap anonse pwochen final an dirèk la isit la.')}
                   </h2>
                   <p>
                     {open
@@ -475,15 +429,15 @@ export default function Arena() {
                   <div className="arena-national__actions">
                     {open && !done ? (
                       <a href="#arena-inscription" className="arena-national__cta">
-                        {t('S’inscrire', 'Enskri')} <ChevronRight size={16} aria-hidden="true" />
+                        {t('S’inscrire', 'Enskri')} <ChevronRight size={18} aria-hidden="true" />
                       </a>
                     ) : open && done && ARENA_WEB_PLAY ? (
                       <Link to={playHref(open.id)} className="arena-national__cta">
-                        {t('Entrer dans la salle', 'Antre nan sal la')} <ChevronRight size={16} aria-hidden="true" />
+                        {t('Entrer dans la salle', 'Antre nan sal la')} <ChevronRight size={18} aria-hidden="true" />
                       </Link>
                     ) : open ? (
                       <Link to="/jeux" className="arena-national__cta">
-                        {t('Jouer maintenant', 'Jwe kounye a')} <ChevronRight size={16} aria-hidden="true" />
+                        {t('Jouer maintenant', 'Jwe kounye a')} <ChevronRight size={18} aria-hidden="true" />
                       </Link>
                     ) : (
                       /* No finale scheduled: the one thing worth doing here is
@@ -492,16 +446,16 @@ export default function Arena() {
                          stay one step away. */
                       <>
                         <Link to="/arena/demo" className="arena-national__cta">
-                          {t('Essayer la finale en démo', 'Eseye final la an demo')} <ChevronRight size={16} aria-hidden="true" />
+                          {t('Essayer la finale en démo', 'Eseye final la an demo')} <ChevronRight size={18} aria-hidden="true" />
                         </Link>
-                        <Link to="/jeux" className="arena-national__ghost">
+                        <Link to="/jeux" className="arena-national__ghost an-ghost">
                           {t('Jouer maintenant', 'Jwe kounye a')}
                         </Link>
                       </>
                     )}
                     {open && (
-                      <Link to="/download?from=arena" className="arena-national__ghost">
-                        <Smartphone size={16} aria-hidden="true" /> {t('L’application', 'Aplikasyon an')}
+                      <Link to="/download?from=arena" className="arena-national__ghost an-ghost">
+                        <Smartphone size={18} aria-hidden="true" /> {t('L’application', 'Aplikasyon an')}
                       </Link>
                     )}
                   </div>
@@ -519,31 +473,42 @@ export default function Arena() {
             {registration}
           </div>
 
-          {/* ── Side column ──────────────────────────────────────────────── */}
+          {/* ── Side column: the school race, then the student's own record ── */}
           <aside className="arena-side">
             <SchoolRanking max={8} />
             {signedIn && (
-              <section className="arena-card arena-bilan" aria-labelledby="arena-bilan-title">
-                <div className="arena-card__head">
-                  <h2 id="arena-bilan-title">{t('Mon bilan', 'Bilan mwen')}</h2>
-                </div>
-                <div className="arena-bilan__grid">
-                  <div><span>{t('Parties', 'Pati')}</span><strong>{nf(gamesPlayed)}</strong></div>
-                  <div><span>XP</span><strong>{nf(profile?.xp || 0)}</strong></div>
-                  <div><span>{t('Niveau', 'Nivo')}</span><strong>{level?.level || 1}</strong></div>
-                </div>
-                {GAMES.some((g) => highScores[g.id]) && (
-                  <ul className="arena-bilan__records">
-                    {GAMES.filter((g) => highScores[g.id]).map((g) => (
-                      <li key={g.id}>
-                        <span>{isCreole ? g.nameHt : g.name}</span>
-                        <strong>{nf(highScores[g.id])}</strong>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <Link to="/jeux" className="arena-card__link">
-                  {t('Faire monter mon école', 'Fè lekòl mwen monte')} <ChevronRight size={14} aria-hidden="true" />
+              <section className="arena-block arena-bilan" aria-labelledby="arena-bilan-title">
+                <h2 id="arena-bilan-title" className="arena-block__title">{t('Mon bilan', 'Bilan mwen')}</h2>
+                <dl className="arena-bilan__list">
+                  <div>
+                    <dt>{t('Rang dans ton école', 'Plas ou nan lekòl ou')}</dt>
+                    <dd>{myIndex >= 0 ? `#${myIndex + 1}` : '—'}</dd>
+                  </div>
+                  <div>
+                    <dt>{t('Rang national de l’école', 'Plas lekòl la nan peyi a')}</dt>
+                    <dd>{mine ? `#${mine.rank}` : '—'}</dd>
+                  </div>
+                  <div>
+                    <dt>{t('Tes points', 'Pwen ou')}</dt>
+                    <dd>{nf(profile?.xp || 0)} XP · {t('niv.', 'niv.')} {level?.level || 1}</dd>
+                  </div>
+                  <div>
+                    <dt>{t('Parties jouées', 'Pati ou jwe')}</dt>
+                    <dd>{nf(gamesPlayed)}</dd>
+                  </div>
+                  <div>
+                    <dt>{t('Série', 'Seri')}</dt>
+                    <dd>{days} {t(days === 1 ? 'jour' : 'jours', 'jou')}</dd>
+                  </div>
+                  {GAMES.filter((g) => highScores[g.id]).map((g) => (
+                    <div key={g.id}>
+                      <dt>{t(`Record · ${g.name}`, `Rekò · ${g.nameHt}`)}</dt>
+                      <dd>{nf(highScores[g.id])}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <Link to="/jeux" className="arena-block__link">
+                  {t('Faire monter mon école', 'Fè lekòl mwen monte')} <ChevronRight size={16} aria-hidden="true" />
                 </Link>
               </section>
             )}

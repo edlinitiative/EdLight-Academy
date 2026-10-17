@@ -193,8 +193,6 @@ body.arena-night :is(.an-go, .gx-btn, .duel-pill):disabled {
   box-shadow: none !important;
   cursor: not-allowed;
 }
-/* The week/national switch read at 12.5px. */
-body.arena-night .leaderboard__scope { min-height: 36px; font-size: 0.875rem !important; }
 /* The daily card's "Jouer →" is the whole card's affordance: same shape. */
 body.arena-night .trivia-daily__cta {
   display: inline-flex;
@@ -250,3 +248,22 @@ body.arena-night .trivia-settings > summary::after {
 }
 body.arena-night .trivia-settings[open] > summary::after { transform: rotate(-135deg); margin-top: 3px; }
 body.arena-night .trivia-settings > summary:hover { background: rgba(255, 255, 255, 0.07); }
+
+/* ══ Arène premium pass (2026-10-17): the shared page head ═════════════════
+   Title + one sentence + one action, on the night — no boxed header. */
+.aph__text { min-width: 0; flex: 1 1 auto; }
+.aph__sub {
+  margin: 0.35rem 0 0;
+  max-width: 60ch;
+  color: #B9C7DA;
+  font-size: 1.0625rem;
+  line-height: 1.5;
+}
+/* With a subtitle the head is two lines: the back arrow aligns to the title,
+   not to the middle of the block. */
+.aph:has(.aph__sub) { align-items: flex-start; }
+.aph:has(.aph__sub) .aph__back { margin-top: 0.35rem; }
+/* The text block takes the remaining width instead of its content width, so
+   on a phone the back arrow stays on the title's line rather than wrapping. */
+.aph__text { flex: 1 1 0; min-width: 0; }
+@media (max-width: 600px) { .aph__actions { flex-basis: 100%; } }

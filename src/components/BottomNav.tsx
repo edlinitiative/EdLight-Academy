@@ -1,13 +1,16 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Home, BookOpen, ClipboardList, GraduationCap, Swords, User } from './icons';
+import { Home, BookOpen, GraduationCap, Swords, User } from './icons';
 
 /**
  * Mobile-only bottom tab bar — the primary navigation on phones.
  *
  * Gives EdLight an app-like, native feel: a frosted, safe-area-aware bar with
- * six thumb-friendly destinations (Home / Learn / Practice / Games / Arena / Profile).
+ * FIVE thumb-friendly destinations, the same five as the native app
+ * (Accueil / Apprendre / Examens / Arène / Profil). Six was too many to read
+ * at 390px; Pratiquer now lives under Apprendre — its tab lights up there, and
+ * <LearnSwitch> at the top of /courses and /practice moves between the two.
  * The "Profil" tab is the account hub — it folds in the secondary destinations
  * (dashboard, study plan, notifications, settings, sign-out) that used to live
  * in the slide-out drawer.
@@ -17,7 +20,6 @@ import { Home, BookOpen, ClipboardList, GraduationCap, Swords, User } from './ic
 const TABS = [
   { to: '/', labelKey: 'nav.home', icon: Home, exact: true },
   { to: '/courses', labelKey: 'nav.learn', icon: BookOpen },
-  { to: '/practice', labelKey: 'nav.practice', icon: ClipboardList },
   { to: '/exams', labelKey: 'nav.exams', icon: GraduationCap },
   { to: '/arena', labelKey: 'nav.arena', icon: Swords },
   { to: '/profile', labelKey: 'nav.profile', icon: User },
@@ -73,8 +75,8 @@ export default function BottomNav() {
 
   const isActive = (path, exact = false) => {
     if (path === '/' || exact) return pathname === path;
-    // /quizzes is the same page as the Pratiquer tab.
-    if (path === '/practice' && pathname.startsWith('/quizzes')) return true;
+    // Practice (/practice, /quizzes) sits under the Apprendre tab.
+    if (path === '/courses' && /^\/(practice|quizzes)(\/|$)/.test(pathname)) return true;
     if (path === '/arena' && /^\/(jeux|trivia|tournois|classement|defi)(\/|$)/.test(pathname)) return true;
     return pathname.startsWith(path);
   };

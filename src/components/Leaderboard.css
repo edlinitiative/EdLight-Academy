@@ -38,31 +38,40 @@
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 0.8rem;
+  min-height: 40px;
+  font-size: 0.875rem;
   font-weight: 700;
   color: var(--primary);
 }
 
-/* Scope tabs */
+/* Controls: period + scope segment groups share one wrapping row. */
+.leaderboard__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+}
+
 .leaderboard__scopes,
 .leaderboard__periods {
   display: inline-flex;
-  gap: 0.3rem;
+  gap: 0.25rem;
   background: var(--surface-alt, #f2f4f7);
   padding: 0.25rem;
-  border-radius: 10px;
-  align-self: flex-start;
+  border-radius: 12px;
 }
 
 .leaderboard__scope {
   border: none;
   background: none;
   cursor: pointer;
-  font-size: 0.78rem;
+  min-height: 40px;
+  font-size: 0.875rem;
   font-weight: 700;
   color: var(--text-muted);
-  padding: 0.3rem 0.7rem;
-  border-radius: 7px;
+  padding: 0 0.85rem;
+  border-radius: 9px;
+  white-space: nowrap;
   transition: background 0.15s ease, color 0.15s ease;
 }
 
@@ -72,99 +81,161 @@
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08);
 }
 
-/* List */
+.leaderboard__scope:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* List — rows sit on the card, divided by hairlines (no row boxes). */
 .leaderboard__list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
 }
 
-.leaderboard__row,
-.leaderboard__self {
+.leaderboard__row {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.5rem 0.6rem;
-  border-radius: 10px;
-  background: var(--surface-alt, #f7f8fa);
+  gap: 0.75rem;
+  min-height: 64px;
+  padding: 0.6rem 0.75rem;
+  border-radius: 14px;
+  position: relative;
 }
+
+.leaderboard__row + .leaderboard__row::before,
+.leaderboard__group + .leaderboard__group::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0.75rem;
+  right: 0.75rem;
+  height: 1px;
+  background: var(--border-color, #e6e8eb);
+}
+
+/* No divider touching the highlighted row. */
+.leaderboard__row.is-me::before,
+.leaderboard__row.is-me + .leaderboard__row::before,
+.leaderboard__group.is-me::before,
+.leaderboard__group.is-me + .leaderboard__group::before { display: none; }
 
 .leaderboard__row.is-me {
-  background: rgba(27, 111, 224, 0.1);
-  outline: 1px solid rgba(27, 111, 224, 0.25);
+  background: rgba(27, 111, 224, 0.09);
+  box-shadow: inset 0 0 0 1.5px rgba(27, 111, 224, 0.45);
 }
 
+/* "Ta place" — the viewer's own row, pinned under the list when off-slice. */
 .leaderboard__self {
-  margin-top: 0.2rem;
-  background: var(--primary-50);
-  border: 1px dashed color-mix(in srgb, var(--primary-500) 30%, transparent);
+  margin-top: 0.25rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-color, #e6e8eb);
+}
+
+.leaderboard__self-label {
+  margin: 0 0 0.35rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-muted);
 }
 
 .lb-rank {
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  font-size: 0.8rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  font-size: 0.9375rem;
   font-weight: 800;
+  line-height: 1;
   color: var(--text-muted);
-  background: var(--surface);
   flex: 0 0 auto;
   font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
 }
 
-.lb-rank--gold { background: #fef3c7; color: #b45309; }
-.lb-rank--silver { background: #e5e7eb; color: #4b5563; }
-.lb-rank--bronze { background: #fde4d0; color: #9a3412; }
+.lb-rank--gold { background: #fde68a; color: #78350f; }
+.lb-rank--silver { background: #e2e8f0; color: #334155; }
+.lb-rank--bronze { background: #fed7aa; color: #7c2d12; }
 
-.leaderboard__name {
+.leaderboard__who {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 0.85rem;
-  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.leaderboard__name {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1.3;
   color: var(--text);
+}
+
+.leaderboard__name-text {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
+}
+
+.leaderboard__sub {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  color: var(--text-muted);
 }
 
 .leaderboard__you {
-  font-size: 0.62rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  flex: none;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.2;
   color: var(--primary);
   background: var(--primary-50);
-  padding: 0.05rem 0.35rem;
+  padding: 0.1rem 0.5rem;
   border-radius: 999px;
-}
-
-.leaderboard__level {
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: var(--text-muted);
-  flex: 0 0 auto;
 }
 
 .leaderboard__xp {
   display: inline-flex;
-  align-items: center;
-  gap: 0.2rem;
-  font-size: 0.82rem;
-  font-weight: 800;
-  color: var(--primary-600);
-  flex: 0 0 auto;
-  min-width: 48px;
+  align-items: baseline;
   justify-content: flex-end;
+  gap: 0.3rem;
+  flex: 0 0 auto;
+  min-width: 72px;
   font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  white-space: nowrap;
 }
+
+.leaderboard__xp-num {
+  font-size: 1.0625rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.leaderboard__xp-unit {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* Compact (dashboard widget): same row, a notch smaller. */
+.leaderboard--compact .leaderboard__row { min-height: 52px; padding: 0.45rem 0.5rem; gap: 0.65rem; }
+.leaderboard--compact .leaderboard__name,
+.leaderboard--compact .leaderboard__xp-num { font-size: 0.9375rem; }
+.leaderboard--compact .lb-rank { width: 28px; height: 28px; font-size: 0.875rem; }
 
 .leaderboard__empty {
   padding: 0.75rem 0;
@@ -173,7 +244,7 @@
 
 .leaderboard__empty p {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: 0.9375rem;
 }
 
 .leaderboard__empty-cta {
@@ -189,8 +260,9 @@
   background: none;
   border: none;
   padding: 0;
+  min-height: 44px;
   cursor: pointer;
-  font-size: 0.8rem;
+  font-size: 0.9375rem;
   font-weight: 700;
   color: var(--primary);
 }
@@ -199,42 +271,35 @@
   text-decoration: underline;
 }
 
-/* Collective boards (École / Ville) — schools/cities ranked as groups */
-.leaderboard__groups {
-  gap: 0.4rem;
-}
-
+/* Collective boards (École / Ville / Département) — groups ranked by total XP */
 .leaderboard__group {
-  border-radius: 10px;
-  background: var(--surface-alt, #f7f8fa);
-  overflow: hidden;
+  position: relative;
+  border-radius: 14px;
 }
 
 .leaderboard__group.is-me {
-  background: rgba(27, 111, 224, 0.1);
-  outline: 1px solid rgba(27, 111, 224, 0.25);
+  background: rgba(27, 111, 224, 0.09);
+  box-shadow: inset 0 0 0 1.5px rgba(27, 111, 224, 0.45);
 }
 
 .leaderboard__group-head {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.75rem;
   width: 100%;
-  padding: 0.5rem 0.6rem;
+  min-height: 64px;
+  padding: 0.6rem 0.75rem;
   background: none;
   border: none;
+  border-radius: 14px;
   cursor: pointer;
   text-align: left;
   font: inherit;
+  color: inherit;
 }
 
-.leaderboard__group-meta {
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: var(--text-muted);
-  flex: 0 0 auto;
-  white-space: nowrap;
-}
+.leaderboard__group-head:hover { background: var(--surface-alt, #f7f8fa); }
+.leaderboard__group-head:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
 
 .leaderboard__chevron {
   color: var(--text-muted);
@@ -250,20 +315,22 @@
 .leaderboard__members {
   list-style: none;
   margin: 0;
-  padding: 0.15rem 0.4rem 0.5rem 0.4rem;
+  padding: 0 0.75rem 0.6rem 3.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
 }
 
 .leaderboard__member {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  padding: 0.35rem 0.5rem 0.35rem 0.4rem;
-  border-radius: 8px;
-  background: var(--surface);
+  gap: 0.65rem;
+  min-height: 44px;
+  padding: 0.25rem 0.5rem;
+  border-radius: 10px;
 }
+
+.leaderboard__member .leaderboard__name { flex: 1 1 auto; font-size: 0.9375rem; font-weight: 600; }
+.leaderboard__member .leaderboard__xp-num { font-size: 0.9375rem; font-weight: 700; }
 
 .leaderboard__member.is-me {
   background: var(--primary-50);
@@ -271,9 +338,9 @@
 
 .leaderboard__member-rank {
   flex: 0 0 auto;
-  width: 20px;
+  width: 22px;
   text-align: center;
-  font-size: 0.72rem;
+  font-size: 0.875rem;
   font-weight: 800;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
@@ -317,7 +384,7 @@
 .leaderboard__sample-note {
   margin: 0.6rem 0 0;
   text-align: center;
-  font-size: 0.8rem;
+  font-size: 0.875rem;
 }
 
 /* Opt-in */
@@ -334,7 +401,8 @@
   align-items: center;
   gap: 0.45rem;
   margin: 0;
-  font-size: 0.82rem;
+  font-size: 0.9375rem;
+  line-height: 1.45;
   color: var(--text-muted);
 }
 
@@ -343,7 +411,7 @@
 .leaderboard__join-pitch--warn svg { color: var(--warning-500); }
 
 .leaderboard__field-error {
-  font-size: 0.72rem;
+  font-size: 0.875rem;
   font-weight: 500;
   color: #b45309;
 }
@@ -357,8 +425,8 @@
 .leaderboard__field {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.78rem;
+  gap: 0.3rem;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--text-muted);
 }
@@ -380,7 +448,7 @@
 .leaderboard__compact-foot {
   border-top: 1px solid var(--border-color, #e6e8eb);
   padding-top: 0.6rem;
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   text-align: center;
 }
 
@@ -396,15 +464,82 @@
   color: var(--primary-400);
 }
 
-/* Medal chips can't come from the token system; give them night equivalents
-   (translucent metal washes + lifted text) so they don't glare on dark rows. */
-[data-theme="dark"] .lb-rank--gold { background: rgba(251, 191, 36, 0.16); color: #FBD38D; }
-[data-theme="dark"] .lb-rank--silver { background: rgba(226, 232, 240, 0.14); color: #CBD5E1; }
-[data-theme="dark"] .lb-rank--bronze { background: rgba(234, 130, 62, 0.16); color: #F4B08C; }
+/* Medal chips can't come from the token system; give them night equivalents. */
+[data-theme="dark"] .lb-rank--gold { background: rgba(251, 191, 36, 0.2); color: #FBD38D; }
+[data-theme="dark"] .lb-rank--silver { background: rgba(226, 232, 240, 0.16); color: #E2E8F0; }
+[data-theme="dark"] .lb-rank--bronze { background: rgba(234, 130, 62, 0.2); color: #F4B08C; }
+[data-theme="dark"] .leaderboard__xp-num { color: var(--text); }
 
 /* Each learner's pixel portrait — the same one the navbar shows them. */
 .leaderboard__avatar {
   flex: none;
-  border-radius: 8px;
   overflow: hidden;
 }
+
+/* Phone: both segment groups take the full width, buttons share it evenly. */
+@media (max-width: 560px) {
+  .leaderboard:not(.leaderboard--compact) .leaderboard__periods,
+  .leaderboard:not(.leaderboard--compact) .leaderboard__scopes { display: flex; width: 100%; }
+  .leaderboard:not(.leaderboard--compact) .leaderboard__scope { flex: 1 1 0; padding: 0 0.4rem; }
+  .leaderboard__row, .leaderboard__group-head { gap: 0.65rem; padding-inline: 0.5rem; }
+  .leaderboard__members { padding-left: 2.75rem; padding-right: 0.5rem; }
+}
+
+/* ══ Arène night (body.arena-night: /classement, /jeux …) ═══════════════════
+   The board sits on the canvas: no card, no glow. Rows are separated by
+   hairlines; only the viewer's own row is filled. Palette is the shared
+   night set (text #F5F8FF / #C1CFE4 / #A7BAD5, surface #12223B / #1B3152,
+   border #365171, link #9DC4FF, gold #FFB92E for rank 1 only). */
+body.arena-night .leaderboard:not(.leaderboard--compact) {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  gap: 1rem;
+}
+body.arena-night .leaderboard__title { font-size: 1.25rem; font-weight: 800; color: #F5F8FF; letter-spacing: -0.01em; }
+body.arena-night .leaderboard__title svg { display: none; }
+body.arena-night .leaderboard__scopes,
+body.arena-night .leaderboard__periods { background: #12223B; box-shadow: inset 0 0 0 1px #365171; border-radius: 999px; }
+body.arena-night .leaderboard .leaderboard__scope {
+  min-height: 40px;
+  border-radius: 999px;
+  color: #C1CFE4;
+  font-size: 0.9375rem !important;
+}
+body.arena-night .leaderboard__scope:hover { color: #F5F8FF; }
+body.arena-night .leaderboard__scope.is-active { background: #F5F8FF; color: #091426; box-shadow: none; }
+body.arena-night .leaderboard__scope:focus-visible { outline-color: #9DC4FF; }
+
+body.arena-night .leaderboard__row + .leaderboard__row::before,
+body.arena-night .leaderboard__group + .leaderboard__group::before { background: rgba(54, 81, 113, 0.7); }
+body.arena-night .leaderboard__row.is-me,
+body.arena-night .leaderboard__group.is-me {
+  background: #1B3152;
+  box-shadow: inset 0 0 0 1.5px #9DC4FF;
+}
+body.arena-night .leaderboard__name { color: #F5F8FF; }
+body.arena-night .leaderboard__sub,
+body.arena-night .leaderboard__xp-unit,
+body.arena-night .leaderboard__member-rank,
+body.arena-night .leaderboard__chevron { color: #A7BAD5; }
+body.arena-night .leaderboard__xp-num { color: #F5F8FF; }
+body.arena-night .leaderboard__you { background: #9DC4FF; color: #091426; }
+body.arena-night .lb-rank { color: #C1CFE4; }
+body.arena-night .lb-rank--gold { background: #FFB92E; color: #2A1A00; }
+body.arena-night .lb-rank--silver { background: #C9D4E5; color: #142238; }
+body.arena-night .lb-rank--bronze { background: #D99363; color: #2A1406; }
+body.arena-night .leaderboard__group-head:hover { background: rgba(255, 255, 255, 0.04); }
+body.arena-night .leaderboard__member.is-me { background: #1B3152; }
+body.arena-night .leaderboard__member .leaderboard__xp-num { color: #C1CFE4; }
+
+body.arena-night .leaderboard__self,
+body.arena-night .leaderboard__join { border-top-color: #365171; }
+body.arena-night .leaderboard__self-label { color: #C1CFE4; }
+body.arena-night .leaderboard__edit,
+body.arena-night .leaderboard__more { color: #9DC4FF; }
+body.arena-night .leaderboard__join-pitch,
+body.arena-night .leaderboard__empty p,
+body.arena-night .leaderboard__error-note { color: #C1CFE4; }
+body.arena-night .leaderboard__field { color: #C1CFE4; }
+body.arena-night .leaderboard__field-error { color: #FFCF7A; }

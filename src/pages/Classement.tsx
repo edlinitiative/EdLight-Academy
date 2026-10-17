@@ -9,19 +9,21 @@
  * The page's own job (redesign plan §6.7) is LABELLING, not ranking: it must be
  * impossible to mistake these practice-XP boards for the inter-school
  * championship, which awards real prizes and keeps its own separate scores. So
- * the two are put side by side, named, and only one of them is this page.
+ * the page says, in words, which one it is and where the other one lives.
  *
  * Nothing here computes or reformats a rank, an XP total or a delta — the board
  * itself (src/components/Leaderboard.tsx) remains the single source of truth,
  * including its loading, empty-with-example and opt-in states.
  *
  * It lives in the Arène's night (Layout + styles/arenaNight.css) and shares
- * its header (ArenaPageHead).
+ * its header (ArenaPageHead). No panels: the board sits on the canvas, like
+ * the learning side; the practice-XP vs championship distinction is plain
+ * text after the board.
  */
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, Swords, Zap } from '../components/icons';
+import { ChevronRight, Zap } from '../components/icons';
 import useStore from '../contexts/store';
 import Leaderboard from '../components/Leaderboard';
 import MySchoolCard from '../components/MySchoolCard';
@@ -52,74 +54,58 @@ export default function Classement() {
       <div className="container classement__container">
         <ArenaPageHead
           title={t('Classement', 'Klasman')}
+          sub={t(
+            'Les XP gagnés en jouant, classés chaque semaine — pour toi et pour ton école.',
+            'XP ou ranmase lè w ap jwe, klase chak semèn — pou ou ak pou lekòl ou.',
+          )}
           actions={<Link to="/jeux" className="an-go"><Zap size={18} aria-hidden="true" /> {t('Gagner des XP', 'Ranmase XP')}</Link>}
         />
 
-        {/* Two columns from 1000px: the explanation on the left, the board on
-            the right — without stretching ranking rows across 1400px. */}
+        {/* Two columns from 1000px: your standing + the school race on the
+            left, the board on the right — without stretching ranking rows
+            across 1400px. On a phone the left column simply comes first. */}
         <div className="classement__layout">
           <div className="classement__side">
             <MySchoolCard where="classement" />
             <div id="ecoles" className="classement__race">
               <SchoolRanking showAllLink={false} />
             </div>
-
-            {/* §6.7 — "Monthly tournament scores must never be visually
-                confused with practice XP." Two named lanes, each with its own
-                icon and colour, so the difference is carried by text first and
-                colour second. */}
-            <section className="classement__kinds" aria-labelledby="classement-kinds-title">
-              <h2 id="classement-kinds-title" className="classement__sr-only">
-                {t('Deux classements différents', 'De klasman diferan')}
-              </h2>
-
-              <div className="classement__kind classement__kind--xp an-panel">
-                <span className="classement__kind-icon" aria-hidden="true">
-                  <Zap size={20} />
-                </span>
-                <div className="classement__kind-body">
-                  <p className="classement__kind-label">
-                    {t('XP de pratique', 'XP pratik')}
-                    <span className="classement__kind-here">{t('cette page', 'paj sa a')}</span>
-                  </p>
-                  <p className="classement__kind-text">
-                    {t(
-                      'Les XP viennent des jeux. Ils font monter ton niveau et ton classement — ils ne donnent droit à aucun prix.',
-                      'XP yo soti nan jwèt yo. Yo fè nivo ou ak klasman ou monte — yo pa bay dwa a okenn pri.',
-                    )}
-                  </p>
-                </div>
-              </div>
-
-              <div className="classement__kind classement__kind--cup an-panel an-panel--edge">
-                <span className="classement__kind-icon" aria-hidden="true">
-                  <Swords size={20} />
-                </span>
-                <div className="classement__kind-body">
-                  <p className="classement__kind-label">
-                    {t('Championnat interscolaire', 'Chanpyona ant lekòl yo')}
-                  </p>
-                  <p className="classement__kind-text">
-                    {t(
-                      'Ses scores sont comptés à part, une soirée par mois, en direct — et donnent de vrais prix.',
-                      'Pwen li yo konte apa, yon swa chak mwa, an dirèk — epi yo bay vre pri.',
-                    )}
-                  </p>
-                  <Link to="/arena/championnat" className="classement__kind-link">
-                    {t('Voir le championnat', 'Gade chanpyona a')}
-                    <ChevronRight size={15} aria-hidden="true" />
-                  </Link>
-                </div>
-              </div>
-            </section>
           </div>
 
-          <div className="classement__main an-panel">
+          <div className="classement__main">
+            <Leaderboard variant="full" periodToggle max={50} />
+            {/* The weekly turnover, said once, quietly, under the board. */}
             <p className="classement__reset">
               {t(`La semaine se termine dans ${left} — le classement de la semaine repart à zéro lundi.`,
                 `Semèn nan fini nan ${left} — klasman semèn nan rekòmanse a zewo lendi.`)}
             </p>
-            <Leaderboard variant="full" periodToggle max={50} />
+
+            {/* §6.7 — "Monthly tournament scores must never be visually
+                confused with practice XP." Said in words, quietly, after the
+                board: this page is practice XP; the championship is separate. */}
+            <section className="classement__kinds" aria-labelledby="classement-kinds-title">
+              <h2 id="classement-kinds-title" className="classement__sr-only">
+                {t('Deux classements différents', 'De klasman diferan')}
+              </h2>
+              <p className="classement__kind">
+                <strong>{t('Ce classement compte les XP de pratique.', 'Klasman sa a konte XP pratik.')}</strong>{' '}
+                {t(
+                  'Ils viennent des jeux et font monter ton niveau — ils ne donnent droit à aucun prix.',
+                  'Yo soti nan jwèt yo epi yo fè nivo ou monte — yo pa bay dwa a okenn pri.',
+                )}
+              </p>
+              <p className="classement__kind">
+                <strong>{t('Le championnat interscolaire est à part.', 'Chanpyona ant lekòl yo apa.')}</strong>{' '}
+                {t(
+                  'Ses scores se jouent en direct, une soirée par mois, et donnent de vrais prix.',
+                  'Pwen li yo jwe an dirèk, yon swa chak mwa, epi yo bay vre pri.',
+                )}
+              </p>
+              <Link to="/arena/championnat" className="classement__kind-link">
+                {t('Voir le championnat', 'Gade chanpyona a')}
+                <ChevronRight size={16} aria-hidden="true" />
+              </Link>
+            </section>
           </div>
         </div>
       </div>
