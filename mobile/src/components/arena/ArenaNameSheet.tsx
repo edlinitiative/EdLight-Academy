@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Text, TextInput, TouchableOpacity, View,
+  KeyboardAvoidingView, Modal, Platform, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
-import PressableScale from '../ui/PressableScale';
 import { defaultAlias, isAcceptableAliasInput } from '../../../../shared/alias';
-import { useColors, typeScale, radius } from '../../theme/theme';
+import { arenaColors as C, arenaType } from '../../theme/arenaTheme';
+import { fonts } from '../../theme/theme';
 import { tapMedium } from '../../utils/haptics';
+import { ArenaButton } from './ArenaKit';
 
 /**
  * Confirm the student's name before a tournament.
@@ -22,6 +23,8 @@ import { tapMedium } from '../../utils/haptics';
  *    this audience is under 18.
  *
  * The preview is live, so nobody discovers what the stream showed afterwards.
+ *
+ * Night palette (Arène): opaque tonal steps, one flat coral primary.
  */
 export default function ArenaNameSheet({
   visible,
@@ -39,7 +42,6 @@ export default function ArenaNameSheet({
   onSave: (fullName: string) => void;
   onClose: () => void;
 }) {
-  const colors = useColors();
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const [value, setValue] = useState('');
 
@@ -56,7 +58,7 @@ export default function ArenaNameSheet({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <TouchableOpacity
-          style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.55)' }}
+          style={{ flex: 1, backgroundColor: 'rgba(2, 6, 18, 0.72)' }}
           activeOpacity={1}
           onPress={onClose}
           accessibilityLabel={t('Fermer', 'Fèmen')}
@@ -64,18 +66,18 @@ export default function ArenaNameSheet({
         <View
           accessibilityViewIsModal
           style={{
-            backgroundColor: colors.bg,
-            borderTopLeftRadius: radius.hero,
-            borderTopRightRadius: radius.hero,
-            padding: 18,
-            paddingBottom: 30,
-            gap: 12,
+            backgroundColor: C.surface,
+            borderTopLeftRadius: 28,
+            borderTopRightRadius: 28,
+            padding: 20,
+            paddingBottom: 34,
+            gap: 14,
           }}
         >
-          <Text style={[typeScale.title, { color: colors.ink }]}>
+          <Text accessibilityRole="header" style={[arenaType.title, { color: C.ink }]}>
             {t('Ton nom complet', 'Non konplè ou')}
           </Text>
-          <Text style={[typeScale.caption, { color: colors.muted }]}>
+          <Text style={[arenaType.body, { color: C.muted }]}>
             {t(
               'Si tu gagnes, tu devras prouver ton identité — écris ton nom tel qu’il est sur tes papiers.',
               'Si w genyen, w ap gen pou pwouve ki moun ou ye — ekri non ou jan li ye sou papye ou yo.',
@@ -89,48 +91,42 @@ export default function ArenaNameSheet({
             autoCapitalize="words"
             autoCorrect={false}
             placeholder={t('Prénom et nom', 'Prenon ak siyati')}
-            placeholderTextColor={colors.faint}
+            placeholderTextColor={C.faint}
             accessibilityLabel={t('Nom complet', 'Non konplè')}
+            keyboardAppearance="dark"
+            selectionColor={C.coral}
             style={{
-              borderWidth: 1, borderColor: colors.border, borderRadius: radius.card,
-              padding: 14, color: colors.ink, backgroundColor: colors.surface,
-              fontSize: 16,
+              minHeight: 52, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14,
+              color: C.ink, backgroundColor: C.surfaceAlt,
+              fontFamily: fonts.regular, fontSize: 16,
             }}
           />
 
           {/* What the stream will actually show. Live, and never the full name. */}
-          <View style={{
-            flexDirection: 'row', alignItems: 'center', gap: 8,
-            padding: 12, borderRadius: radius.card,
-            backgroundColor: colors.azureSoft, borderWidth: 1, borderColor: colors.azureBorder,
-          }}>
-            <Text style={[typeScale.caption, { color: colors.muted, flex: 1 }]}>
+          <View
+            accessible
+            accessibilityLabel={`${t('Le public verra', 'Piblik la ap wè')} ${audienceName ?? ''}`}
+            style={{
+              flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 48,
+              paddingHorizontal: 14, paddingVertical: 12, borderRadius: 16,
+              backgroundColor: C.surfaceRaised,
+            }}
+          >
+            <Text style={[arenaType.status, { color: C.muted, flex: 1 }]}>
               {t('Le public verra', 'Piblik la ap wè')}
             </Text>
-            <Text style={[typeScale.label, { color: audienceName ? colors.azure : colors.faint }]}>
-              {audienceName ?? t('—', '—')}
+            <Text style={[arenaType.name, { color: audienceName ? C.ink : C.faint }]}>
+              {audienceName ?? '—'}
             </Text>
           </View>
 
-          <PressableScale
+          <ArenaButton
+            label={t('Enregistrer', 'Anrejistre')}
             onPress={() => { if (ok && !saving) { tapMedium(); onSave(value.trim()); } }}
-            disabled={!ok || saving}
-            pressedScale={0.98}
-            accessibilityRole="button"
-            accessibilityState={{ disabled: !ok || saving }}
-            style={{
-              padding: 15, borderRadius: radius.card, alignItems: 'center',
-              backgroundColor: ok && !saving ? colors.azure : colors.border,
-            }}
-          >
-            {saving ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={[typeScale.label, { color: ok ? '#fff' : colors.faint }]}>
-                {t('Enregistrer', 'Anrejistre')}
-              </Text>
-            )}
-          </PressableScale>
+            disabled={!ok}
+            busy={saving}
+            style={{ minHeight: 52 }}
+          />
         </View>
       </KeyboardAvoidingView>
     </Modal>

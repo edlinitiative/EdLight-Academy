@@ -26,7 +26,8 @@ export type TabParamList = {
   Dashboard: undefined;
   Courses: undefined;
   Exams: undefined;
-  Trivia: undefined;
+  /** intent: opened from the ArenaHub route as practice or a friend challenge. */
+  Trivia: { intent?: 'practice' | 'challenge'; nonce?: number } | undefined;
   Profile: undefined;
 };
 

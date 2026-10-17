@@ -3,7 +3,7 @@ import { Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Check } from 'lucide-react-native';
 import PressableScale from '../ui/PressableScale';
 import { GRADES } from '../../../../shared/trackConfig';
-import { useColors, typeScale, radius } from '../../theme/theme';
+import { arenaColors as C, arenaType } from '../../theme/arenaTheme';
 import { select } from '../../utils/haptics';
 
 /**
@@ -19,6 +19,8 @@ import { select } from '../../utils/haptics';
  * tournament, and the honest way to say that is to let them see their real
  * answer selected with the consequence written next to it — not to omit the
  * option and leave them wondering why their class is missing.
+ *
+ * Night palette (Arène): opaque tonal steps; the picked row is a wash + check.
  */
 export default function ArenaGradeSheet({
   visible,
@@ -33,13 +35,12 @@ export default function ArenaGradeSheet({
   onPick: (code: string) => void;
   onClose: () => void;
 }) {
-  const colors = useColors();
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <TouchableOpacity
-        style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.55)' }}
+        style={{ flex: 1, backgroundColor: 'rgba(2, 6, 18, 0.72)' }}
         activeOpacity={1}
         onPress={onClose}
         accessibilityLabel={t('Fermer', 'Fèmen')}
@@ -47,19 +48,19 @@ export default function ArenaGradeSheet({
       <View
         accessibilityViewIsModal
         style={{
-          backgroundColor: colors.bg,
-          borderTopLeftRadius: radius.hero,
-          borderTopRightRadius: radius.hero,
-          padding: 18,
-          paddingBottom: 30,
-          gap: 12,
+          backgroundColor: C.surface,
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
+          padding: 20,
+          paddingBottom: 34,
+          gap: 14,
           maxHeight: '75%',
         }}
       >
-        <Text style={[typeScale.title, { color: colors.ink }]}>
+        <Text accessibilityRole="header" style={[arenaType.title, { color: C.ink }]}>
           {t('Ta classe', 'Klas ou')}
         </Text>
-        <Text style={[typeScale.caption, { color: colors.muted }]}>
+        <Text style={[arenaType.body, { color: C.muted }]}>
           {t(
             'Le championnat est réservé au primaire et au secondaire.',
             'Chanpyona a se pou primè ak segondè.',
@@ -77,23 +78,24 @@ export default function ArenaGradeSheet({
                 pressedScale={0.98}
                 accessibilityRole="button"
                 accessibilityState={{ selected: picked }}
+                accessibilityLabel={`${isCreole ? g.labelHt : g.label}${ineligible ? t(', pas éligible au championnat', ', pa kalifye pou chanpyona a') : ''}`}
                 style={{
-                  flexDirection: 'row', alignItems: 'center', gap: 10,
-                  padding: 14, borderRadius: radius.card,
-                  backgroundColor: picked ? colors.azureSoft : colors.surface,
+                  flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 52,
+                  paddingHorizontal: 16, paddingVertical: 12, borderRadius: 16,
+                  backgroundColor: picked ? C.signalSoft : C.surfaceRaised,
                 }}
               >
                 <View style={{ flex: 1, gap: 2 }}>
-                  <Text style={[typeScale.label, { color: colors.ink }]}>
+                  <Text style={[arenaType.name, { color: C.ink }]}>
                     {isCreole ? g.labelHt : g.label}
                   </Text>
                   {ineligible ? (
-                    <Text style={[typeScale.micro, { color: colors.muted }]}>
+                    <Text style={[arenaType.status, { color: C.muted }]}>
                       {t('Pas éligible au championnat', 'Pa kalifye pou chanpyona a')}
                     </Text>
                   ) : null}
                 </View>
-                {picked ? <Check color={colors.azure} size={16} /> : null}
+                {picked ? <Check color={C.ink} size={18} /> : null}
               </PressableScale>
             );
           })}

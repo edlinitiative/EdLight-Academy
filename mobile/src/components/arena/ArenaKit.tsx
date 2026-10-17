@@ -22,6 +22,7 @@ import ArenaWorld from './art/environment/ArenaWorld';
 import type { Occasion } from './art/environment/ArenaWorld';
 import type { EventStatus, LivePhase } from '../../utils/arenaViewState';
 import useNightStatusBar from './useNightStatusBar';
+import { statusLabelText, type StatusLabel } from '../../utils/arenaStatus';
 
 type T = (fr: string, ht: string) => string;
 
@@ -123,27 +124,25 @@ export function ArenaButton({
 
 // ── Status labels ───────────────────────────────────────────────────────────
 
-export type StatusLabel = 'live' | 'delayed' | 'reconnecting' | 'provisional' | 'final' | 'stale' | 'soon' | 'local';
+// The labels and the state → badge mapping are pure (utils/arenaStatus.ts);
+// re-exported here so screens keep importing the kit.
+export { statusLabelText, stateStatus, watchStatus } from '../../utils/arenaStatus';
+export type { StatusLabel } from '../../utils/arenaStatus';
 
-export function statusLabelText(kind: StatusLabel, t: T): string {
+/** The dot colour for a badge. Gold only for the official result. */
+export function statusTone(kind: StatusLabel): string {
   switch (kind) {
-    case 'live': return t('En direct', 'An dirèk');
-    case 'delayed': return t('En différé', 'An reta');
-    case 'reconnecting': return t('Reconnexion…', 'N ap rekonekte…');
-    case 'provisional': return t('Provisoire', 'Pwovizwa');
-    case 'final': return t('Officiel', 'Ofisyèl');
-    case 'stale': return t('Dernières données connues', 'Dènye done nou genyen');
-    case 'soon': return t('Bientôt', 'Talè');
-    case 'local': return t('Pour toi seulement — ne compte pas', 'Pou ou sèlman — sa pa konte');
-    default: return '';
+    case 'live': return C.live;
+    case 'final': return C.gold;
+    case 'reconnecting': case 'stale': case 'delayed': return C.warn;
+    case 'provisional': case 'grading': case 'doors': return C.signal;
+    case 'registration': return C.success;
+    default: return C.muted;
   }
 }
 
 export function StatusPill({ kind, t, style }: { kind: StatusLabel; t: T; style?: StyleProp<ViewStyle> }) {
-  const tone = kind === 'live' ? C.live
-    : kind === 'final' ? C.gold
-      : kind === 'reconnecting' || kind === 'stale' || kind === 'delayed' ? C.warn
-        : kind === 'provisional' ? C.signal : C.muted;
+  const tone = statusTone(kind);
   const text = statusLabelText(kind, t);
   return (
     <View
