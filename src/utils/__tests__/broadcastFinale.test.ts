@@ -17,6 +17,7 @@ import {
   PODIUM_SLOTS,
   PODIUM_STEP_MS,
   POSTGAME_CYCLE_MS,
+  POSTGAME_PODIUM_MS,
   POSTGAME_STATS_MS,
   REVEAL_STEP_MS,
   TEASER_HOLD_MS,
@@ -469,30 +470,37 @@ describe('climberFrom', () => {
 // ── Sequences 19 → 20: the post-game clock ─────────────────────────────────
 
 describe('postGameBeat', () => {
-  it('holds the superlatives for thirty seconds', () => {
-    expect(postGameBeat(0).phase).toBe('stats');
-    expect(postGameBeat(29_999).phase).toBe('stats');
-    expect(postGameBeat(POSTGAME_STATS_MS).phase).toBe('teaser');
+  const P = POSTGAME_PODIUM_MS;
+  it('opens on the podium', () => {
+    expect(postGameBeat(0).phase).toBe('podium');
+    expect(postGameBeat(P - 1).phase).toBe('podium');
   });
 
-  it('runs the teaser for eight, then starts over', () => {
-    expect(postGameBeat(37_999).phase).toBe('teaser');
-    expect(postGameBeat(POSTGAME_CYCLE_MS).phase).toBe('stats');
+  it('holds the superlatives for thirty seconds after the podium', () => {
+    expect(postGameBeat(P).phase).toBe('stats');
+    expect(postGameBeat(P).phaseElapsed).toBe(0);
+    expect(postGameBeat(P + 29_999).phase).toBe('stats');
+    expect(postGameBeat(P + POSTGAME_STATS_MS).phase).toBe('teaser');
+  });
+
+  it('runs the teaser for eight, then starts over on the podium', () => {
+    expect(postGameBeat(P + 37_999).phase).toBe('teaser');
+    expect(postGameBeat(POSTGAME_CYCLE_MS).phase).toBe('podium');
     expect(postGameBeat(POSTGAME_CYCLE_MS).phaseElapsed).toBe(0);
   });
 
   it('loops rather than going blank, however long the screen stays up', () => {
     // A stage in a school hall an hour later must still be showing the result.
-    expect(postGameBeat(POSTGAME_CYCLE_MS * 40 + 5_000).phase).toBe('stats');
-    expect(postGameBeat(POSTGAME_CYCLE_MS * 40 + 33_000).phase).toBe('teaser');
+    expect(postGameBeat(POSTGAME_CYCLE_MS * 40 + 5_000).phase).toBe('podium');
+    expect(postGameBeat(POSTGAME_CYCLE_MS * 40 + P + 5_000).phase).toBe('stats');
   });
 
   it('reports how far into the current phase it is', () => {
-    expect(postGameBeat(POSTGAME_STATS_MS + 4_000).phaseElapsed).toBe(4_000);
+    expect(postGameBeat(P + POSTGAME_STATS_MS + 4_000).phaseElapsed).toBe(4_000);
   });
 
   it('treats a junk clock as the start', () => {
-    expect(postGameBeat(-1).phase).toBe('stats');
+    expect(postGameBeat(-1).phase).toBe('podium');
     expect(postGameBeat(Number.NaN).phaseElapsed).toBe(0);
   });
 });
