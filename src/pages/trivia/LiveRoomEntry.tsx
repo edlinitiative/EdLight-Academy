@@ -49,7 +49,7 @@ export default function LiveRoomEntry({ isCreole }: { isCreole: boolean }) {
               maxLength={6}
               value={pin}
               onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              placeholder="829415"
+              placeholder="••••••"
               aria-label={t('Code du salon', 'Kòd salon an')}
             />
           </label>

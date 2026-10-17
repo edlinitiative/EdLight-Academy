@@ -44,7 +44,11 @@
   .fp-name { font-size: 1.15rem; }
   .fp-block { padding-top: 8px; }
   .fp-rank { font-size: 2rem; }
-  .fp-step.is-first .fp-block { height: 104px; }
-  .fp-step.is-second .fp-block { height: 76px; }
-  .fp-step.is-third .fp-block { height: 58px; }
+  .fp-step.is-first .fp-block { height: 112px; }
+  .fp-step.is-second .fp-block { height: 90px; }
+  .fp-step.is-third .fp-block { height: 74px; }
 }
+/* A step is never shorter than its own number and label (the 3e place
+   block was cropped at 1280×720). */
+.fp-block { box-sizing: border-box; padding-bottom: 10px; }
+.fp-step.is-third .fp-block, .fp-step.is-second .fp-block, .fp-step.is-first .fp-block { min-height: 74px; }

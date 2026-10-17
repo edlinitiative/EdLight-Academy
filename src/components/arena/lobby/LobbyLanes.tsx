@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Swords, Users, Trophy, ChevronRight, Clock, Gift, CalendarCheck } from '../../icons';
-import SchoolCrest from '../../../arena-art/crest/SchoolCrest';
+import SchoolCrest, { schoolColors } from '../../../arena-art/crest/SchoolCrest';
+import Avatar from '../../../arena-art/avatars/Avatar';
 import { DUEL_ROUND } from '../../../utils/duels';
 import { TEAM_SIZE } from '../../../../shared/leaderboardAgg';
 import type { OpenArena } from '../../../hooks/useOpenArena';
@@ -72,6 +73,7 @@ export default function LobbyLanes({
                   {shown.map((e) => (
                     <li key={e.id} className={e.id === uid ? 'is-me' : ''}>
                       <span className="lb-ladder__n">{ladder.indexOf(e) + 1}</span>
+                      <span className="lb-face lb-face--sm" aria-hidden="true"><Avatar seed={e.id} size={28} still colors={schoolColors(school.name)} /></span>
                       <span className="lb-ladder__name">{e.id === uid ? t('Toi', 'Ou') : e.displayName}</span>
                       <span className="lb-ladder__xp">{nf(e.xp)} XP</span>
                     </li>

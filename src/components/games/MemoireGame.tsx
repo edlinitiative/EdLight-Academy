@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Timer, MousePointerClick } from '../icons';
+import { Timer, MousePointerClick, Check } from '../icons';
 import { CAPITAL_PAIRS } from '../../data/triviaData';
 import { buildMemoryDeck } from '../../utils/gameGen';
 import GameOverCard from './GameOverCard';
@@ -80,8 +80,10 @@ export default function MemoireGame({ isCreole, onExit, onRecord, highScore = nu
         maxScore={maxScore}
         stats={[
           { label: isCreole ? 'Mouvman' : 'Coups', value: moves },
-          { label: isCreole ? 'Tan' : 'Temps', value: `${seconds}s` },
+          { label: isCreole ? 'Tan' : 'Temps', value: `${seconds} s` },
         ]}
+        unit={isCreole ? 'pwen' : 'points'}
+        gameName={isCreole ? 'Memwa' : 'Mémoire'}
         reward={reward}
         onReplay={replay}
         onExit={onExit}
@@ -110,6 +112,7 @@ export default function MemoireGame({ isCreole, onExit, onRecord, highScore = nu
               aria-label={isUp ? card.label : (isCreole ? 'Kat kache' : 'Carte cachée')}
             >
               <span className="mem-card__face">{isUp ? card.label : '?'}</span>
+              {matched.has(card.id) && <span className="mem-card__done"><Check size={14} aria-hidden="true" />{isCreole ? 'Pè' : 'Paire'}</span>}
             </button>
           );
         })}

@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import type { SceneProps } from '../sceneContract';
 import { ambientFact, rankMovement, schoolHue } from '../rhythm';
 import type { SchoolStanding } from '../../../shared/arena/events';
+import SchoolCrest from '../../arena-art/crest/SchoolCrest';
 import './roundRhythm.css';
 
 /**
@@ -79,7 +80,7 @@ export default function Board({ data, scene, reduceMotion, t }: SceneProps) {
   }
 
   return (
-    <div className="rb-board">
+    <div className="rb-board" style={{ ['--rb-count' as string]: String(lanes.length) }}>
       <ol className="rb-board__lanes" aria-label={t('Classement des écoles', 'Klasman lekòl yo')}>
         {lanes.map((school, i) => {
           const rows = moves?.get(school.key) ?? 0;
@@ -100,6 +101,9 @@ export default function Board({ data, scene, reduceMotion, t }: SceneProps) {
             >
               <span className="rb-lane__edge" aria-hidden="true" />
               <span className="rb-lane__rank">{school.rank}</span>
+              {/* The school's crest — the same one the champion reveal and
+                  the lobby show, seeded by the full name. */}
+              <span className="rb-lane__crest"><SchoolCrest name={school.label} size={40} /></span>
               <span className="rb-lane__id">
                 <span className="rb-lane__short">{school.shortName || school.label}</span>
                 <span className="rb-lane__full">{school.label}</span>

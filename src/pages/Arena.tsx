@@ -9,7 +9,8 @@ import ArenaPageHead from '../components/arena/ArenaPageHead';
 import { ARENA_WEB_PLAY } from '../../shared/arena/webPlay';
 import MySchoolCard from '../components/MySchoolCard';
 import SchoolRanking from '../components/SchoolRanking';
-import UserAvatar from '../components/UserAvatar';
+import Avatar from '../arena-art/avatars/Avatar';
+import SchoolCrest, { schoolColors } from '../arena-art/crest/SchoolCrest';
 import SchoolBuilding from '../components/arena/SchoolBuilding';
 import { GRADES } from '../../shared/trackConfig';
 import { useTrivia } from '../hooks/useTrivia';
@@ -327,7 +328,9 @@ export default function Arena() {
                      on the real broadcast, at /arena/demo. Practice games
                      stay one step away. */
                   <>
-                    <Link to="/arena/demo" className="arena-national__cta">
+                    {/* Secondary: the title row already carries the page's one
+                        coral action. */}
+                    <Link to="/arena/demo" className="arena-national__ghost an-ghost">
                       {t('Essayer la finale en démo', 'Eseye final la an demo')} <ChevronRight size={18} aria-hidden="true" />
                     </Link>
                     <Link to="/jeux" className="arena-national__ghost an-ghost">
@@ -427,7 +430,7 @@ export default function Arena() {
                             )}
                             <li className={`arena-board__row${i < TEAM_SIZE ? ' is-five' : ''}${m.uid && m.uid === user?.uid ? ' is-me' : ''}`}>
                               <span className="arena-board__pos">{i + 1}</span>
-                              <UserAvatar seed={m.uid} name={m.displayName} size={32} className="arena-board__avatar" />
+                              <span className="arena-board__avatar" aria-hidden="true"><Avatar seed={m.uid || m.displayName || 'eleve'} size={36} still colors={mySchool ? schoolColors(mySchool) : undefined} /></span>
                               <span className="arena-board__name">
                                 {m.displayName}
                                 {m.uid && m.uid === user?.uid && <em>{t('toi', 'ou')}</em>}
@@ -491,12 +494,17 @@ export default function Arena() {
                     ))}
                   </ol>
                   <ol className="arena-teams">
-                    {standings.slice(0, 12).map((s) => (
+                    {standings.slice(0, 12).map((s, i) => (
                       <li
                         key={s.key}
                         className={`arena-teams__row${myTeam?.key === s.key ? ' is-me' : ''}${s.qualified ? '' : ' is-short'}`}
                       >
-                        <span className="arena-board__pos">{s.qualified ? s.rank : '—'}</span>
+                        {/* A school short of five still has a place in the race (the same
+                            rule as SchoolRanking beside it); it is dimmed, and its
+                            line says it is not classed yet. A column of dashes
+                            read as a broken board. */}
+                        <span className="arena-board__pos">{s.qualified ? s.rank : i + 1}</span>
+                        <span className="arena-teams__crest"><SchoolCrest name={s.label} size={32} /></span>
                         <span className="arena-teams__name">
                           {s.label}
                           <small>

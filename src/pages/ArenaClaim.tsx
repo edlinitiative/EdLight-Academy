@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Trophy, Upload, CheckCircle2, Clock, FileText, AlertTriangle } from '../components/icons';
 import useStore from '../contexts/store';
+import { AuthModal } from '../components/Auth';
+import './ArenaClaim.css';
 import {
   CONSENT_ACCEPT,
   CONSENT_MAX_BYTES,
@@ -58,6 +60,7 @@ export default function ArenaClaim() {
 
   const [claim, setClaim] = useState<MyClaim | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
   const [contact, setContact] = useState('');
   const [isMinor, setIsMinor] = useState<boolean | null>(null);
   const [guardianName, setGuardianName] = useState('');
@@ -185,35 +188,60 @@ export default function ArenaClaim() {
   // ── Gates ─────────────────────────────────────────────────────────────────
 
   if (!tid) {
-    return <Shell><p>{t('Lien incomplet.', 'Lyen an pa konplè.')}</p></Shell>;
+    return (
+      <Shell t={t}>
+        <h1 className="claim__title">{t('Lien incomplet', 'Lyen an pa konplè')}</h1>
+        <p className="claim__lede">
+          {t(
+            'Ce lien de réclamation ne précise pas le tournoi. Ouvrez le lien complet reçu par email, ou écrivez-nous.',
+            'Lyen reklamasyon sa a pa di ki tounwa. Louvri lyen konplè ou resevwa nan imel la, oswa ekri nou.',
+          )}
+        </p>
+        <div className="claim__actions">
+          <Link className="claim__btn claim__btn--primary" to="/contact">{t('Nous écrire', 'Ekri nou')}</Link>
+          <Link className="claim__btn" to="/arena">{t('Aller à l’Arène', 'Ale nan Arèn nan')}</Link>
+        </div>
+      </Shell>
+    );
   }
   if (!user) {
+    // This page lives outside Layout (it is linked from an email), so it
+    // mounts the sign-in sheet itself. It used to link to /login, which is
+    // not a route — the winner landed on "Page introuvable".
     return (
-      <Shell>
-        <h1 style={{ fontSize: 22, margin: '0 0 8px' }}>{t('Réclamer votre prix', 'Reklame pri ou')}</h1>
-        <p style={{ color: '#5B6572' }}>
+      <Shell t={t}>
+        <h1 className="claim__title">{t('Réclamer votre prix', 'Reklame pri ou')}</h1>
+        <p className="claim__lede">
           {t(
             'Connectez-vous avec le compte qui a joué le tournoi. C’est celui-là qui a gagné, pas une adresse email.',
             'Konekte ak kont ki te jwe tounwa a. Se li ki genyen, pa yon adrès imel.',
           )}
         </p>
-        <Link className="btn btn--primary" to="/login">{t('Se connecter', 'Konekte')}</Link>
+        <div className="claim__actions">
+          <button type="button" className="claim__btn claim__btn--primary" onClick={() => setSigningIn(true)}>
+            {t('Se connecter', 'Konekte')}
+          </button>
+        </div>
+        {signingIn && <AuthModal onClose={() => setSigningIn(false)} />}
       </Shell>
     );
   }
   if (!loaded) {
-    return <Shell><p>{t('Chargement…', 'Ap chaje…')}</p></Shell>;
+    return <Shell t={t}><p className="claim__lede" role="status">{t('Chargement…', 'Ap chaje…')}</p></Shell>;
   }
   if (!claim) {
     return (
-      <Shell>
-        <h1 style={{ fontSize: 22, margin: '0 0 8px' }}>{t('Aucun prix à réclamer', 'Pa gen pri pou reklame')}</h1>
-        <p style={{ color: '#5B6572' }}>
+      <Shell t={t}>
+        <h1 className="claim__title">{t('Aucun prix à réclamer', 'Pa gen pri pou reklame')}</h1>
+        <p className="claim__lede">
           {t(
             'Ce compte n’a pas de prix en attente pour ce tournoi. Si vous pensez que c’est une erreur, écrivez-nous.',
             'Kont sa a pa gen okenn pri k ap tann pou tounwa sa a. Si ou panse se yon erè, ekri nou.',
           )}
         </p>
+        <div className="claim__actions">
+          <Link className="claim__btn claim__btn--primary" to="/contact">{t('Nous écrire', 'Ekri nou')}</Link>
+        </div>
       </Shell>
     );
   }
@@ -221,7 +249,7 @@ export default function ArenaClaim() {
   // ── The page ──────────────────────────────────────────────────────────────
 
   return (
-    <Shell>
+    <Shell t={t}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
         <Trophy size={20} aria-hidden="true" />
         <h1 style={{ fontSize: 22, margin: 0 }}>
@@ -229,7 +257,7 @@ export default function ArenaClaim() {
         </h1>
       </div>
       {claim.rolledDownFrom ? (
-        <p style={{ fontSize: 13, color: '#5B6572', margin: '0 0 16px' }}>
+        <p style={{ fontSize: 14, color: '#5B6572', margin: '0 0 16px' }}>
           {t(
             'Ce prix vous revient parce qu’il n’a pas été réclamé à temps par le gagnant précédent.',
             'Pri sa a rive jwenn ou paske moun ki te genyen l anvan an pa t reklame l atan.',
@@ -297,7 +325,7 @@ export default function ArenaClaim() {
             </Labelled>
 
             <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
-              <legend style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>
+              <legend style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
                 {t('Avez-vous 18 ans ou plus ?', 'Èske ou gen 18 an oswa plis ?')}
               </legend>
               <div style={{ display: 'flex', gap: 10 }}>
@@ -307,7 +335,7 @@ export default function ArenaClaim() {
                 ].map(([minor, label]) => (
                   <label key={String(minor)} style={{
                     display: 'flex', gap: 8, alignItems: 'center', padding: '10px 14px',
-                    borderRadius: 10, fontSize: 13, cursor: expired ? 'default' : 'pointer',
+                    borderRadius: 10, fontSize: 14, cursor: expired ? 'default' : 'pointer',
                     border: `1px solid ${isMinor === minor ? '#1B6FE0' : '#d9dde3'}`,
                   }}>
                     <input
@@ -322,7 +350,7 @@ export default function ArenaClaim() {
 
             {isMinor === true ? (
               <div style={{ display: 'grid', gap: 12, padding: 16, borderRadius: 12, background: '#F7F8FA' }}>
-                <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6, color: '#5B6572' }}>
+                <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: '#5B6572' }}>
                   {t(
                     'Le prix est remis à un parent ou tuteur. Donnez son nom et son contact : il recevra le formulaire d’autorisation par email.',
                     'Se yon paran oswa yon responsab ki resevwa pri a. Bay non l ak kontak li : l ap resevwa fòm otorizasyon an nan imel.',
@@ -402,7 +430,7 @@ export default function ArenaClaim() {
               </div>
 
               {!submitted ? (
-                <p style={{ margin: 0, fontSize: 13, color: '#5B6572' }}>
+                <p style={{ margin: 0, fontSize: 14, color: '#5B6572' }}>
                   {t(
                     'Envoyez d’abord vos coordonnées ci-dessus.',
                     'Voye kontak ou anwo a anvan.',
@@ -411,12 +439,12 @@ export default function ArenaClaim() {
               ) : null}
 
               {claim.consent ? (
-                <p style={{ margin: 0, fontSize: 13, color: '#067647', display: 'flex', gap: 8, alignItems: 'center' }}>
+                <p style={{ margin: 0, fontSize: 14, color: '#067647', display: 'flex', gap: 8, alignItems: 'center' }}>
                   <CheckCircle2 size={15} aria-hidden="true" />
                   {t('Formulaire reçu.', 'Nou resevwa fòm nan.')}
                 </p>
               ) : needsConsent ? (
-                <p style={{ margin: 0, fontSize: 13, color: '#B54708', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                <p style={{ margin: 0, fontSize: 14, color: '#B54708', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                   <AlertTriangle size={15} aria-hidden="true" style={{ flex: 'none', marginTop: 2 }} />
                   {t(
                     'Tant que ce formulaire n’est pas déposé, la réclamation n’est pas complète.',
@@ -425,7 +453,7 @@ export default function ArenaClaim() {
                 </p>
               ) : null}
 
-              <p style={{ margin: 0, fontSize: 12, color: '#5B6572' }}>
+              <p style={{ margin: 0, fontSize: 14, color: '#5B6572' }}>
                 {t(
                   `PDF ou photo, ${Math.round(CONSENT_MAX_BYTES / 1024 / 1024)} Mo maximum.`,
                   `PDF oswa foto, ${Math.round(CONSENT_MAX_BYTES / 1024 / 1024)} Mo maksimòm.`,
@@ -438,7 +466,7 @@ export default function ArenaClaim() {
 
       <p style={{
         marginTop: 32, padding: '12px 14px', borderRadius: 10, background: '#FFF6E8',
-        fontSize: 13, lineHeight: 1.6,
+        fontSize: 14, lineHeight: 1.6,
       }}>
         {t(
           'Nous ne vous demanderons jamais une photo de pièce d’identité, un numéro de document, des informations bancaires, ni un paiement. Si un message vous demande cela en notre nom, il ne vient pas de nous.',
@@ -456,17 +484,24 @@ const inputStyle: React.CSSProperties = {
   border: '1px solid #d9dde3', fontSize: 14, background: '#fff',
 };
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({ children, t }: { children: React.ReactNode; t: (fr: string, ht: string) => string }) {
   return (
-    <div className="page" style={{ maxWidth: 620, margin: '0 auto', padding: '32px 20px 64px' }}>
-      {children}
+    <div className="claim">
+      <header className="claim__brand">
+        <Link to="/" className="claim__home">
+          <img src="/assets/logo.png" alt="" width={28} height={28} />
+          <span>EdLight Academy</span>
+        </Link>
+        <span className="claim__where">{t('Championnat inter-écoles', 'Chanpyona ant lekòl')}</span>
+      </header>
+      <main className="claim__card">{children}</main>
     </div>
   );
 }
 
 function Labelled({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label style={{ display: 'block', fontSize: 13, fontWeight: 600 }}>
+    <label style={{ display: 'block', fontSize: 14, fontWeight: 600 }}>
       {label}
       <div style={{ marginTop: 5, fontWeight: 400 }}>{children}</div>
     </label>
@@ -478,7 +513,7 @@ function Step({ n, done, label }: { n: number; done: boolean; label: string }) {
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
       <span style={{
         width: 24, height: 24, borderRadius: 999, display: 'grid', placeItems: 'center',
-        fontSize: 12, fontWeight: 700, flex: 'none',
+        fontSize: 14, fontWeight: 700, flex: 'none',
         background: done ? '#067647' : '#1B6FE0', color: '#fff',
       }}>{done ? '✓' : n}</span>
       <strong style={{ fontSize: 14 }}>{label}</strong>

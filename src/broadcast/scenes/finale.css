@@ -25,7 +25,7 @@
 .finale {
 	width: 100%;
 	display: grid;
-	gap: clamp(10px, 1.8vh, 22px);
+	gap: clamp(14px, 1.8vh, 22px);
 }
 
 .finale-mono {
@@ -35,9 +35,9 @@
 }
 
 .finale-label {
-	font-size: clamp(10px, 0.85vw, 13px);
-	letter-spacing: 0.16em;
-	text-transform: uppercase;
+	font-size: clamp(14px, 0.85vw, 13px);
+	letter-spacing: 0.01em;
+	text-transform: none;
 	color: var(--stage-dim, #7C8EAC);
 }
 
@@ -49,7 +49,7 @@
 }
 
 .finale-detail {
-	font-size: clamp(11px, 1vw, 16px);
+	font-size: clamp(14px, 1vw, 16px);
 	color: var(--stage-dim, #7C8EAC);
 }
 
@@ -71,7 +71,7 @@
 .finale-rank {
 	display: grid;
 	grid-template-columns: 3ch 1fr auto;
-	gap: clamp(10px, 1.4vw, 22px);
+	gap: clamp(14px, 1.4vw, 22px);
 	align-items: baseline;
 	padding: clamp(6px, 1vh, 12px) 0;
 	border-bottom: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
@@ -81,7 +81,7 @@
 	font-family: var(--font-mono, 'Geist Mono', monospace);
 	font-variant-numeric: tabular-nums;
 	color: var(--stage-dim, #7C8EAC);
-	font-size: clamp(13px, 1.3vw, 20px);
+	font-size: clamp(14px, 1.3vw, 20px);
 }
 
 .finale-rank__name {
@@ -98,7 +98,7 @@
 .finale-rank__full {
 	display: block;
 	font-weight: 400;
-	font-size: clamp(10px, 0.9vw, 14px);
+	font-size: clamp(14px, 0.9vw, 14px);
 	letter-spacing: 0;
 	color: var(--stage-faint, #3C4B67);
 	overflow: hidden;
@@ -134,10 +134,10 @@
  * here on you can read the distance without waiting for a callout.
  */
 .finale-gap {
-	padding: 4px 0 4px calc(3ch + clamp(10px, 1.4vw, 22px));
-	font-size: clamp(10px, 0.95vw, 14px);
+	padding: 4px 0 4px calc(3ch + clamp(14px, 1.4vw, 22px));
+	font-size: clamp(14px, 0.95vw, 14px);
 	letter-spacing: 0.1em;
-	text-transform: uppercase;
+	text-transform: none;
 	color: var(--stage-faint, #3C4B67);
 }
 
@@ -168,7 +168,7 @@
 
 .finale-card {
 	background: var(--stage-ground, #060E1C);
-	padding: clamp(10px, 1.6vh, 20px) clamp(12px, 1.2vw, 20px);
+	padding: clamp(14px, 1.6vh, 20px) clamp(14px, 1.2vw, 20px);
 	display: grid;
 	gap: 5px;
 	align-content: start;
@@ -232,7 +232,7 @@
 .finale-stake {
 	display: grid;
 	grid-template-columns: minmax(0, auto) 1fr;
-	gap: clamp(10px, 1.4vw, 24px);
+	gap: clamp(14px, 1.4vw, 24px);
 	align-items: baseline;
 	padding: clamp(7px, 1.1vh, 14px) 0;
 	border-top: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
@@ -246,7 +246,7 @@
 }
 
 .finale-stake__line {
-	font-size: clamp(11px, 1.15vw, 18px);
+	font-size: clamp(14px, 1.15vw, 18px);
 	color: var(--stage-dim, #7C8EAC);
 	text-align: right;
 }
@@ -288,7 +288,7 @@
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0 clamp(14px, 1.8vw, 34px);
-	font-size: clamp(12px, 1.25vw, 20px);
+	font-size: clamp(14px, 1.25vw, 20px);
 	color: var(--stage-ink, #EEF3FB);
 }
 
@@ -312,12 +312,12 @@
 .finale-podium__row {
 	display: grid;
 	grid-template-columns: 4ch minmax(0, 1fr) auto;
-	gap: clamp(10px, 1.4vw, 22px);
+	gap: clamp(14px, 1.4vw, 22px);
 	align-items: baseline;
 	padding: 7px 0;
 	border-top: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
 	color: var(--stage-dim, #7C8EAC);
-	font-size: clamp(11px, 1.1vw, 17px);
+	font-size: clamp(14px, 1.1vw, 17px);
 }
 
 .finale-podium__name { color: var(--stage-ink, #EEF3FB); font-weight: 700; }
@@ -325,7 +325,7 @@
 .finale-stats {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 0 clamp(12px, 1.6vw, 28px);
+	gap: 0 clamp(14px, 1.6vw, 28px);
 	font-family: var(--font-mono, 'Geist Mono', monospace);
 	font-variant-numeric: tabular-nums;
 }
@@ -351,14 +351,14 @@
 }
 
 .finale-provisional__title {
-	font-size: clamp(12px, 1.2vw, 19px);
+	font-size: clamp(14px, 1.2vw, 19px);
 	font-weight: 700;
 	letter-spacing: 0.02em;
 	color: var(--stage-ink, #EEF3FB);
 }
 
 .finale-provisional__detail {
-	font-size: clamp(11px, 1.05vw, 17px);
+	font-size: clamp(14px, 1.05vw, 17px);
 	color: var(--stage-dim, #7C8EAC);
 }
 
@@ -396,7 +396,7 @@
 .finale-map-slot > * { max-width: 100%; }
 
 .finale-map-slot__empty {
-	font-size: clamp(11px, 1vw, 15px);
+	font-size: clamp(14px, 1vw, 15px);
 	color: var(--stage-faint, #3C4B67);
 	padding: 16px;
 	text-align: center;
@@ -417,7 +417,7 @@
 	align-items: center;
 	padding: 5px 0;
 	border-top: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
-	font-size: clamp(11px, 1.05vw, 17px);
+	font-size: clamp(14px, 1.05vw, 17px);
 	color: var(--stage-dim, #7C8EAC);
 }
 
@@ -469,8 +469,8 @@
 
 .finale-teaser__date {
 	font-family: var(--font-mono, 'Geist Mono', monospace);
-	font-size: clamp(13px, 1.4vw, 22px);
-	letter-spacing: 0.06em;
+	font-size: clamp(14px, 1.4vw, 22px);
+	letter-spacing: 0.01em;
 	color: var(--stage-gold, #FFB92E);
 }
 
@@ -514,4 +514,24 @@
 		animation: none !important;
 	}
 	.finale-wipe { transform: none; }
+}
+
+/* ── Fit the box (2026-10-17 audit) ────────────────────────────────────────
+ * On a short stage (a laptop, or the demo with its dock) halftime and the
+ * stakes ran past the bottom of the stage. Below ~600px of stage height the
+ * full names under the short ones go, rows tighten, and halftime keeps its
+ * first three cards; type scales with the stage height. */
+.finale-rank__name { font-size: clamp(17px, min(2.2vw, 6.5cqh), 38px); }
+.finale-rank__score { font-size: clamp(16px, min(2vw, 6cqh), 32px); }
+.finale-stake__name { font-size: clamp(18px, min(2.4vw, 7cqh), 40px); }
+@container (max-height: 600px) {
+  .finale-rank__full { display: none; }
+  .finale-rank { padding: 4px 0; }
+  .finale-gap { padding-top: 2px; padding-bottom: 2px; }
+  .finale-card { padding: 8px 12px; gap: 2px; }
+  .finale-halftime__cards .finale-card:nth-child(n + 4) { display: none; }
+  .finale-stake { padding: 4px 0; }
+}
+@container (max-height: 460px) {
+  .finale-halftime__cards .finale-card:nth-child(n + 3) { display: none; }
 }

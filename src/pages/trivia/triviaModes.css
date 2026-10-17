@@ -239,3 +239,42 @@
 .jz .live-entry__pin { color: #C1CFE4; font-size: 0.9375rem; }
 .jz .live-entry__pin input { border-color: transparent; background: #091426; color: #F5F8FF; }
 .jz .live-entry__all { min-height: 44px; color: #9DC4FF; font-weight: 650; }
+
+/* ── Solid surfaces (2026-10-17 audit) ── selected chips are a lighter solid
+   fill (and aria-pressed), never an outline; a disabled primary is a quiet
+   solid, not a washed-out coral; sprint play uses the night's tones. */
+.jz .sprint-chip.is-on { border-color: transparent; background: #2F4B78; color: #FFFFFF; box-shadow: none; font-weight: 800; }
+.jz .sprint-chip:hover:not(.is-on) { background: #284068; color: #F5F8FF; }
+.jz .sprint-btn:disabled { opacity: 1; background: #1F3456; color: #A7BAD5; cursor: default; }
+.jz .live-entry__pin input::placeholder { color: #4F6A92; }
+.jz .sprint-hud { background: #13243F; box-shadow: none; }
+.jz .sprint-hud__title, .jz .sprint-q__text, .jz .sprint-stats strong { color: #F5F8FF; }
+.jz .sprint-metric, .jz .sprint-why, .jz .sprint-stats > div, .jz .sprint-mistakes li, .jz .sprint-bank li { background: #1C3254; }
+.jz .sprint-metric > span:first-child, .jz .sprint-metric small, .jz .sprint-stats span, .jz .sprint-bank__meta, .jz .sprint-mastery small { color: #C1CFE4; font-size: 0.875rem; }
+.jz .sprint-metric strong, .jz .sprint-bank__q, .jz .sprint-mastery__row, .jz .sprint-mistakes .sprint-mistakes__q { color: #F5F8FF; }
+.jz .sprint-metric--timer strong { color: #FFD27A; }
+.jz .sprint-meter { background: #24395A; }
+.jz .sprint-meter > span { background: #5B9DFF; }
+.jz .sprint-meter--timer > span { background: #FFB92E; }
+.jz .sprint-option { border: 0; background: #1F3456; color: #F5F8FF; font-size: 1rem; min-height: 56px; }
+.jz .sprint-option:hover:not(:disabled) { border-color: transparent; background: #284068; }
+.jz .sprint-option__key { background: #13243F; color: #F5F8FF; }
+.jz .sprint-option kbd { color: #A7BAD5; font-size: 0.875rem; }
+.jz .sprint-option.is-picked { background: #1D3D70; }
+.jz .sprint-option.is-right { background: #0E3A2C; }
+.jz .sprint-option.is-wrong { background: #46192A; }
+.jz .sprint-option.is-dim { opacity: 1; background: #0E1A30; color: #A7BAD5; }
+.jz .sprint-why p, .jz .sprint-mistakes p { color: #C1CFE4; }
+.jz .sprint-why.is-right strong:first-child { color: #8BF0C4; }
+.jz .sprint-why.is-wrong strong:first-child { color: #FFB8C3; }
+.jz .sprint-paused { color: #F5F8FF; }
+.jz .sprint-scratch { color: #C1CFE4; font-size: 0.9375rem; }
+.jz .sprint-scratch textarea { border: 0; background: #0D1A30; color: #F5F8FF; }
+.jz .sprint-xp { color: #FFD27A; }
+.jz .sprint-link { color: #9DC4FF; font-size: 0.9375rem; }
+.jz .sprint-q__flag { box-shadow: none; }
+.jz .sprint-pill--red { background: #46192A; color: #FFB8C3; }
+.sprint-option__mark { display: inline-flex; align-items: center; gap: 4px; flex: none; font-size: 0.875rem; font-weight: 750; white-space: nowrap; }
+.jz .sprint-option.is-picked .sprint-option__mark { color: #CFE2FF; }
+.jz .sprint-option.is-right .sprint-option__mark { color: #8BF0C4; }
+.jz .sprint-option.is-wrong .sprint-option__mark { color: #FFB8C3; }

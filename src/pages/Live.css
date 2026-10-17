@@ -28,8 +28,8 @@
 	   generic navy, so the stage reads as the same family as the site. */
 	--stage-ground: #060E1C;
 	--stage-ink: #EEF3FB;
-	--stage-dim: #7C8EAC;
-	--stage-faint: #3C4B67;
+	--stage-dim: #9AABC6;
+	--stage-faint: #6A7C9C;
 	--stage-rule: rgba(160, 190, 235, 0.14);
 	--stage-azure: #2F80ED;
 	--stage-azure-lit: #6FB0FF;
@@ -105,7 +105,7 @@
 	min-height: calc(100dvh - 2 * clamp(18px, 3.4vh, 54px));
 	display: flex;
 	flex-direction: column;
-	gap: clamp(12px, 2.2vh, 26px);
+	gap: clamp(14px, 2.2vh, 26px);
 }
 
 /* ── Header ─────────────────────────────────────────────────────────────── */
@@ -115,7 +115,7 @@
 	align-items: center;
 	justify-content: space-between;
 	gap: 20px;
-	padding-bottom: clamp(10px, 1.6vh, 18px);
+	padding-bottom: clamp(14px, 1.6vh, 18px);
 	border-bottom: 1px solid var(--stage-rule);
 }
 
@@ -150,7 +150,7 @@
 .live__subtitle {
 	margin: 2px 0 0;
 	color: var(--stage-dim);
-	font-size: clamp(11px, 1.05vw, 14px);
+	font-size: clamp(14px, 1.05vw, 14px);
 }
 
 /* The one flourish. A bar, not a pill — a pill is what every generated page
@@ -162,10 +162,10 @@
 	padding: 6px 13px;
 	background: var(--stage-coral);
 	color: #14060A;
-	font-size: clamp(10px, 1vw, 12px);
+	font-size: clamp(14px, 1vw, 12px);
 	font-weight: 800;
-	letter-spacing: 0.16em;
-	text-transform: uppercase;
+	letter-spacing: 0.01em;
+	text-transform: none;
 	white-space: nowrap;
 }
 
@@ -196,8 +196,8 @@
 	display: grid;
 	grid-template-columns: clamp(44px, 5.2vw, 84px) 1fr auto;
 	align-items: baseline;
-	gap: clamp(12px, 2.2vw, 30px);
-	padding: clamp(9px, 1.5vh, 19px) 0 clamp(11px, 1.7vh, 21px);
+	gap: clamp(14px, 2.2vw, 30px);
+	padding: clamp(14px, 1.5vh, 19px) 0 clamp(14px, 1.7vh, 21px);
 	border-bottom: 1px solid var(--stage-rule);
 	/* FLIP writes the inverse transform here and this transition turns it into
 	   a slide. Kept off `all` so a colour change never rides the same curve. */
@@ -290,7 +290,7 @@
 
 .live__needed {
 	margin-top: 7px;
-	font-size: clamp(10px, 1vw, 13px);
+	font-size: clamp(14px, 1vw, 13px);
 	color: var(--stage-dim);
 }
 
@@ -320,7 +320,7 @@
 	display: inline-block;
 	margin-left: 12px;
 	font-family: var(--font-mono, 'Geist Mono', monospace);
-	font-size: clamp(11px, 1.15vw, 15px);
+	font-size: clamp(14px, 1.15vw, 15px);
 	font-weight: 500;
 	vertical-align: middle;
 	animation: live-delta-in 460ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -339,7 +339,7 @@
 .live__ticker {
 	position: relative;
 	overflow: hidden;
-	padding-top: clamp(10px, 1.6vh, 18px);
+	padding-top: clamp(14px, 1.6vh, 18px);
 	border-top: 1px solid var(--stage-rule);
 	-webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
 	mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
@@ -358,7 +358,7 @@
 	display: inline-flex;
 	align-items: baseline;
 	gap: 10px;
-	font-size: clamp(11px, 1.1vw, 15px);
+	font-size: clamp(14px, 1.1vw, 15px);
 	white-space: nowrap;
 }
 
@@ -393,7 +393,7 @@
 	content: '';
 	position: absolute;
 	left: 0;
-	bottom: clamp(10px, 1.6vh, 20px);
+	bottom: clamp(14px, 1.6vh, 20px);
 	height: 3px;
 	width: 38%;
 	background: linear-gradient(90deg, rgba(47, 128, 237, 0.5), transparent);
@@ -435,4 +435,26 @@
 	}
 	.live__lane,
 	.live__bar-fill { transition: none !important; }
+}
+
+/* ── One screen (2026-10-17 audit) ─────────────────────────────────────────
+ * /direct is a projector page: at 1280×720 the stage scrolled, so the map's
+ * readout and the bottom lanes sat below the fold where nobody scrolls. On a
+ * landscape screen the page is now exactly one viewport tall and the stage
+ * takes what the header leaves; scenes size themselves to that box (stage.css
+ * makes it a size container). A phone keeps the scrolling page. */
+@media (min-width: 721px) and (min-height: 480px) {
+	.live--stage {
+		height: 100vh;
+		height: 100dvh;
+		min-height: 0;
+	}
+	.live--stage .live__inner {
+		height: 100%;
+		min-height: 0;
+	}
+	.live--stage .live__inner > :not(.live__head) {
+		flex: 1 1 auto;
+		min-height: 0;
+	}
 }

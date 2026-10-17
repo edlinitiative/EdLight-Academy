@@ -37,7 +37,7 @@
 
 .rb-board__empty,
 .rb-board__note {
-  font-size: clamp(12px, 1.1vw, 16px);
+  font-size: clamp(14px, 1.1vw, 16px);
   color: var(--stage-dim, #7C8EAC);
   margin: 0;
 }
@@ -58,9 +58,9 @@
   height: var(--rb-lane-h);
   display: grid;
   grid-template-columns: 3ch 1fr auto;
-  gap: clamp(12px, 1.6vw, 28px);
+  gap: clamp(14px, 1.6vw, 28px);
   align-items: center;
-  padding: 0 0 0 clamp(12px, 1.2vw, 22px);
+  padding: 0 0 0 clamp(14px, 1.2vw, 22px);
   border-bottom: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
 }
 
@@ -108,7 +108,7 @@
 
 .rb-lane__full {
   display: block;
-  font-size: clamp(10px, 0.85vw, 14px);
+  font-size: clamp(14px, 0.85vw, 14px);
   color: var(--stage-faint, #3C4B67);
   white-space: nowrap;
   overflow: hidden;
@@ -183,22 +183,22 @@
 .rb-ambient {
   display: flex;
   align-items: baseline;
-  gap: clamp(10px, 1.2vw, 20px);
+  gap: clamp(14px, 1.2vw, 20px);
   padding-top: clamp(8px, 1.2vh, 16px);
   border-top: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
   animation: stage-enter 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .rb-ambient__label {
-  font-size: clamp(10px, 0.85vw, 13px);
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-size: clamp(14px, 0.85vw, 13px);
+  letter-spacing: 0.01em;
+  text-transform: none;
   color: var(--stage-faint, #3C4B67);
   white-space: nowrap;
 }
 
 .rb-ambient__text {
-  font-size: clamp(13px, 1.3vw, 21px);
+  font-size: clamp(14px, 1.3vw, 21px);
   color: var(--stage-dim, #7C8EAC);
 }
 
@@ -302,7 +302,7 @@
   position: relative;
   width: 100%;
   display: grid;
-  gap: clamp(10px, 1.8vh, 24px);
+  gap: clamp(14px, 1.8vh, 24px);
   overflow: hidden;
 }
 
@@ -321,7 +321,7 @@
 .rr-figure {
   display: flex;
   align-items: baseline;
-  gap: clamp(10px, 1.2vw, 22px);
+  gap: clamp(14px, 1.2vw, 22px);
 }
 
 /* The one number. The total sits beside it, smaller, so there is never a second
@@ -336,9 +336,9 @@
 }
 
 .rr-category {
-  font-size: clamp(12px, 1.1vw, 18px);
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
+  font-size: clamp(14px, 1.1vw, 18px);
+  letter-spacing: 0.01em;
+  text-transform: none;
   color: var(--stage-azure-lit, #6FB0FF);
 }
 
@@ -391,8 +391,8 @@
   text-align: center;
   font-size: clamp(22px, 3.4vw, 62px);
   font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  text-transform: none;
   color: var(--stage-azure-lit, #6FB0FF);
   opacity: 0;
   animation: rr-cross 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -424,7 +424,7 @@
   display: flex;
   align-items: baseline;
   gap: clamp(8px, 1vw, 16px);
-  font-size: clamp(12px, 1.2vw, 19px);
+  font-size: clamp(14px, 1.2vw, 19px);
   color: var(--stage-dim, #7C8EAC);
 }
 
@@ -445,7 +445,7 @@
   min-height: clamp(220px, 46vh, 520px);
   display: grid;
   align-content: center;
-  gap: clamp(12px, 2vh, 28px);
+  gap: clamp(14px, 2vh, 28px);
   overflow: hidden;
 }
 
@@ -510,9 +510,9 @@
 }
 
 .ro-count__label {
-  font-size: clamp(10px, 0.85vw, 13px);
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-size: clamp(14px, 0.85vw, 13px);
+  letter-spacing: 0.01em;
+  text-transform: none;
   color: var(--stage-faint, #3C4B67);
 }
 
@@ -567,3 +567,26 @@
   .rr-cross { opacity: 1; }
   .rg__sweep { display: none; }
 }
+
+/* ── Fit the box (2026-10-17 audit) ────────────────────────────────────────
+ * Lane height is the smaller of the old screen-based height and an even
+ * share of the stage's height (`--rb-count` is set by Board.tsx), so eight
+ * lanes fit a 720px laptop instead of the last ones being cropped. The
+ * round-start figure above the board takes its share first. Names and
+ * scores scale with the lane so a short lane never clips its text. */
+.rb-board {
+  --rb-avail: calc(100cqh - 3.5rem);
+  --rb-lane-h: clamp(30px, min(6.2vh, calc(var(--rb-avail) / var(--rb-count, 8))), 78px);
+}
+.rr-scene .rb-board { --rb-avail: calc(100cqh - 16cqh - 8rem); }
+.rb-lane__short { font-size: min(clamp(17px, 2.1vw, 34px), calc(var(--rb-lane-h) * 0.56)); }
+.rb-lane__score { font-size: min(clamp(18px, 2.4vw, 38px), calc(var(--rb-lane-h) * 0.6)); }
+.rb-lane__rank { font-size: min(clamp(14px, 1.5vw, 24px), calc(var(--rb-lane-h) * 0.5)); }
+.rb-lane__crest { display: inline-flex; line-height: 0; }
+.rb-lane { grid-template-columns: 3ch auto 1fr auto; }
+@media (max-width: 620px) {
+  .rb-lane { grid-template-columns: 2.5ch auto 1fr auto; }
+}
+.rb-lane__crest svg { width: clamp(22px, calc(var(--rb-lane-h) * 0.66), 48px); height: auto; }
+/* The crest identifies the school now; the hue dot would be a second mark. */
+.rb-lane:has(.rb-lane__crest) .rb-lane__edge { display: none; }

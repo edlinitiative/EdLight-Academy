@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { Play, Swords, Share2, Check, LogIn, ChevronRight } from '../../icons';
 import PlayerCard from '../../../arena-art/cards/PlayerCard';
 import SchoolCrest from '../../../arena-art/crest/SchoolCrest';
-import UserAvatar from '../../UserAvatar';
+import Avatar from '../../../arena-art/avatars/Avatar';
+import { schoolColors } from '../../../arena-art/crest/SchoolCrest';
 import { inviteRef, schoolInviteMessage, sendInvite, canNativeShare } from '../../../utils/schoolInvite';
 import { trackEvent } from '../../../utils/telemetry';
 import type { RivalPick } from './rival';
@@ -111,7 +112,7 @@ export default function LobbyStrip({
             {t('Ton rival', 'Rival ou')} · {rival.scope === 'school' ? t('dans ton école', 'nan lekòl ou') : t('au national', 'nan tout peyi a')}
           </p>
           <div className="lb-rival__who">
-            <UserAvatar seed={r.id} name={rName} size={44} radius={12} />
+            <span className="lb-face" aria-hidden="true"><Avatar seed={r.id} size={44} still colors={r.school ? schoolColors(r.school) : undefined} /></span>
             <div>
               <strong>{rName}</strong>
               <span data-testid="rival-gap">

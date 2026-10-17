@@ -636,3 +636,55 @@
 .ah-game__over { color: #C1CFE4 !important; }
 .ah-game__body > p:not(.ah-game__over) { font-size: 1.0625rem; color: #C1CFE4; }
 .ah-keys-hint { font-size: 0.925rem; }
+
+/* ══ Opaque surfaces (2026-10-17 audit) ════════════════════════════════════
+   Ted: a hairline on a translucent fill "looks too AI". Every surface on the
+   lobby page is now an OPAQUE tonal fill — surface #13243F, raised #1C3254 —
+   told apart from the night by tone and space, never by an outline, a glass
+   blur, a gradient edge or a coloured glow. */
+.ah-game {
+  background: #13243F;
+  box-shadow: none;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease;
+}
+.ah-game::after { display: none; }
+.ah-game:hover { background: #1C3254; transform: translateY(-3px); }
+.ah-game__art { background: #0F1D36; }
+.ah-art-map__glow { display: none; }
+/* The story card's "Commencer" is the card's label, not a second primary:
+   the page's one coral is "Jouer une partie". */
+.ah-game--story .ah-cta {
+  background: #1F3456;
+  color: #F5F8FF;
+  box-shadow: none;
+  border-radius: var(--r-btn, 12px);
+  min-height: var(--btn-h, 44px);
+  padding: 0 1.2rem;
+}
+.ah-game--story:hover .ah-cta { background: #284068; }
+.ah-key { background: #1F3456; box-shadow: none; }
+.ah-chip { background: #1C3254; box-shadow: none; backdrop-filter: none; text-transform: none; letter-spacing: 0; font-size: 0.95rem; }
+.ah-tower__tag { background: #13243F; box-shadow: none; backdrop-filter: none; }
+.ah-tower__tag strong { background: #1F3456; }
+.ah-tower.is-mine .ah-tower__tag { box-shadow: none; }
+.ah-tower.is-mine .school-building,
+.ah-step .school-building { filter: none; }
+.ah-podium-sec { background: var(--ah-ink); }
+.ah-step__block { background: #1C3254; box-shadow: none; }
+.ah-step--1 .ah-step__block { background: #F2B23A; box-shadow: none; }
+.ah-rest { background: #13243F; box-shadow: none; }
+.ah-rest li + li { box-shadow: none; }
+.ah-rest li.is-mine { background: #2A3550; box-shadow: none; }
+.aj-card { background: #13243F; box-shadow: none; }
+.aj-card::before { display: none; }
+.aj-step { background: #1C3254; box-shadow: none; }
+.aj-step.is-now { background: #3A2A3A; box-shadow: none; }
+.aj-step.is-now .aj-step__n { background: #FF6A45; color: #12213A; box-shadow: none; }
+.aj-ghost { background: #1F3456; box-shadow: none; }
+.aj-ghost:hover { background: #284068; }
+.aj-field { background: #0F1D36; box-shadow: none; }
+.aj-school .school-building { filter: none; }
+.aj-school__label { letter-spacing: 0; text-transform: none; font-size: 0.975rem; }
+/* An empty seat is a solid, quieter tile — not a dashed outline. */
+.aj-seat { border: 0; background: #1C3254; color: #8FA3C8; }
+.aj-seat.is-on { background: #2FB97A; color: #04281A; box-shadow: none; }

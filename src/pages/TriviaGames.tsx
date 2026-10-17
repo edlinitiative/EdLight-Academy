@@ -956,13 +956,15 @@ export default function TriviaGames() {
     highScore: highScores[game.id] ?? null,
   };
 
+  const GameIcon = GAME_ICONS[game.id];
   return (
-    <div className="trivia-page trivia-page--arcade">
+    <div className="trivia-page trivia-page--arcade" style={{ '--cat': game.color } as React.CSSProperties}>
       <div className="arcade__header">
-        <button className="trivia-back-btn trivia-back-btn--sm" onClick={exit} aria-label={isCreole ? 'Kite' : 'Quitter'}>
+        <button type="button" className="mx-close" onClick={exit} aria-label={isCreole ? 'Kite' : 'Quitter'}>
           <X size={18} />
         </button>
-        <h1 className="arcade__title" style={{ color: game.color }}>
+        {GameIcon && <span className="arcade__glyph" aria-hidden="true"><GameIcon size={18} /></span>}
+        <h1 className="arcade__title">
           {isCreole ? game.nameHt : game.name}
         </h1>
       </div>

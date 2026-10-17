@@ -143,10 +143,10 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }) {
   if (!entry) {
     return (
       <div className="mk-game" style={{ '--cat-color': '#059669' } as React.CSSProperties}>
-        <p className="text-muted">
+        <p className="mk-game__answer">
           {isCreole ? 'Pa gen mo disponib kounye a.' : 'Aucun mot disponible pour le moment.'}
         </p>
-        <button className="button button--ghost" onClick={onExit}>
+        <button type="button" className="an-ghost" onClick={onExit}>
           ← {isCreole ? 'Jwèt yo' : 'Les jeux'}
         </button>
       </div>
@@ -158,14 +158,14 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }) {
       <div className="mk-game__modes" role="tablist">
         <button
           role="tab" aria-selected={mode === 'daily'}
-          className={`leaderboard__scope ${mode === 'daily' ? 'is-active' : ''}`}
+          className={`mk-mode${mode === 'daily' ? ' is-on' : ''}`}
           onClick={() => setMode('daily')}
         >
           <CalendarCheck size={14} /> {isCreole ? 'Mo jou a' : 'Mot du jour'}
         </button>
         <button
           role="tab" aria-selected={mode === 'practice'}
-          className={`leaderboard__scope ${mode === 'practice' ? 'is-active' : ''}`}
+          className={`mk-mode${mode === 'practice' ? ' is-on' : ''}`}
           onClick={() => { setMode('practice'); setPracticeNonce((n) => n + 1); }}
         >
           <Shuffle size={14} /> {isCreole ? 'Antrennman' : 'Entraînement'}
@@ -181,8 +181,13 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }) {
               {Array.from({ length: WORD_LENGTH }).map((_, col) => {
                 const letter = guess[col] || '';
                 const st = evaln ? evaln[col] : letter ? 'filled' : 'empty';
+                const word = st === 'correct' ? (isCreole ? 'bon plas' : 'bien placée') : st === 'present' ? (isCreole ? 'move plas' : 'mal placée') : st === 'absent' ? (isCreole ? 'pa ladan' : 'absente') : '';
                 return (
-                  <span key={col} className={`mk-tile mk-tile--${st}`}>{letter}</span>
+                  <span key={col} className={`mk-tile mk-tile--${st}`} aria-label={letter ? (word ? `${letter}, ${word}` : letter) : undefined}>
+                    {letter}
+                    {st === 'correct' && <Check size={11} className="mk-tile__mark" aria-hidden="true" />}
+                    {st === 'present' && <span className="mk-tile__mark mk-tile__mark--dot" aria-hidden="true" />}
+                  </span>
                 );
               })}
             </div>
@@ -190,44 +195,59 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }) {
         })}
       </div>
 
+      {guesses.length > 0 && (
+        <p className="mk-legend" aria-hidden="true">
+          <span><i className="mk-legend__sw mk-legend__sw--correct"><Check size={10} /></i>{isCreole ? 'Bon plas' : 'Bien placée'}</span>
+          <span><i className="mk-legend__sw mk-legend__sw--present"><b /></i>{isCreole ? 'Move plas' : 'Mal placée'}</span>
+          <span><i className="mk-legend__sw mk-legend__sw--absent" />{isCreole ? 'Pa ladan' : 'Absente'}</span>
+        </p>
+      )}
+
       {!over && guesses.length >= 2 && (
         showHint ? (
           <p className="mk-game__hint"><Lightbulb size={14} /> {isCreole ? entry.hintHt : entry.hint}</p>
         ) : (
-          <button className="mk-game__hint-btn" onClick={() => setShowHint(true)}>
+          <button type="button" className="mk-game__hint-btn" onClick={() => setShowHint(true)}>
             <Lightbulb size={14} /> {isCreole ? 'Yon endis ?' : 'Un indice ?'}
           </button>
         )
       )}
 
       {over && (
-        <div className="mk-game__end">
-          <p className="mk-game__answer">
+        <div className="mk-game__end" role="status">
+          <h2 className="mk-game__verdict">
             {state === 'won'
-              ? (isCreole ? 'Bravo !' : 'Bravo !')
-              : (isCreole ? 'Mo a te:' : 'Le mot était :')}{' '}
-            <strong>{entry.display}</strong>
-            {entry.hint && <span className="text-muted"> — {isCreole ? entry.hintHt : entry.hint}</span>}
+              ? (isCreole ? `Jwenn an ${guesses.length} esè !` : `Trouvé en ${guesses.length} essai${guesses.length > 1 ? 's' : ''} !`)
+              : (isCreole ? 'Se pa pou jodi a' : 'Pas cette fois')}
+          </h2>
+          <p className="mk-game__answer">
+            {isCreole ? 'Mo a se :' : 'Le mot :'} <strong>{entry.display}</strong>
+            {entry.hint && <span className="mk-game__def"> — {isCreole ? entry.hintHt : entry.hint}</span>}
           </p>
           {reward && reward.xpEarned > 0 && (
-            <p className="mk-game__xp">+{reward.xpEarned} XP{reward.guest ? (isCreole ? ' — konekte pou sove yo' : ' — connectez-vous pour les garder') : ''}</p>
+            <p className="mk-game__xp">+{reward.xpEarned} XP{reward.guest ? (isCreole ? ' — konekte pou kenbe yo' : ' — connecte-toi pour les garder') : ''}</p>
+          )}
+          {mode !== 'practice' && (
+            <p className="mk-game__tomorrow">
+              {isCreole ? 'Yon nouvo mo demen. Antrennman an la toujou.' : 'Un nouveau mot demain. L’entraînement reste ouvert.'}
+            </p>
           )}
           <div className="mk-game__end-actions">
             {state === 'won' && (
-              <button className="button button--primary" onClick={share}>
-                {copied ? <Check size={15} /> : <Share2 size={15} />} {copied ? (isCreole ? 'Kopye !' : 'Copié !') : (isCreole ? 'Pataje' : 'Partager')}
+              <button type="button" className={mode === 'practice' ? 'an-ghost' : 'an-go'} onClick={share}>
+                {copied ? <Check size={15} /> : <Share2 size={15} />} {copied ? (isCreole ? 'Kopye !' : 'Copié !') : (isCreole ? 'Kopye rezilta a' : 'Copier mon résultat')}
               </button>
             )}
             {mode === 'practice' ? (
-              <button className="button button--primary" onClick={() => setPracticeNonce((n) => n + 1)}>
+              <button type="button" className="an-go" onClick={() => setPracticeNonce((n) => n + 1)}>
                 {isCreole ? 'Yon lòt mo' : 'Un autre mot'}
               </button>
-            ) : (
-              <p className="text-muted mk-game__tomorrow">
-                {isCreole ? 'Retounen demen pou yon nouvo mo !' : 'Revenez demain pour un nouveau mot !'}
-              </p>
+            ) : state !== 'won' && (
+              <button type="button" className="an-go" onClick={() => { setMode('practice'); setPracticeNonce((n) => n + 1); }}>
+                <Shuffle size={15} /> {isCreole ? 'Antrennman' : 'S’entraîner'}
+              </button>
             )}
-            <button className="button button--ghost" onClick={onExit}>← {isCreole ? 'Jwèt yo' : 'Les jeux'}</button>
+            <button type="button" className="an-ghost" onClick={onExit}>← {isCreole ? 'Jwèt yo' : 'Les jeux'}</button>
           </div>
         </div>
       )}
@@ -239,6 +259,7 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }) {
               {row.split('').map((k) => (
                 <button
                   key={k}
+                  type="button"
                   className={`mk-key ${k === '↵' || k === '⌫' ? 'mk-key--wide' : ''} ${keyStates[k] ? `mk-key--${keyStates[k]}` : ''}`}
                   onClick={() => type(k)}
                   aria-label={k === '↵' ? (isCreole ? 'Antre' : 'Entrée') : k === '⌫' ? (isCreole ? 'Efase' : 'Effacer') : k}

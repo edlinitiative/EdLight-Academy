@@ -61,7 +61,7 @@
 	display: grid;
 	grid-template-columns: clamp(30px, 3.2vw, 58px) 1fr auto;
 	align-items: center;
-	gap: clamp(10px, 1.8vw, 28px);
+	gap: clamp(14px, 1.8vw, 28px);
 	padding: 0 0 0 0;
 	border-bottom: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
 }
@@ -106,7 +106,7 @@
 
 .mv-lane__full {
 	margin-top: 2px;
-	font-size: clamp(10px, 0.95vw, 13px);
+	font-size: clamp(14px, 0.95vw, 13px);
 	color: var(--stage-dim, #7C8EAC);
 	white-space: nowrap;
 	overflow: hidden;
@@ -168,7 +168,7 @@
 	margin-left: clamp(8px, 1vw, 16px);
 	padding: 2px 9px;
 	font-family: var(--font-mono, 'Geist Mono', monospace);
-	font-size: clamp(11px, 1.05vw, 15px);
+	font-size: clamp(14px, 1.05vw, 15px);
 	font-weight: 700;
 	font-variant-numeric: tabular-nums;
 	letter-spacing: 0.02em;
@@ -233,7 +233,7 @@
 .mv-head {
 	display: flex;
 	align-items: baseline;
-	gap: clamp(10px, 1.4vw, 20px);
+	gap: clamp(14px, 1.4vw, 20px);
 	width: 100%;
 	animation: stage-enter 320ms var(--mv-ease) both;
 }
@@ -253,7 +253,7 @@
 .mv-aside {
 	justify-self: end;
 	width: min(460px, 100%);
-	padding: clamp(10px, 1.4vh, 16px) 0 0 clamp(12px, 1.2vw, 18px);
+	padding: clamp(14px, 1.4vh, 16px) 0 0 clamp(14px, 1.2vw, 18px);
 	border-top: 2px solid var(--stage-coral, #FF5C39);
 	animation: stage-enter 320ms var(--mv-ease) both;
 }
@@ -269,16 +269,16 @@
 
 .mv-card__unit {
 	margin-left: 10px;
-	font-size: clamp(11px, 1vw, 15px);
+	font-size: clamp(14px, 1vw, 15px);
 	font-weight: 700;
-	letter-spacing: 0.16em;
-	text-transform: uppercase;
+	letter-spacing: 0.01em;
+	text-transform: none;
 	color: var(--stage-dim, #7C8EAC);
 }
 
 .mv-card__line {
 	margin-top: 4px;
-	font-size: clamp(12px, 1.15vw, 18px);
+	font-size: clamp(14px, 1.15vw, 18px);
 	color: var(--stage-dim, #7C8EAC);
 }
 
@@ -301,13 +301,13 @@
 
 .mv-slot__n {
 	font-family: var(--font-mono, 'Geist Mono', monospace);
-	font-size: clamp(10px, 0.95vw, 13px);
+	font-size: clamp(14px, 0.95vw, 13px);
 	color: var(--stage-faint, #3C4B67);
 }
 
 .mv-slot__name {
 	margin-top: 5px;
-	font-size: clamp(12px, 1.25vw, 20px);
+	font-size: clamp(14px, 1.25vw, 20px);
 	font-weight: 700;
 	line-height: 1.12;
 	color: var(--stage-ink, #EEF3FB);
@@ -316,7 +316,7 @@
 
 .mv-slot__meta {
 	margin-top: 3px;
-	font-size: clamp(10px, 0.95vw, 13px);
+	font-size: clamp(14px, 0.95vw, 13px);
 	color: var(--stage-dim, #7C8EAC);
 	font-variant-numeric: tabular-nums;
 }
@@ -470,9 +470,9 @@
 }
 
 .mv-gap__label {
-	font-size: clamp(10px, 0.9vw, 13px);
-	letter-spacing: 0.16em;
-	text-transform: uppercase;
+	font-size: clamp(14px, 0.9vw, 13px);
+	letter-spacing: 0.01em;
+	text-transform: none;
 	color: var(--stage-dim, #7C8EAC);
 }
 
@@ -502,7 +502,7 @@
 	justify-content: space-between;
 	width: 100%;
 	margin-top: 6px;
-	font-size: clamp(10px, 0.95vw, 13px);
+	font-size: clamp(14px, 0.95vw, 13px);
 	color: var(--stage-dim, #7C8EAC);
 }
 

@@ -1,11 +1,12 @@
 /**
- * Shared game-over screen for the arcade games — score ring, per-game stat
- * rows, the XP reward block, and replay/exit actions. Reuses the
- * trivia-results CSS so every game ends with the same celebratory look.
+ * Shared game-over screen for the arcade games. Built on the trivia match's
+ * results language (.mx-res in TriviaGames.css): one big score, a sentence-case
+ * headline, the round's facts as solid tiles, the XP it earned, then one coral
+ * action ("Rejouer") and a quiet way back. Every figure is the round's own.
  */
 
 import React from 'react';
-import { Trophy, Star, ThumbsUp, Dumbbell, Sparkles, Crown, RefreshCw } from '../icons';
+import { Trophy, Crown, Sparkles, RefreshCw } from '../icons';
 import Celebration from '../Celebration';
 import { CountUp } from '../../hooks/useCountUp';
 
@@ -19,94 +20,95 @@ export default function GameOverCard({
   isCreole,
   accent = '#1B6FE0',
   highScore = null,
+  unit = null,
+  gameName = null,
+}: {
+  score: number;
+  maxScore: number;
+  stats?: { label: string; value: React.ReactNode }[];
+  reward?: any;
+  onReplay?: () => void;
+  onExit: () => void;
+  isCreole: boolean;
+  accent?: string;
+  highScore?: number | null;
+  /** What the big number counts ("bonnes réponses", "points"…). */
+  unit?: string | null;
+  gameName?: string | null;
 }) {
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
 
-  // Big-win moments earn a confetti burst: a fresh personal record, a level-up,
-  // or a near-perfect round. Everyone still sees the score + message.
+  // A fresh personal record, a level-up or a near-perfect round earn the
+  // confetti; everyone still sees the score and the line under it.
   const isNewRecord = highScore != null && score >= highScore && score > 0;
   const bigWin = pct >= 90 || isNewRecord || !!reward?.leveledUp;
 
-  let IconCmp, message, messageHt;
-  if (pct >= 90) {
-    IconCmp = Trophy;
-    message = 'Excellent ! Vous êtes un champion !';
-    messageHt = 'Ekselan! Ou se yon chanpyon!';
-  } else if (pct >= 70) {
-    IconCmp = Star;
-    message = 'Très bien ! Continuez comme ça !';
-    messageHt = 'Trè byen! Kontinye konsa!';
-  } else if (pct >= 50) {
-    IconCmp = ThumbsUp;
-    message = 'Pas mal ! Vous pouvez vous améliorer.';
-    messageHt = 'Pa mal! Ou ka amelyore.';
-  } else {
-    IconCmp = Dumbbell;
-    message = 'Courage ! Réessayez pour progresser.';
-    messageHt = 'Kouraj! Eseye ankò pou pwogrese.';
-  }
+  const headline = pct >= 90
+    ? t('Excellent, du grand jeu !', 'Ekselan, se gwo jwèt !')
+    : pct >= 70
+      ? t('Très bien, continue comme ça !', 'Trè byen, kontinye konsa !')
+      : pct >= 50
+        ? t('Pas mal ! Tu peux encore progresser.', 'Pa mal ! Ou ka pwogrese plis toujou.')
+        : t('Courage ! Chaque partie te fait progresser.', 'Kouraj ! Chak pati fè w pwogrese.');
 
   return (
-    <div className="trivia-results" style={{ '--cat-color': accent } as React.CSSProperties}>
-      <div className="trivia-results__card">
-        <Celebration active={bigWin} />
-        <span className="trivia-results__emoji"><IconCmp size={48} /></span>
-        <h2 className="trivia-results__title">{isCreole ? 'Rezilta Ou' : 'Vos Résultats'}</h2>
-        <div className="trivia-results__score-ring">
-          <svg viewBox="0 0 120 120" className="trivia-results__ring-svg">
-            <circle cx="60" cy="60" r="52" className="trivia-results__ring-bg" />
-            <circle
-              cx="60" cy="60" r="52"
-              className="trivia-results__ring-fill"
-              style={{ strokeDasharray: `${(pct / 100) * 327} 327` }}
-            />
-          </svg>
-          <span className="trivia-results__pct">{pct}%</span>
-        </div>
-        {stats.length > 0 && (
-          <div className="game-over__stats">
+    <div className="mx-page go-page" style={{ '--cat-color': accent } as React.CSSProperties}>
+      <section className="mx-res" data-size={bigWin ? 'big' : 'routine'} aria-labelledby="go-title">
+        <header className="mx-res__head mx-in go-head">
+          <Celebration active={bigWin} />
+          {gameName && <p className="mx-res__eyebrow">{gameName}</p>}
+          <div className="mx-res__scoreline">
+            {bigWin && <span className="mx-res__medal" aria-hidden="true">{reward?.leveledUp ? <Crown size={30} /> : <Trophy size={30} />}</span>}
+            <p className="mx-res__score">
+              <span className="mx-num">{score}</span>
+              <span className="mx-res__cap">{unit || t('points', 'pwen')}</span>
+            </p>
+          </div>
+          <h2 id="go-title" className="mx-res__headline">{headline}</h2>
+        </header>
+
+        {(stats.length > 0 || isNewRecord) && (
+          <ul className="mx-res__facts mx-in" aria-label={t('Ta partie', 'Pati ou')}>
+            {isNewRecord && (
+              <li className="mx-fact mx-fact--record">
+                <span className="mx-fact__label"><span className="mx-fact__icon" aria-hidden="true"><Trophy size={16} /></span>{t('Nouveau record personnel', 'Nouvo rekò pèsonèl')}</span>
+                <strong className="mx-fact__value mx-num">{score}</strong>
+                {highScore != null && highScore !== score && <span className="mx-fact__detail">{t(`avant : ${highScore}`, `anvan : ${highScore}`)}</span>}
+              </li>
+            )}
             {stats.map((s) => (
-              <div key={s.label} className="game-over__stat">
-                <span className="game-over__stat-value">{s.value}</span>
-                <span className="game-over__stat-label">{s.label}</span>
-              </div>
+              <li key={s.label} className="mx-fact">
+                <span className="mx-fact__label">{s.label}</span>
+                <strong className="mx-fact__value mx-num">{s.value}</strong>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
-        {highScore != null && score >= highScore && score > 0 && (
-          <p className="game-over__record">
-            <Trophy size={14} /> {isCreole ? 'Nouvo rekò pèsonèl !' : 'Nouveau record personnel !'}
-          </p>
-        )}
-        <p className="trivia-results__message">{isCreole ? messageHt : message}</p>
+
         {reward && reward.xpEarned > 0 && (
-          <div className="trivia-reward">
-            <span className="trivia-reward__xp">
-              <Sparkles size={16} /> <CountUp value={reward.xpEarned} prefix="+" suffix=" XP" />
-            </span>
-            {reward.leveledUp && (
-              <span className="trivia-reward__levelup">
-                <Crown size={14} /> {isCreole ? `Nivo ${reward.newLevel} !` : `Niveau ${reward.newLevel} !`}
-              </span>
-            )}
-            {reward.guest && (
-              <span className="trivia-reward__guest">
-                {isCreole ? 'Konekte pou anrejistre XP ou' : 'Connectez-vous pour sauvegarder vos XP'}
-              </span>
-            )}
+          <div className="mx-res__earn mx-in">
+            <div className="mx-xp">
+              <div className="mx-xp__top">
+                <p className="mx-xp__amount"><Sparkles size={18} aria-hidden="true" /> <span className="mx-num"><CountUp value={reward.xpEarned} prefix="+" suffix=" XP" /></span></p>
+                {reward.leveledUp && <p className="mx-xp__why"><Crown size={14} aria-hidden="true" /> {t(`Niveau ${reward.newLevel} atteint !`, `Ou rive nivo ${reward.newLevel} !`)}</p>}
+              </div>
+              {reward.guest && <p className="mx-res__note">{t('Aperçu : connecte-toi pour garder tes XP et tes records.', 'Apèsi : konekte pou kenbe XP ou ak rekò ou.')}</p>}
+            </div>
           </div>
         )}
-        <div className="trivia-results__actions">
+
+        <div className="mx-res__actions mx-in">
           {onReplay && (
-            <button className="button button--primary" onClick={onReplay}>
-              <RefreshCw size={16} /> {isCreole ? 'Jwe ankò' : 'Rejouer'}
+            <button type="button" className="an-go" onClick={onReplay}>
+              <RefreshCw size={16} aria-hidden="true" /> {t('Rejouer', 'Rejwe')}
             </button>
           )}
-          <button className="button button--ghost" onClick={onExit}>
-            ← {isCreole ? 'Jwèt yo' : 'Les jeux'}
+          <button type="button" className="an-ghost" onClick={onExit}>
+            ← {t('Les jeux', 'Jwèt yo')}
           </button>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

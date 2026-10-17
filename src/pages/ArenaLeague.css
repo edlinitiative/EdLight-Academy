@@ -357,3 +357,18 @@
 .arena-podium__step--1 .arena-podium__xp { color: #FFB92E; }
 @media (prefers-reduced-motion: reduce) { .arena-stage__beam { filter: none; } }
 .arena-national__body { justify-items: start; }
+
+/* ══ 2026-10-17 audit: opaque surfaces, faces, crests ══════════════════════
+   Ted: an outline on a fill "looks too AI". Surfaces are told apart by tone
+   alone; the empty seats are quiet solid tiles, not dashed outlines. */
+.arena-champ { --ac-surface: #13243F; --ac-surface-2: #1C3254; }
+.arena-switch,
+.arena-switch__tab.is-on,
+.arena-national,
+.arena-champ .arena-page__done { box-shadow: none; }
+.arena-switch__tab.is-on { background: #284068; }
+.arena-seats__seat { border: 0; background: #1C3254; color: #8FA3C8; }
+.arena-board__avatar { display: inline-flex; line-height: 0; border-radius: 50%; overflow: visible; }
+.arena-teams__row { grid-template-columns: 2rem auto minmax(0, 1fr) auto; }
+.arena-teams__crest { display: inline-flex; line-height: 0; }
+.arena-teams__row.is-short .arena-board__pos { color: #7F92B2; }
