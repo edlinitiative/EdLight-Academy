@@ -15,11 +15,11 @@ const build = (lang: 'fr' | 'ht', peers?: number) =>
 
 describe('the reminder e-mail', () => {
   it('carries a preheader, so the inbox does not scrape the greeting', () => {
-    // Without one, Gmail printed "Bonjour, Marie 👋" twice — once as the
+    // Without one, Gmail printed the greeting twice — once as the
     // preview of an email whose first words were the same greeting.
     const html = build('fr');
     expect(html).toMatch(/display:none[^"]*max-height:0/);
-    expect(html).toContain("ta session de 5 minutes t'attend");
+    expect(html).toContain('ta session d’étude t’attend');
   });
 
   it('declares a dark palette rather than letting the client invent one', () => {

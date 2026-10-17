@@ -21,11 +21,8 @@
 
 const RESEND_URL = 'https://api.resend.com/emails';
 const DEFAULT_FROM = 'EdLight Academy <sandra@edlight.org>';
-const APP_URL = 'https://academy.edlight.org';
 
-const AZURE = '#1B6FE0';
-const INK = '#141A21';
-const MUTED = '#5B6572';
+import { APP_URL, C, FONT_BODY, FONT_DISPLAY, button, buttonOutline, emailDocument, h1, hello, para, row, small } from './emailShell';
 
 export type ConsentEmailLang = 'fr' | 'ht';
 
@@ -58,6 +55,11 @@ function deadline(ms: number, lang: ConsentEmailLang): string {
 const STRINGS = {
   fr: {
     subject: (title: string) => `Autorisation parentale — ${title}`,
+    heading: 'Votre autorisation est nécessaire',
+    context: 'Arène · prix',
+    preheader: (p: string) => `${p} a gagné un prix. Il nous faut votre autorisation écrite.`,
+    deadlineLabel: 'Date limite',
+    footerNote: 'Vous recevez cet e-mail parce qu’une réclamation de prix a été déposée pour un élève mineur.',
     hello: (g: string) => `Bonjour ${g},`,
     won: (p: string, r: number, prize: string, title: string) =>
       `${p} a terminé ${r}<sup>${r === 1 ? 'er' : 'e'}</sup> au tournoi ${title} et a gagné ${prize}.`,
@@ -76,6 +78,11 @@ const STRINGS = {
   },
   ht: {
     subject: (title: string) => `Otorizasyon paran — ${title}`,
+    heading: 'Nou bezwen otorizasyon ou',
+    context: 'Arèn · pri',
+    preheader: (p: string) => `${p} genyen yon pri. Nou bezwen otorizasyon ou alekri.`,
+    deadlineLabel: 'Dat limit',
+    footerNote: 'Ou resevwa imèl sa a paske yon reklamasyon pri te fèt pou yon elèv minè.',
     hello: (g: string) => `Bonjou ${g},`,
     won: (p: string, r: number, prize: string, title: string) =>
       `${p} fini nimewo ${r} nan tounwa ${title} epi li genyen ${prize}.`,
@@ -99,52 +106,42 @@ const esc = (s: string): string =>
 
 export function buildConsentEmailHtml(args: ConsentEmailArgs): string {
   const t = STRINGS[args.lang] || STRINGS.fr;
+  const lang = args.lang === 'ht' ? 'ht' : 'fr';
   const player = esc(args.playerName);
   const formUrl = `${APP_URL}/arena/autorisation?tid=${encodeURIComponent(args.tournamentId)}`;
   const claimUrl = `${APP_URL}/arena/reclamation?tid=${encodeURIComponent(args.tournamentId)}`;
 
-  const button = (href: string, label: string, primary: boolean) => `
-    <a href="${href}" style="display:inline-block;padding:12px 20px;border-radius:999px;
-       background:${primary ? AZURE : '#ffffff'};color:${primary ? '#ffffff' : AZURE};
-       border:1px solid ${AZURE};text-decoration:none;font-weight:700;font-size:14px;
-       margin:0 8px 8px 0;">${esc(label)}</a>`;
+  const step = (n: number, text: string) => `<tr>
+    <td valign="top" style="width:40px;padding:0 0 14px;">
+      <div style="width:28px;height:28px;border-radius:999px;background:#E6EEFB;color:${C.action};font-family:${FONT_DISPLAY};font-weight:800;font-size:14px;line-height:28px;text-align:center;">${n}</div>
+    </td>
+    <td valign="top" class="edl-body" style="padding:3px 0 14px;font-family:${FONT_BODY};font-size:16px;line-height:1.5;color:${C.body};">${esc(text)}</td>
+  </tr>`;
 
-  return `<!doctype html>
-<html lang="${args.lang === 'ht' ? 'ht' : 'fr'}"><body style="margin:0;padding:24px;background:#F6F7F9;
-  font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:${INK};">
-  <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px;padding:28px;">
-    <p style="margin:0 0 16px;font-size:15px;">${esc(t.hello(args.guardianName))}</p>
-
-    <p style="margin:0 0 16px;font-size:15px;line-height:1.55;">
-      ${t.won(player, args.rank, money(args.prizeCents), esc(args.tournamentTitle))}
-    </p>
-    <p style="margin:0 0 20px;font-size:15px;line-height:1.55;">
-      ${t.because.replace('${p}', player)}
-    </p>
-
-    <p style="margin:0 0 8px;font-size:14px;font-weight:700;">${esc(t.steps)}</p>
-    <ol style="margin:0 0 20px;padding-left:20px;font-size:14px;line-height:1.7;color:${MUTED};">
-      <li>${esc(t.step1)}</li>
-      <li>${esc(t.step2)}</li>
-      <li>${esc(t.step3)}</li>
-    </ol>
-
-    <div style="margin:0 0 20px;">
-      ${button(formUrl, t.cta, true)}
-      ${button(claimUrl, t.claimCta, false)}
-    </div>
-
-    <p style="margin:0 0 20px;font-size:14px;line-height:1.55;">
-      ${esc(t.deadline(deadline(args.expiresAt, args.lang)))}
-    </p>
-
-    <p style="margin:0 0 16px;padding:12px 14px;border-radius:10px;background:#FFF6E8;
-       font-size:13px;line-height:1.55;">${esc(t.never)}</p>
-
-    <p style="margin:0 0 4px;font-size:13px;color:${MUTED};">${esc(t.questions)}</p>
-    <p style="margin:0;font-size:13px;color:${MUTED};">${esc(t.signoff)}</p>
-  </div>
-</body></html>`;
+  return emailDocument({
+    lang,
+    title: t.subject(args.tournamentTitle),
+    preheader: t.preheader(args.playerName),
+    context: t.context,
+    rows:
+      row(hello(esc(t.hello(args.guardianName))) + h1(t.heading)
+        + para(t.won(player, args.rank, money(args.prizeCents), esc(args.tournamentTitle)))
+        + para(t.because.replace('${p}', player)), '28px 28px 0')
+      + row(`<div class="edl-ink" style="font-family:${FONT_DISPLAY};font-weight:700;font-size:17px;color:${C.ink};">${esc(t.steps)}</div>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px;">
+          ${step(1, t.step1)}${step(2, t.step2)}${step(3, t.step3)}
+        </table>`, '22px 28px 0')
+      + row(button(formUrl, esc(t.cta)) + '<div style="height:10px;line-height:10px;font-size:0;">&nbsp;</div>' + buttonOutline(claimUrl, esc(t.claimCta)), '8px 28px 0')
+      + row(`<div class="edl-well" style="background:${C.well};border-radius:16px;padding:16px 18px;">
+          <div class="edl-muted" style="font-family:${FONT_BODY};font-size:13px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:${C.muted};">${esc(t.deadlineLabel)}</div>
+          <div class="edl-body" style="margin-top:6px;font-family:${FONT_BODY};font-size:16px;line-height:1.5;color:${C.body};">${esc(t.deadline(deadline(args.expiresAt, args.lang)))}</div>
+        </div>`)
+      + row(`<div class="edl-warn" style="background:${C.warnBg};border-radius:16px;padding:16px 18px;">
+          <p style="margin:0;font-family:${FONT_BODY};font-size:15px;line-height:1.55;color:${C.warnText};">${esc(t.never)}</p>
+        </div>`, '12px 28px 0'),
+    footerNote: t.footerNote,
+    footerExtra: small(`${esc(t.questions)}<br>${esc(t.signoff)}`, 10),
+  });
 }
 
 /**

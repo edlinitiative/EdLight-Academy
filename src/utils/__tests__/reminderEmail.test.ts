@@ -20,36 +20,44 @@ const BASE = {
 };
 
 describe('buildReminderEmailHtml', () => {
-  it('renders EdLight branding, the title, the message and a CTA', () => {
+  it('renders EdLight branding, its own headline and a CTA', () => {
     const html = buildReminderEmailHtml(BASE);
     expect(html).toContain('EdLight Academy');
-    expect(html).toContain('Continue ta révision de Chimie');
-    expect(html).toContain('en attente');
+    expect(html).toContain('C’est l’heure de ta session d’étude.');
     expect(html).toContain('Continuer à apprendre'); // fr CTA
+  });
+
+  it('does not print the stored reminder message (old docs hold English defaults)', () => {
+    const html = buildReminderEmailHtml({ ...BASE, message: 'Time to continue your learning!' });
+    expect(html).not.toContain('Time to continue');
   });
 
   it('greets the student by first name when known, and namelessly when not', () => {
     const withName = buildReminderEmailHtml({ ...BASE, personalization: { firstName: 'Ted' } });
-    expect(withName).toContain('Bonjour, Ted 👋');
+    expect(withName).toContain('Bonjour Ted,');
     const without = buildReminderEmailHtml(BASE);
-    expect(without).toContain('Bonjour 👋');
+    expect(without).toContain('Bonjour,');
+    expect(without).not.toMatch(/\p{Extended_Pictographic}/u);
   });
 
-  it('shows progress chips only for non-zero values — absence, never a zero', () => {
+  it('shows figures only for non-zero values — absence, never a zero', () => {
     const html = buildReminderEmailHtml({
       ...BASE,
       personalization: { streakDays: 7, masteredCount: 0, dueReviewCount: 3 },
     });
-    expect(html).toContain("7 jours d'affilée");
-    expect(html).toContain('3 questions à revoir');
-    expect(html).not.toContain('0 leçon');
+    expect(html).toContain('jours d’affilée');
+    expect(html).toContain('à revoir');
+    expect(html).not.toContain('leçons maîtrisées');
+    expect(html).not.toContain('leçon maîtrisée');
     // The review link lands on the web Revizyon session, not a bare dashboard.
     expect(html).toContain('https://academy.edlight.org/revision');
   });
 
-  it('names the course in the next-step box when given', () => {
+  it('names the course in its own panel when given', () => {
     const html = buildReminderEmailHtml({ ...BASE, personalization: { courseName: 'Chimie NS1' } });
-    expect(html).toContain('Ta prochaine étape · Chimie NS1');
+    expect(html).toContain('Ton cours');
+    expect(html).toContain('Chimie NS1');
+    expect(buildReminderEmailHtml(BASE)).not.toContain('Ton cours');
   });
 
   it('reengagement variant leads with earned mastery and its own CTA', () => {
@@ -58,9 +66,10 @@ describe('buildReminderEmailHtml', () => {
       variant: 'reengagement',
       personalization: { firstName: 'Ted', masteredCount: 12 },
     });
-    expect(html).toContain('Tu nous manques, Ted 👋');
-    expect(html).toContain('12 leçons');
-    expect(html).toContain("Reprendre l'apprentissage");
+    expect(html).toContain('Ted,');
+    expect(html).toContain('Ton travail est toujours là.');
+    expect(html).toContain('leçons déjà maîtrisées');
+    expect(html).toContain('Reprendre l’apprentissage');
     // The win-back never shows the reminder chips row.
     expect(html).not.toContain('à revoir');
   });
@@ -84,13 +93,36 @@ describe('buildReminderEmailHtml', () => {
   it('uses Haitian Creole copy when lang = ht', () => {
     const html = buildReminderEmailHtml({ ...BASE, lang: 'ht' });
     expect(html).toContain('Kontinye aprann'); // ht CTA
-    expect(html).toContain('rapèl etid'); // ht footer
+    expect(html).toContain('pwograme'); // ht footer
   });
 
   it('escapes HTML in user-facing strings', () => {
     const html = buildReminderEmailHtml({ ...BASE, title: 'Chimie <script>alert(1)</script>' });
     expect(html).not.toContain('<script>alert(1)</script>');
     expect(html).toContain('&lt;script&gt;');
+  });
+
+  it('question variant makes the question the hero and never carries an answer', () => {
+    const html = buildReminderEmailHtml({
+      ...BASE, variant: 'question',
+      teaser: { question: 'Quelle est la capitale du Canada ?', category: 'Géographie' },
+    });
+    expect(html).toContain('Quelle est la capitale du Canada ?');
+    expect(html).toContain('Géographie');
+    expect(html).toContain('Répondre');
+    expect(html).not.toContain('Ottawa');
+  });
+
+  it('question variant without a teaser falls back to the morning quiz', () => {
+    const html = buildReminderEmailHtml({ ...BASE, variant: 'question', teaser: null });
+    expect(html).toContain('Ton quiz du matin.');
+  });
+
+  it('streak variant shows the real count, and words when there is none', () => {
+    const withCount = buildReminderEmailHtml({ ...BASE, variant: 'streak', personalization: { streakDays: 6 } });
+    expect(withCount).toContain('Tu as joué 6 jours de suite');
+    const without = buildReminderEmailHtml({ ...BASE, variant: 'streak' });
+    expect(without).toContain('Tu as joué hier.');
   });
 
   it('includes an unsubscribe / manage-preferences link', () => {

@@ -54,6 +54,7 @@ import {
   type NudgeKind,
 } from './_lib/dailyNudge';
 import { pickTeaser, teaserCopy } from './_lib/teaserQuestion';
+import { loadEmailPersonalization } from './_lib/emailPersonalization';
 
 /** Backlog cap per run, mirroring the other crons. */
 const MAX_SENDS_PER_RUN = 300;
@@ -215,6 +216,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (dryRun) continue;
 
       if (wantsEmail) {
+        // Each nudge has its own email layout: the question as the hero, the
+        // streak count, or the plain morning quiz. Only streak-at-risk needs
+        // the extra reads (the real streak count); the others need the name.
+        const firstName = firstNameOf(u.full_name) || null;
+        const isStreak = kind === 'streak-at-risk';
+        const personalization = isStreak
+          ? { ...(await loadEmailPersonalization(db, uid, u.full_name)), firstName }
+          : { firstName };
         const r = await sendReminderEmail({
           to,
           title: copy.title,
@@ -222,8 +231,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // Straight into the category the question came from, so answering
           // it is the first thing they can do rather than something to go and
           // find from the dashboard.
-          url: teaser && kind !== 'streak-at-risk' ? `/quiz/${teaser.categoryId}` : '/dashboard',
+          url: teaser && !isStreak ? `/quiz/${teaser.categoryId}` : '/dashboard',
           lang,
+          variant: isStreak ? 'streak' : teaser ? 'question' : 'morning',
+          teaser: teaser && !isStreak
+            ? {
+                question: lang === 'ht' ? teaser.questionHt : teaser.question,
+                category: lang === 'ht' ? teaser.categoryNameHt : teaser.categoryName,
+              }
+            : null,
+          personalization,
         });
         if ('sent' in r) summary.emailed += 1;
         else summary.errors += 1;

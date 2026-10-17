@@ -9,9 +9,9 @@
 import { buildPlanEmailHtml, sendPlanEmail } from '../../../api/_lib/planEmail';
 import { buildPlanIcs } from '../planIcs';
 
-// Local-midnight epochs so date formatting is timezone-stable in tests.
-const JUL_15 = new Date(2026, 6, 15).getTime();
-const JUL_18 = new Date(2026, 6, 18).getTime();
+// Noon UTC, so the Haiti-time date is the same day wherever the test runs.
+const JUL_15 = Date.UTC(2026, 6, 15, 12);
+const JUL_18 = Date.UTC(2026, 6, 18, 12);
 
 const PLAN = {
   title: 'Plan Chimie 4 semaines',
@@ -29,7 +29,8 @@ describe('buildPlanEmailHtml', () => {
     const html = buildPlanEmailHtml(PLAN, 'fr');
     expect(html).toContain('EdLight Academy');
     expect(html).toContain('Plan Chimie 4 semaines');
-    expect(html).toMatch(/60\s*minutes par jour/);
+    expect(html).toContain('60 min');
+    expect(html).toContain('par jour');
   });
 
   it('lists every task grouped by subject with its scheduled date', () => {
@@ -41,9 +42,9 @@ describe('buildPlanEmailHtml', () => {
     for (const t of ['Chimie Bac 2019', 'Chimie Bac 2020', 'Physique Bac 2021', 'Physique Bac 2022']) {
       expect(html).toContain(t);
     }
-    // Dates (dd/mm/yyyy, local)
-    expect(html).toContain('15/07/2026');
-    expect(html).toContain('18/07/2026');
+    // Dates as a weekday + day + month, in Haiti time
+    expect(html).toMatch(/mer\. 15 juil\./);
+    expect(html).toMatch(/sam\. 18 juil\./);
     // Undated task gets the "to schedule" label instead of a date
     expect(html).toMatch(/À planifier/);
   });
@@ -57,8 +58,8 @@ describe('buildPlanEmailHtml', () => {
     const html = buildPlanEmailHtml(PLAN, 'ht');
     expect(html).toContain('EdLight Academy');
     expect(html).toContain('Plan Chimie 4 semaines');
-    expect(html).toMatch(/minit chak jou/);
-    expect(html).not.toMatch(/minutes par jour/);
+    expect(html).toContain('chak jou');
+    expect(html).not.toContain('par jour');
     expect(html).toContain('https://academy.edlight.org/study-plan');
   });
 

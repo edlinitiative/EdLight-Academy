@@ -19,6 +19,7 @@
  */
 
 import { buildPlanIcs, type PlanIcsInput, type PlanIcsTask } from '../../src/utils/planIcs';
+import { C, FONT_BODY, FONT_DISPLAY, button, emailDocument, eyebrow, h1, hello, para, row, small } from './emailShell';
 
 export type PlanEmailLang = 'fr' | 'ht';
 
@@ -37,7 +38,12 @@ const SEND_FAILED_ERROR = "l'email n'a pas pu être envoyé — réessaie un peu
 
 interface Strings {
   subject: (title: string) => string;
+  hello: string;
   intro: string;
+  sessions: (n: number) => string;
+  minutesUnit: string;
+  dailyLabel: string;
+  preheader: (title: string) => string;
   daily: (minutes: number) => string;
   unscheduled: string;
   cta: string;
@@ -49,7 +55,12 @@ interface Strings {
 const STRINGS: Record<PlanEmailLang, Strings> = {
   fr: {
     subject: (title) => `${title} — ton plan d'étude EdLight Academy`,
-    intro: "Voici ton plan d'étude personnalisé, préparé avec Sandra.",
+    hello: 'Ton plan d’étude',
+    intro: 'Préparé avec Sandra, à partir de tes cours et de tes examens.',
+    sessions: (n) => (n > 1 ? 'séances prévues' : 'séance prévue'),
+    minutesUnit: 'min',
+    dailyLabel: 'par jour',
+    preheader: (title) => `${title} — tes prochaines séances, jour par jour.`,
     daily: (minutes) => `Objectif : ${minutes} minutes par jour`,
     unscheduled: 'À planifier',
     cta: "Voir mon plan d'étude",
@@ -60,7 +71,12 @@ const STRINGS: Record<PlanEmailLang, Strings> = {
   },
   ht: {
     subject: (title) => `${title} — plan etid EdLight Academy ou`,
-    intro: 'Men plan etid pèsonalize ou, Sandra prepare li avè ou.',
+    hello: 'Plan etid ou',
+    intro: 'Sandra prepare l avè ou, apati kou ak egzamen ou yo.',
+    sessions: () => 'seyans pwograme',
+    minutesUnit: 'min',
+    dailyLabel: 'chak jou',
+    preheader: (title) => `${title} — pwochen seyans ou yo, jou pa jou.`,
     daily: (minutes) => `Objektif : ${minutes} minit chak jou`,
     unscheduled: 'Pou planifye',
     cta: 'Gade plan etid mwen',
@@ -81,12 +97,15 @@ function escapeHtml(value: string): string {
     .replace(/"/g, '&quot;');
 }
 
-/** dd/mm/yyyy in local time — matches how the app formats plan dates. */
-function formatDate(ms: number): string {
-  const d = new Date(ms);
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  return `${day}/${month}/${d.getFullYear()}`;
+/** "ven. 18 oct." — a weekday reads faster than dd/mm/yyyy on a phone. */
+function formatDate(ms: number, lang: PlanEmailLang): string {
+  try {
+    return new Intl.DateTimeFormat(lang === 'ht' ? 'fr-HT' : 'fr-FR', {
+      weekday: 'short', day: 'numeric', month: 'short', timeZone: 'America/Port-au-Prince',
+    }).format(new Date(ms));
+  } catch {
+    return new Date(ms).toISOString().slice(0, 10);
+  }
 }
 
 /** Best display title for a task — same fallback chain as planIcs.taskTitle.
@@ -99,60 +118,74 @@ function taskTitle(task: PlanIcsTask, fallback: string): string {
 }
 
 /**
- * Render the plan as simple branded HTML (inline styles only — email clients
- * ignore <style> blocks). Pure function; safe to unit-test byte-for-byte.
+ * The plan as dated rows grouped by subject, on the shared email shell.
+ * Pure function; safe to unit-test.
  */
 export function buildPlanEmailHtml(plan: PlanEmailInput, lang: PlanEmailLang): string {
   const t = STRINGS[lang] || STRINGS.fr;
   const title = plan.title || "Plan d'étude EdLight";
 
-  // Group tasks by subject, preserving first-seen subject order.
+  // Group tasks by subject, preserving first-seen subject order; dated tasks
+  // first within a subject, soonest first.
   const groups = new Map<string, PlanIcsTask[]>();
+  let count = 0;
   for (const task of plan.tasks || []) {
     if (!task) continue;
+    count += 1;
     const subject = task.subject || '—';
     const list = groups.get(subject) || [];
     list.push(task);
     groups.set(subject, list);
   }
 
+  const taskRow = (task: PlanIcsTask, first: boolean) => {
+    const when = task.nextReviewMs ? formatDate(task.nextReviewMs, lang) : t.unscheduled;
+    return `<tr>
+      <td valign="top" class="edl-rule" style="padding:12px 12px 12px 0;width:96px;${first ? '' : `border-top:1px solid ${C.border};`}">
+        <span style="display:inline-block;padding:4px 10px;border-radius:999px;background:${task.nextReviewMs ? '#E6EEFB' : C.well};color:${task.nextReviewMs ? C.action : C.muted};font-family:${FONT_BODY};font-size:13px;font-weight:700;white-space:nowrap;">${escapeHtml(when)}</span>
+      </td>
+      <td valign="top" class="edl-ink edl-rule" style="padding:13px 0;${first ? '' : `border-top:1px solid ${C.border};`}font-family:${FONT_BODY};font-size:16px;line-height:1.4;font-weight:600;color:${C.ink};">${escapeHtml(taskTitle(task, t.fallbackTaskTitle))}</td>
+    </tr>`;
+  };
+
   const groupsHtml = [...groups.entries()]
     .map(([subject, tasks]) => {
-      const items = tasks
-        .map((task) => {
-          const when = task.nextReviewMs ? formatDate(task.nextReviewMs) : t.unscheduled;
-          return `<li style="margin:4px 0;">${escapeHtml(taskTitle(task, t.fallbackTaskTitle))} — <span style="color:#5B6472;">${escapeHtml(when)}</span></li>`;
-        })
-        .join('');
-      return [
-        `<h3 style="margin:20px 0 6px;font-size:16px;color:#1B6FE0;">${escapeHtml(subject)}</h3>`,
-        `<ul style="margin:0;padding-left:20px;color:#1F2733;">${items}</ul>`,
-      ].join('');
+      const sorted = [...tasks].sort((x, y) => (x.nextReviewMs || Infinity) - (y.nextReviewMs || Infinity));
+      return row(
+        `${eyebrow(escapeHtml(subject))}
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:6px;">${sorted.map((task, i) => taskRow(task, i === 0)).join('')}</table>`,
+        '22px 28px 0',
+      );
     })
     .join('');
 
-  const dailyHtml = plan.dailyTargetMinutes
-    ? `<p style="margin:8px 0 0;color:#5B6472;">${escapeHtml(t.daily(plan.dailyTargetMinutes))}</p>`
+  const figures: string[] = [];
+  if (plan.dailyTargetMinutes) {
+    figures.push(`<td width="50%" align="center" class="edl-rule" style="padding:14px 8px;">
+      <div class="edl-ink" style="font-family:${FONT_DISPLAY};font-weight:800;font-size:26px;line-height:1;color:${C.ink};">${escapeHtml(String(plan.dailyTargetMinutes))} ${t.minutesUnit}</div>
+      <div class="edl-muted" style="margin-top:6px;font-family:${FONT_BODY};font-size:13px;color:${C.muted};">${t.dailyLabel}</div></td>`);
+  }
+  if (count > 0) {
+    figures.push(`<td width="50%" align="center" class="edl-rule" style="padding:14px 8px;${figures.length ? `border-left:1px solid ${C.border};` : ''}">
+      <div class="edl-ink" style="font-family:${FONT_DISPLAY};font-weight:800;font-size:26px;line-height:1;color:${C.ink};">${count}</div>
+      <div class="edl-muted" style="margin-top:6px;font-family:${FONT_BODY};font-size:13px;color:${C.muted};">${t.sessions(count)}</div></td>`);
+  }
+  const figuresRow = figures.length
+    ? row(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="edl-rule" style="border:1px solid ${C.border};border-radius:16px;border-collapse:separate;"><tr>${figures.join('')}</tr></table>`, '22px 28px 0')
     : '';
 
-  return [
-    `<div style="max-width:560px;margin:0 auto;font-family:'Plus Jakarta Sans',Arial,sans-serif;background:#FFFFFF;color:#1F2733;">`,
-    `<div style="background:#1B6FE0;padding:20px 24px;border-radius:12px 12px 0 0;">`,
-    `<span style="color:#FFFFFF;font-size:18px;font-weight:700;">EdLight Academy</span>`,
-    `</div>`,
-    `<div style="padding:24px;border:1px solid #E3E8F0;border-top:none;border-radius:0 0 12px 12px;">`,
-    `<h2 style="margin:0;font-size:20px;">${escapeHtml(title)}</h2>`,
-    dailyHtml,
-    `<p style="margin:16px 0 0;">${escapeHtml(t.intro)}</p>`,
-    groupsHtml,
-    `<p style="margin:24px 0 0;"><a href="${PLAN_URL}" style="display:inline-block;background:#1B6FE0;color:#FFFFFF;text-decoration:none;padding:10px 20px;border-radius:999px;font-weight:600;">${escapeHtml(t.cta)}</a></p>`,
-    `<p style="margin:16px 0 0;font-size:13px;color:#5B6472;">${escapeHtml(t.icsNote)}</p>`,
-    `<p style="margin:20px 0 0;font-size:12px;color:#8A93A3;">${escapeHtml(t.footer)}</p>`,
-    `</div>`,
-    `</div>`,
-  ]
-    .filter(Boolean)
-    .join('\n');
+  return emailDocument({
+    lang,
+    title,
+    preheader: t.preheader(title),
+    context: 'Sandra',
+    rows:
+      row(hello(t.hello) + h1(escapeHtml(title)) + para(escapeHtml(t.intro)), '28px 28px 0')
+      + figuresRow
+      + groupsHtml
+      + row(button(PLAN_URL, escapeHtml(t.cta)) + small(escapeHtml(t.icsNote), 14, 'center')),
+    footerNote: escapeHtml(t.footer),
+  });
 }
 
 // ─── Resend sender ───────────────────────────────────────────────────────────
