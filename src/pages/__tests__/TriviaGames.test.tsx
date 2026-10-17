@@ -1,6 +1,7 @@
 import React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import TriviaGames, { TriviaQuiz } from '../TriviaGames';
 
 const mockRecord = jest.fn().mockResolvedValue({ xpEarned: 10, guest: true });
@@ -15,6 +16,8 @@ jest.mock('../../services/answerEventsService', () => ({ logAnswerEvent: jest.fn
 jest.mock('../../utils/telemetry', () => ({ trackEvent: jest.fn() }));
 jest.mock('../../components/Leaderboard', () => () => null);
 jest.mock('../../components/ArenaBanner', () => () => null);
+jest.mock('../../components/MySchoolCard', () => () => null);
+jest.mock('../../components/SchoolRanking', () => () => null);
 
 beforeEach(() => { window.scrollTo = jest.fn(); localStorage.clear(); });
 afterEach(() => { jest.useRealTimers(); });
@@ -48,7 +51,7 @@ it('times out once, records the missed answer, and finishes only once', () => {
 });
 
 it('starts directly from a topic, reviews errors without awarding again, and replays directly', async () => {
-  render(<MemoryRouter initialEntries={['/jeux/trivia']}><Routes><Route path="/jeux/:gameId" element={<TriviaGames />} /></Routes></MemoryRouter>);
+  render(<QueryClientProvider client={new QueryClient()}><MemoryRouter initialEntries={['/jeux/trivia']}><Routes><Route path="/jeux/:gameId" element={<TriviaGames />} /></Routes></MemoryRouter></QueryClientProvider>);
   expect(screen.getByText(/10 questions · Sans chrono/)).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Maths éclair — 2 questions' }));
   expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(/plus/);

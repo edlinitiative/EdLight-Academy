@@ -128,8 +128,8 @@ body.arena-night .navbar .nav-actions__signin:hover, body.arena-night .navbar .n
      · tabs, segmented switches and choice chips stay pills.
    This file loads before the lazy page CSS, hence body.arena-night and
    !important on the properties those files also set. */
-body.arena-night :is(.ah-start, .aj-go, .an-go, .demo-go, .arc-btn--lg, .arc-btn--go, .gx-btn:not(.gx-btn--ghost), .duel-pill--primary, .ah-game--story .ah-cta),
-body.arena-night :is(.ah-ghost, .an-ghost, .gx-btn--ghost, .duel-pill--soft, .gx-duel, .ah-cta--btn) {
+body.arena-night :is(.ah-start, .aj-go, .an-go, .demo-go, .arc-btn--lg, .arc-btn--go, .gx-btn:not(.gx-btn--ghost), .duel-pill--primary, .ah-game--story .ah-cta, .hs-go, .arena-national__cta, .trivia-daily__cta, .trivia-mix, .myschool__cta, main .button--primary),
+body.arena-night :is(.ah-ghost, .an-ghost, .gx-btn--ghost, .duel-pill--soft, .gx-duel, .ah-cta--btn, .hs-ghost, .myschool__ghost, main .button--ghost, main .button--secondary) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -146,26 +146,32 @@ body.arena-night :is(.ah-ghost, .an-ghost, .gx-btn--ghost, .duel-pill--soft, .gx
   transform: none;
   transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease, filter 0.15s ease !important;
 }
-/* Primary: coral, lit from above, a glow rather than a slab. */
-body.arena-night :is(.ah-start, .aj-go, .an-go, .demo-go, .arc-btn--lg, .arc-btn--go, .gx-btn:not(.gx-btn--ghost), .duel-pill--primary, .ah-game--story .ah-cta) {
-  background: linear-gradient(180deg, #FF7550 0%, #FF5C39 100%) !important;
-  color: #fff !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 12px 28px -14px rgba(255, 92, 57, 0.9) !important;
+/* Primary (2026-10-17): FLAT coral. Ted still disliked the button after the
+   slab became a gradient with a coral glow — it read as the same raised,
+   lit key. Now: one solid fill, no gradient, no glow, no lift on hover. Text
+   is dark marine, the spec's pairing: white on this coral is under 3:1. */
+body.arena-night :is(.ah-start, .aj-go, .an-go, .demo-go, .arc-btn--lg, .arc-btn--go, .gx-btn:not(.gx-btn--ghost), .duel-pill--primary, .ah-game--story .ah-cta, .hs-go, .arena-national__cta, .trivia-daily__cta, .trivia-mix, .myschool__cta, main .button--primary) {
+  background: #FF6A45 !important;
+  color: #12213A !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
 }
-body.arena-night :is(.ah-start, .aj-go, .an-go, .demo-go, .arc-btn--lg, .arc-btn--go, .gx-btn:not(.gx-btn--ghost), .duel-pill--primary, .ah-game--story .ah-cta):hover {
-  filter: brightness(1.06);
-  transform: translateY(-1px) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 16px 32px -14px rgba(255, 92, 57, 1) !important;
+body.arena-night :is(.ah-start, .aj-go, .an-go, .demo-go, .arc-btn--lg, .arc-btn--go, .gx-btn:not(.gx-btn--ghost), .duel-pill--primary, .ah-game--story .ah-cta, .hs-go, .arena-national__cta, .trivia-daily__cta, .trivia-mix, .myschool__cta, main .button--primary):hover {
+  background: #FF7D5C !important;
+  filter: none;
+  transform: none !important;
+  box-shadow: none !important;
 }
-/* Secondary: glass on the night. */
-body.arena-night :is(.ah-ghost, .an-ghost, .gx-btn--ghost, .duel-pill--soft, .gx-duel, .ah-cta--btn) {
-  background: rgba(255, 255, 255, 0.08) !important;
-  color: #fff !important;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22) !important;
+body.arena-night :is(.ah-start, .aj-go, .an-go, .demo-go, .arc-btn--lg, .arc-btn--go, .gx-btn:not(.gx-btn--ghost), .duel-pill--primary, .ah-game--story .ah-cta, .hs-go, .arena-national__cta, .trivia-daily__cta, .trivia-mix, .myschool__cta, main .button--primary) svg { color: currentColor; }
+/* Secondary: a flat, quiet fill with a hairline. */
+body.arena-night :is(.ah-ghost, .an-ghost, .gx-btn--ghost, .duel-pill--soft, .gx-duel, .ah-cta--btn, .hs-ghost, .myschool__ghost, main .button--ghost, main .button--secondary) {
+  background: rgba(255, 255, 255, 0.07) !important;
+  color: #F5F8FF !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2) !important;
 }
-body.arena-night :is(.ah-ghost, .an-ghost, .gx-btn--ghost, .duel-pill--soft, .gx-duel, .ah-cta--btn):hover {
-  background: rgba(255, 255, 255, 0.14) !important;
-  transform: translateY(-1px) !important;
+body.arena-night :is(.ah-ghost, .an-ghost, .gx-btn--ghost, .duel-pill--soft, .gx-duel, .ah-cta--btn, .hs-ghost, .myschool__ghost, main .button--ghost, main .button--secondary):hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  transform: none !important;
 }
 body.arena-night :is(.ah-start, .aj-go, .an-go, .demo-go, .arc-btn--lg, .arc-btn--go, .gx-btn, .duel-pill, .ah-cta, .ah-ghost, .an-ghost, .gx-duel):active {
   transform: translateY(0) scale(0.98) !important;
@@ -198,3 +204,49 @@ body.arena-night .trivia-daily__cta {
   border-radius: var(--r-btn, 12px) !important;
   font-weight: 750 !important;
 }
+
+/* ══ Arène back links + trivia setup (2026-10-17) ══════════════════════════
+   One way back on every Arène page: a quiet text link with a chevron, like
+   the learning side's top bars — not a boxed button that competes with the
+   page's real action. */
+body.arena-night .trivia-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 40px;
+  padding: 0 0.6rem 0 0.35rem !important;
+  border: 0 !important;
+  border-radius: var(--r-btn, 12px) !important;
+  background: none !important;
+  box-shadow: none !important;
+  color: #C1CFE4 !important;
+  font-size: 0.975rem !important;
+  font-weight: 650 !important;
+}
+body.arena-night .trivia-back-btn:hover { background: rgba(255, 255, 255, 0.07) !important; color: #fff !important; }
+body.arena-night .trivia-mix { min-height: var(--btn-h-lg, 52px) !important; padding: 0 1.75rem !important; font-size: 1.05rem !important; }
+body.arena-night .trivia-settings > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 40px;
+  padding: 0 0.6rem;
+  border-radius: var(--r-btn, 12px);
+  color: #9DC4FF;
+  font-weight: 650;
+  list-style: none;
+  cursor: pointer;
+}
+body.arena-night .trivia-settings > summary::-webkit-details-marker { display: none; }
+body.arena-night .trivia-settings > summary::after {
+  content: '';
+  width: 7px;
+  height: 7px;
+  margin-top: -3px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 0.15s ease;
+}
+body.arena-night .trivia-settings[open] > summary::after { transform: rotate(-135deg); margin-top: 3px; }
+body.arena-night .trivia-settings > summary:hover { background: rgba(255, 255, 255, 0.07); }

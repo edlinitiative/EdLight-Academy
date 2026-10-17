@@ -24,12 +24,28 @@ import { Link } from 'react-router-dom';
 import { ChevronRight, Swords, Zap } from '../components/icons';
 import useStore from '../contexts/store';
 import Leaderboard from '../components/Leaderboard';
+import MySchoolCard from '../components/MySchoolCard';
+import SchoolRanking from '../components/SchoolRanking';
 import ArenaPageHead from '../components/arena/ArenaPageHead';
 import './Classement.css';
+
+/** Time left until the weekly board turns over (Monday 00:00, device time — as weekId keys it). */
+export function untilWeekReset(now = new Date()): { days: number; hours: number } {
+  const next = new Date(now);
+  next.setHours(0, 0, 0, 0);
+  const daysToMonday = ((8 - next.getDay()) % 7) || 7;
+  next.setDate(next.getDate() + daysToMonday);
+  const ms = Math.max(0, next.getTime() - now.getTime());
+  return { days: Math.floor(ms / 86_400_000), hours: Math.floor((ms % 86_400_000) / 3_600_000) };
+}
 
 export default function Classement() {
   const language = useStore((s) => s.language);
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
+  const { days, hours } = untilWeekReset();
+  const left = days > 0
+    ? t(`${days} j ${hours} h`, `${days} j ${hours} è`)
+    : hours > 0 ? t(`${hours} h`, `${hours} è`) : t('moins d’une heure', 'mwens pase inèdtan');
 
   return (
     <section className="section classement">
@@ -43,6 +59,11 @@ export default function Classement() {
             the right — without stretching ranking rows across 1400px. */}
         <div className="classement__layout">
           <div className="classement__side">
+            <MySchoolCard where="classement" />
+            <div id="ecoles" className="classement__race">
+              <SchoolRanking showAllLink={false} />
+            </div>
+
             {/* §6.7 — "Monthly tournament scores must never be visually
                 confused with practice XP." Two named lanes, each with its own
                 icon and colour, so the difference is carried by text first and
@@ -94,6 +115,10 @@ export default function Classement() {
           </div>
 
           <div className="classement__main an-panel">
+            <p className="classement__reset">
+              {t(`La semaine se termine dans ${left} — le classement de la semaine repart à zéro lundi.`,
+                `Semèn nan fini nan ${left} — klasman semèn nan rekòmanse a zewo lendi.`)}
+            </p>
             <Leaderboard variant="full" periodToggle max={50} />
           </div>
         </div>

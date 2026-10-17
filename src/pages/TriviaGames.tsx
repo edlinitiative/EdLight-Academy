@@ -14,6 +14,8 @@ import { todayStr } from '../services/streakService';
 import { GAMES, GAME_ICONS, getGameById } from '../data/games';
 import Leaderboard from '../components/Leaderboard';
 import SchoolRanking from '../components/SchoolRanking';
+import MySchoolCard from '../components/MySchoolCard';
+import { useQueryClient } from '@tanstack/react-query';
 import DailyQuests from '../components/DailyQuests';
 import { useCollectives } from '../hooks/useLeaderboard';
 import { useOpenArena } from '../hooks/useOpenArena';
@@ -73,7 +75,7 @@ function CategoryPicker({ onSelect, isCreole, categories, questions, count, setC
         {!duelPick && <>
         <p>{count} {isCreole ? 'kesyon' : 'questions'} · {timed ? (isCreole ? '15 segonn / kesyon' : '15 secondes / question') : (isCreole ? 'San kwonomèt' : 'Sans chrono')}{!isAuthed && (isCreole ? ' · San kont' : ' · Sans compte')}</p>
         <button className="button button--primary trivia-mix" onClick={() => onSelect('mixed')} disabled={!Object.values(questions).some((bank: any[]) => bank.length)}>
-          <Sparkles size={18} aria-hidden="true" /> {isCreole ? 'Jwe yon melanj tèm' : 'Jouer un mélange de thèmes'}
+          {isCreole ? 'Jwe yon melanj tèm' : 'Jouer un mélange de thèmes'}
         </button>
         <details className="trivia-settings">
           <summary>{isCreole ? 'Modifye pati a' : 'Modifier la partie'}</summary>
@@ -528,6 +530,15 @@ function TriviaClassic({ isCreole, onExitHub }) {
   const [answers, setAnswers] = useState([]);
   const [reward, setReward] = useState(null);
   const [saving, setSaving] = useState(false);
+  // After a round is saved, the boards it moved are stale: refetch them so the
+  // standing card under the result shows the place THIS game earned.
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (screen !== 'results' || saving) return;
+    for (const key of ['leaderboard-weekly', 'leaderboard-my-rank', 'leaderboard-collectives']) {
+      queryClient.invalidateQueries({ queryKey: [key] });
+    }
+  }, [screen, saving, queryClient]);
   const [saveError, setSaveError] = useState(false);
   const [playNonce, setPlayNonce] = useState(0);
   const [dailyNotice, setDailyNotice] = useState('');
@@ -718,6 +729,7 @@ function TriviaClassic({ isCreole, onExitHub }) {
         accentColor={category === 'daily' ? '#f59e0b' : null} onReplay={handleReplay} onHome={handleHome}
         onReview={() => { trackEvent('trivia_review', { category }); setScreen('review'); }}
         isCreole={isCreole} categories={categories} onStartDuelRound={startDuelRound} onPickDuel={pickDuel} />
+      {isAuthed && !saving && <div className="trivia-standing"><MySchoolCard where="trivia-results" /></div>}
     </>}
     {screen === 'review' && <section className="trivia-review">
       <button className="trivia-back-btn" onClick={() => setScreen('results')}>← {isCreole ? 'Rezilta' : 'Résultats'}</button>

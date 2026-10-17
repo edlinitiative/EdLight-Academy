@@ -66,3 +66,25 @@
   .classement__layout { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 2rem; align-items: start; }
   .classement__side { position: sticky; top: calc(var(--navbar-height, 64px) + 1rem); }
 }
+
+/* 2026-10-17: your standing and the school race lead the side column. */
+.classement__side { display: grid; gap: 1rem; align-content: start; }
+.classement__race { scroll-margin-top: 88px; }
+.classement__reset {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: 12px;
+  background: rgba(255, 210, 122, 0.1);
+  color: #FFE2A6;
+  font-size: 0.925rem;
+  line-height: 1.45;
+}
+/* Phone: the race, then the board, then the two explanations. */
+@media (max-width: 999px) {
+  .classement__layout { display: flex; flex-direction: column; gap: 1rem; }
+  .classement__side { display: contents; }
+  .classement__side > .myschool,
+  .classement__race { order: 1; }
+  .classement__main { order: 2; }
+  .classement__kinds { order: 3; }
+}

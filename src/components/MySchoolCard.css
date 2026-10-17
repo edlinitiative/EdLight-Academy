@@ -220,3 +220,149 @@
   .myschool__actions { justify-content: flex-start; }
   .myschool__cta { flex: 0 0 auto; min-width: 220px; }
 }
+
+/* ══ Ton classement + La course des écoles (2026-10-17) ═════════════════════
+   Two places side by side (you, your school), each led by one large number;
+   the school board as podium · your school · bottom of the race. Buttons are
+   the site's 12px soft rectangles, not pills. */
+.myschool {
+  gap: 1rem;
+  padding: 1.15rem 1.25rem 1.25rem;
+  background: var(--surface, #fff);
+  border-color: var(--border);
+}
+.myschool__top { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+.myschool__heading {
+  margin: 0;
+  color: var(--text-900);
+  font-family: var(--font-heading);
+  font-size: 1.125rem;
+  font-weight: 800;
+}
+.myschool__all, .myschool__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  color: var(--primary-600, #1558B8);
+  font-size: 0.925rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.myschool__link:hover, .myschool__all:hover { text-decoration: underline; }
+.myschool__places {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+@media (max-width: 520px) { .myschool__places { grid-template-columns: 1fr; } }
+.myschool__place {
+  display: grid;
+  align-content: start;
+  gap: 0.35rem;
+  padding: 0.95rem 1rem;
+  border-radius: 14px;
+  background: var(--surface-muted, #F3F6FA);
+}
+.myschool__eyebrow { font-size: 0.8125rem; letter-spacing: 0.04em; }
+.myschool__big { display: flex; align-items: baseline; gap: 0.45rem; }
+.myschool__big strong {
+  color: var(--text-900);
+  font-family: var(--font-heading);
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.myschool__big strong sup { font-size: 0.5em; margin-left: 1px; }
+.myschool__big span { color: var(--text-600); font-size: 0.925rem; font-weight: 600; }
+.myschool__school {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  overflow: hidden;
+  color: var(--text-900);
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.myschool__school svg { flex: none; color: var(--text-500); }
+.myschool__line { display: block; font-size: 0.925rem; color: var(--text-700); }
+.myschool__cta, .myschool__ghost { border-radius: var(--r-btn, 12px); min-height: 44px; font-size: 0.95rem; }
+.myschool__cta { background: var(--primary-600, #1558B8); }
+.myschool__cta:hover:not(:disabled) { background: #114A99; }
+.myschool__cta--inline { justify-self: start; margin-top: 0.25rem; flex: none; }
+
+.school-rank__rule { margin: -0.25rem 0 0.75rem; color: var(--text-600); font-size: 0.875rem; }
+.school-rank__label { display: flex; align-items: center; gap: 0.4rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.school-rank__label em {
+  flex: none;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  background: var(--primary-600, #1558B8);
+  color: #fff;
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 700;
+}
+.school-rank__name small { font-size: 0.8125rem; }
+.school-rank__pos {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: var(--surface-muted, #EDF2F8);
+  color: var(--text-700);
+  font-size: 0.875rem;
+}
+.school-rank__list li:nth-child(1) .school-rank__pos { color: var(--text-700); }
+.school-rank__pos--1 { background: #FFE7A8 !important; color: #6B4A00 !important; }
+.school-rank__pos--2 { background: #E3E8EF !important; color: #3D4A5C !important; }
+.school-rank__pos--3 { background: #F6D8C2 !important; color: #7A3E12 !important; }
+.school-rank__list--top li { padding: 0.6rem 0.6rem; }
+.school-rank__list--mine { margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px dashed var(--border); }
+.school-rank__sub {
+  margin: 1rem 0 0;
+  color: var(--text-900);
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+.school-rank__subline { margin: 0.15rem 0 0.4rem; color: var(--text-600); font-size: 0.85rem; }
+.school-rank__list--bottom .school-rank__pos { background: #FDEBEC; color: #A12232; }
+.school-rank__count { margin: 0.75rem 0 0; color: var(--text-500); font-size: 0.8125rem; }
+
+/* The Arène's night: the same board on glass. */
+body.arena-night .school-rank,
+body.arena-night .myschool {
+  border: 1px solid rgba(170, 200, 255, 0.16) !important;
+  background: rgba(13, 26, 58, 0.72) !important;
+  box-shadow: none !important;
+}
+body.arena-night .school-rank__head h2,
+body.arena-night .school-rank__name,
+body.arena-night .school-rank__sub,
+body.arena-night .myschool__heading,
+body.arena-night .myschool__big strong,
+body.arena-night .myschool__school { color: #F5F8FF; }
+body.arena-night .school-rank__rule,
+body.arena-night .school-rank__subline,
+body.arena-night .school-rank__count,
+body.arena-night .school-rank__name small,
+body.arena-night .myschool__line,
+body.arena-night .myschool__big span { color: #A7BAD5; }
+body.arena-night .school-rank__xp { color: #FFD27A; }
+body.arena-night .school-rank__pos { background: rgba(255, 255, 255, 0.08); color: #C1CFE4; }
+body.arena-night .school-rank__list--bottom .school-rank__pos { background: rgba(255, 120, 130, 0.16); color: #FFB7C0; }
+body.arena-night .school-rank__list li.is-mine { background: rgba(61, 139, 255, 0.16); }
+body.arena-night .school-rank__all,
+body.arena-night .myschool__all,
+body.arena-night .myschool__link { color: #9DC4FF; }
+body.arena-night .myschool__place { background: rgba(255, 255, 255, 0.05); }
+[data-theme="dark"] .myschool__place { background: rgba(255, 255, 255, 0.05); }
+[data-theme="dark"] .school-rank__pos { background: rgba(255, 255, 255, 0.08); }
+/* Long school names wrap rather than run under the XP figure. */
+.school-rank__label { white-space: normal; overflow: visible; flex-wrap: wrap; line-height: 1.3; }

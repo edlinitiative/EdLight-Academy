@@ -240,3 +240,33 @@ export function teamStandingFor(
   const target = normalizeName(key);
   return standings.find((s) => s.key === target) ?? null;
 }
+
+/**
+ * The school race: every school on the board, in `rankTeams` order (qualified
+ * schools first, by best-five XP), each with a 1-based `place` in that list.
+ *
+ * `rank` stays the official, qualified-only rank the championship uses; this
+ * only adds the place a student can see moving. Without it every school board
+ * read "Aucune école classée" while eight schools had players, because none
+ * had five yet.
+ */
+export interface RaceStanding extends TeamStanding {
+  place: number;
+}
+
+export function schoolRace(groups: GroupRanking[], opts: { teamSize?: number } = {}): RaceStanding[] {
+  return rankTeams(groups, opts).map((s, i) => ({ ...s, place: i + 1 }));
+}
+
+/**
+ * The two ends of the race for a compact board: the top three, and the
+ * bottom three once there are enough schools that the lists cannot overlap
+ * (and the bottom is not just "everyone who is not on the podium").
+ */
+export const RACE_BOTTOM_MIN_SCHOOLS = 7;
+
+export function raceEnds(race: RaceStanding[], n = 3): { top: RaceStanding[]; bottom: RaceStanding[] } {
+  const top = race.slice(0, n);
+  const bottom = race.length >= RACE_BOTTOM_MIN_SCHOOLS ? race.slice(-n) : [];
+  return { top, bottom };
+}

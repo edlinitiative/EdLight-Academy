@@ -1,5 +1,14 @@
 /**
- * MySchoolCard — the student's school, as a team they can grow.
+ * MySchoolCard — "Ton classement": where the student stands this week, where
+ * their school stands in the race, and the invite that moves the second.
+ *
+ * Ted (2026-10-17): "a student can't really see their leaderboard … in their
+ * dashboard or profile they should see their position and their school." So
+ * the card now leads with two places — yours (weekly, national) and your
+ * school's (the shared best-five race, `useSchoolRace`) — each with the one
+ * gap or missing-player count that says what to do next.
+ *
+ * Earlier note, still true:
  *
  * Ted: "use that information to tell them 'you are the first person from your
  * school' and invite them … everything on the platform becomes a tool to grow
@@ -15,11 +24,14 @@
  * list underneath it. While that board is loading nothing is claimed.
  */
 import React, { useEffect, useState } from 'react';
-import { School as SchoolIcon, Share2, Copy, Check, Plus, TrendingUp } from './icons';
+import { Link } from 'react-router-dom';
+import { School as SchoolIcon, Share2, Copy, Check, Plus, ChevronRight } from './icons';
 import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
-import { useCollectives } from '../hooks/useLeaderboard';
-import { normalizeName } from '../../shared/leaderboardAgg';
+import { useLeaderboard } from '../hooks/useLeaderboard';
+import { useSchoolRace } from '../hooks/useSchoolRace';
+import { normalizeName, TEAM_SIZE } from '../../shared/leaderboardAgg';
+import { isValidAlias } from '../services/leaderboardService';
 import { schoolInviteMessage, inviteRef, sendInvite, canNativeShare } from '../utils/schoolInvite';
 import './MySchoolCard.css';
 
@@ -34,7 +46,8 @@ export default function MySchoolCard({ where }: { where: string }) {
 
   const { profile, isLoading: profileLoading } = useTrivia();
   const school: string | null = profile?.leaderboard?.school || null;
-  const { groups, isLoading: boardLoading } = useCollectives('school', 'all', !!school);
+  const { race, isLoading: boardLoading } = useSchoolRace(!!school);
+  const { entries: weekEntries, myRank, myEntry, isLoading: weekLoading } = useLeaderboard(50);
 
   const [ref, setRef] = useState<{ code: string | null; link: string } | null>(null);
   const [copied, setCopied] = useState(false);
@@ -47,26 +60,66 @@ export default function MySchoolCard({ where }: { where: string }) {
 
   if (!user?.uid || profileLoading) return null;
 
+  const hasAlias = isValidAlias(profile?.leaderboard?.displayName || '');
+  const ahead = myRank && myRank > 1 ? weekEntries[myRank - 2] || null : null;
+  const myXp = myEntry?.xp || 0;
+
+  /** You, this week, nationally — or the one step that puts you on the board. */
+  const meBlock = (
+    <div className="myschool__place">
+      <span className="myschool__eyebrow">{t('Toi, cette semaine', 'Ou menm, semèn sa a')}</span>
+      {weekLoading ? (
+        <p className="myschool__line">{t('Chargement…', 'N ap chaje…')}</p>
+      ) : myRank ? (
+        <>
+          <div className="myschool__big"><strong>#{myRank}</strong><span>{t('au national', 'nan peyi a')}</span></div>
+          <p className="myschool__line">
+            {ahead
+              ? t(`${nf(myXp)} XP · ${nf(Math.max(0, (ahead.xp || 0) - myXp))} XP derrière ${ahead.displayName}`,
+                `${nf(myXp)} XP · ${nf(Math.max(0, (ahead.xp || 0) - myXp))} XP dèyè ${ahead.displayName}`)
+              : t(`${nf(myXp)} XP · 1ʳᵉ place — garde-la jusqu’à dimanche.`, `${nf(myXp)} XP · premye plas — kenbe l jiska dimanch.`)}
+          </p>
+        </>
+      ) : !hasAlias ? (
+        <p className="myschool__line">
+          <Link to="/profile#reglages" className="myschool__link">{t('Choisis un pseudo', 'Chwazi yon pseudo')}</Link>
+          {t(' pour apparaître au classement.', ' pou parèt nan klasman an.')}
+        </p>
+      ) : (
+        <p className="myschool__line">
+          <Link to="/jeux" className="myschool__link">{t('Joue une partie', 'Jwe yon pati')}</Link>
+          {t(' cette semaine pour entrer au classement.', ' semèn sa a pou antre nan klasman an.')}
+        </p>
+      )}
+    </div>
+  );
+
   if (!school) {
     return (
-      <section className="myschool myschool--empty" aria-label={t('Ton école', 'Lekòl ou')}>
-        <span className="myschool__icon" aria-hidden="true"><SchoolIcon size={20} /></span>
-        <div className="myschool__body">
-          <h2 className="myschool__title">{t('Représente ton école', 'Reprezante lekòl ou')}</h2>
-          <p className="myschool__sub">
-            {t('Chaque partie fait monter ton école au classement.', 'Chak pati fè lekòl ou monte nan klasman an.')}
-          </p>
+      <section className="myschool" aria-label={t('Ton classement', 'Klasman ou')}>
+        <div className="myschool__top">
+          <h2 className="myschool__heading">{t('Ton classement', 'Klasman ou')}</h2>
+          <Link to="/classement" className="myschool__all">{t('Classement', 'Klasman')} <ChevronRight size={14} aria-hidden="true" /></Link>
         </div>
-        <button type="button" className="myschool__cta" onClick={() => setSchoolChosen(false)}>
-          <Plus size={16} aria-hidden="true" /> {t('Ajouter mon école', 'Ajoute lekòl mwen')}
-        </button>
+        <div className="myschool__places">
+          {meBlock}
+          <div className="myschool__place">
+            <span className="myschool__eyebrow">{t('Ton école', 'Lekòl ou')}</span>
+            <p className="myschool__line">
+              {t('Ajoute ton école : chaque partie la fait monter dans la course.', 'Ajoute lekòl ou : chak pati fè l monte nan kous la.')}
+            </p>
+            <button type="button" className="myschool__cta myschool__cta--inline" onClick={() => setSchoolChosen(false)}>
+              <Plus size={16} aria-hidden="true" /> {t('Ajouter mon école', 'Ajoute lekòl mwen')}
+            </button>
+          </div>
+        </div>
       </section>
     );
   }
 
   const key = normalizeName(school);
-  const mine = groups.find((g) => g.key === key) || null;
-  const above = mine && mine.rank > 1 ? groups.find((g) => g.rank === mine.rank - 1) || null : null;
+  const mine = race.find((g) => g.key === key) || null;
+  const above = mine && mine.place > 1 ? race[mine.place - 2] || null : null;
   // Members counts me when I have an entry; "alone" means nobody ELSE.
   const others = mine ? Math.max(0, mine.members - 1) : 0;
   const alone = !boardLoading && others === 0;
@@ -78,41 +131,40 @@ export default function MySchoolCard({ where }: { where: string }) {
     if (didCopy) { setCopied(true); setTimeout(() => setCopied(false), 2200); }
   };
 
+  const schoolLine = boardLoading
+    ? t('Chargement…', 'N ap chaje…')
+    : !mine
+      ? t('Ton école entre dans la course dès ta prochaine partie.', 'Lekòl ou antre nan kous la depi pwochen pati ou.')
+      : !mine.qualified
+        ? t(`${Math.min(mine.members, TEAM_SIZE)}/${TEAM_SIZE} joueurs — il en manque ${mine.needed} pour être classée.`,
+          `${Math.min(mine.members, TEAM_SIZE)}/${TEAM_SIZE} jwè — li manke ${mine.needed} pou l kalifye.`)
+        : above
+          ? t(`${nf(above.teamXp - mine.teamXp)} XP derrière ${above.label}.`, `${nf(above.teamXp - mine.teamXp)} XP dèyè ${above.label}.`)
+          : t('En tête de la course — défendez la place.', 'An tèt kous la — defann plas la.');
+
   return (
-    <section className="myschool" aria-label={t('Ton école', 'Lekòl ou')}>
-      <div className="myschool__head">
-        <span className="myschool__icon" aria-hidden="true"><SchoolIcon size={20} /></span>
-        <div className="myschool__body">
-          <span className="myschool__eyebrow">{t('Ton école', 'Lekòl ou')}</span>
-          <h2 className="myschool__title">{mine?.label || school}</h2>
-        </div>
-        {mine && (
-          <span className="myschool__rank" title={t('Rang parmi les écoles', 'Plas pami lekòl yo')}>
-            #{mine.rank}
-          </span>
-        )}
+    <section className="myschool" aria-label={t('Ton classement', 'Klasman ou')}>
+      <div className="myschool__top">
+        <h2 className="myschool__heading">{t('Ton classement', 'Klasman ou')}</h2>
+        <Link to="/classement" className="myschool__all">{t('Classement', 'Klasman')} <ChevronRight size={14} aria-hidden="true" /></Link>
       </div>
 
-      {!boardLoading && (
-        <p className="myschool__line">
-          {alone
-            ? t(
-              'Tu es le seul élève de ton école ici. Invite ta classe : chaque camarade fait monter l’école.',
-              'Se ou sèl elèv lekòl ou isit la. Envite klas ou : chak kanmarad fè lekòl la monte.',
-            )
-            : above
-              ? <>
-                <TrendingUp size={15} aria-hidden="true" />
-                {t(
-                  `${others + 1} élèves · ${nf(above.totalXp - mine.totalXp)} XP derrière ${above.label}`,
-                  `${others + 1} elèv · ${nf(above.totalXp - mine.totalXp)} XP dèyè ${above.label}`,
-                )}
-              </>
-              : mine?.rank === 1
-                ? t(`${others + 1} élèves · 1ʳᵉ école du pays — défendez la place.`, `${others + 1} elèv · premye lekòl nan peyi a — defann plas la.`)
-                : t(`${others + 1} élèves de ton école sont ici.`, `${others + 1} elèv lekòl ou isit la.`)}
-        </p>
-      )}
+      <div className="myschool__places">
+        {meBlock}
+        <div className="myschool__place">
+          <span className="myschool__eyebrow">{t('Ton école', 'Lekòl ou')}</span>
+          {mine ? (
+            <div className="myschool__big">
+              <strong>{mine.place}<sup>{mine.place === 1 ? t('re', 'e') : t('e', 'e')}</sup></strong>
+              <span>{t(`sur ${race.length} écoles`, `sou ${race.length} lekòl`)}</span>
+            </div>
+          ) : null}
+          <p className="myschool__school"><SchoolIcon size={15} aria-hidden="true" /> {mine?.label || school}</p>
+          <p className="myschool__line">
+            {alone && mine ? t('Tu es le seul élève de ton école ici. Invite ta classe.', 'Se ou sèl elèv lekòl ou isit la. Envite klas ou.') : schoolLine}
+          </p>
+        </div>
+      </div>
 
       <div className="myschool__actions">
         <button type="button" className="myschool__cta" disabled={!ref} onClick={() => invite('whatsapp')}>
