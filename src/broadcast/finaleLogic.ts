@@ -45,13 +45,15 @@ export const CHAMPION_SLOTS = 5;
 /** The individual podium is three. */
 export const PODIUM_SLOTS = 3;
 /** Sequence 19 holds the superlatives board for 30s… */
+/** The final opens on the podium: champion school, then the top three students… */
+export const POSTGAME_PODIUM_MS = 14_000;
 export const POSTGAME_STATS_MS = 30_000;
 /** …then sequence 20 runs 8s… */
 export const POSTGAME_TEASER_MS = 8_000;
 /** …of which the champions line owns the first half before the challenge lands. */
 export const TEASER_HOLD_MS = 4_000;
 /** After which the post-game loops, because a stream left up must never go blank. */
-export const POSTGAME_CYCLE_MS = POSTGAME_STATS_MS + POSTGAME_TEASER_MS;
+export const POSTGAME_CYCLE_MS = POSTGAME_PODIUM_MS + POSTGAME_STATS_MS + POSTGAME_TEASER_MS;
 
 const safe = (n: unknown): number => (typeof n === 'number' && Number.isFinite(n) ? n : 0);
 
@@ -382,7 +384,7 @@ export function climberFrom(events: readonly ArenaEvent[] | undefined): BiggestC
 
 // ── Post-game phases (sequences 19 → 20) ────────────────────────────────────
 
-export type PostGamePhase = 'stats' | 'teaser';
+export type PostGamePhase = 'podium' | 'stats' | 'teaser';
 
 export interface PostGameBeat {
   phase: PostGamePhase;
@@ -400,9 +402,11 @@ export interface PostGameBeat {
  */
 export function postGameBeat(elapsedMs: number): PostGameBeat {
   const at = Math.max(0, safe(elapsedMs)) % POSTGAME_CYCLE_MS;
-  return at < POSTGAME_STATS_MS
-    ? { phase: 'stats', phaseElapsed: at }
-    : { phase: 'teaser', phaseElapsed: at - POSTGAME_STATS_MS };
+  if (at < POSTGAME_PODIUM_MS) return { phase: 'podium', phaseElapsed: at };
+  const afterPodium = at - POSTGAME_PODIUM_MS;
+  return afterPodium < POSTGAME_STATS_MS
+    ? { phase: 'stats', phaseElapsed: afterPodium }
+    : { phase: 'teaser', phaseElapsed: afterPodium - POSTGAME_STATS_MS };
 }
 
 export type TeaserBeat = 'champions' | 'challenge';

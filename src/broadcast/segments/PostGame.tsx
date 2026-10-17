@@ -1,6 +1,7 @@
 import React from 'react';
 import SceneFrame from '../SceneFrame';
 import ProvisionalNotice from '../ProvisionalNotice';
+import FinalPodium from './FinalPodium';
 import type { StageData } from '../sceneContract';
 import {
   avgSeconds,
@@ -73,6 +74,8 @@ export default function PostGame({
   const { phase, phaseElapsed } = postGameBeat(elapsed);
   const stats = superlatives(data.standings, data.places, previousStandings ?? null);
   const champion = data.standings?.schools?.[0] ?? null;
+
+  if (phase === 'podium') return <FinalPodium data={data} reduceMotion={reduceMotion} t={t} />;
 
   if (phase === 'teaser') {
     const beat = teaserBeat(phaseElapsed);
