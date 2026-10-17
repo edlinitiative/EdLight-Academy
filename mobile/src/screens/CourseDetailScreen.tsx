@@ -18,6 +18,8 @@ import CourseInstructorCard from '../components/CourseInstructorCard';
 import ChapterTest from '../components/ChapterTest';
 import PressableScale from '../components/ui/PressableScale';
 import { useCourseThumb } from '../hooks/useCourseThumb';
+import VideoCover from '../components/ui/VideoCover';
+import { lessonVideoThumbs, youTubeEmbedUrl } from '../utils/videoThumb';
 import {
   summarize, lessonMastery, masteryLabel, masteryColor, masteryNextStep,
   courseLessonIds, chapterTestReady, type ProgressMap,
@@ -146,8 +148,11 @@ export function parseCourseDescription(raw?: string | null): ParsedDescription {
  * saved progress stay on screen — and a failure keeps the lesson in place
  * with a retry. The lesson title sits ABOVE this, so identity survives either.
  */
-function VideoPlayer({ videoUrl, isCreole, offline }: { videoUrl: string; isCreole?: boolean; offline: boolean }) {
+function VideoPlayer({ videoUrl, thumbnail, isCreole, offline }: { videoUrl: string; thumbnail?: string | null; isCreole?: boolean; offline: boolean }) {
   const [failed, setFailed] = useState(false);
+  // Facade: the lesson still + EdLight play button. The WebView (and YouTube's
+  // chrome, cookies and red button) mounts only after the student taps.
+  const [started, setStarted] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const wasOffline = useRef(offline);
@@ -156,12 +161,13 @@ function VideoPlayer({ videoUrl, isCreole, offline }: { videoUrl: string; isCreo
     if (wasOffline.current && !offline) { setFailed(false); setAttempt((n) => n + 1); }
     wasOffline.current = offline;
   }, [offline]);
-  useEffect(() => { setFailed(false); }, [videoUrl]);
+  useEffect(() => { setFailed(false); setStarted(false); }, [videoUrl]);
 
   const ytId = extractYouTubeId(videoUrl);
-  const embedUrl = ytId
-    ? `https://www.youtube.com/embed/${ytId}?playsinline=1`
-    : videoUrl;
+  // Always the nocookie host (memory: academy-video-url-format). Autoplay is
+  // on because the WebView only exists once the student pressed play.
+  const embedUrl = ytId ? youTubeEmbedUrl(ytId, { autoplay: true }) : videoUrl;
+  const stills = useMemo(() => lessonVideoThumbs(videoUrl, thumbnail), [videoUrl, thumbnail]);
 
   // Embed via an HTML shell with baseUrl set to the web app's origin: many
   // course videos are embed-restricted by domain, and YouTube rejects players
@@ -208,12 +214,28 @@ function VideoPlayer({ videoUrl, isCreole, offline }: { videoUrl: string; isCreo
     );
   }
 
+  if (!started) {
+    return (
+      <VideoCover
+        uris={stills}
+        playPosition="center"
+        radiusTop={0}
+        onPress={() => setStarted(true)}
+        accessibilityLabel={t('Lire la vidéo', 'Jwe videyo a')}
+      />
+    );
+  }
+
   return (
     <View className="w-full bg-black" style={{ aspectRatio: 16 / 9 }}>
       <WebView
         key={attempt}
         source={{ html, baseUrl: 'https://edlight-academy.web.app' }}
         allowsFullscreenVideo
+        // Inline playback inside the 16:9 box (playsinline=1 needs this on iOS).
+        // autoplay=1 is requested, but YouTube may still show its own start
+        // button in a WebView (seen in the iOS sim), costing a second tap.
+        allowsInlineMediaPlayback
         mediaPlaybackRequiresUserAction={false}
         // WebView needs a real style — className is not applied to native views
         // from react-native-webview, which left the player blank.
@@ -699,7 +721,7 @@ export default function CourseDetailScreen() {
       )}
 
       {activeLesson?.videoUrl ? (
-        <VideoPlayer videoUrl={activeLesson.videoUrl} isCreole={isCreole} offline={offline} />
+        <VideoPlayer videoUrl={activeLesson.videoUrl} thumbnail={activeLesson.thumbnail} isCreole={isCreole} offline={offline} />
       ) : activeLesson ? (
         <View
           className="w-full items-center justify-center"

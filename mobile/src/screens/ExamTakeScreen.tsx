@@ -15,7 +15,7 @@ import { loadExamAttemptDraft, saveExamAttemptDraft, markExamAttemptSubmitted } 
 import { saveExamResult } from '../services/examResults';
 import { recordReview } from '../services/reviewService';
 import useStore from '../contexts/store';
-import { useColors, useTheme, typeScale } from '../theme/theme';
+import { useColors, useTheme, typeScale, fonts } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import Button from '../components/ui/Button';
@@ -136,7 +136,7 @@ function QuestionNav({ current, total, answers, sections, onGoto }: {
         {answered && !active ? (
           <Check color={colors.azure} size={16} strokeWidth={3} />
         ) : (
-          <Text style={[typeScale.caption, { color: active ? '#ffffff' : colors.muted, fontFamily: 'Satoshi-Bold' }]}>
+          <Text style={[typeScale.caption, { color: active ? '#ffffff' : colors.muted, fontFamily: fonts.headingBold }]}>
             {i + 1}
           </Text>
         )}
@@ -219,7 +219,7 @@ function MCQQuestion({ question, answer, onAnswer, isCreole }: {
                 backgroundColor: selected ? colors.azure : colors.surfaceAlt,
               }}
             >
-              <Text style={[typeScale.label, { color: selected ? '#ffffff' : colors.muted, fontFamily: 'Satoshi-Bold' }]}>{key.toUpperCase()}</Text>
+              <Text style={[typeScale.label, { color: selected ? '#ffffff' : colors.muted, fontFamily: fonts.headingBold }]}>{key.toUpperCase()}</Text>
             </View>
             <MathText text={String(label)} style={{ flex: 1, fontSize: 15, lineHeight: 22, color: colors.ink }} />
           </PressableScale>
@@ -358,7 +358,7 @@ function ExamHint({ hints, isCreole }: { hints?: any; isCreole: boolean }) {
       ))}
       {shown < clean.length ? (
         <TouchableOpacity onPress={() => setShown((s) => s + 1)} style={{ alignSelf: 'flex-start', marginTop: 4 }} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-          <Text style={[typeScale.label, { color: colors.azure, fontFamily: 'Satoshi-Bold' }]}>{t('Indice suivant', 'Endis swivan')} →</Text>
+          <Text style={[typeScale.label, { color: colors.azure, fontFamily: fonts.headingBold }]}>{t('Indice suivant', 'Endis swivan')} →</Text>
         </TouchableOpacity>
       ) : null}
     </View>

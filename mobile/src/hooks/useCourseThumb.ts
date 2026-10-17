@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { courseVideoThumbs } from '../utils/videoThumb';
 
 /**
@@ -16,15 +16,32 @@ import { courseVideoThumbs } from '../utils/videoThumb';
  * it: this walks down the candidates on each load failure and reports `null`
  * once they are exhausted, letting the caller fall back to its icon placeholder.
  *
+ * The hand-picked cover (utils/courseCovers, ported from the web) leads the
+ * list, so Math NS1 no longer opens on the iPad colour-picker frame.
+ *
  *   const { uri, onError } = useCourseThumb(course);
  *   {uri ? <Image source={{ uri }} onError={onError} /> : <SubjectIcon />}
  */
 export function useCourseThumb(course: any): { uri: string | null; onError: () => void } {
   const candidates = useMemo(() => courseVideoThumbs(course), [course]);
-  const [attempt, setAttempt] = useState(0);
+  return useThumbCandidates(candidates);
+}
+
+/**
+ * Walk an ordered list of image candidates: `uri` is the current one, and
+ * `onError` steps to the next. `null` once exhausted. Restarts when the list
+ * changes (a recycled list row showing a different course).
+ */
+export function useThumbCandidates(candidates: readonly string[]): { uri: string | null; onError: () => void } {
+  const key = candidates.join('|');
+  const [state, setState] = useState({ key, attempt: 0 });
+  useEffect(() => {
+    if (state.key !== key) setState({ key, attempt: 0 });
+  }, [key, state.key]);
+  const attempt = state.key === key ? state.attempt : 0;
   return {
     uri: candidates[attempt] ?? null,
-    onError: () => setAttempt((a) => a + 1),
+    onError: () => setState((s) => ({ key, attempt: (s.key === key ? s.attempt : 0) + 1 })),
   };
 }
 

@@ -9,7 +9,7 @@ import React, { useEffect } from 'react';
 import { View, Text } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import Animated, { useAnimatedProps, useSharedValue, withTiming, Easing } from 'react-native-reanimated';
-import { useColors } from '../../theme/theme';
+import { useColors, fonts } from '../../theme/theme';
 import { useReduceMotion } from '../../utils/motion';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -20,21 +20,27 @@ interface ProgressRingProps {
   size?: number;
   strokeWidth?: number;
   color?: string;
-  /** Show the percentage in the center. Default true. */
+  /** Show the percentage in the center. Default true. Ignored when `label` is set. */
   showLabel?: boolean;
+  /** Custom centre label, e.g. "2/19" (rendered in the heading face, 15). */
+  label?: React.ReactNode;
+  /** Arc turns `success` at 100% unless a `color` is given. Default true. */
+  successWhenComplete?: boolean;
 }
 
 export default function ProgressRing({
   value,
-  size = 46,
-  strokeWidth = 5,
+  size = 64,
+  strokeWidth = 6,
   color,
   showLabel = true,
+  label,
+  successWhenComplete = true,
 }: ProgressRingProps) {
   const colors = useColors();
   const reduceMotion = useReduceMotion();
-  const fill = color ?? colors.azure;
-  const clamped = Math.max(0, Math.min(100, Math.round(value)));
+  const clamped = Math.max(0, Math.min(100, Math.round(Number.isFinite(value) ? value : 0)));
+  const fill = color ?? (successWhenComplete && clamped >= 100 ? colors.success : colors.azure);
 
   // viewBox is a fixed 100×100 space; the SVG scales to `size`.
   const R = 44;
@@ -59,7 +65,7 @@ export default function ProgressRing({
       style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}
     >
       <Svg width={size} height={size} viewBox="0 0 100 100">
-        <Circle cx={50} cy={50} r={R} fill="none" stroke={colors.hairline} strokeWidth={strokeWidth} />
+        <Circle cx={50} cy={50} r={R} fill="none" stroke={colors.surfaceAlt} strokeWidth={strokeWidth} />
         <AnimatedCircle
           cx={50}
           cy={50}
@@ -73,7 +79,17 @@ export default function ProgressRing({
           animatedProps={animatedProps}
         />
       </Svg>
-      {showLabel && (
+      {label != null ? (
+        <View style={{ position: 'absolute', alignItems: 'center', justifyContent: 'center' }}>
+          {typeof label === 'string' || typeof label === 'number' ? (
+            <Text maxFontSizeMultiplier={1.2} style={{ fontFamily: fonts.heading, fontSize: 15, lineHeight: 19, color: colors.ink, letterSpacing: -0.3 }}>
+              {label}
+            </Text>
+          ) : (
+            label
+          )}
+        </View>
+      ) : showLabel && (
         <View style={{ position: 'absolute', alignItems: 'center', justifyContent: 'center' }}>
           <Text maxFontSizeMultiplier={1.1} style={{ fontSize: size * 0.26, fontWeight: '800', color: clamped > 0 ? fill : colors.faint, letterSpacing: -0.3 }}>
             {clamped}

@@ -8,6 +8,8 @@
  * so a card can show a real video thumbnail without any extra data.
  */
 
+import { courseCoverFor } from './courseCovers';
+
 /** First captured group of any of the supported YouTube URL shapes. */
 export function extractYouTubeId(url: string | null | undefined): string | null {
   if (!url) return null;
@@ -83,6 +85,8 @@ function firstVideoLessonThumbs(course: any): string[] {
  * populated) is only a fallback when no video id can be extracted.
  */
 export function courseVideoThumb(course: any): string | null {
+  const cover = courseCoverFor(course);
+  if (cover) return cover;
   for (const unit of course?.modules ?? []) {
     for (const lesson of unit?.lessons ?? []) {
       if (lesson?.type !== 'video') continue;
@@ -101,5 +105,25 @@ export function courseVideoThumb(course: any): string | null {
  * the course has no video lesson to derive a still from.
  */
 export function courseVideoThumbs(course: any): string[] {
-  return firstVideoLessonThumbs(course);
+  // The hand-picked cover (utils/courseCovers) leads; the first lesson's
+  // stills follow so a 404 on the cover still lands on a real frame.
+  const cover = courseCoverFor(course);
+  const rest = firstVideoLessonThumbs(course);
+  return cover ? [cover, ...rest.filter((u) => u !== cover)] : rest;
+}
+
+/** A lesson's own still candidates (sharpest first), for chapter rows and the player facade. */
+export function lessonVideoThumbs(videoUrl: string | null | undefined, fallback?: string | null): string[] {
+  const yt = extractYouTubeId(videoUrl);
+  const list = [...(yt ? youTubeThumbUrls(yt) : []), fallback];
+  return list.filter((u): u is string => typeof u === 'string' && u.length > 0);
+}
+
+/**
+ * The privacy-respecting embed URL the lesson player must use. The app's rule
+ * (and the web's CSP) is youtube-nocookie.com/embed/{id}, never youtube.com.
+ */
+export function youTubeEmbedUrl(id: string, opts: { autoplay?: boolean } = {}): string {
+  const q = `playsinline=1&rel=0&modestbranding=1${opts.autoplay ? '&autoplay=1' : ''}`;
+  return `https://www.youtube-nocookie.com/embed/${id}?${q}`;
 }
