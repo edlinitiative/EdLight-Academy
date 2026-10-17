@@ -17,6 +17,7 @@
  */
 
 import React, { useEffect, useState, useRef } from 'react';
+import type { TriviaIntent } from '../../utils/triviaIntent';
 import { View, Text, ScrollView, Dimensions, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Flame, Share2, Snowflake, Star, UserPlus, Swords, ChevronRight } from 'lucide-react-native';
@@ -62,7 +63,8 @@ interface GameRecord {
 
 interface JeuxHubProps {
   onSelectGame: (id: string) => void;
-  onStartTrivia: () => void;
+  /** Open Trivia for practice, or for a friend challenge (the duel path). */
+  onStartTrivia: (intent?: TriviaIntent) => void;
   onStartDaily: () => void;
   /** Replay a duel's category — the rematch, straight from the result. */
   onRematch: (categoryId: string) => void;
@@ -251,7 +253,7 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily, onR
 
   // Jeu de la semaine — rotates on the leaderboard's ISO week (Monday reset).
   const featuredId = weeklyGameId();
-  const open = (id: string) => (id === 'trivia' ? onStartTrivia() : onSelectGame(id));
+  const open = (id: string) => (id === 'trivia' ? onStartTrivia('practice') : onSelectGame(id));
 
   const segs: { key: HubTab; label: string }[] = [
     { key: 'jouer', label: t('Jouer', 'Jwe') },
@@ -330,7 +332,7 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily, onR
               )}
               title={t('Défier un ami', 'Defye yon zanmi')}
               meta={t('Joue une manche, puis envoie-lui les mêmes questions', 'Jwe yon manch, epi voye menm kesyon yo ba li')}
-              onPress={onStartTrivia}
+              onPress={() => onStartTrivia('challenge')}
             />
 
             {isAuthed ? (
@@ -405,7 +407,7 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily, onR
       {/* ── Arène — the competition world ── */}
       {tab === 'arene' && (
         <ScrollView contentContainerStyle={scrollPad} showsVerticalScrollIndicator={false}>
-          <ArenaHubPanel onPractice={onStartTrivia} onDuel={onStartTrivia} />
+          <ArenaHubPanel onPractice={() => onStartTrivia('practice')} onDuel={() => onStartTrivia('challenge')} />
         </ScrollView>
       )}
 

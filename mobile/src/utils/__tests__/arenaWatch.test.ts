@@ -40,3 +40,55 @@ describe('answer along (local only)', () => {
     expect(tallyPlayAlong(answers, {})).toEqual({ answered: 0, correct: 0 });
   });
 });
+
+import {
+  FOLLOW_NONE, parseFollowPref, serializeFollowPref, resolveFollowKey, toggleFollowPref, type FollowPref,
+} from '../arenaWatch';
+
+describe('follow preference (M4)', () => {
+  const own = 'own';
+  // What survives an app relaunch: write, then read back.
+  const relaunch = (p: FollowPref) => parseFollowPref(serializeFollowPref(p));
+
+  it('defaults to the own school when nothing was chosen', () => {
+    const p = parseFollowPref(null);
+    expect(p).toEqual({ kind: 'default' });
+    expect(resolveFollowKey(p, own)).toBe(own);
+    expect(resolveFollowKey(p, null)).toBeNull();
+  });
+
+  it('choosing a school follows it, and it survives a relaunch', () => {
+    const p = toggleFollowPref({ kind: 'default' }, own, 'b');
+    expect(resolveFollowKey(p, own)).toBe('b');
+    expect(resolveFollowKey(relaunch(p), own)).toBe('b');
+  });
+
+  it('switching from one chosen school to another', () => {
+    const p = toggleFollowPref({ kind: 'school', key: 'b' }, own, 'c');
+    expect(resolveFollowKey(p, own)).toBe('c');
+  });
+
+  it('clearing the DEFAULT school stays cleared — it does not fall back to it', () => {
+    const p = toggleFollowPref({ kind: 'default' }, own, own);
+    expect(p).toEqual({ kind: 'none' });
+    expect(resolveFollowKey(p, own)).toBeNull();
+    expect(serializeFollowPref(p)).toBe(FOLLOW_NONE);
+    expect(resolveFollowKey(relaunch(p), own)).toBeNull();
+  });
+
+  it('clearing a chosen school stays cleared after a relaunch', () => {
+    const p = toggleFollowPref({ kind: 'school', key: 'b' }, own, 'b');
+    expect(resolveFollowKey(relaunch(p), own)).toBeNull();
+  });
+
+  it('following again after clearing', () => {
+    const p = toggleFollowPref({ kind: 'none' }, own, own);
+    expect(resolveFollowKey(p, own)).toBe(own);
+    expect(resolveFollowKey(relaunch(p), own)).toBe(own);
+  });
+
+  it('the default is stored as no value at all', () => {
+    expect(serializeFollowPref({ kind: 'default' })).toBeNull();
+    expect(parseFollowPref('')).toEqual({ kind: 'default' });
+  });
+});

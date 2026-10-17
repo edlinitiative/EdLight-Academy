@@ -2,7 +2,7 @@
  * The hub's event card copy, as a pure function of real tournament data.
  * No React; tested in utils/__tests__/arenaHubCopy.test.ts.
  */
-import type { StatusLabel } from './ArenaKit';
+import { stateStatus, type StatusLabel } from '../../utils/arenaStatus';
 import { formatCountdown } from '../../services/arenaService';
 
 type T = (fr: string, ht: string) => string;
@@ -42,14 +42,14 @@ export function hubEventCopy(kind: HubKind, tour: TourLike, now: number, t: T): 
       return tour.state === 'live'
         ? { pill: 'live', line: t('Tu es inscrit et la partie est en cours.', 'Ou enskri e pati a ap jwe kounye a.'), action: t('Revenir dans la partie', 'Retounen nan pati a'), countdown: null }
         : {
-          pill: 'soon',
+          pill: stateStatus(tour.state),
           line: t('Les portes sont ouvertes. Entre pour compter dans les présents.', 'Pòt yo louvri. Antre pou yo konte w prezan.'),
           action: t('Entrer dans l’Arène', 'Antre nan Arèn nan'),
           countdown: toStart > 0 ? formatCountdown(toStart) : null,
         };
     case 'results':
       return {
-        pill: tour.state === 'final' ? 'final' : 'provisional',
+        pill: stateStatus(tour.state),
         line: tour.state === 'grading'
           ? t('Les scores sont en cours de calcul.', 'N ap kalkile nòt yo.')
           : tour.state === 'final'
@@ -69,14 +69,14 @@ export function hubEventCopy(kind: HubKind, tour: TourLike, now: number, t: T): 
     default:
       if (tour.state === 'doors') {
         return {
-          pill: 'soon',
+          pill: 'doors',
           line: t('Les portes sont ouvertes maintenant.', 'Pòt yo louvri kounye a.'),
           action: t('Ouvrir le lobby', 'Louvri lobi a'),
           countdown: toStart > 0 ? formatCountdown(toStart) : null,
         };
       }
       return {
-        pill: null,
+        pill: stateStatus(tour.state),
         line: t('Inscriptions ouvertes. Inscris-toi avec ton école.', 'Enskripsyon louvri. Enskri ak lekòl ou.'),
         action: t('S’inscrire', 'Enskri'),
         countdown: toDoors > 0 ? formatCountdown(toDoors) : null,

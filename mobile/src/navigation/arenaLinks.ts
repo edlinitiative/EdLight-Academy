@@ -13,7 +13,8 @@
  * /arena/championnat           → ArenaHub (championship section)
  * /arena/jouer                 → ArenaHub (it offers the one-tap rejoin)
  * /arena/jouer/:tid            → ArenaLobby(tid)   (valid id shape only)
- * /arena/demo                  → ArenaWatch        (spectator view)
+ * /arena/demo                  → ArenaHub(section demo): explains the web
+ *                                simulation and opens it in a browser
  * /arena/histoire, /arena/studio and every other reserved word
  *                              → ArenaHub (web-only pages; never a tournament)
  * /arena/:tid (app scheme)     → ArenaLobby(tid)   (valid id shape only)
@@ -69,7 +70,10 @@ export function normalizeDuelCode(value: unknown): string | null {
   return DUEL_CODE_RE.test(code) ? code : null;
 }
 
-export type ArenaHubSection = 'championnat';
+export type ArenaHubSection = 'championnat' | 'demo';
+
+/** The web demo — an offline simulation with fictional schools (never a real event). */
+export const ARENA_DEMO_URL = 'https://academy.edlight.org/arena/demo';
 
 export type LinkTarget =
   | { screen: 'Defi'; params: { code: string } }
@@ -123,7 +127,9 @@ export function resolveAppPath(input: string): LinkTarget | null {
   const subLower = sub.toLowerCase();
 
   if (subLower === 'championnat') return { screen: 'ArenaHub', params: { section: 'championnat' } };
-  if (subLower === 'demo') return { screen: 'ArenaWatch' };
+  // The demo is a web simulation: the hub explains it and opens it in a
+  // browser. Never ArenaWatch, which would resolve a REAL live event (M7).
+  if (subLower === 'demo') return { screen: 'ArenaHub', params: { section: 'demo' } };
   if (subLower === 'jouer') {
     const tid = segs[2];
     return isValidTournamentId(tid) ? { screen: 'ArenaLobby', params: { tournamentId: tid } } : { screen: 'ArenaHub' };

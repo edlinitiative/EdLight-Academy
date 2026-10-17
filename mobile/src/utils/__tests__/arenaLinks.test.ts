@@ -55,9 +55,9 @@ describe('resolveAppPath', () => {
     expect(resolveAppPath('arena/jouer')).toEqual({ screen: 'ArenaHub' });
   });
 
-  it('sends the web demo to the spectator screen', () => {
-    expect(resolveAppPath('arena/demo')).toEqual({ screen: 'ArenaWatch' });
-    expect(resolveAppPath('arena/DEMO?ref=x')).toEqual({ screen: 'ArenaWatch' });
+  it('sends the web demo to the hub demo explainer, never a real live event', () => {
+    expect(resolveAppPath('arena/demo')).toEqual({ screen: 'ArenaHub', params: { section: 'demo' } });
+    expect(resolveAppPath('arena/DEMO?ref=x')).toEqual({ screen: 'ArenaHub', params: { section: 'demo' } });
   });
 
   it('never parses a web-only page as a tournament', () => {
@@ -75,7 +75,7 @@ describe('resolveAppPath', () => {
   });
 
   it('accepts full URLs on both prefixes', () => {
-    expect(resolveAppPath('https://academy.edlight.org/arena/demo')).toEqual({ screen: 'ArenaWatch' });
+    expect(resolveAppPath('https://academy.edlight.org/arena/demo')).toEqual({ screen: 'ArenaHub', params: { section: 'demo' } });
     expect(resolveAppPath('edlight://arena/oct-2026')).toEqual({ screen: 'ArenaLobby', params: { tournamentId: 'oct-2026' } });
   });
 

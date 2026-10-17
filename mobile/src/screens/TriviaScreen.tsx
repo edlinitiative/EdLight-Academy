@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SvgUri } from 'react-native-svg';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, withSequence, withSpring, Easing } from 'react-native-reanimated';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { Flame, Check, X, RefreshCw, ChevronRight, ChevronLeft, Share2, Crown, Snowflake, Swords, Star, Clock, Shuffle } from 'lucide-react-native';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
 import { getDailyChallengeQuestions } from '../utils/dailyChallenge';
@@ -46,6 +46,7 @@ import SuitesGame from '../components/games/SuitesGame';
 import { ArenaButton } from '../components/arena/ArenaKit';
 import Avatar from '../components/arena/art/avatars/Avatar';
 import useNightStatusBar from '../components/arena/useNightStatusBar';
+import { intentPlan, parseTriviaIntent, pickerCopy, resultPrimary, roundSizeFor, type TriviaIntent } from '../utils/triviaIntent';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -236,7 +237,7 @@ function orderCategoriesForTrack(cats: any[], track: string | null | undefined) 
 }
 
 function CategoryPicker({
-  onSelect, onMixed, onBack, header, isCreole,
+  onSelect, onMixed, onBack, header, isCreole, intent = 'practice', isAuthed = true, onSignIn,
 }: {
   onSelect: (id: string) => void;
   onMixed: () => void;
@@ -244,9 +245,15 @@ function CategoryPicker({
   /** Rendered above the grid (the Défi du jour card). */
   header?: React.ReactNode;
   isCreole: boolean;
+  /** Practice, or a friend challenge (a duel-able round only). */
+  intent?: TriviaIntent;
+  isAuthed?: boolean;
+  onSignIn?: () => void;
 }) {
   const track = useStore((s) => s.track);
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  const plan = intentPlan(intent);
+  const copy = pickerCopy(intent, t);
   const { list: orderedCategories, recommendedId } = useMemo(
     () => orderCategoriesForTrack(TRIVIA_CATEGORIES as any[], track),
     [track],
@@ -263,21 +270,42 @@ function CategoryPicker({
       ListHeaderComponent={
         <View>
           <PhaseHeader
-            title="Trivia"
-            subtitle={t('Choisis un thème, ou mélange-les', 'Chwazi yon tèm, oswa melanje yo')}
+            title={copy.title}
+            subtitle={copy.subtitle}
             onBack={onBack}
             backLabel={t('Retour aux jeux', 'Tounen nan jwèt yo')}
           />
           <View style={{ paddingHorizontal: SIDE, paddingTop: 8, gap: 12 }}>
-            {header}
-            <ArenaButton
-              variant="secondary"
-              label={t('Jouer un mélange de thèmes', 'Jwe yon melanj tèm')}
-              accessibilityHint={t('10 questions tirées de tous les thèmes', '10 kesyon nan tout tèm yo')}
-              icon={<Shuffle color={C.ink} size={18} />}
-              onPress={onMixed}
-              style={{ minHeight: 52 }}
-            />
+            {copy.explainer ? (
+              // The async duel format, said once, before the choice.
+              <View accessible style={{ flexDirection: 'row', gap: 12, padding: 16, borderRadius: 20, backgroundColor: C.surface }}>
+                <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surfaceRaised }}>
+                  <Swords color={C.ink} size={18} />
+                </View>
+                <View style={{ flex: 1, gap: 8 }}>
+                  <Text style={[arenaType.body, { color: C.inkSoft }]}>{copy.explainer}</Text>
+                  {!isAuthed ? (
+                    <>
+                      <Text style={[arenaType.status, { color: C.warn }]}>
+                        {t('Connecte-toi pour pouvoir envoyer le défi.', 'Konekte pou w ka voye defi a.')}
+                      </Text>
+                      {onSignIn ? <ArenaButton variant="secondary" label={t('Se connecter', 'Konekte')} onPress={onSignIn} style={{ alignSelf: 'flex-start', backgroundColor: C.surfaceRaised }} /> : null}
+                    </>
+                  ) : null}
+                </View>
+              </View>
+            ) : null}
+            {plan.showDaily ? header : null}
+            {plan.allowMixed ? (
+              <ArenaButton
+                variant="secondary"
+                label={t('Jouer un mélange de thèmes', 'Jwe yon melanj tèm')}
+                accessibilityHint={t('10 questions tirées de tous les thèmes', '10 kesyon nan tout tèm yo')}
+                icon={<Shuffle color={C.ink} size={18} />}
+                onPress={onMixed}
+                style={{ minHeight: 52 }}
+              />
+            ) : null}
           </View>
           <NightSection title={t('Les thèmes', 'Tèm yo')} meta={t(`${orderedCategories.length} thèmes`, `${orderedCategories.length} tèm`)} style={{ marginHorizontal: SIDE }} />
         </View>
@@ -676,7 +704,7 @@ export function QuizPlayer({
 
 function TriviaResults({
   score, total, category, reward, dailyReplay, mistakes, freezeEarned,
-  onRetry, onChooseCategory, onChallenge, isCreole,
+  onRetry, onChooseCategory, onChallenge, isCreole, intent = 'practice',
 }: {
   score: number;
   total: number;
@@ -692,6 +720,8 @@ function TriviaResults({
   /** "Défier un ami" — present only when this round can become a duel. */
   onChallenge?: (() => Promise<void>) | null;
   isCreole: boolean;
+  /** A round started from "Défier un ami" leads with sending the duel. */
+  intent?: TriviaIntent;
 }) {
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const user = useStore((s) => s.user);
@@ -726,6 +756,26 @@ function TriviaResults({
   const winW = Dimensions.get('window').width;
   const previewW = Math.min(winW - SIDE * 2, 380) * 0.72;
 
+  const leadChallenge = resultPrimary(intent, !!onChallenge) === 'challenge';
+  const shareAction = {
+    label: t('Partager', 'Pataje'),
+    icon: <Share2 color={C.onCoral} size={18} />,
+    onPress: () => shareRef.current?.share({ mode: 'score', subject: shareSubject, score, total }),
+  };
+  const challengeAction = onChallenge ? {
+    label: challenging
+      ? t('Préparation du défi…', 'N ap prepare defi a…')
+      : leadChallenge ? t('Envoyer le défi', 'Voye defi a') : t('Défier un ami', 'Defye yon zanmi'),
+    icon: <Swords color={leadChallenge ? C.onCoral : C.ink} size={18} />,
+    busy: challenging,
+    accessibilityHint: t('Envoie ces mêmes questions à un ami', 'Voye menm kesyon sa yo bay yon zanmi'),
+    onPress: async () => {
+      if (challenging) return;
+      setChallenging(true);
+      try { await onChallenge(); } finally { setChallenging(false); }
+    },
+  } : null;
+
   return (
     <>
       <ShareCardCapture ref={shareRef} />
@@ -751,29 +801,26 @@ function TriviaResults({
             {days > 0 ? <RewardChip icon={<Flame color={C.coral} size={16} />} label={t(`Série ${days} jours`, `Seri ${days} jou`)} /> : null}
           </>
         )}
-        primary={{
-          label: t('Partager', 'Pataje'),
-          icon: <Share2 color={C.onCoral} size={18} />,
-          onPress: () => shareRef.current?.share({ mode: 'score', subject: shareSubject, score, total }),
-        }}
+        primary={leadChallenge && challengeAction ? challengeAction : shareAction}
         secondary={[
+          ...(leadChallenge ? [{ ...shareAction, icon: <Share2 color={C.ink} size={18} /> }] : []),
           { label: t('Rejouer', 'Rejwe'), icon: <RefreshCw color={C.ink} size={18} />, onPress: onRetry },
-          ...(onChallenge ? [{
-            label: challenging ? t('Préparation du défi…', 'N ap prepare defi a…') : t('Défier un ami', 'Defye yon zanmi'),
-            icon: <Swords color={C.ink} size={18} />,
-            busy: challenging,
-            accessibilityHint: t('Envoie ces mêmes questions à un ami', 'Voye menm kesyon sa yo bay yon zanmi'),
-            onPress: async () => {
-              if (challenging) return;
-              setChallenging(true);
-              try { await onChallenge(); } finally { setChallenging(false); }
-            },
-          }] : []),
+          ...(!leadChallenge && challengeAction ? [challengeAction] : []),
         ]}
         link={mistakes.length > 0
           ? { label: review ? t('Masquer mes erreurs', 'Kache erè m yo') : t(`Revoir mes erreurs (${mistakes.length})`, `Revize erè m yo (${mistakes.length})`), onPress: () => setReview((r) => !r) }
           : { label: t('Choisir un autre thème', 'Chwazi yon lòt tèm'), onPress: onChooseCategory }}
       >
+        {intent === 'challenge' ? (
+          <Text style={[arenaType.body, { color: C.inkSoft, textAlign: 'center' }]}>
+            {onChallenge
+              ? t(
+                `Envoie le lien : ton ami joue ces ${total} questions quand il veut et essaie de battre ton ${score} sur ${total}.`,
+                `Voye lyen an : zanmi w jwe ${total} kesyon sa yo lè li vle e li eseye bat ${score} sou ${total} ou a.`,
+              )
+              : t('Connecte-toi pour envoyer ce défi à un ami.', 'Konekte pou w voye defi sa a bay yon zanmi.')}
+          </Text>
+        ) : null}
         {dailyReplay || reward?.guest ? (
           <Text style={[arenaType.status, { color: C.muted, textAlign: 'center' }]}>
             {dailyReplay
@@ -834,9 +881,19 @@ export default function TriviaScreen() {
   const { profile, recordResult, recordGameResult, daily, isAuthed } = useTrivia();
   const { recordActivity } = useStreak();
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const qc = useQueryClient();
+  const toggleAuthModal = useStore((s) => s.toggleAuthModal);
 
   const [phase, setPhase] = useState<TriviaPhase>('hub');
+  // Practice or friend challenge — carried from the host to the result (M1).
+  const [intent, setIntent] = useState<TriviaIntent>('practice');
+  const startTrivia = useCallback((next?: TriviaIntent) => {
+    setIntent(parseTriviaIntent(next));
+    setSelectedCategory(null);
+    setIsDailyRound(false);
+    setPhase('categories');
+  }, []);
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<any>(null);
   const [roundSize, setRoundSize] = useState(10);
@@ -867,6 +924,7 @@ export default function TriviaScreen() {
   // a navigation stack), so we reset the local phase ourselves.
   useEffect(() => {
     const unsub = navigation.addListener('tabPress', () => {
+      setIntent('practice');
       setPhase('hub');
       setSelectedGame(null);
       setSelectedCategory(null);
@@ -913,6 +971,17 @@ export default function TriviaScreen() {
     }, [pendingDailyChallenge, setPendingDailyChallenge, daily, startDaily]),
   );
 
+  // The ArenaHub root route hands its intent over as a tab param (practice or
+  // challenge, with a nonce so the same intent twice still lands). Consume it
+  // once, then clear it so a later tab visit does not replay it.
+  const routeIntent = route?.params?.intent;
+  const routeNonce = route?.params?.nonce;
+  useEffect(() => {
+    if (!routeIntent) return;
+    startTrivia(parseTriviaIntent(routeIntent));
+    navigation.setParams({ intent: undefined, nonce: undefined });
+  }, [routeIntent, routeNonce, startTrivia, navigation]);
+
   useEffect(() => {
     if (!dailyDoneNote) return;
     const tmr = setTimeout(() => setDailyDoneNote(false), 3500);
@@ -956,8 +1025,18 @@ export default function TriviaScreen() {
     const cat = TRIVIA_CATEGORIES.find((c: any) => c.id === categoryId);
     setSelectedCategory(cat ?? null);
     setIsDailyRound(false);
+    // A challenge plays a fixed short round straight away: the duel is the
+    // point, not the round size.
+    const available = (TRIVIA_QUESTIONS as Record<string, any[]>)[categoryId]?.length ?? 0;
+    const fixed = cat ? roundSizeFor(intent, available) : null;
+    if (fixed) {
+      setQuestions(prepareQuestions(categoryId, fixed));
+      setRoundSize(fixed);
+      setPhase('playing');
+      return;
+    }
     setPhase('roundPicker');
-  }, []);
+  }, [intent]);
 
   const handlePickRound = useCallback(
     (count: number) => {
@@ -1017,6 +1096,7 @@ export default function TriviaScreen() {
   );
 
   const exitToHub = useCallback(() => {
+    setIntent('practice');
     setPhase('hub');
     setSelectedGame(null);
     setSelectedCategory(null);
@@ -1086,7 +1166,7 @@ export default function TriviaScreen() {
         <>
           <JeuxHub
             onSelectGame={(id) => { setSelectedGame(id); setPhase('arcade'); }}
-            onStartTrivia={() => setPhase('categories')}
+            onStartTrivia={startTrivia}
             onStartDaily={startDaily}
             onRematch={handleSelectCategory}
           />
@@ -1130,6 +1210,9 @@ export default function TriviaScreen() {
           onBack={exitToHub}
           header={<DailyChallengeBanner daily={daily} isCreole={isCreole} onStart={startDaily} compact />}
           isCreole={isCreole}
+          intent={intent}
+          isAuthed={isAuthed}
+          onSignIn={toggleAuthModal}
         />
       )}
 
@@ -1166,6 +1249,7 @@ export default function TriviaScreen() {
           onChooseCategory={handleChooseCategory}
           onChallenge={challengeIdxs ? handleChallenge : null}
           isCreole={isCreole}
+          intent={intent}
         />
       )}
     </SafeAreaView>

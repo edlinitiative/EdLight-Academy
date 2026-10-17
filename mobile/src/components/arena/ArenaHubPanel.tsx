@@ -7,10 +7,11 @@
  *  - the ArenaHub root route (screens/arena/ArenaHubScreen), which is where the
  *    /arena deep link and the "back to the Arena" actions land.
  *
- * Order is by what the student can act on: who they compete for (school crest
- * and its real rank), then the ONE event action that applies right now —
- * rejoin, results, register, watch, or an honest "nothing scheduled" with what
- * to do meanwhile — then the secondary rows (watch, last results).
+ * Order is by what the student can act on. With an event: who they compete
+ * for (school crest and its real rank), then the ONE event action that applies
+ * right now — rejoin, results, register, watch — then the secondary rows.
+ * Between events (audit M3): everyday play first (coral "Jouer une partie" and
+ * "Défier un ami"), then the school, then a small honest "nothing scheduled".
  *
  * Real data only. The school is the student's own leaderboard school; the rank
  * is the weekly school board's (1-based among qualified schools, and absent —
@@ -38,6 +39,7 @@ import { ArenaPanel, ArenaButton, StatusPill, StaleBanner, stateCopy } from './A
 import SchoolCrest from './art/crest/SchoolCrest';
 import arenaHaptics from './arenaHaptics';
 import { hubEventCopy, formatEventDate } from './arenaHubCopy';
+import { CHALLENGE_ROUND } from '../../utils/triviaIntent';
 
 export interface ArenaHubPanelProps {
   /** Start a practice round (Jeux). */
@@ -93,8 +95,43 @@ export default function ArenaHubPanel({ onPractice, onDuel }: ArenaHubPanelProps
   const qualifiedCount = useMemo(() => rankTeams(groups ?? []).filter((g) => g.qualified).length, [groups]);
   const levelLabel = grade && /^ns/i.test(grade) ? displayLevel(grade) : null;
 
+  // Between events the Arena leads with what is always playable (M3) — the
+  // same promise as web /arena: a real round now, a friend challenge, then
+  // the school context, then the honest "nothing scheduled".
+  const noEvent = hub.status !== 'loading' && !fault && !tour;
+  const playCard = (
+    <View style={{ padding: 22, gap: 12, borderRadius: 24, backgroundColor: C.surfaceRaised }}>
+      <Text style={[arenaType.label, { fontSize: 15, color: C.muted }]}>{t('Jouer maintenant', 'Jwe kounye a')}</Text>
+      <Text style={{ fontFamily: fonts.heading, fontSize: 22, lineHeight: 27, letterSpacing: -0.4, color: C.ink }}>
+        {schoolName
+          ? t('Chaque partie fait monter ton école', 'Chak pati fè lekòl ou monte')
+          : t('Une partie de trivia, tout de suite', 'Yon pati trivia, touswit')}
+      </Text>
+      <Text style={[arenaType.body, { color: C.muted }]}>
+        {t('Tes points comptent au classement de la semaine.', 'Pwen ou yo konte nan klasman semèn nan.')}
+      </Text>
+      <ArenaButton
+        label={t('Jouer une partie', 'Jwe yon pati')}
+        onPress={() => { arenaHaptics.choose(); onPractice(); }}
+        icon={<Zap color={C.onCoral} size={18} />}
+        style={{ marginTop: 4, minHeight: 52 }}
+      />
+      <ArenaButton
+        variant="secondary"
+        label={t('Défier un ami', 'Defye yon zanmi')}
+        accessibilityHint={t(`Joue ${CHALLENGE_ROUND} questions, puis envoie-les à un ami`, `Jwe ${CHALLENGE_ROUND} kesyon, epi voye yo bay yon zanmi`)}
+        onPress={() => { arenaHaptics.choose(); onDuel(); }}
+        icon={<Swords color={C.ink} size={18} />}
+        // On the raised card the secondary step goes DOWN to read.
+        style={{ minHeight: 52, backgroundColor: C.surface }}
+      />
+    </View>
+  );
+
   return (
     <View style={{ gap: 14 }}>
+      {noEvent ? playCard : null}
+
       {/* ── Who you compete for ───────────────────────────────────────── */}
       <View
         accessible
@@ -216,24 +253,29 @@ export default function ArenaHubPanel({ onPractice, onDuel }: ArenaHubPanelProps
           <ArenaButton label={copy.action} onPress={primaryAction} icon={primaryIcon(p.kind)} style={{ marginTop: 4, minHeight: 52 }} />
         </View>
       ) : (
-        // Honest empty state: no invented date, and no coral on the page.
-        <View style={{ padding: 22, gap: 10, borderRadius: 24, backgroundColor: C.surface }}>
-          <Text style={[arenaType.name, { fontSize: 14, color: C.muted }]}>{t('Prochain championnat', 'Pwochen chanpyona')}</Text>
-          <Text style={{ fontFamily: fonts.heading, fontSize: 20, lineHeight: 25, color: C.ink }}>
-            {t('Aucun championnat prévu pour l’instant', 'Pa gen chanpyona pwograme pou kounye a')}
-          </Text>
-          <Text style={[arenaType.body, { color: C.muted }]}>
-            {t(
-              'On te prévient dès qu’un championnat est annoncé. En attendant, chaque partie fait monter ton école au classement de la semaine.',
-              'N ap fè w konnen depi yo anonse yon chanpyona. Pandan w ap tann, chak pati fè lekòl ou monte nan klasman semèn nan.',
-            )}
-          </Text>
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 6 }}>
-            <ArenaButton variant="secondary" label={t('S’entraîner', 'Antrene w')} onPress={() => { arenaHaptics.choose(); onPractice(); }} icon={<Zap color={C.ink} size={16} />} style={{ flex: 1 }} />
-            <ArenaButton variant="secondary" label={t('Défier un ami', 'Defye yon zanmi')} onPress={() => { arenaHaptics.choose(); onDuel(); }} icon={<Swords color={C.ink} size={16} />} style={{ flex: 1 }} />
+        // Honest, and small: no invented date. The everyday play above is
+        // the Arena's job between events (M3), not an empty championship.
+        <View accessible style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 20, backgroundColor: C.surface }}>
+          <CalendarDays color={C.muted} size={20} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={[arenaType.name, { fontSize: 15, color: C.inkSoft }]}>
+              {t('Aucun championnat prévu pour l’instant', 'Pa gen chanpyona pwograme pou kounye a')}
+            </Text>
+            <Text style={[arenaType.status, { color: C.muted }]}>
+              {t('On te prévient dès qu’un championnat est annoncé.', 'N ap fè w konnen depi yo anonse yon chanpyona.')}
+            </Text>
           </View>
         </View>
       )}
+
+      {/* With an event on the card, everyday play stays one tap away —
+          tonal, because the event owns the screen's one coral action. */}
+      {tour && copy ? (
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <ArenaButton variant="secondary" label={t('Jouer une partie', 'Jwe yon pati')} onPress={() => { arenaHaptics.choose(); onPractice(); }} icon={<Zap color={C.ink} size={16} />} style={{ flex: 1, minHeight: 52 }} />
+          <ArenaButton variant="secondary" label={t('Défier un ami', 'Defye yon zanmi')} onPress={() => { arenaHaptics.choose(); onDuel(); }} icon={<Swords color={C.ink} size={16} />} style={{ flex: 1, minHeight: 52 }} />
+        </View>
+      ) : null}
 
       {/* ── Secondary rows ────────────────────────────────────────────── */}
       {hub.watchable && p.kind !== 'watch' ? (

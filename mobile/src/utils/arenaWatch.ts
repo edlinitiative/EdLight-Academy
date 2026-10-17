@@ -77,3 +77,54 @@ export function tallyPlayAlong(answers: PlayAlongAnswers, revealed: Record<numbe
   }
   return { answered, correct };
 }
+
+// ── Follow preference (audit M4) ─────────────────────────────────────────────
+
+/**
+ * Three different answers, kept apart:
+ *  - `default`  never chose — follow the viewer's own registered school;
+ *  - `none`     chose to follow nobody — stays nobody across relaunches,
+ *               even though an own school exists;
+ *  - `school`   chose this school.
+ * Collapsing `none` into "no stored value" is the bug this replaces: clearing
+ * the default school fell straight back to it.
+ */
+export type FollowPref =
+  | { kind: 'default' }
+  | { kind: 'none' }
+  | { kind: 'school'; key: string };
+
+export const FOLLOW_STORAGE_KEY = 'arena.watch.follow';
+/** The stored sentinel for "nobody". Not a valid school key (keys are normalized names). */
+export const FOLLOW_NONE = '__none__';
+
+/** Read the stored value (null = never written). */
+export function parseFollowPref(stored: string | null | undefined): FollowPref {
+  if (stored == null || stored === '') return { kind: 'default' };
+  if (stored === FOLLOW_NONE) return { kind: 'none' };
+  return { kind: 'school', key: stored };
+}
+
+/** What to store: null means remove the key (back to the default). */
+export function serializeFollowPref(pref: FollowPref): string | null {
+  if (pref.kind === 'default') return null;
+  if (pref.kind === 'none') return FOLLOW_NONE;
+  return pref.key;
+}
+
+/** The school actually followed, or null for nobody. */
+export function resolveFollowKey(pref: FollowPref, ownSchoolKey: string | null): string | null {
+  if (pref.kind === 'none') return null;
+  if (pref.kind === 'school') return pref.key;
+  return ownSchoolKey;
+}
+
+/**
+ * A tap on a school row: tapping the school you follow (by default or by
+ * choice) unfollows it EXPLICITLY; tapping any other school follows it.
+ */
+export function toggleFollowPref(pref: FollowPref, ownSchoolKey: string | null, tapped: string): FollowPref {
+  const current = resolveFollowKey(pref, ownSchoolKey);
+  if (current === tapped) return { kind: 'none' };
+  return { kind: 'school', key: tapped };
+}
