@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Home, BookOpen, GraduationCap, Swords, User } from './icons';
@@ -81,35 +81,24 @@ export default function BottomNav() {
     return pathname.startsWith(path);
   };
 
-  // Native-app feel for the tab bar:
-  //   • single tap → smooth-scroll the current page back to the top (the <Link>
-  //                 still handles navigation when the route is different)
-  //   • double tap → reload the route (a quick "pull-to-refresh" equivalent)
-  const lastTapRef = useRef({ to: '', time: 0 });
-
+  // Tab bar taps are ordinary navigation. The one extra: tapping the tab of
+  // the page you are already on scrolls it back to the top (the <Link> won't
+  // navigate, so it wouldn't otherwise reset scroll). There used to be a
+  // hidden double-tap-to-reload gesture here; it reloaded the whole document
+  // and could discard an answer in progress or a pending save (audit #18,
+  // PRD LJ-11), so it is gone. Refresh lives in explicit controls instead.
   const scrollToTop = () => {
     try {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      document.scrollingElement?.scrollTo?.({ top: 0, behavior: 'smooth' });
+      const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+      const behavior: ScrollBehavior = reduce ? 'auto' : 'smooth';
+      window.scrollTo({ top: 0, behavior });
+      document.scrollingElement?.scrollTo?.({ top: 0, behavior });
     } catch {
       window.scrollTo(0, 0);
     }
   };
 
-  const handleTabTap = (to) => (e) => {
-    const now = Date.now();
-    const prev = lastTapRef.current;
-    const isDoubleTap = prev.to === to && now - prev.time < 350;
-    lastTapRef.current = { to, time: now };
-
-    if (isDoubleTap) {
-      // Second quick tap on the same tab → refresh.
-      e.preventDefault();
-      window.location.reload();
-      return;
-    }
-    // First tap → jump to the top. Essential when we're already on this route,
-    // since the <Link> won't navigate (and so wouldn't otherwise reset scroll).
+  const handleTabTap = () => {
     scrollToTop();
   };
 
@@ -124,7 +113,7 @@ export default function BottomNav() {
               to={to}
               className={`bottom-nav__item ${active ? 'is-active' : ''}`}
               aria-current={active ? 'page' : undefined}
-              onClick={handleTabTap(to)}
+              onClick={handleTabTap}
             >
               <span className="bottom-nav__icon">
                 <Icon size={22} strokeWidth={active ? 2.4 : 2} aria-hidden="true" />

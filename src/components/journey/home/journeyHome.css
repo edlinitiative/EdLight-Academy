@@ -1,0 +1,199 @@
+/* ══ Signed-in Home: the learning journey (2026-10-17) ══════════════════════
+   LJ-01 continuation row, LJ-10 progress summary, due-review copy.
+   Rules kept from the founder: no top band / greeting / stat strip, no
+   coloured left-border stripes, one primary button per region (the site's
+   .button system, --r-btn), text ≥ 14px, light + dark from the shared tokens. */
+
+.jh-sr {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* ── The one next action ──────────────────────────────────────────────────── */
+.jh-next {
+  --jh-link: var(--primary-600, #1558B8);
+  display: grid;
+  grid-template-columns: minmax(200px, 300px) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(1rem, 2.4vw, 1.75rem);
+  padding: clamp(1rem, 2vw, 1.35rem);
+  border-radius: 24px;
+  background: var(--surface, #fff);
+  box-shadow: 0 0 0 1px var(--border, #E3EAF4), 0 24px 48px -38px rgba(11, 41, 107, 0.45);
+  animation: jh-reveal 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.jh-next--plain { grid-template-columns: minmax(0, 1fr); }
+.jh-next--loading { animation: none; }
+[data-theme="dark"] .jh-next { --jh-link: var(--primary-700, #6FA8F5); box-shadow: 0 0 0 1px var(--border-strong, rgba(255,255,255,.16)); }
+
+@keyframes jh-reveal { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.jh-next__media {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--primary-500) 10%, var(--surface, #fff));
+}
+.jh-next__media--CHEM { background: color-mix(in srgb, #10B981 12%, var(--surface, #fff)); }
+.jh-next__media--PHYS { background: color-mix(in srgb, #8B5CF6 12%, var(--surface, #fff)); }
+.jh-next__media--ECON { background: color-mix(in srgb, #F59E0B 14%, var(--surface, #fff)); }
+.jh-next__media img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.06); display: block; }
+.jh-next__play {
+  position: absolute; right: 0.6rem; bottom: 0.6rem;
+  display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
+  background: #fff; color: #1558B8; box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.45);
+}
+
+.jh-next__body { display: grid; align-content: center; min-width: 0; }
+.jh-next__context {
+  margin: 0 0 0.3rem;
+  color: var(--text-600);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.jh-next__title {
+  margin: 0;
+  color: var(--text-900);
+  font-family: var(--font-heading, sans-serif);
+  font-size: clamp(1.375rem, 1.05rem + 1vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.jh-next__verb { color: var(--jh-link); }
+.jh-next__status {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.75rem;
+  margin: 0.55rem 0 0;
+  color: var(--text-600);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+}
+.jh-next__fact + .jh-next__fact::before,
+.jh-ev + .jh-next__fact::before { content: none; }
+.jh-next__note { margin: 0.5rem 0 0; color: var(--text-600); font-size: 0.875rem; }
+
+.jh-next__actions {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.25rem;
+  margin-top: 1rem;
+}
+.jh-next__actions .button { text-decoration: none; }
+.jh-next__alt {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  min-height: 44px; padding: 0; border: 0; background: none; cursor: pointer;
+  color: var(--jh-link); font: inherit; font-size: 0.9375rem; font-weight: 700; text-decoration: none;
+}
+.jh-next__alt:hover { text-decoration: underline; text-underline-offset: 3px; }
+.jh-next__alt--quiet { color: var(--text-600); font-weight: 600; }
+.jh-next__alt:focus-visible { outline: 3px solid var(--primary-400, #4C8EF0); outline-offset: 2px; border-radius: 6px; }
+
+/* Evidence words: the label carries the meaning; the wash only groups it. */
+.jh-ev {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  padding: 0.15rem 0.6rem; border-radius: 999px;
+  font-size: 0.875rem; font-weight: 700; line-height: 1.5;
+  background: var(--surface-muted); color: var(--text-700);
+}
+.jh-ev::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; opacity: 0.75; }
+.jh-ev--new::before { background: transparent; box-shadow: inset 0 0 0 1.5px currentColor; }
+.jh-ev--completed { background: color-mix(in srgb, var(--primary-500) 12%, var(--surface)); color: var(--primary-700, #114A99); }
+.jh-ev--practised { background: color-mix(in srgb, #8B5CF6 13%, var(--surface)); color: #5B21B6; }
+.jh-ev--mastered { background: color-mix(in srgb, #10B981 14%, var(--surface)); color: #047857; }
+[data-theme="dark"] .jh-ev--practised { color: #C4B5FD; }
+[data-theme="dark"] .jh-ev--mastered { color: #6EE7B7; }
+
+/* Class choice: choosing is a pill (button system), acting is a rectangle. */
+.jh-class { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.9rem; }
+.jh-class__chip {
+  min-height: 44px; padding: 0 1rem; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--border-strong, #D5DEEA); background: var(--surface); color: var(--text-900);
+  font: inherit; font-size: 0.9375rem; font-weight: 700;
+}
+.jh-class__chip:hover { border-color: var(--primary-500); }
+.jh-class__chip.is-on { background: var(--primary-500); border-color: var(--primary-500); color: #fff; }
+.jh-class__chip:focus-visible { outline: 3px solid var(--primary-400, #4C8EF0); outline-offset: 2px; }
+.jh-next .button--secondary { white-space: normal; text-align: left; text-decoration: none; }
+
+@media (max-width: 720px) {
+  .jh-next:not(.jh-next--plain) { grid-template-columns: 132px minmax(0, 1fr); align-items: start; }
+  .jh-next__media { border-radius: 12px; }
+  .jh-next__play { width: 30px; height: 30px; right: 0.35rem; bottom: 0.35rem; }
+  .jh-next__play svg { width: 15px; height: 15px; }
+  .jh-next__actions { grid-column: 1 / -1; }
+  .jh-next:not(.jh-next--plain) .jh-next__body { display: contents; }
+  .jh-next:not(.jh-next--plain) .jh-next__context,
+  .jh-next:not(.jh-next--plain) .jh-next__title { grid-column: 2; }
+  .jh-next:not(.jh-next--plain) .jh-next__media { grid-row: 1 / span 2; }
+  .jh-next:not(.jh-next--plain) .jh-next__status,
+  .jh-next:not(.jh-next--plain) .jh-next__note { grid-column: 1 / -1; }
+}
+@media (max-width: 720px) {
+  .jh-next:not(.jh-next--plain):not(.jh-next--loading) { row-gap: 0.25rem; }
+  .jh-next:not(.jh-next--plain):not(.jh-next--loading) .jh-next__context { margin: 0; align-self: end; }
+  .jh-next:not(.jh-next--plain):not(.jh-next--loading) .jh-next__title { align-self: start; font-size: 1.25rem; }
+  .jh-next__actions .button--lg { flex: 1 1 100%; }
+  .jh-next--loading { grid-template-columns: 1fr; }
+  .jh-next--loading .jh-next__media { display: none; }
+}
+
+/* ── Subject card tweaks ──────────────────────────────────────────────────── */
+.lws-ring b.jh-ring-frac { font-size: 0.7rem; letter-spacing: -0.02em; }
+.lws-subj__meta { font-size: 0.9rem; }
+.jh-subj-skel { pointer-events: none; }
+.jh-subj-skel__cover { display: block; aspect-ratio: 16 / 9; background: var(--surface-muted); }
+.jh-subj-skel__body { display: grid; gap: 0.6rem; padding: 1.1rem 1.25rem 1.3rem; }
+.jh-subj-skel__body span { display: block; height: 14px; border-radius: 6px; background: var(--surface-muted); }
+.jh-subj-skel__body span:first-child { width: 55%; height: 20px; }
+.jh-section-note { margin: 0; color: var(--text-600); font-size: 0.9375rem; }
+
+/* ── Progress summary (LJ-10) ─────────────────────────────────────────────── */
+.jh-prog { display: grid; gap: 0.85rem; }
+.jh-prog .lws-section__head h3 { margin: 0; font-family: var(--font-heading, sans-serif); font-size: 1.15rem; font-weight: 800; letter-spacing: -0.02em; }
+.jh-prog__list { display: grid; gap: 1rem; margin: 0; padding: 0; list-style: none; }
+.jh-prog__row { display: grid; gap: 0.3rem; }
+.jh-prog__name { color: var(--text-900); font-size: 0.9875rem; font-weight: 800; }
+.jh-prog__bar {
+  display: block; height: 6px; overflow: hidden; border-radius: 6px;
+  background: var(--surface-muted, #EEF2F7);
+}
+.jh-prog__fill {
+  display: block; height: 100%; border-radius: inherit; background: var(--primary-500, #1B6FE0);
+  transition: width 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.jh-prog__facts { color: var(--text-600); font-size: 0.9375rem; font-variant-numeric: tabular-nums; line-height: 1.4; }
+.jh-prog__delta { color: #047857; font-size: 0.875rem; font-weight: 700; }
+[data-theme="dark"] .jh-prog__delta { color: #6EE7B7; }
+.jh-prog__empty { margin: 0; color: var(--text-600); font-size: 0.9375rem; line-height: 1.5; }
+.jh-prog__empty p { margin: 0 0 0.5rem; }
+.jh-prog__retry,
+.jh-prog__how summary {
+  min-height: 44px; padding: 0; border: 0; background: none; cursor: pointer;
+  color: var(--primary-600, #1558B8); font: inherit; font-size: 0.9375rem; font-weight: 700;
+}
+[data-theme="dark"] .jh-prog__retry,
+[data-theme="dark"] .jh-prog__how summary { color: var(--primary-700, #6FA8F5); }
+.jh-prog__how summary { display: flex; align-items: center; list-style: none; }
+.jh-prog__how summary::-webkit-details-marker { display: none; }
+.jh-prog__how summary::after { content: '▾'; margin-left: 0.35rem; font-size: 0.8em; transition: transform 0.18s ease; }
+.jh-prog__how[open] summary::after { transform: rotate(180deg); }
+.jh-prog__how dl { display: grid; gap: 0.55rem; margin: 0.25rem 0 0.6rem; }
+.jh-prog__how dt { color: var(--text-900); font-size: 0.9375rem; font-weight: 800; }
+.jh-prog__how dd { margin: 0; color: var(--text-600); font-size: 0.9375rem; line-height: 1.45; }
+.jh-prog__how p { margin: 0; color: var(--text-600); font-size: 0.875rem; line-height: 1.45; }
+.jh-prog__skel { display: grid; gap: 1rem; }
+
+/* ── Due review copy ──────────────────────────────────────────────────────── */
+.jh-review__why { margin: 0 0 0.75rem; color: var(--text-600); font-size: 0.9375rem; line-height: 1.45; }
+.jh-review__fail { display: grid; gap: 0.6rem; justify-items: start; }
+.lws-weak .lws-muted { font-size: 0.9375rem; line-height: 1.45; }
+
+@media (prefers-reduced-motion: reduce) {
+  .jh-next { animation: none; }
+  .jh-prog__fill, .jh-prog__how summary::after { transition: none; }
+}
+
+/* Review counts are amounts to revisit, not red marks. */
+.lws .jh-review .lws-weak__list .lws-weak__count { background: var(--surface); color: var(--text-700) !important; font-size: 0.875rem; }

@@ -6,6 +6,9 @@ import { useTranslation } from 'react-i18next';
 import { logAnswerEvent } from '../services/answerEventsService';
 import { recordReviewOutcome } from '../services/reviewService';
 import useStore from '../contexts/store';
+import AnswerStatus from './journey/practice/AnswerStatus';
+import { isGradable } from './journey/practice/practiceScope';
+import './journey/practice/practice.css';
 
 export const MAX_ATTEMPTS = 3;
 
@@ -18,7 +21,11 @@ export default function DirectBankQuiz({
   isLast = false,
   onClose,
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  // New lines are written inline FR/HT (as on the quiz page): a brand-new
+  // i18next key would fall back to French for Kreyòl readers.
+  const isCreole = String(i18n?.language || useStore.getState().language || '').toLowerCase().startsWith('ht');
+  const tx = (fr: string, ht: string) => (isCreole ? ht : fr);
   const katexReady = useKatex();
   const [selected, setSelected] = useState(null);
   const [textAns, setTextAns] = useState('');
@@ -31,7 +38,14 @@ export default function DirectBankQuiz({
   // "Réessayer" — re-graded the still-selected wrong answer, spending an
   // attempt on a choice already known to be wrong.
   const [lastWrong, setLastWrong] = useState<number | string | null>(null);
+  // What the student gave on the attempt that closed the question, for the
+  // "Ta réponse" row of the correction.
+  const [finalAnswer, setFinalAnswer] = useState('');
   const maxAttempts = MAX_ATTEMPTS;
+  // No key to compare with (missing answer, unusable options): the question
+  // is shown and answered, but never marked wrong and never sent to review.
+  const gradable = isGradable(item);
+  const [ungraded, setUngraded] = useState(false);
 
   const derivedHints = useMemo(() => {
     const base = Array.isArray(item?.hints) ? item.hints.filter(Boolean) : [];
@@ -50,9 +64,23 @@ export default function DirectBankQuiz({
     setCorrect(null);
     setAttempts(0);
     setLastWrong(null);
+    setFinalAnswer('');
+    setUngraded(false);
   }, [item]);
 
   const handleCheck = () => {
+    if (!gradable) {
+      const given = (item.kind === 'mcq' || item.kind === 'tf')
+        ? String(item.options?.[selected] ?? '')
+        : String(textAns).trim();
+      if (!given) return;
+      setFinalAnswer(given);
+      setSubmitted(true);
+      setCorrect(null);
+      setUngraded(true);
+      if (onScore) onScore({ correct: 0, message: 'ungraded', attemptsLeft: 0, attempt: 1, answer: given });
+      return;
+    }
     let isCorrect = false;
     if (item.kind === 'mcq' || item.kind === 'tf') {
       if (selected === null) return;
@@ -89,6 +117,7 @@ export default function DirectBankQuiz({
       }
     }
     if (isCorrect) {
+      setFinalAnswer(answer);
       setSubmitted(true);
       setCorrect(true);
       if (onScore) onScore({ correct: 1, message: 'correct', attemptsLeft: maxAttempts - attempts, attempt: attempts + 1, answer });
@@ -97,6 +126,7 @@ export default function DirectBankQuiz({
     const next = attempts + 1;
     setAttempts(next);
     if (next >= maxAttempts) {
+      setFinalAnswer(answer);
       setSubmitted(true);
       setCorrect(false);
       if (onScore) onScore({ correct: 0, message: 'exhausted_attempts', attemptsLeft: 0, attempt: next, answer });
@@ -110,11 +140,13 @@ export default function DirectBankQuiz({
 
   const Status = () => {
     if (!submitted) {
+      if (!gradable) return null;
       const left = maxAttempts - attempts;
       return <span className="chip chip--ghost">{t('quizzes.triesLeft', '{{count}} essai restant', { count: left })}</span>;
     }
+    if (ungraded) return null;
     return correct
-      ? <span className="chip chip--success"><Check size={14} /> {t('quizzes.correctChip', 'Correct')}</span>
+      ? <span className="chip chip--success"><Check size={14} aria-hidden="true" /> {t('quizzes.correctChip', 'Correct')}</span>
       : <span className="chip chip--danger">{t('quizzes.outOfTries', 'Plus d\'essais')}</span>;
   };
 
@@ -155,7 +187,7 @@ export default function DirectBankQuiz({
             const isCorrectOpt = idx === item.correctIndex;
             const isSelectedOpt = selected === idx;
             let stateClass = '';
-            if (submitted) {
+            if (submitted && !ungraded) {
               if (isCorrectOpt) stateClass = 'radio-option--correct';
               else if (isSelectedOpt) stateClass = 'radio-option--wrong';
             } else if (attempts > 0 && idx === lastWrong) {
@@ -197,39 +229,80 @@ export default function DirectBankQuiz({
         </div>
       )}
 
-      {hintToShow && (
-        <div className="hint-box" style={{ margin: '0.5rem 0' }}>
-          <strong>{t('quizzes.hint', 'Indice')}:</strong> <span dangerouslySetInnerHTML={renderWithKatex(hintToShow, katexReady)} />
-        </div>
-      )}
+      {/* One live region for every outcome, so a screen reader hears the
+          verdict without the focus moving off the answer (LJ-08). Order is
+          the anatomy: result, your response, expected answer, explanation. */}
+      <div className="pq-live" aria-live="polite">
+        {!submitted && attempts > 0 && (
+          <div className="pq-correction pq-correction--open">
+            <p className="pq-correction__verdict">
+              <AnswerStatus kind="tryagain" tx={tx} />
+              <span className="pq-correction__next">
+                {tx(
+                  `Même question : il te reste ${maxAttempts - attempts} essai${maxAttempts - attempts > 1 ? 's' : ''}.`,
+                  `Menm kesyon an : ou rete ${maxAttempts - attempts} esè.`,
+                )}
+              </span>
+            </p>
+            {hintToShow && (
+              <div className="pq-hint">
+                <span className="pq-hint__label">{t('quizzes.hint', 'Indice')}</span>
+                <span dangerouslySetInnerHTML={renderWithKatex(hintToShow, katexReady)} />
+              </div>
+            )}
+          </div>
+        )}
 
-      {submitted && (
-        <div className={`quiz-card__explanation quiz-card__explanation--${correct ? 'correct' : 'wrong'}`} style={{ marginTop: '0.75rem' }}>
-          {correct ? (
-            <div>
-              <div style={{ marginBottom: '0.5rem' }}>
-                <strong>{t('quizzes.correct', 'Correct !')}</strong> {correctAnswerDisplay ? (
-                  <>
-                    {' '}<em>{t('quizzes.answerLabel', 'Réponse')}:</em> <span dangerouslySetInnerHTML={renderWithKatex(correctAnswerDisplay, katexReady)} />
-                  </>
-                ) : null}
-              </div>
-              {item.good && (
-                <div><strong>{t('quizzes.explanation', 'Explication')}:</strong> <span dangerouslySetInnerHTML={renderWithKatex(item.good, katexReady)} /></div>
-              )}
+        {submitted && (() => {
+          const kind = ungraded ? 'ungraded' : correct ? (attempts === 0 ? 'correct' : 'retry') : 'incorrect';
+          // Authored text only. `good` explains the right answer; `wrong` is
+          // the authored feedback on a miss. Nothing is generated to fill
+          // the slot — when neither exists the student is told so.
+          const why = correct ? item.good : (item.good || item.wrong);
+          return (
+            <div className={`pq-correction pq-correction--${kind}`}>
+              <p className="pq-correction__verdict">
+                <AnswerStatus kind={kind} tx={tx} tries={attempts + 1} />
+                {kind === 'incorrect' && (
+                  <span className="pq-correction__next">{tx('Plus d’essais pour cette question.', 'Pa gen esè ankò pou kesyon sa a.')}</span>
+                )}
+              </p>
+              <dl className="pq-rows">
+                {finalAnswer && (
+                  <div className="pq-row pq-row--yours">
+                    <dt>{tx('Ta réponse', 'Repons ou')}</dt>
+                    <dd dangerouslySetInnerHTML={renderWithKatex(finalAnswer, katexReady)} />
+                  </div>
+                )}
+                {kind === 'incorrect' && correctAnswerDisplay && (
+                  <div className="pq-row pq-row--expected">
+                    <dt>{t('quizzes.correctAnswerLabel', 'Bonne réponse')}</dt>
+                    <dd dangerouslySetInnerHTML={renderWithKatex(correctAnswerDisplay, katexReady)} />
+                  </div>
+                )}
+                {kind === 'ungraded' && (
+                  <div className="pq-row pq-row--expected">
+                    <dt>{tx('Réponse attendue', 'Repons ki te tann')}</dt>
+                    <dd>{tx('Aucun corrigé n’est enregistré pour cette question.', 'Pa gen koreksyon ki anrejistre pou kesyon sa a.')}</dd>
+                  </div>
+                )}
+              </dl>
+              {why ? (
+                <div className="pq-why">
+                  <p className="pq-why__label">{t('quizzes.explanation', 'Explication')}</p>
+                  <div className="pq-why__body" dangerouslySetInnerHTML={renderWithKatex(why, katexReady)} />
+                </div>
+              ) : kind !== 'correct' && kind !== 'retry' ? (
+                <p className="pq-why pq-why--none">
+                  {kind === 'ungraded'
+                    ? tx('Pas d’explication rédigée : compare ta réponse avec ta leçon.', 'Pa gen eksplikasyon ekri : konpare repons ou ak leson ou.')
+                    : tx('Pas encore d’explication rédigée pour cette question. Relis la bonne réponse et ta leçon.', 'Poko gen eksplikasyon ekri pou kesyon sa a. Relize bon repons lan ak leson ou.')}
+                </p>
+              ) : null}
             </div>
-          ) : (
-            <div>
-              <div style={{ marginBottom: '0.5rem' }}>
-                <strong>{t('quizzes.correctAnswerLabel', 'Bonne réponse')}:</strong> <span dangerouslySetInnerHTML={renderWithKatex(correctAnswerDisplay, katexReady)} />
-              </div>
-              {(item.good || item.wrong) && (
-                <div><strong>{t('quizzes.explanation', 'Explication')}:</strong> <span dangerouslySetInnerHTML={renderWithKatex(item.good || item.wrong, katexReady)} /></div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+          );
+        })()}
+      </div>
 
       {/* Unified action bar. `Vérifier` hides once answered when a parent
           provides `onNext`, so the primary action becomes `Suivant`. The
@@ -244,17 +317,20 @@ export default function DirectBankQuiz({
               ? selected === null || selected === lastWrong
               : textAns.trim().length === 0 || textAns.trim() === lastWrong)}
           >
-            {submitted ? t('quizzes.answered', 'Répondu') : t('quizzes.check', 'Vérifier')}
+            {submitted
+              ? t('quizzes.answered', 'Répondu')
+              : gradable ? t('quizzes.check', 'Vérifier') : tx('Valider ma réponse', 'Valide repons mwen')}
           </button>
         )}
-        {onNext && (
+        {/* Shown once the question is resolved, so the card never carries
+            two primary buttons with one of them dead. */}
+        {onNext && canAdvance && (
           <button
             type="button"
-            className="button button--primary button--sm"
+            className="button button--primary button--lg"
             onClick={onNext}
-            disabled={!canAdvance}
           >
-            {isLast ? t('quizzes.finish', 'Terminer') : t('common.next', 'Suivant')}
+            {isLast ? t('quizzes.finish', 'Terminer') : tx('Question suivante', 'Kesyon swivan')}
           </button>
         )}
         {onClose && (

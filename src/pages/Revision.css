@@ -1,0 +1,52 @@
+/* /revision — topic line, end-of-session and "nothing in this topic" cards.
+   Calm surfaces, status in words + icon; no emoji confetti, no stripes. */
+.revision-page .rv-topic {
+  margin: 0.5rem 0 0;
+  color: var(--text-700);
+  font-size: 1rem;
+}
+.revision-page .rv-topic strong { color: var(--text-900); }
+
+.rv-card {
+  display: grid;
+  gap: 0.6rem;
+  max-width: 640px;
+  padding: clamp(1.25rem, 3vw, 1.75rem);
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(15, 30, 56, 0.04), 0 16px 36px -28px rgba(15, 30, 56, 0.35);
+}
+[data-theme="dark"] .rv-card { box-shadow: none; outline: 1px solid var(--border); }
+.rv-card__title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  color: var(--text-900);
+  font-size: 1.125rem;
+  font-weight: 750;
+}
+.rv-card__title .icon { color: var(--primary-600); }
+.rv-card__figure {
+  margin: 0;
+  color: var(--text-900);
+  font-size: 1.0625rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.rv-card__text {
+  margin: 0;
+  color: var(--text-700);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+.rv-card__text--strong { color: var(--text-900); font-weight: 650; }
+.rv-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+@media (max-width: 600px) {
+  .rv-card__actions .button { width: 100%; }
+}

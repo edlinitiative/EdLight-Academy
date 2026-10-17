@@ -906,3 +906,11 @@
 
 .pf-stat .pf-tile { margin-bottom: 0.25rem; }
 .pf-badges__more { margin-top: 0.9rem; }
+
+/* CourseProgressCard: says what "Terminée" counts (LJ-10). */
+.pf-scope-note {
+  margin: -4px 0 12px;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  color: var(--text-muted);
+}

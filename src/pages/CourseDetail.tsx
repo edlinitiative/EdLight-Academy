@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useMemo, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback, Suspense } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import LessonComplete from '../components/LessonComplete';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Check, X, BookOpen, MessageCircle, ChevronLeft, Target, WifiOff, AlertCircle } from '../components/icons';
+import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { Check, BookOpen, MessageCircle, ChevronLeft, WifiOff } from '../components/icons';
 import { useAppData, useCourses } from '../hooks/useData';
 import { useCourseProgress } from '../hooks/useProgress';
 import YouTubePlayer, { getYouTubeVideoId } from '../components/YouTubePlayer';
@@ -16,12 +15,18 @@ import { chapterTestLessonMap, lessonMastery, masteryNextStep, summarize } from 
 import { useCourseMastery } from '../hooks/useMastery';
 import MasteryBadge from '../components/MasteryBadge';
 import ChapterTestCard from '../components/ChapterTestCard';
-import { useAskSandra } from '../components/SandraWidget';
+import { useAskSandra, SandraFocusPanel } from '../components/SandraWidget';
 import { useTranslation } from 'react-i18next';
 import './CourseDetail.css';
-import LessonVideoFrame from '../components/LessonVideoFrame';
+import LessonVideoFrame, { lessonVideoWatchUrl } from '../components/LessonVideoFrame';
 import { displayCourseName } from '../utils/courseName';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
+import { EVIDENCE, trackJourney } from '../utils/learningJourney';
+import { useLessonCompletion, PENDING } from '../components/journey/lesson/useLessonCompletion';
+import LessonCompleteAction from '../components/journey/lesson/LessonCompleteAction';
+import LessonCompletionPanel from '../components/journey/lesson/LessonCompletionPanel';
+import { chapterPractice, lessonQuestionCount } from '../components/journey/lesson/chapterPractice';
+import { catalogReturnPath, levelFromCourseId } from '../components/journey/lesson/catalogReturn';
 
 // Only the lesson view uses these. Between them they pull in KaTeX and the
 // markdown stack (~120 KB gzipped), which delayed the course overview — the
@@ -37,8 +42,10 @@ const InstructionRenderer = lazyWithRetry(() => import('../components/Instructio
 const loadProgressTracking = () => import('../services/progressTracking');
 const trackVideoProgress = (...args: Parameters<typeof import('../services/progressTracking').trackVideoProgress>) =>
   loadProgressTracking().then((m) => m.trackVideoProgress(...args));
-const markLessonComplete = (...args: Parameters<typeof import('../services/progressTracking').markLessonComplete>) =>
-  loadProgressTracking().then((m) => m.markLessonComplete(...args));
+// The completion write that REPORTS its outcome (the older markLessonComplete
+// swallows every error, so the screen could not tell saved from failed).
+const confirmLessonComplete = (uid: string, courseId: string, lessonId: string) =>
+  loadProgressTracking().then((m) => m.confirmLessonComplete(uid, courseId, lessonId));
 
 // ── Video resume position ("reprendre la vidéo") ───────────────────────────
 // Persist the last playback second per lesson in localStorage so reopening a
@@ -120,6 +127,7 @@ export default function CourseDetail() {
   const L = (fr: string, ht: string) => (isCreole ? ht : fr);
   const { courseId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { data, isLoading, isError, isFetching, refetch } = useAppData();
   // The lightweight catalog hydrates instantly from localStorage and already
@@ -135,6 +143,11 @@ export default function CourseDetail() {
   const [showFlashcards, setShowFlashcards] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false); // Mobile sidebar toggle
   const [showComments, setShowComments] = useState(false); // Mobile comments toggle
+  // Bumped by the video's "Réessayer": remounts the frame, nothing else.
+  const [videoRetry, setVideoRetry] = useState(0);
+  // Whether the real provider player is on screen (after the press).
+  const [videoPlaying, setVideoPlaying] = useState(false);
+  useEffect(() => { setVideoPlaying(false); }, [activeModule, activeLesson, courseId]);
   const { isAuthenticated, enrolledCourses, user } = useStore();
   // Sandra's own public API (`src/components/SandraWidget`): it composes the
   // grounding, and it is the thing that knows whether she is allowed to help
@@ -144,29 +157,6 @@ export default function CourseDetail() {
   const freeVideoIds = useStore((s) => s.freeVideoIds);
   const recordActivity = useStore((s) => s.recordActivity);
   const { progress } = useCourseProgress(courseId);
-
-  // ── Completion, confirmed ──────────────────────────────────────────────────
-  // `useCourseProgress` reads the progress document ONCE per course, so a
-  // lesson marked complete in this session was written to Firestore and then
-  // never read back: the button stayed on "Marquer comme terminé" and the
-  // lesson list kept showing it as unfinished until a reload. This set holds
-  // only ids whose write the server has ACKNOWLEDGED (added after the promise
-  // resolves), so it echoes the authoritative document rather than inventing a
-  // second progress model — nothing here decides completion, it only stops the
-  // screen from contradicting a save that landed.
-  const [justCompleted, setJustCompleted] = useState<Set<string>>(() => new Set());
-  const completedIds = useMemo(() => {
-    const ids = new Set<string>(progress?.completedLessons || []);
-    justCompleted.forEach((id) => ids.add(id));
-    return ids;
-  }, [progress?.completedLessons, justCompleted]);
-  // What the lesson list is handed: the same document, plus this session's
-  // confirmed writes, so the sidebar's ticks agree with the lesson screen.
-  const progressView = useMemo(
-    () => (justCompleted.size > 0 ? { ...(progress || {}), completedLessons: [...completedIds] } : progress),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [progress, justCompleted, completedIds],
-  );
 
   // Connectivity, used for honest copy only (the app-wide NetworkStatus banner
   // owns the global message). A queued write must not be reported as saved.
@@ -183,6 +173,36 @@ export default function CourseDetail() {
       window.removeEventListener('offline', goOffline);
     };
   }, []);
+
+  // ── Completion, confirmed ──────────────────────────────────────────────────
+  // `useCourseProgress` reads the progress document ONCE per course, so a
+  // lesson marked complete in this session would otherwise never show as
+  // complete until a reload. `confirmedIds` holds only ids whose write the
+  // server has ACKNOWLEDGED, so it echoes the authoritative document rather
+  // than inventing a second progress model. The hook also owns the honest
+  // save states (saving / slow / queued / failed) and the duplicate guard —
+  // see components/journey/lesson/useLessonCompletion.ts.
+  const completion = useLessonCompletion({
+    uid: user?.uid,
+    courseId,
+    offline,
+    save: confirmLessonComplete,
+    onConfirmed: () => {
+      // `confirmLessonComplete` also advances the global streak.
+      queryClient.invalidateQueries({ queryKey: ['global-streak'] });
+    },
+  });
+  const completedIds = useMemo(() => {
+    const ids = new Set<string>(progress?.completedLessons || []);
+    completion.confirmedIds.forEach((id) => ids.add(id));
+    return ids;
+  }, [progress?.completedLessons, completion.confirmedIds]);
+  // What the lesson list is handed: the same document, plus this session's
+  // confirmed writes, so the outline's ticks agree with the lesson screen.
+  const progressView = useMemo(
+    () => (completion.confirmedIds.size > 0 ? { ...(progress || {}), completedLessons: [...completedIds] } : progress),
+    [progress, completion.confirmedIds, completedIds],
+  );
 
   const enrichedCourse = data?.courses?.find((c) => c.id === courseId);
   const course = enrichedCourse ?? catalog?.find((c) => c.id === courseId);
@@ -424,6 +444,9 @@ export default function CourseDetail() {
   // Sandra's panel reads to know which lesson is on screen.
   const restoredForRef = useRef<string | null>(null);
   const lessonParam = searchParams.get('lesson');
+  // A `?lesson=` that no longer exists in this course (renamed, removed).
+  const [staleLesson, setStaleLesson] = useState(false);
+  useEffect(() => { setStaleLesson(false); }, [courseId]);
 
   useEffect(() => {
     if (!courseId || restoredForRef.current === courseId) return;
@@ -438,12 +461,15 @@ export default function CourseDetail() {
         restoredForRef.current = courseId;
         goToLesson(m, lIdx);
         setView('lesson');
+        trackJourney('lesson_resume_resolved', { source: 'link', course_id: courseId, lesson_id: lessonParam, outcome: 'opened' });
         return;
       }
     }
     // Stale link: the id isn't in this course. Drop it and stay on the
-    // overview rather than opening some other lesson.
+    // overview — saying so — rather than opening some other lesson.
     restoredForRef.current = courseId;
+    setStaleLesson(true);
+    trackJourney('lesson_resume_resolved', { source: 'link', course_id: courseId, lesson_id: lessonParam, outcome: 'stale_link' });
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       next.delete('lesson');
@@ -510,51 +536,16 @@ export default function CourseDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [courseId, course?.name, activeModuleData?.id, activeLessonData?.id, view]);
 
-  // Finishing a lesson is the moment a student is most likely to do one more —
-  // so completion opens the continuation sheet rather than just turning the
-  // button green. `markLessonComplete` also advances the global streak, so the
-  // streak query is invalidated to stop the sheet quoting yesterday's count.
-  const [showDone, setShowDone] = useState(false);
-
-  // Saving a completion has four honest outcomes, and the screen says which:
-  //   saving  — the write is in flight
-  //   slow    — still unconfirmed after 8s; we do NOT claim it worked
-  //   queued  — offline; Firestore is holding the write until the connection is back
-  //   failed  — it did not land, and the button is still the way to retry
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'slow' | 'queued' | 'failed'>('idle');
-  useEffect(() => { setSaveState('idle'); }, [activeLessonData?.id]);
-
-  const handleMarkComplete = async () => {
-    if (!user?.uid || !courseId || !activeLessonData?.id) return;
-    if (saveState === 'saving' || saveState === 'slow' || saveState === 'queued') return;
-
-    const lessonId = activeLessonData.id;
-    setSaveState(offline ? 'queued' : 'saving');
-    // Offline the promise simply never settles (the write sits in Firestore's
-    // local queue), so the copy says "waiting for the connection" instead of
-    // spinning forever or pretending the lesson is done.
-    const slowTimer = offline
-      ? null
-      : setTimeout(() => setSaveState((s) => (s === 'saving' ? 'slow' : s)), 8000);
-
-    try {
-      await markLessonComplete(user.uid, courseId, lessonId);
-      if (slowTimer) clearTimeout(slowTimer);
-      queryClient.invalidateQueries({ queryKey: ['global-streak'] });
-      // Confirmed by the server — now the screen may show it as complete.
-      setJustCompleted((prev) => new Set(prev).add(lessonId));
-      setSaveState('idle');
-      setShowDone(true);
-    } catch (error) {
-      if (slowTimer) clearTimeout(slowTimer);
-      console.error('[CourseDetail] Error marking lesson complete:', error);
-      // The sheet is a reward for work that landed; don't show it for work
-      // that didn't. The button stays actionable so they can retry.
-      setSaveState('failed');
-    }
+  // Saving a completion has honest outcomes and the screen says which; the
+  // hook keeps them per lesson, so a late answer for one lesson can never
+  // acknowledge another, and refuses a second write while one is pending.
+  const activeEntry = completion.entryFor(activeLessonData?.id);
+  const handleMarkComplete = () => {
+    if (!activeLessonData?.id) return;
+    completion.complete(activeLessonData.id);
   };
 
-  /** The lesson the continuation sheet offers, or null at the end of a course. */
+  /** The next lesson, as the completion panel names it; null at the end of a course. */
   const nextUp = useMemo(() => {
     if (!nextTarget) return null;
     const lesson = getModuleLessons(nextTarget.module)[nextTarget.lesson];
@@ -567,10 +558,11 @@ export default function CourseDetail() {
   }, [nextTarget?.module, nextTarget?.lesson, modules, isCreole]);
 
   const goToNextLesson = () => {
-    setShowDone(false);
     if (!nextTarget) return;
     goToLesson(nextTarget.module, nextTarget.lesson);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const reduced = typeof window !== 'undefined'
+      && window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
   };
 
   // Check if current lesson is completed (the progress document, plus any
@@ -581,14 +573,33 @@ export default function CourseDetail() {
   // go on to the next one. Naming it here lets the quiet previous/next pager
   // below drop its "Suivant", which was the same tap as the big blue button
   // directly above it — two controls competing to be the next step.
-  const lessonPrimary: 'complete' | 'next' | null =
+  // A completed lesson's primary lives in the completion panel (practice for
+  // this chapter, or the next lesson when the bank has nothing for it).
+  const lessonPrimary: 'complete' | 'done' | 'next' | null =
     activeLessonData?.type === 'quiz'
       ? null
-      : isEnrolled && !isLessonCompleted
-        ? 'complete'
-        : nextTarget
-          ? 'next'
-          : null;
+      : isLessonCompleted && isAuthenticated
+        ? 'done'
+        : isEnrolled && !isLessonCompleted
+          ? 'complete'
+          : nextTarget
+            ? 'next'
+            : null;
+
+  // What practice this lesson can honestly promise. The practice page scopes
+  // by unit, so the count is the unit's bank rows and the label says chapter.
+  const practice = useMemo(() => chapterPractice({
+    quizBank: data?.quizBank,
+    courseCode: course?.code,
+    module: activeModuleData,
+    lessonId: activeLessonData?.id,
+  }), [data?.quizBank, course?.code, activeModuleData, activeLessonData?.id]);
+  // Bank rows tagged to THIS lesson — only these make the in-page exercises
+  // lesson-specific. null while the bank loads.
+  const lessonQuestions = useMemo(
+    () => lessonQuestionCount(data?.quizBank, course?.code, activeModuleData, activeLessonData?.lesson_no),
+    [data?.quizBank, course?.code, activeModuleData, activeLessonData?.lesson_no],
+  );
 
   // How far this unit has actually been taken — read off the same document, so
   // it can never disagree with the lesson list.
@@ -736,14 +747,17 @@ export default function CourseDetail() {
   }
 
   if (!course) {
+    // An unknown or removed course. Keep the student's class (read off the id)
+    // on the way back, rather than dropping them on an unfiltered catalogue.
+    const backTo = catalogReturnPath(location.state, levelFromCourseId(courseId));
     return (
       <div className="section">
         <div className="container">
           <div className="card card--message">
-            <h2 className="section__title">{t('courses.notAvailableTitle', 'Ce cours n\'est pas disponible')}</h2>
-            <p className="text-muted">{t('courses.notAvailableBody', 'Nous n\'avons pas trouvé le cours que vous cherchez.')}</p>
-            <button className="button button--primary" onClick={() => navigate('/courses')}>
-              {t('courses.returnToCatalog', 'Retour au catalogue')}
+            <h2 className="section__title">{t('courses.notAvailableTitle', L('Ce cours n\'est pas disponible', 'Kou sa a pa disponib'))}</h2>
+            <p className="text-muted">{t('courses.notAvailableBody', L('Nous n\'avons pas trouvé le cours que vous cherchez.', 'Nou pa jwenn kou w ap chèche a.'))}</p>
+            <button className="button button--primary" onClick={() => navigate(backTo)}>
+              {t('courses.returnToCatalog', L('Retour au catalogue', 'Retounen nan katalòg la'))}
             </button>
           </div>
         </div>
@@ -751,8 +765,14 @@ export default function CourseDetail() {
     );
   }
 
+  const lessonTitle = activeLessonData?.title || activeModuleData?.title || course.name;
+  const showCompletionPanel = lessonPrimary === 'done' && !!activeLessonData?.id;
+  // "Suivant" in the pager is left out whenever another action on screen
+  // already IS the next lesson (the primary, or the completion panel).
+  const pagerNext = nextTarget && lessonPrimary !== 'next' && !showCompletionPanel;
+
   return (
-    <div className="section course-detail">
+    <div className={`section course-detail${view === 'lesson' ? ' course-detail--lesson' : ''}`}>
       <div className="container course-detail__container">
         {view === 'overview' ? (
           <CourseOverview
@@ -763,13 +783,21 @@ export default function CourseDetail() {
             isEnrolled={isEnrolled}
             resumeTarget={resumeTarget}
             hasProgress={hasProgress}
+            staleLesson={staleLesson}
+            backTo={catalogReturnPath(location.state)}
             onStart={() => {
+              const target = getModuleLessons(resumeTarget.module)[resumeTarget.lesson];
+              if (hasProgress) {
+                trackJourney('lesson_resume_resolved', { source: 'overview', course_id: courseId, lesson_id: target?.id, outcome: 'opened' });
+              }
+              setStaleLesson(false);
               goToLesson(resumeTarget.module, resumeTarget.lesson);
               setView('lesson');
             }}
             onSelectModule={(mIdx) => {
               // Opening a chapter RESUMES it: the first lesson of that chapter
               // the student hasn't finished, not lesson 1 again.
+              setStaleLesson(false);
               goToLesson(mIdx, firstUnfinishedIn(mIdx));
               setView('lesson');
             }}
@@ -778,28 +806,96 @@ export default function CourseDetail() {
         <Suspense fallback={<div className="course-detail__layout"><SkeletonText lines={6} /></div>}>
         <div className="course-detail__layout">
           <div className="course-detail__column">
-            <button
-              type="button"
-              className="course-detail__back"
-              onClick={() => setView('overview')}
-            >
-              <ChevronLeft size={16} /> {displayCourseName(course.name || course.title)}
-            </button>
+            {/* The way back to the course, and — on constrained widths — the
+                labelled way into the outline sheet, side by side. */}
+            <div className="lesson-stage__crumbs">
+              <button
+                type="button"
+                className="course-detail__back"
+                onClick={() => setView('overview')}
+              >
+                <ChevronLeft size={16} aria-hidden="true" />
+                <span>{L('Retour au cours', 'Retounen nan kou a')}<span className="qz__sr-only"> : </span></span>
+                <span className="course-detail__back-name">{displayCourseName(course.name || course.title)}</span>
+              </button>
+              <button
+                className="button button--ghost button--sm lesson-card__sidebar-toggle"
+                onClick={() => setShowSidebar(true)}
+                type="button"
+                aria-haspopup="dialog"
+                aria-expanded={showSidebar}
+                aria-controls="lesson-outline"
+              >
+                <BookOpen size={15} aria-hidden="true" /> {t('courses.courseContent', 'Contenu du cours')}
+              </button>
+            </div>
+
             <article className="lesson-card lesson-stage">
-              {/* ── 1. The lesson itself ────────────────────────────────────
-                  The video (or the chapter test) comes first and gets the
-                  width: what the student came for. Title, progress and the
-                  next action follow it, deliberately quieter. */}
+              {/* ── 1. Which lesson this is, and where it sits ──────────────
+                  BEFORE the player, in reading order and on screen (PRD
+                  LJ-04): a student — or a screen reader — learns what they
+                  are about to watch first. One eyebrow line, the title, one
+                  line of real state, all read off the authoritative documents. */}
+              <header className="lesson-card__header lesson-stage__head">
+                <div className="lesson-card__header-content">
+                  {/* Where the lesson sits, and its real state, on ONE line
+                      — so the player and the next action keep their room. */}
+                  <p className="lesson-stage__meta">
+                    <span className="lesson-card__eyebrow">
+                      {activeModuleData?.title || course.name}
+                      {lessonBreakdown.length > 0
+                        ? ` · ${isCreole
+                            ? `Leson ${activeLesson + 1} sou ${lessonBreakdown.length}`
+                            : `Leçon ${activeLesson + 1} sur ${lessonBreakdown.length}`}`
+                        : ''}
+                    </span>
+                    {isEnrolled && lessonBreakdown.length > 0 && unitCompletedCount > 0 && (
+                      <span className="lesson-stage__state-text">
+                        {L(
+                          `${unitCompletedCount}/${lessonBreakdown.length} terminées dans ce chapitre`,
+                          `${unitCompletedCount}/${lessonBreakdown.length} fini nan chapit sa a`,
+                        )}
+                      </span>
+                    )}
+                    {/* The completion panel below says "Terminée" itself. */}
+                    {isLessonCompleted && !showCompletionPanel && (
+                      <span className="lesson-stage__chip lesson-stage__chip--done">
+                        <Check size={13} aria-hidden="true" />
+                        {isCreole ? EVIDENCE.completed.ht : EVIDENCE.completed.fr}
+                      </span>
+                    )}
+                    {videoLocked && (
+                      <span className="lesson-stage__chip lesson-stage__chip--locked">
+                        {L('Vidéo verrouillée', 'Videyo fèmen')}
+                      </span>
+                    )}
+                    {/* The next step for this lesson, where the lesson is
+                        named. Hidden at `none`: telling someone who just
+                        opened a lesson to watch it is noise. */}
+                    {isEnrolled && activeLessonData?.type !== 'quiz' && activeLessonLevel !== 'none' && (
+                      <span className="lesson-stage__mastery">
+                        <MasteryBadge level={activeLessonLevel} isCreole={isCreole} />
+                        <span className="lesson-stage__state-text">
+                          {nextStepLabel || t('courses.masteryDone', L('Rien à revoir ici.', 'Pa gen anyen pou revize isit.'))}
+                        </span>
+                      </span>
+                    )}
+                  </p>
+                  <h1 className="lesson-card__title">{lessonTitle}</h1>
+                </div>
+              </header>
+
               {offline && isVideoLesson && (
                 <p className="lesson-stage__notice lesson-stage__notice--offline">
-                  <WifiOff size={14} aria-hidden="true" />
+                  <WifiOff size={15} aria-hidden="true" />
                   {L(
-                    'Vous êtes hors ligne. La vidéo a besoin d’une connexion ; le texte de cette leçon reste lisible, mais les exercices peuvent ne pas se charger.',
-                    'Ou pa gen koneksyon. Videyo a bezwen entènèt ; tèks leson sa a rete la, men egzèsis yo ka pa chaje.',
+                    'Tu es hors ligne. La vidéo a besoin d’une connexion ; le texte de cette leçon reste lisible.',
+                    'Ou pa gen koneksyon. Videyo a bezwen entènèt ; tèks leson sa a rete la.',
                   )}
                 </p>
               )}
 
+              {/* ── 2. The lesson itself ──────────────────────────────────── */}
               <div
                 className={`lesson-card__media ${activeLessonData?.type === 'quiz' ? 'lesson-card__media--quiz' : ''}`}
                 aria-busy={enriching && !primaryVideo ? true : undefined}
@@ -807,9 +903,9 @@ export default function CourseDetail() {
                 {videoLocked ? (
                   <div className="lesson-card__gate">
                     <div className="lesson-card__gate-icon" aria-hidden>🔒</div>
-                    <h3 className="lesson-card__gate-title">
+                    <h2 className="lesson-card__gate-title">
                       {t('courses.gateTitle', L('Créez un compte gratuit pour continuer', 'Kreye yon kont gratis pou kontinye'))}
-                    </h3>
+                    </h2>
                     <p className="lesson-card__gate-text">
                       {t('courses.gateText', L(
                         `Vous avez profité de vos ${FREE_VIDEO_LIMIT} vidéos gratuites. Inscrivez-vous gratuitement pour débloquer tous les cours, quiz et examens.`,
@@ -847,17 +943,20 @@ export default function CourseDetail() {
                     <YouTubePlayer
                       key={`${youtubeVideoId}:${restart.token}`}
                       videoId={youtubeVideoId}
-                      title={activeLessonData?.title || activeModuleData?.title || course.name}
+                      title={lessonTitle}
                       onTimeUpdate={handleVideoTimeUpdate}
                       onEnded={handleVideoEnded}
                       startSeconds={startedFrom}
                     />
                   ) : (
                     <LessonVideoFrame
-                      key={primaryVideo}
+                      key={`${primaryVideo}:${videoRetry}`}
                       src={primaryVideo}
-                      title={activeLessonData?.title || activeModuleData?.title || course.name}
-                      playLabel={L('Lancer la vidéo', 'Lanse videyo a')}
+                      title={lessonTitle}
+                      isCreole={isCreole}
+                      offline={offline}
+                      onRetry={() => setVideoRetry((n) => n + 1)}
+                      onPlayingChange={setVideoPlaying}
                     />
                   )
                 ) : enriching ? (
@@ -892,6 +991,25 @@ export default function CourseDetail() {
                 )}
               </div>
 
+              {/* The provider's player can fail in ways we can't see from here.
+                  Its fallbacks sit under it, never over its controls. */}
+              {videoPlaying && !youtubeVideoId && primaryVideo && lessonVideoWatchUrl(primaryVideo) && (
+                <p className="lesson-stage__notice lesson-stage__notice--video">
+                  {L('Un problème de lecture ?', 'Videyo a pa mache ?')}
+                  <button type="button" className="lesson-stage__notice-link" onClick={() => setVideoRetry((n) => n + 1)}>
+                    {L('Recharger la vidéo', 'Rechaje videyo a')}
+                  </button>
+                  <a
+                    className="lesson-stage__notice-link"
+                    href={lessonVideoWatchUrl(primaryVideo) as string}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {L('Ouvrir sur YouTube', 'Louvri sou YouTube')}
+                  </a>
+                </p>
+              )}
+
               {/* Continuity, stated plainly. The position is kept per lesson
                   in this browser — so say where playback picked up, and give
                   the student the start of the video back if that isn't what
@@ -906,6 +1024,72 @@ export default function CourseDetail() {
                     {L('Recommencer depuis le début', 'Rekòmanse depi nan konmansman')}
                   </button>
                 </p>
+              )}
+
+              {/* ── 3. The next action ─────────────────────────────────────
+                  Directly under the player, so title, player and next step
+                  fit a short laptop together. One primary: finish the lesson
+                  (with the plain truth about its save), or — once the server
+                  has confirmed it — the completion panel's practice. */}
+              {activeLessonData?.type !== 'quiz' && (
+                <div className="lesson-stage__bar">
+                  {lessonPrimary === 'complete' && (
+                    <LessonCompleteAction
+                      entry={activeEntry}
+                      isCreole={isCreole}
+                      onComplete={handleMarkComplete}
+                    />
+                  )}
+                  {lessonPrimary === 'next' && nextTarget && (
+                    <button
+                      type="button"
+                      className="button button--primary lesson-stage__next-primary"
+                      onClick={goToNextLesson}
+                    >
+                      {L('Leçon suivante', 'Pwochen leson')}
+                      {nextUp?.title && <span className="lesson-stage__next-sub">{nextUp.title}</span>}
+                    </button>
+                  )}
+                  {showCompletionPanel && (
+                    <LessonCompletionPanel
+                      key={activeLessonData.id}
+                      isCreole={isCreole}
+                      fresh={completion.freshId === activeLessonData.id}
+                      practice={practice}
+                      courseCode={course?.code}
+                      courseId={String(courseId)}
+                      lessonId={activeLessonData.id}
+                      unitTitle={activeModuleData?.title}
+                      next={nextUp}
+                      onNext={goToNextLesson}
+                      onOutline={() => setView('overview')}
+                    />
+                  )}
+
+                  {/* Lesson-to-lesson paging, quiet. */}
+                  {(prevTarget || pagerNext) && (
+                    <div className="lesson-card__nav-group lesson-card__nav-group--navigation lesson-stage__pager">
+                      {prevTarget && (
+                        <button
+                          type="button"
+                          className="button button--ghost button--sm lesson-card__nav-flat"
+                          onClick={() => goToLesson(prevTarget.module, prevTarget.lesson)}
+                        >
+                          ← {L('Précédente', 'Anvan')}
+                        </button>
+                      )}
+                      {pagerNext && (
+                        <button
+                          type="button"
+                          className="button button--ghost button--sm lesson-card__nav-flat"
+                          onClick={() => goToLesson(nextTarget.module, nextTarget.lesson)}
+                        >
+                          {L('Suivante', 'Apre')} →
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
 
               {!isAuthenticated && !videoLocked && isVideoLesson && (
@@ -932,91 +1116,17 @@ export default function CourseDetail() {
                 </div>
               )}
 
-              {/* ── 2. Which lesson this is, and where it sits ──────────────
-                  Restrained on purpose: one eyebrow line, the title, and one
-                  line of real state (completion of this unit, mastery of this
-                  lesson) — all read off the authoritative documents. */}
-              <header className="lesson-card__header lesson-stage__head">
-                <div className="lesson-card__header-content">
-                  <span className="lesson-card__eyebrow">
-                    {activeModuleData?.title || course.name}
-                    {lessonBreakdown.length > 0
-                      ? ` · ${t('courses.lessonPosition', {
-                          current: activeLesson + 1,
-                          total: lessonBreakdown.length,
-                          defaultValue: isCreole
-                            ? `Leson ${activeLesson + 1} sou ${lessonBreakdown.length}`
-                            : `Leçon ${activeLesson + 1} sur ${lessonBreakdown.length}`,
-                        })}`
-                      : ''}
-                  </span>
-                  {/* A heading, not a control: the click handler that used to
-                      open the chapter drawer from here was invisible and
-                      unreachable by keyboard. The labelled toggle beside it is
-                      the way in. */}
-                  <h1 className="lesson-card__title">
-                    {activeLessonData?.title || activeModuleData?.title || course.name}
-                  </h1>
-
-                  <div className="lesson-stage__state">
-                    {isLessonCompleted && (
-                      <span className="lesson-stage__chip lesson-stage__chip--done">
-                        <Check size={13} aria-hidden="true" />
-                        {L('Leçon terminée', 'Leson fini')}
-                      </span>
-                    )}
-                    {videoLocked && (
-                      <span className="lesson-stage__chip lesson-stage__chip--locked">
-                        {L('Vidéo verrouillée', 'Videyo fèmen')}
-                      </span>
-                    )}
-                    {isEnrolled && lessonBreakdown.length > 0 && unitCompletedCount > 0 && (
-                      <span className="lesson-stage__state-text">
-                        {L(
-                          `${unitCompletedCount}/${lessonBreakdown.length} leçons terminées dans cette unité`,
-                          `${unitCompletedCount}/${lessonBreakdown.length} leson fini nan inite sa a`,
-                        )}
-                      </span>
-                    )}
-                    {/* The next step for this lesson, where the lesson is
-                        named. Hidden at `none`: telling someone who just
-                        opened a lesson to watch it is noise. */}
-                    {isEnrolled && activeLessonData?.type !== 'quiz' && activeLessonLevel !== 'none' && (
-                      <span className="lesson-stage__mastery">
-                        <MasteryBadge level={activeLessonLevel} isCreole={isCreole} />
-                        <span className="lesson-stage__state-text">
-                          {nextStepLabel || t('courses.masteryDone', L('Rien à revoir ici.', 'Pa gen anyen pou revize isit.'))}
-                        </span>
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Mobile: Show Course Content toggle button */}
-                <button
-                  className="button button--ghost button--sm lesson-card__sidebar-toggle"
-                  onClick={() => setShowSidebar(!showSidebar)}
-                  type="button"
-                >
-                  {showSidebar ? <><X size={14} /> {t('common.close', 'Fermer')}</> : <><BookOpen size={14} /> {t('courses.courseContent', 'Contenu du cours')}</>}
-                </button>
-              </header>
-
-              {/* ── 3. The explanation ─────────────────────────────────────
+              {/* ── 4. The explanation ─────────────────────────────────────
                   Objectives and lesson text, at a readable measure, through
                   the renderer the rest of the app uses for maths so `$x^2$`
                   in authored content isn't shown raw. */}
               {activeDescription && (
                 <div className="lesson-card__description lesson-stage__text">
-                  {/* `InstructionRenderer` is the app's KaTeX + Markdown
-                      renderer, and it is what authored `$x^2$` in a lesson
-                      needs. But it also carries an EXAM helper that pushes
+                  {/* `InstructionRenderer` carries an EXAM helper that pushes
                       "a)" / "1)" sub-part markers onto their own line, and a
-                      lesson title like "Fractions (Partie 1)" trips it: the
-                      browser showed "… (Partie" / "» du cours …" on two lines
-                      with the "1)" eaten as a list marker. So prose with no
-                      markup goes through as prose; anything with real markup
-                      or math still goes to the renderer. */}
+                      lesson title like "Fractions (Partie 1)" trips it. So
+                      prose with no markup goes through as prose; anything with
+                      real markup or math still goes to the renderer. */}
                   {hasRichText(activeDescription) ? (
                     <InstructionRenderer text={activeDescription} />
                   ) : (
@@ -1025,9 +1135,9 @@ export default function CourseDetail() {
                 </div>
               )}
 
-              {/* Sandra, from inside the lesson — and exactly what she is
-                  told. She receives the page and the titles, never the
-                  student's answers. */}
+              {/* Sandra, from inside the lesson — in the flow, never floating
+                  over the player. She receives the page and the titles, never
+                  the student's answers. */}
               {isAuthenticated && activeLessonData?.type !== 'quiz' && (
                 <div className="lesson-stage__sandra">
                   <button
@@ -1046,9 +1156,6 @@ export default function CourseDetail() {
                     <MessageCircle size={15} aria-hidden="true" />
                     {L('Demander à Sandra', 'Mande Sandra')}
                   </button>
-                  {/* What she is told, stated where the student decides to ask
-                      — not buried in a policy page. It matches exactly what
-                      `askSandra` sends plus the grade her panel attaches. */}
                   <span className="lesson-stage__sandra-note">
                     {sandraAvailable
                       ? L(
@@ -1059,156 +1166,57 @@ export default function CourseDetail() {
                   </span>
                 </div>
               )}
-
-              {/* ── 4. The next action ─────────────────────────────────────
-                  One primary action for the lesson, and the plain truth about
-                  whether it was saved. Practice moved out of this row: it
-                  belongs after the lesson, not beside the button that ends
-                  it. */}
-              <div className="lesson-card__nav">
-                {activeLessonData?.type !== 'quiz' && (lessonPrimary || isLessonCompleted) && (
-                  <div className="lesson-stage__next">
-                    {lessonPrimary === 'complete' ? (
-                      <button
-                        type="button"
-                        className="button button--primary lesson-stage__next-primary"
-                        onClick={handleMarkComplete}
-                        disabled={saveState === 'saving' || saveState === 'slow' || saveState === 'queued'}
-                      >
-                        {saveState === 'saving' || saveState === 'slow'
-                          ? L('Enregistrement…', 'N ap anrejistre…')
-                          : saveState === 'queued'
-                            ? L('En attente de la connexion…', 'N ap tann koneksyon an…')
-                            : nextTarget
-                              ? L('Terminer et continuer', 'Fini epi kontinye')
-                              : t('courses.markComplete', L('Marquer comme terminé', 'Make kòm fini'))}
-                      </button>
-                    ) : lessonPrimary === 'next' && nextTarget ? (
-                      <button
-                        type="button"
-                        className="button button--primary lesson-stage__next-primary"
-                        onClick={() => goToLesson(nextTarget.module, nextTarget.lesson)}
-                      >
-                        {L('Leçon suivante', 'Pwochen leson')}
-                        {nextUp?.title && <span className="lesson-stage__next-sub">{nextUp.title}</span>}
-                      </button>
-                    ) : null}
-
-                    {saveState === 'slow' && (
-                      <p className="lesson-stage__save lesson-stage__save--pending" role="status">
-                        {L(
-                          'Toujours en cours d’enregistrement. Ne fermez pas la page ; nous vous confirmerons dès que c’est enregistré.',
-                          'N ap toujou anrejistre. Pa fèmen paj la ; n ap konfime w kou li anrejistre.',
-                        )}
-                      </p>
-                    )}
-                    {saveState === 'queued' && (
-                      <p className="lesson-stage__save lesson-stage__save--pending" role="status">
-                        <WifiOff size={13} aria-hidden="true" />
-                        {L(
-                          'Hors ligne : la leçon sera marquée comme terminée dès le retour de la connexion. Ce n’est pas encore enregistré.',
-                          'San koneksyon : leson an ap make kòm fini kou entènèt la tounen. Li poko anrejistre.',
-                        )}
-                      </p>
-                    )}
-                    {saveState === 'failed' && (
-                      <p className="lesson-stage__save lesson-stage__save--failed" role="alert">
-                        <AlertCircle size={13} aria-hidden="true" />
-                        {L(
-                          'Nous n’avons pas pu enregistrer. Vérifiez votre connexion, puis réessayez.',
-                          'Nou pa t ka anrejistre. Tcheke koneksyon ou, epi eseye ankò.',
-                        )}
-                      </p>
-                    )}
-                    {isLessonCompleted && !nextTarget && (
-                      <p className="lesson-stage__save">
-                        {L(
-                          'C’était la dernière leçon de ce cours.',
-                          'Sa te dènye leson kou sa a.',
-                        )}
-                        <button
-                          type="button"
-                          className="lesson-stage__notice-link"
-                          onClick={() => setView('overview')}
-                        >
-                          {L('Revoir le plan du cours', 'Gade plan kou a')}
-                        </button>
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Lesson-to-lesson paging. "Suivant" is left out whenever the
-                    primary action above it already IS the next lesson. */}
-                {(prevTarget || (nextTarget && lessonPrimary !== 'next')) && (
-                  <div className="lesson-card__nav-group lesson-card__nav-group--navigation">
-                    <button
-                      className="button button--ghost button--sm lesson-card__nav-flat"
-                      onClick={() => {
-                        if (prevTarget) {
-                          goToLesson(prevTarget.module, prevTarget.lesson);
-                          setShowSidebar(false);
-                        }
-                      }}
-                      disabled={!prevTarget}
-                    >
-                      ← {t('common.previous', 'Précédent')}
-                    </button>
-                    {nextTarget && lessonPrimary !== 'next' && (
-                      <button
-                        className="button button--ghost button--sm lesson-card__nav-flat"
-                        onClick={() => {
-                          goToLesson(nextTarget.module, nextTarget.lesson);
-                          setShowSidebar(false);
-                        }}
-                      >
-                        {t('common.next', 'Suivant')} →
-                      </button>
-                    )}
-                  </div>
-                )}
-
-              </div>
             </article>
 
-            {/* ── 5. Practice, at the transition out of the lesson ────────
-                After the video and the explanation, never beside them: the
-                same questions offered next to the thing they test read as one
-                more control. A quiz-type lesson already IS the test, so this
-                region stays out of its way. */}
+            {/* ── 5. Practice inside the lesson ──────────────────────────
+                After the video and the explanation, never beside them. The
+                heading says what the questions actually cover: this lesson
+                only when the bank tags questions to it, otherwise the chapter.
+                Secondary buttons: the lesson's one primary is above. */}
             {activeLessonData?.type !== 'quiz' && (
               <section className="lesson-practice" aria-labelledby="lesson-practice-title" ref={practiceRef}>
                 <h2 id="lesson-practice-title" className="lesson-practice__title">
-                  <Target size={16} aria-hidden="true" />
-                  {L('Pratiquer cette leçon', 'Pratike leson sa a')}
+                  {lessonQuestions && lessonQuestions > 0
+                    ? L('S’exercer sur cette leçon', 'Egzèse sou leson sa a')
+                    : L('S’exercer', 'Egzèse')}
                 </h2>
 
                 {!practiceOpen && (
                   <>
                     <div className="lesson-practice__actions">
-                      <button
-                        type="button"
-                        className="button button--primary button--sm"
-                        onClick={() => setShowQuiz(true)}
-                        title={t('courses.practiceTitle', L('S’entraîner avec un quiz', 'Pratike ak yon quiz'))}
-                      >
-                        <span className="button-text">{t('courses.practice', L('Exercices', 'Egzèsis'))}</span>
-                      </button>
+                      {lessonQuestions !== 0 && (
+                        <button
+                          type="button"
+                          className="button button--ghost button--sm"
+                          onClick={() => setShowQuiz(true)}
+                        >
+                          <span className="button-text">
+                            {lessonQuestions
+                              ? L(`Exercices de la leçon · ${lessonQuestions}`, `Egzèsis leson an · ${lessonQuestions}`)
+                              : t('courses.practice', L('Exercices', 'Egzèsis'))}
+                          </span>
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="button button--ghost button--sm"
                         onClick={() => setShowFlashcards(true)}
-                        title={t('courses.flashcardsTitle', L('Étudier avec des flashcards', 'Etidye ak kat etid'))}
                       >
                         <span className="button-text">{t('courses.flashcards', L('Flashcards', 'Kat etid'))}</span>
                       </button>
                     </div>
+                    {lessonQuestions === 0 && (
+                      <p className="lesson-practice__note">
+                        {L(
+                          'Pas encore de questions propres à cette leçon : la pratique proposée couvre tout le chapitre.',
+                          'Poko gen kesyon pou leson sa a sèlman : pratik la kouvri tout chapit la.',
+                        )}
+                      </p>
+                    )}
 
                     {/* The chapter test for this unit — the only route to
-                        `mastered`. A unit-level action rather than a row in the
-                        lesson list: adding a lesson would inflate every course's
-                        lesson denominator and drop existing students' progress
-                        percentages, and a test isn't a lesson anyway. */}
+                        `mastered`. A unit-level action rather than a row in
+                        the lesson list: a test isn't a lesson. */}
                     {isEnrolled && (
                       <ChapterTestCard
                         summary={unitMastery}
@@ -1239,8 +1247,7 @@ export default function CourseDetail() {
                 {showQuiz && hasQuiz && (
                   /* The exercises for THIS lesson. lessonId is what attributes
                      the score to the lesson, so it can climb the mastery
-                     ladder — it used to be undefined, which is why the score
-                     was computed and then dropped. */
+                     ladder. */
                   <UnitQuiz
                     subjectCode={course?.code}
                     unitId={undefined}
@@ -1273,13 +1280,13 @@ export default function CourseDetail() {
                 aria-expanded={showComments}
               >
                 <span className="lesson-card__comments-title">
-                  <MessageCircle size={18} /> {t('courses.discussionComments', L('Discussion & commentaires', 'Diskisyon ak kòmantè'))}
+                  <MessageCircle size={18} aria-hidden="true" /> {t('courses.discussionComments', L('Discussion & commentaires', 'Diskisyon ak kòmantè'))}
                 </span>
                 <span className="lesson-card__comments-chevron" aria-hidden="true">
                   {showComments ? '▼' : '▶'}
                 </span>
               </button>
-              
+
               <div className="lesson-card__comments-content">
                 {/* Mounted on demand: a thread nobody opened shouldn't cost a
                     read on a phone connection. */}
@@ -1294,7 +1301,6 @@ export default function CourseDetail() {
             </div>
           </div>
 
-          {/* Sidebar - extracted into CourseSidebar component */}
           <CourseSidebar
             courseId={courseId}
             modules={modules}
@@ -1311,15 +1317,11 @@ export default function CourseDetail() {
         </Suspense>
         )}
       </div>
-      {/* Removed modal overlay; inline rendering used instead */}
 
-      {/* Session-end continuation: turns a finished lesson into the next one. */}
-      <LessonComplete
-        open={showDone}
-        next={nextUp}
-        onContinue={goToNextLesson}
-        onDismiss={() => setShowDone(false)}
-      />
+      {/* Layout unmounts the global Sandra widget in focus mode, so the lesson
+          hosts the panel its "Demander à Sandra" opens. No launcher of its
+          own: nothing floats over the player or the lesson's controls. */}
+      {view === 'lesson' && <SandraFocusPanel />}
     </div>
   );
 }

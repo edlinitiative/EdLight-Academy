@@ -1,4 +1,6 @@
-import { courseLabel, parseUnit, practiceHref, readStudyPrefs, strongSpots, weakSpots } from '../profileData';
+import {
+  completedLessonsLabel, courseLabel, parseUnit, practiceHref, readStudyPrefs, strongSpotLabel, strongSpots, weakSpots,
+} from '../profileData';
 
 describe('parseUnit', () => {
   it('reads the course and unit from a lesson id', () => {
@@ -31,7 +33,7 @@ describe('strongSpots', () => {
       'MATH-NSI-U1-L2': { bestPct: 100 },
       'MATH-NSI-U2-L1': { completed: true, bestPct: 75 },
     });
-    expect(spots).toEqual([{ unitKey: 'MATH-NSI-U1', course: 'MATH-NSI', unitNo: 1, count: 2 }]);
+    expect(spots).toEqual([{ unitKey: 'MATH-NSI-U1', course: 'MATH-NSI', unitNo: 1, count: 2, mastered: 1 }]);
   });
 });
 
@@ -48,4 +50,22 @@ it('accepts only known goals and rhythms from the account', () => {
   expect(readStudyPrefs({ studyGoal: 'bac', studyMinutes: 30 })).toEqual({ studyGoal: 'bac', studyMinutes: 30 });
   expect(readStudyPrefs({ studyGoal: 'rich', studyMinutes: 7 })).toEqual({ studyGoal: null, studyMinutes: null });
   expect(readStudyPrefs(null)).toEqual({ studyGoal: null, studyMinutes: null });
+});
+
+describe('evidence labels (LJ-10)', () => {
+  it('never calls an exercise-only lesson mastered', () => {
+    expect(strongSpotLabel({ count: 2, mastered: 1 }, false)).toBe('1 maîtrisée · 1 pratiquée');
+    expect(strongSpotLabel({ count: 3, mastered: 0 }, false)).toBe('3 pratiquées');
+    expect(strongSpotLabel({ count: 1, mastered: 1 }, true)).toBe('1 metrize');
+    expect(strongSpotLabel({ count: 2 }, true)).toBe('2 pratike');
+  });
+
+  it('shows a denominator only when the course total is known and consistent', () => {
+    expect(completedLessonsLabel(3, 33, false)).toBe('3 / 33 leçons terminées');
+    expect(completedLessonsLabel(1, 33, false)).toBe('1 / 33 leçon terminée');
+    expect(completedLessonsLabel(3, undefined, false)).toBe('3 leçons terminées');
+    // A count above the catalogue total means the total is stale: drop it.
+    expect(completedLessonsLabel(40, 33, false)).toBe('40 leçons terminées');
+    expect(completedLessonsLabel(3, 33, true)).toBe('3 / 33 leson fini');
+  });
 });

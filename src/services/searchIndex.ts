@@ -146,12 +146,16 @@ async function courseItems(lang: Lang): Promise<SearchItem[]> {
     });
     for (const m of c.modules || []) {
       for (const l of m.lessons || []) {
-        if (!l?.lessonId || !l.title) continue;
+        // dataService's transformed course names the lesson `id`; the raw
+        // catalog snapshot names it `lessonId`. Reading only `lessonId` left
+        // every lesson out of search.
+        const lessonId = l?.lessonId || l?.id;
+        if (!lessonId || !l.title) continue;
         items.push({
           type: 'lesson',
           title: l.title,
           subtitle: `${c.name || c.id}${m.title ? ` · ${m.title}` : ''}`,
-          to: `/courses/${encodeURIComponent(c.id)}?lesson=${encodeURIComponent(l.lessonId)}`,
+          to: `/courses/${encodeURIComponent(c.id)}?lesson=${encodeURIComponent(lessonId)}`,
           keywords: `${c.subject || ''} ${level} ${m.title || ''} leson leçon`,
         });
       }

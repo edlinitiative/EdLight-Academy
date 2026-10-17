@@ -36,8 +36,8 @@
  * that lives in users/{uid}/mastery/lessons, keyed by lesson.
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Brain, Check } from '../components/icons';
+import { Link, useLocation } from 'react-router-dom';
+import { Brain, Check, Info } from '../components/icons';
 import DirectBankQuiz, { MAX_ATTEMPTS } from '../components/DirectBankQuiz';
 import { Skeleton, SkeletonText } from '../components/Skeleton';
 import { EmptyState } from '../components/StateViews';
@@ -46,8 +46,18 @@ import useStore from '../contexts/store';
 import { toDirectItemFromRow } from '../services/quizBank';
 import { loadReviewMap } from '../services/reviewService';
 import { dueQuestionIds, type ReviewMap } from '../utils/review';
+import { findCourse, isGradable, normalizeCourseCode, unitOptionsFor } from '../components/journey/practice/practiceScope';
+import { useJourneyOnce } from '../components/journey/practice/useJourneyOnce';
+import './Revision.css';
 
 const SESSION_LIMIT = 10;
+
+/** Does a bank row belong to the requested topic? Course, then unit (`U{n}`). */
+function inTopic(row: any, course: string, unit: string): boolean {
+  if (!course) return true;
+  if (String(row?.subject_code_norm || '') !== course) return false;
+  return !unit || String(row?.unit_id_norm || '').toLowerCase() === unit.toLowerCase();
+}
 
 export default function Revision() {
   const { data: appData, isLoading: dataLoading } = useAppData();
@@ -55,6 +65,41 @@ export default function Revision() {
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  const location = useLocation();
+
+  /*
+   * Topic context (LJ-09, PRD §10 "Enter review"): a result screen links
+   * here with ?course=CHEM-NSI&unit=U2&from=result. The session then holds
+   * ONLY that topic's due questions, and says so. If that topic has nothing
+   * due, the page says that too and offers the rest explicitly — it never
+   * silently swaps in other subjects' questions.
+   */
+  const topic = useMemo(() => {
+    const p = new URLSearchParams(location.search);
+    const rawCourse = (p.get('course') || '').trim();
+    const rawUnit = (p.get('unit') || '').trim();
+    const from = (p.get('from') || '').trim();
+    const course = rawCourse ? findCourse(appData?.courses || [], rawCourse) : null;
+    const code = course ? String(course.code || normalizeCourseCode(course.id)) : rawCourse ? normalizeCourseCode(rawCourse) : '';
+    const unitOpt = course && rawUnit ? unitOptionsFor(course).find((o) => o.value.toLowerCase() === rawUnit.toLowerCase()) : undefined;
+    const subjectName: Record<string, [string, string]> = {
+      CHEM: ['Chimie', 'Chimi'], PHYS: ['Physique', 'Fizik'], MATH: ['Mathématiques', 'Matematik'], ECON: ['Économie', 'Ekonomi'],
+    };
+    const subj = course ? subjectName[course.subject] : null;
+    const label = [
+      subj ? (isCreole ? subj[1] : subj[0]) : '',
+      course?.level ? String(course.level).replace(/^NS(.*)$/i, 'NS $1') : '',
+    ].filter(Boolean).join(' ');
+    return {
+      course: code,
+      unit: unitOpt ? unitOpt.value : (rawUnit && course ? rawUnit : ''),
+      label: [label, unitOpt?.label].filter(Boolean).join(' · '),
+      from,
+    };
+  }, [location.search, appData?.courses, isCreole]);
+  // "Tout réviser" drops the topic for this visit, by an explicit choice.
+  const [widened, setWidened] = useState(false);
+  const scoped = !!topic.course && !widened;
 
   const [reviewMap, setReviewMap] = useState<ReviewMap | null>(null);
   useEffect(() => {
@@ -66,23 +111,28 @@ export default function Revision() {
 
   // Frozen deck: built once when both the review map and the quiz bank are in.
   const [items, setItems] = useState<any[] | null>(null);
+  /** Due questions outside the requested topic — offered, never mixed in. */
+  const [otherDue, setOtherDue] = useState(0);
   const rows: any[] = appData?.quizBank?.rows ?? [];
   useEffect(() => {
     if (items !== null || reviewMap === null || rows.length === 0) return;
     const byId = new Map<string, any>();
     for (const row of rows) if (row?.id) byId.set(String(row.id), row);
     const deck: any[] = [];
+    let elsewhere = 0;
     for (const id of dueQuestionIds(reviewMap)) {
       const row = byId.get(id);
       if (!row) continue; // question no longer in the bank — let it age out
       const item = toDirectItemFromRow(row);
-      // Essays can't be auto-graded into "resolved"; keep the session crisp.
-      if (item && item.kind !== 'essay') deck.push(item);
-      if (deck.length >= SESSION_LIMIT) break;
+      // Essays and key-less questions can't be auto-graded into "resolved".
+      if (!isGradable(item)) continue;
+      if (scoped && !inTopic(row, topic.course, topic.unit)) { elsewhere += 1; continue; }
+      if (deck.length < SESSION_LIMIT) deck.push(item);
     }
+    setOtherDue(elsewhere);
     setItems(deck);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reviewMap, rows, items]);
+  }, [reviewMap, rows, items, scoped]);
 
   /**
    * Reviewable questions left, counted the same way the deck is built: due in
@@ -96,8 +146,9 @@ export default function Revision() {
     for (const id of dueQuestionIds(map)) {
       const row = byId.get(id);
       if (!row) continue;
+      if (scoped && !inTopic(row, topic.course, topic.unit)) continue;
       const item = toDirectItemFromRow(row);
-      if (item && item.kind !== 'essay') n += 1;
+      if (isGradable(item)) n += 1;
     }
     return n;
   };
@@ -150,6 +201,15 @@ export default function Revision() {
     }
   };
 
+  // review_started once the frozen deck exists; review_completed at the end.
+  const sessionKey = items && items.length > 0 ? `${user?.uid}|${topic.course}|${topic.unit}|${widened}|${items.map((i) => i?.id).join(',')}` : null;
+  useJourneyOnce('review_started', sessionKey, {
+    source: topic.from || 'direct', course: topic.course || null, unit: topic.unit || null, scoped, count: items?.length ?? 0,
+  });
+  useJourneyOnce('review_completed', finished && sessionKey ? sessionKey : null, {
+    source: topic.from || 'direct', course: topic.course || null, unit: topic.unit || null, scoped, count: items?.length ?? 0, resolved: score,
+  });
+
   const goNext = () => {
     if (!canAdvance) return;
     const next = idx + 1;
@@ -164,9 +224,14 @@ export default function Revision() {
         {t('Révision', 'Revizyon')}
       </h1>
       <p className="page-header__subtitle text-muted">
-        {t('Les questions que vous avez ratées — jusqu\'à ce que vous les maîtrisiez.',
-          'Kesyon ou te rate yo — jiskaske ou metrize yo.')}
+        {t('Les questions ratées au premier essai, jusqu\'à ce que tu les réussisses.',
+          'Kesyon ou rate premye fwa yo, jiskaske ou reyisi yo.')}
       </p>
+      {scoped && topic.label && (
+        <p className="rv-topic">
+          {t('Sujet : ', 'Sijè : ')}<strong>{topic.label}</strong>
+        </p>
+      )}
     </div>
   );
 
@@ -215,6 +280,26 @@ export default function Revision() {
     );
   }
 
+  if (items.length === 0 && scoped && otherDue > 0) {
+    // Nothing due in the requested topic, but elsewhere there is: say so and
+    // let the student choose — do not swap topics behind their back.
+    return shell(
+      <div className="rv-card" role="status">
+        <p className="rv-card__title"><Check size={18} aria-hidden /> {t('Rien à revoir dans ce sujet pour le moment.', 'Anyen pou revize nan sijè sa a kounye a.')}</p>
+        <p className="rv-card__text">
+          {t(`Tu as ${otherDue} autre${otherDue > 1 ? 's' : ''} question${otherDue > 1 ? 's' : ''} à revoir dans d’autres chapitres.`,
+            `Ou gen ${otherDue} lòt kesyon pou revize nan lòt chapit.`)}
+        </p>
+        <div className="rv-card__actions">
+          <button type="button" className="button button--primary" onClick={() => { setWidened(true); setItems(null); }}>
+            {t('Réviser les autres chapitres', 'Revize lòt chapit yo')}
+          </button>
+          <Link className="button button--ghost" to="/quizzes">{t('Faire des exercices', 'Fè egzèsis')}</Link>
+        </div>
+      </div>,
+    );
+  }
+
   if (items.length === 0) {
     /*
      * An empty deck is NOT proof that nothing is due. `loadReviewMap` swallows
@@ -258,48 +343,50 @@ export default function Revision() {
     };
 
     return shell(
-      <div className="card" style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: '2.2rem', marginBottom: '0.5rem' }} aria-hidden>
-          {resolved === items.length ? '🎉' : '💪'}
-        </div>
-        <p style={{ margin: 0, fontWeight: 600 }}>
+      <div className="rv-card" role="status">
+        <p className="rv-card__title">
+          {resolved === items.length
+            ? <><Check size={18} aria-hidden /> {t('Toutes réussies.', 'Tout reyisi.')}</>
+            : <><Info size={18} aria-hidden /> {t('Révision terminée.', 'Revizyon fini.')}</>}
+        </p>
+        <p className="rv-card__figure">
           {t(`${resolved} question${resolved > 1 ? 's' : ''} réussie${resolved > 1 ? 's' : ''} sur ${items.length}.`,
             `${resolved} kesyon reyisi sou ${items.length}.`)}
         </p>
-        <p className="text-muted" style={{ margin: '0.5rem 0 0' }}>
+        <p className="rv-card__text">
           {missed > 0
             ? t(
-              // "Les 1 autre reviendront" was the singular before this.
               missed > 1
-                ? `Les ${missed} autres reviendront — c'est comme ça qu'on apprend.`
-                : 'L\'autre reviendra — c\'est comme ça qu\'on apprend.',
+                ? `Les ${missed} autres restent dans ta Révision : elles reviendront à la prochaine séance.`
+                : 'L\'autre reste dans ta Révision : elle reviendra à la prochaine séance.',
               missed > 1
-                ? `${missed} lòt yo ap tounen — se konsa nou aprann.`
-                : 'Lòt la ap tounen — se konsa nou aprann.')
-            : t('Chacune de ces questions quitte votre liste de révision, sur le web comme sur le téléphone.',
-              'Chak kesyon sa yo soti nan lis revizyon ou, sou web la tankou sou telefòn lan.')}
+                ? `${missed} lòt yo rete nan Revizyon ou : y ap tounen nan pwochen sesyon an.`
+                : 'Lòt la rete nan Revizyon ou : l ap tounen nan pwochen sesyon an.')
+            : t('Les questions réussies quittent ta liste de révision, sur le web comme sur le téléphone.',
+              'Kesyon ou reyisi yo soti nan lis revizyon ou, sou web la tankou sou telefòn lan.')}
         </p>
         {/* What is left — stated only once it has actually been re-read. */}
         {remainingDue != null && (
-          <p className="text-muted" style={{ margin: '0.35rem 0 1rem', fontWeight: 600 }}>
+          <p className="rv-card__text rv-card__text--strong">
             {remainingDue > 0
-              ? t(`Il vous reste ${remainingDue} question${remainingDue > 1 ? 's' : ''} à revoir.`,
-                `Ou gen ${remainingDue} kesyon ki rete pou revize.`)
-              : t('Votre liste de révision est vide pour le moment.', 'Lis revizyon ou vid kounye a.')}
+              ? t(`Il te reste ${remainingDue} question${remainingDue > 1 ? 's' : ''} à revoir${scoped ? ' dans ce sujet' : ''}.`,
+                `Ou gen ${remainingDue} kesyon ki rete pou revize${scoped ? ' nan sijè sa a' : ''}.`)
+              : scoped
+                ? t('Rien d’autre à revoir dans ce sujet pour le moment.', 'Anyen ankò pou revize nan sijè sa a kounye a.')
+                : t('Ta liste de révision est vide pour le moment.', 'Lis revizyon ou vid kounye a.')}
           </p>
         )}
-        {remainingDue == null && <div style={{ height: '1rem' }} />}
-        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+        <div className="rv-card__actions">
           {canContinue ? (
-            <button type="button" className="button button--primary button--sm" onClick={startNewSession}>
+            <button type="button" className="button button--primary" onClick={startNewSession}>
               {t('Continuer la révision', 'Kontinye revizyon an')}
             </button>
           ) : (
-            <Link className="button button--primary button--sm" to="/quizzes">
-              {t('Faire des exercices', 'Fè egzèsis')}
+            <Link className="button button--primary" to={topic.course ? `/quizzes?course=${encodeURIComponent(topic.course)}${topic.unit ? `&unit=${encodeURIComponent(topic.unit)}` : ''}&from=review` : '/quizzes'}>
+              {topic.course ? t('S’entraîner sur ce chapitre', 'Pratike sou chapit sa a') : t('Faire des exercices', 'Fè egzèsis')}
             </Link>
           )}
-          <Link className="button button--ghost button--sm" to="/dashboard">
+          <Link className="button button--ghost" to="/dashboard">
             {t('Retour au tableau de bord', 'Tounen sou tablo a')}
           </Link>
         </div>

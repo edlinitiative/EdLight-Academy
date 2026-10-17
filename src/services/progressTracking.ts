@@ -130,6 +130,47 @@ export async function markLessonComplete(userId, courseId, lessonId) {
 }
 
 /**
+ * Mark a lesson as completed, and SAY whether it landed.
+ *
+ * `markLessonComplete` above swallows every error (and silently returns when
+ * the progress document is missing), so a caller awaiting it cannot tell a
+ * confirmed write from a failed one — the lesson screen used to celebrate
+ * both. This variant is for a caller that shows the outcome:
+ *
+ *  - resolves 'saved'   — the server acknowledged the write (offline, the
+ *                          promise stays pending while Firestore queues it);
+ *  - resolves 'already' — the document already lists the lesson, nothing was
+ *                          written and no points were awarded again;
+ *  - rejects            — nothing was saved (read failed, no progress
+ *                          document, write rejected). Safe to retry.
+ *
+ * Same document, same arrayUnion, same one-time points as markLessonComplete;
+ * it introduces no new progress rule. Points failing after the completion
+ * landed does not turn a saved lesson into a failure.
+ */
+export async function confirmLessonComplete(userId: string, courseId: string, lessonId: string): Promise<'saved' | 'already'> {
+  if (!userId || !courseId || !lessonId) throw new Error('lesson-completion/missing-context');
+  const progressRef = doc(db, 'users', userId, 'progress', courseId);
+  const progressDoc = await getDoc(progressRef);
+  if (!progressDoc.exists()) throw new Error('lesson-completion/no-progress-document');
+
+  const completedLessons = progressDoc.data().completedLessons || [];
+  if (completedLessons.includes(lessonId)) return 'already';
+
+  await updateDoc(progressRef, {
+    completedLessons: arrayUnion(lessonId),
+    lastAccessedAt: new Date(),
+  });
+  track('lesson_complete', { course_id: courseId, lesson_id: lessonId });
+  try {
+    await awardPoints(userId, courseId, 10, 'lesson_complete');
+  } catch (error) {
+    console.error('[Progress] Lesson saved; awarding points failed:', error);
+  }
+  return 'saved';
+}
+
+/**
  * Track quiz attempt
  */
 export async function trackQuizAttempt(userId, courseId, quizId, attemptData) {

@@ -1398,8 +1398,8 @@
 .lws-weak__list li { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.6rem 0.75rem; border-radius: 10px; background: var(--surface-muted); }
 .lws-weak__list strong { display: block; color: var(--text-900); font-size: 0.88rem; }
 .lws-weak__list span { color: var(--text-500); font-size: 0.8rem; }
-.lws-weak__count { flex: none; padding: 0.1rem 0.5rem; border-radius: 999px; background: #FEE2E2; color: #B91C1C !important; font-weight: 800; }
-[data-theme="dark"] .lws-weak__count { background: rgba(239, 68, 68, 0.18); color: #FCA5A5 !important; }
+.lws-weak__count { flex: none; padding: 0.1rem 0.5rem; border-radius: 999px; background: var(--surface-2, #F1F5F9); color: var(--text-700) !important; font-weight: 700; }
+[data-theme="dark"] .lws-weak__count { background: rgba(255, 255, 255, 0.08); color: var(--text-700) !important; }
 .lws-side .quests { margin: 0; }
 
 .lrn-browse-title { margin: 0 0 1rem; color: #0B296B; font-size: 1.25rem; font-weight: 800; }
