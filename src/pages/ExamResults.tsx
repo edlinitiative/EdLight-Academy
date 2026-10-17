@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import './ExamResults.css';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { BookOpen, Trophy, ThumbsUp, Dumbbell, BarChart3, Clock, Lightbulb, RefreshCw, PenLine, Target, Check, X, Eye } from '../components/icons';
+import { BookOpen, BarChart3, Clock, Lightbulb, RefreshCw, PenLine, Target, Check, X, Eye } from '../components/icons';
 import useStore from '../contexts/store';
 import FigureRenderer from '../components/FigureRenderer';
 import InstructionRenderer from '../components/InstructionRenderer';
@@ -12,8 +12,6 @@ import { checkWithCAS } from '../utils/mathCAS';
 import ReviewSession from '../components/ReviewSession';
 import { Skeleton, SkeletonText } from '../components/Skeleton';
 import { EmptyState } from '../components/StateViews';
-import Celebration from '../components/Celebration';
-import { CountUp } from '../hooks/useCountUp';
 import { TRACK_BY_CODE } from '../config/trackConfig';
 import { isNumericId, fetchSingleExam } from '../utils/examCatalog';
 import { loadExamResult } from '../services/examResults';
@@ -471,16 +469,7 @@ const ExamResults = () => {
   const color = subjectColor(subject);
   const trackInfo = examTrack ? TRACK_BY_CODE[examTrack] : null;
 
-  // Score ring percentage
   const pct = summary.percentage;
-  const circumference = 2 * Math.PI * 54;
-  const dashOffset = circumference - (circumference * pct) / 100;
-
-  // Grade label
-  const gradeLabel = pct >= 80 ? t('Excellent !', 'Ekselan !') : pct >= 60 ? t('Bien', 'Byen') : pct >= 40 ? t('Passable', 'Pasab') : t('À améliorer', 'Pou amelyore');
-  const GradeIcon = pct >= 80 ? Trophy : pct >= 60 ? ThumbsUp : pct >= 40 ? BookOpen : Dumbbell;
-
-  const ringColor = pct >= 60 ? 'var(--success-500)' : pct >= 40 ? 'var(--warning-500)' : 'var(--danger-500)';
 
   // ── Per-question verdicts (integers; see statusTally's note) ──────────────
   const tally = statusTally(results);
@@ -567,67 +556,44 @@ const ExamResults = () => {
   return (
     <section className="section exam-results">
       <div className="container">
-        {/* Header */}
-        <div className="page-header exam-results__header">
-          <button className="button button--ghost button--sm" onClick={() => navigate(`/exams/${level || ''}`)} type="button">
-            ← {t('Retour aux examens', 'Retounen nan egzamen yo')}
+        {/*
+          S11: the paper is the title, its status sits under it, and the score
+          is a figure with its definition — no ring, no confetti, no grade
+          adjective. The tally and the caveats below carry the nuance.
+        */}
+        <header className="exam-results__head">
+          <button className="exam-results__back" onClick={() => navigate(`/exams/${level || ''}`)} type="button">
+            ← {t('Examens', 'Egzamen')}
           </button>
-          <h1 className="page-header__title">{t('Résultats', 'Rezilta')}</h1>
-          <p className="page-header__subtitle" style={{ color }}>
-            {subject}, {examTitle || t('Examen', 'Egzamen')} {storedLevel && `(${storedLevel})`}
+          <p className="exam-results__context">
+            {[subject, storedLevel].filter(Boolean).join(' · ')}
           </p>
-        </div>
+          <h1 className="exam-results__title">{examTitle || t('Examen', 'Egzamen')}</h1>
+          <p className={`exam-results__status${tally.pending > 0 || aiGradeFailures > 0 ? ' exam-results__status--provisional' : ''}`}>
+            {tally.pending > 0 || aiGradeFailures > 0
+              ? t('Correction provisoire', 'Koreksyon pwovizwa')
+              : t('Correction terminée', 'Koreksyon fini')}
+          </p>
+        </header>
 
       {aiGradeFailures > 0 && (
-        <div className="card card--message" role="status" style={{ marginBottom: '1rem' }}>
-          <p>
-            {t(
-              'Certaines réponses libres n’ont pas pu être corrigées automatiquement. Votre score peut être incomplet.',
-              'Kèk repons lib pa t ka korije otomatikman. Nòt ou a ka pa konplè.',
-            )}
-          </p>
-        </div>
+        <p className="exam-results__caveat exam-results__caveat--warn" role="status">
+          {t(
+            'Certaines réponses libres n’ont pas pu être corrigées automatiquement. Votre score peut être incomplet.',
+            'Kèk repons lib pa t ka korije otomatikman. Nòt ou a ka pa konplè.',
+          )}
+        </p>
       )}
 
       {/* Score overview */}
       <div className="exam-results__overview" aria-label={`${t('Score', 'Nòt')}: ${pct}%`}>
-        {/* A passing score (≥60%) earns a confetti payoff. */}
-        <Celebration active={pct >= 60} count={22} />
-        {/* Score ring */}
-        <div className="exam-results__score-ring">
-          <svg viewBox="0 0 120 120" className="exam-results__ring-svg">
-            <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(0,0,0,0.06)" strokeWidth="8" />
-            <circle
-              cx="60" cy="60" r="54" fill="none"
-              stroke={ringColor}
-              strokeWidth="8"
-              strokeLinecap="round"
-              strokeDasharray={circumference}
-              strokeDashoffset={dashOffset}
-              transform="rotate(-90 60 60)"
-              style={{ transition: 'stroke-dashoffset 1s ease' }}
-            />
-          </svg>
-          <div className="exam-results__score-text">
-            <CountUp className="exam-results__score-pct" value={pct} suffix="%" duration={1000} />
-            <span className="exam-results__score-label"><GradeIcon size={16} /> {gradeLabel}</span>
-          </div>
-        </div>
-
-        {/*
-          The score, then the verdicts, then the caveat — one column, three
-          weights. This replaced six identical stat cards: §7 asks for compact
-          rows instead of a wall of equal-weight figures, and two of those cards
-          (`correctCount`, `autoGraded`) could not be defended at all. See the
-          source note at the top of this file.
-        */}
         <div className="exam-results__summary">
           <p className="exam-results__points">
             <span className="exam-results__points-value">{summary.earnedPoints}</span>
             <span className="exam-results__points-total">/ {summary.totalPoints}</span>
-            <span className="exam-results__points-label">
-              {t('points obtenus sur cette épreuve', 'pwen ou genyen nan eprèv sa a')}
-            </span>
+          </p>
+          <p className="exam-results__points-label">
+            {t(`points obtenus sur cette épreuve · ${pct} %`, `pwen ou genyen nan eprèv sa a · ${pct} %`)}
           </p>
 
           <ul className="exam-results__tally" aria-label={t('Détail des réponses', 'Detay repons yo')}>
@@ -776,7 +742,6 @@ const ExamResults = () => {
       */}
       <div className="exam-results__next" style={{ '--next-accent': color } as React.CSSProperties}>
         <div className="exam-results__next-head">
-          <span className="exam-results__next-icon"><Lightbulb size={20} aria-hidden /></span>
           <div className="exam-results__next-copy">
             <h2 className="exam-results__next-title">{t('Et maintenant', 'E kounye a')}&nbsp;?</h2>
             <p className="exam-results__next-sub">

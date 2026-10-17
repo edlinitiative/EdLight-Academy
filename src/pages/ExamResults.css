@@ -382,3 +382,357 @@
     transition: none;
   }
 }
+
+/* ══ Results premium layer (2026-10-16, design spec S11) ═══════════════════
+   One reading column. The paper is the title; the score is a figure with
+   its definition; the next step is a plain block with one primary action;
+   the correction reads like the quiz review — white question cards on the
+   canvas, verdicts as badges and words, never coloured stripes. Scoped to
+   `.section.exam-results` so it outranks the index.css layers. */
+.section.exam-results > .container {
+  max-width: 880px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.section.exam-results .exam-results__head { margin: 0 0 clamp(1.5rem, 4vw, 2rem); }
+.section.exam-results .exam-results__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 40px;
+  margin: 0 0 1rem -0.5rem;
+  padding: 0 0.6rem;
+  border: 0;
+  border-radius: var(--r-btn, 12px);
+  background: none;
+  color: var(--text-600);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+.section.exam-results .exam-results__back:hover { background: var(--surface-muted, #EDF2F8); color: var(--text-900); }
+.section.exam-results .exam-results__back:focus-visible { outline: 2px solid var(--primary-500); outline-offset: 2px; }
+.section.exam-results .exam-results__context {
+  margin: 0 0 0.35rem;
+  color: var(--text-600);
+  font-size: 1rem;
+  font-weight: 600;
+}
+.section.exam-results .exam-results__title {
+  margin: 0;
+  max-width: 30ch;
+  color: var(--text-900);
+  font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif);
+  font-size: clamp(1.6rem, 3.4vw, 2rem);
+  font-weight: 750;
+  line-height: 1.22;
+  letter-spacing: -0.02em;
+}
+.section.exam-results .exam-results__status {
+  display: inline-flex;
+  margin: 0.85rem 0 0;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  background: #E7F7EF;
+  color: #11643A;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.section.exam-results .exam-results__status--provisional { background: #FFF3DC; color: #805000; }
+
+/* Score: no surface, just the figure. */
+.section.exam-results .exam-results__overview {
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+.section.exam-results .exam-results__points {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin: 0;
+  font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.section.exam-results .exam-results__points-value {
+  color: var(--text-900);
+  font-size: clamp(3.5rem, 9vw, 5rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+.section.exam-results .exam-results__points-total {
+  color: var(--text-500);
+  font-size: clamp(1.6rem, 4vw, 2.1rem);
+  font-weight: 700;
+}
+.section.exam-results .exam-results__points-label {
+  margin: 0.45rem 0 0;
+  color: var(--text-700);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.section.exam-results .exam-results__tally {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.section.exam-results .exam-results__tally-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.85rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface-muted, #EDF2F8);
+  color: var(--text-700);
+  font-size: 0.95rem;
+  font-weight: 550;
+}
+.section.exam-results .exam-results__tally-item strong { color: var(--text-900); font-weight: 800; font-variant-numeric: tabular-nums; }
+.section.exam-results .exam-results__tally-item--right svg { color: #11643A; }
+.section.exam-results .exam-results__tally-item--wrong svg { color: #A12232; }
+.section.exam-results .exam-results__tally-total { color: var(--text-600); font-size: 0.95rem; }
+.section.exam-results .exam-results__caveat {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  margin: 1rem 0 0;
+  padding: 0.75rem 1rem;
+  border: 0;
+  border-radius: 12px;
+  background: #EAF2FE;
+  color: #174E96;
+  font-size: 0.975rem;
+  line-height: 1.5;
+}
+.section.exam-results .exam-results__caveat--warn { margin: 0 0 1.25rem; background: #FFF3DC; color: #805000; }
+.section.exam-results .exam-results__weighted-line { margin: 0.85rem 0 0; color: var(--text-700); font-size: 0.975rem; }
+.section.exam-results .exam-results__how { margin-top: 0.85rem; }
+.section.exam-results .exam-results__how > summary {
+  color: var(--primary-600);
+  font-size: 0.95rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+.section.exam-results .exam-results__how-list { color: var(--text-700); font-size: 0.95rem; line-height: 1.55; }
+
+/* Where the points went */
+.section.exam-results .exam-results__breakdown {
+  margin: clamp(2rem, 5vw, 2.75rem) 0 0;
+  padding: clamp(1.1rem, 3vw, 1.5rem);
+  border: 0;
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(15, 30, 56, 0.04), 0 8px 24px rgba(15, 30, 56, 0.06);
+}
+.section.exam-results .exam-results__breakdown-title {
+  display: block;
+  margin: 0 0 0.35rem;
+  color: var(--text-900);
+  font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+.section.exam-results .exam-results__breakdown-title svg { display: none; }
+.section.exam-results .exam-results__breakdown-source { color: var(--text-600); font-size: 0.95rem; max-width: none; }
+.section.exam-results .exam-results__breakdown-sub {
+  color: var(--text-600);
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* What next: one plain block */
+.section.exam-results .exam-results__next {
+  display: grid;
+  gap: 1.1rem;
+  margin: clamp(2rem, 5vw, 2.75rem) 0 0;
+  padding: clamp(1.25rem, 3vw, 1.75rem);
+  border: 0;
+  border-radius: 20px;
+  background: var(--surface-muted, #EDF2F8);
+  box-shadow: none;
+}
+.section.exam-results .exam-results__next-head { display: block; min-width: 0; }
+.section.exam-results .exam-results__next-title {
+  margin: 0 0 0.4rem;
+  color: var(--text-900);
+  font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+.section.exam-results .exam-results__next-sub { margin: 0; color: var(--text-700); font-size: 1.0625rem; line-height: 1.55; }
+.section.exam-results .exam-results__next-note { margin: 0.5rem 0 0; color: var(--text-600); font-size: 0.95rem; }
+.section.exam-results .exam-results__next-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.section.exam-results .exam-results__next-actions .button svg,
+.section.exam-results .exam-results__actions .button svg { display: none; }
+.section.exam-results .exam-results__local-note { margin: 0.85rem 0 0; color: var(--text-600); font-size: 0.95rem; }
+
+/* Correction */
+.section.exam-results .exam-results__details { margin-top: clamp(2.5rem, 6vw, 3.5rem); scroll-margin-top: 88px; }
+.section.exam-results .exam-results__details-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+.section.exam-results .exam-results__details-title {
+  margin: 0;
+  color: var(--text-900);
+  font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif);
+  font-size: clamp(1.3rem, 2.6vw, 1.5rem);
+  font-weight: 700;
+}
+.section.exam-results .exam-results__filter-chip { min-height: 36px; font-size: 0.925rem; }
+.section.exam-results .card.exam-results__item {
+  margin: 0 0 0.75rem;
+  padding: clamp(1rem, 2.6vw, 1.5rem);
+  border: 0;
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(15, 30, 56, 0.04), 0 8px 24px rgba(15, 30, 56, 0.06);
+}
+.section.exam-results .exam-results__item-header { gap: 0.6rem; margin-bottom: 0.75rem; }
+.section.exam-results .exam-results__item-number {
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 0.4rem;
+  border-radius: 8px;
+  background: var(--surface-muted, #EDF2F8);
+  color: var(--text-700);
+  font-size: 0.875rem;
+  font-weight: 800;
+}
+.section.exam-results .exam-results__item-type { color: var(--text-600); font-size: 0.875rem; }
+.section.exam-results .exam-results__item-points {
+  margin-left: auto;
+  color: var(--text-900);
+  font-size: 0.95rem;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+.section.exam-results .exam-results__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.65rem;
+  border: 0;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.section.exam-results .exam-results__badge--correct { background: #E7F7EF; color: #11643A; }
+.section.exam-results .exam-results__badge--incorrect { background: #FDEBEC; color: #A12232; }
+.section.exam-results .exam-results__badge--partial { background: #FFF3DC; color: #805000; }
+.section.exam-results .exam-results__badge--manual { background: #EAF2FE; color: #174E96; }
+.section.exam-results .exam-results__badge--unanswered { background: var(--surface-muted, #EDF2F8); color: var(--text-700); }
+.section.exam-results .exam-results__item-question { color: var(--text-900); font-size: 1.0625rem; line-height: 1.6; }
+.section.exam-results .exam-results__item-answer,
+.section.exam-results .exam-results__item-correct {
+  margin: 0.75rem 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-800, var(--text-900));
+  font-size: 1rem;
+  line-height: 1.55;
+}
+.section.exam-results .exam-results__item-answer > strong,
+.section.exam-results .exam-results__item-correct > strong {
+  display: block;
+  margin-bottom: 0.15rem;
+  color: var(--text-500);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.section.exam-results .exam-results__item-correct { color: #11643A; font-weight: 650; }
+.section.exam-results .exam-results__item-explanation {
+  display: block;
+  margin: 0.85rem 0 0;
+  padding: 0.75rem 0.9rem;
+  border: 0;
+  border-radius: 12px;
+  background: var(--surface-muted, #EDF2F8);
+  color: var(--text-700);
+  font-size: 0.975rem;
+  font-style: normal;
+  line-height: 1.6;
+}
+.section.exam-results .exam-results__item-explanation > svg { display: none; }
+.section.exam-results .exam-results__item-solution,
+.section.exam-results .exam-results__item-approaches {
+  margin-top: 0.75rem;
+  border: 1px solid var(--border, #DCE5F0);
+  border-radius: 12px;
+}
+.section.exam-results .exam-results__item-solution > summary,
+.section.exam-results .exam-results__item-approaches > summary {
+  padding: 0.6rem 0.85rem;
+  background: none;
+  color: var(--primary-600);
+  font-size: 0.95rem;
+}
+.section.exam-results .exam-results__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+@media (max-width: 600px) {
+  .section.exam-results .exam-results__next-actions .button,
+  .section.exam-results .exam-results__actions .button { width: 100%; }
+  .section.exam-results .exam-results__details-head { align-items: flex-start; }
+}
+
+[data-theme="dark"] .section.exam-results .exam-results__status { background: #173F31; color: #A4ECC7; }
+[data-theme="dark"] .section.exam-results .exam-results__status--provisional,
+[data-theme="dark"] .section.exam-results .exam-results__caveat--warn,
+[data-theme="dark"] .section.exam-results .exam-results__badge--partial { background: #47371E; color: #FFDA91; }
+[data-theme="dark"] .section.exam-results .exam-results__caveat,
+[data-theme="dark"] .section.exam-results .exam-results__badge--manual { background: #1A3458; color: #BED8FF; }
+[data-theme="dark"] .section.exam-results .exam-results__badge--correct { background: #173F31; color: #A4ECC7; }
+[data-theme="dark"] .section.exam-results .exam-results__badge--incorrect { background: #48232D; color: #FFB7C0; }
+[data-theme="dark"] .section.exam-results .exam-results__item-correct,
+[data-theme="dark"] .section.exam-results .exam-results__tally-item--right svg { color: #A4ECC7; }
+[data-theme="dark"] .section.exam-results .exam-results__tally-item--wrong svg { color: #FFB7C0; }
+[data-theme="dark"] .section.exam-results .card.exam-results__item,
+[data-theme="dark"] .section.exam-results .exam-results__breakdown { box-shadow: none; }
+/* Inline answers/explanations: the global .instruction-renderer is a bordered,
+   padded block with 13px paragraphs — wrong inside a sentence. */
+.section.exam-results .exam-results__item-answer .instruction-renderer,
+.section.exam-results .exam-results__item-correct .instruction-renderer,
+.section.exam-results .exam-results__item-explanation .instruction-renderer {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  font-size: inherit;
+}
+.section.exam-results .exam-results__item-answer .instruction-renderer__p,
+.section.exam-results .exam-results__item-correct .instruction-renderer__p,
+.section.exam-results .exam-results__item-explanation .instruction-renderer__p {
+  display: inline;
+  margin: 0;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+.section.exam-results .exam-results__tally { border-top: 0; padding-top: 0; }
