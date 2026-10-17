@@ -49,3 +49,38 @@ it('exhausting the tries reveals the expected answer and the explanation', () =>
   expect(screen.getByText('Ta réponse').nextSibling).toHaveTextContent('c');
   expect(screen.getByText('Parce que d.')).toBeInTheDocument();
 });
+
+it('a right first try carries ONE verdict, folds the other choices and keeps the explanation', () => {
+  const { container } = render(<DirectBankQuiz item={{ id: 'q5', kind: 'mcq', stem: 'S', options: ['L’eau', 'L’huile', 'L’air', 'Le mercure'], correctIndex: 0, good: 'Rapport à l’eau.' }} onScore={jest.fn()} onNext={undefined} onClose={undefined} />);
+  fireEvent.click(screen.getByLabelText('L’eau'));
+  fireEvent.click(screen.getByText('Vérifier'));
+  // One verdict: the AnswerStatus — no legacy "Correct" chip above it.
+  expect(container.querySelectorAll('.pq-status')).toHaveLength(1);
+  expect(screen.getByText('Correct du premier coup')).toBeInTheDocument();
+  expect(container.querySelector('.chip--success')).toBeNull();
+  expect(screen.queryByText('Correct')).not.toBeInTheDocument();
+  // The chosen answer stays on screen, so it is not repeated as "Ta réponse".
+  expect(screen.queryByText('Ta réponse')).not.toBeInTheDocument();
+  expect(screen.getByLabelText('L’eau')).toBeInTheDocument();
+  expect(screen.queryByLabelText('L’huile')).not.toBeInTheDocument();
+  expect(screen.getByText('Rapport à l’eau.')).toBeInTheDocument();
+  const fold = screen.getByRole('button', { name: 'Voir les 3 autres choix' });
+  expect(fold).toHaveAttribute('aria-expanded', 'false');
+  fireEvent.click(fold);
+  expect(screen.getByLabelText('L’huile')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Masquer les autres choix' })).toHaveAttribute('aria-expanded', 'true');
+});
+
+it('a miss keeps the wrong and the right choice open, and both "Ta réponse" and "Bonne réponse"', () => {
+  const { container } = render(<DirectBankQuiz item={{ id: 'q6', kind: 'mcq', stem: 'S', options: ['a', 'b', 'c', 'd'], correctIndex: 3 }} onScore={jest.fn()} onNext={undefined} onClose={undefined} />);
+  for (const l of ['a', 'b', 'c']) { fireEvent.click(screen.getByLabelText(l)); fireEvent.click(screen.getByText('Vérifier')); }
+  expect(container.querySelectorAll('.pq-status')).toHaveLength(1);
+  expect(container.querySelector('.chip--danger')).toBeNull();
+  expect(container.querySelectorAll('.radio-option')).toHaveLength(2);
+  expect(container.querySelector('.radio-option--wrong')).toHaveTextContent('c');
+  expect(container.querySelector('.radio-option--correct')).toHaveTextContent('d');
+  fireEvent.click(screen.getByRole('button', { name: 'Voir les 2 autres choix' }));
+  expect(container.querySelectorAll('.radio-option')).toHaveLength(4);
+  expect(screen.getByText('Ta réponse')).toBeInTheDocument();
+  expect(screen.getByText('Bonne réponse')).toBeInTheDocument();
+});

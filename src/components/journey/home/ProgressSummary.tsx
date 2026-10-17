@@ -28,6 +28,8 @@ type Props = {
   levelLabel: (lv: string) => string;
   courseLevel: (c: any) => string;
   L: (fr: string, ht: string) => string;
+  /** Extra class on the card (the workspace hides it on phones). */
+  className?: string;
 };
 
 /** "6 terminées" / "1 terminée" / "6 fini". */
@@ -63,7 +65,7 @@ function Bar({ from, to, label }: { from: number; to: number; label: string }) {
 }
 
 export default function ProgressSummary({
-  rows, loading, failed, onRetry, subjectName, levelLabel, courseLevel, L,
+  rows, loading, failed, onRetry, subjectName, levelLabel, courseLevel, L, className,
 }: Props) {
   const uid = useStore((s) => s.user?.uid || null);
   const language = useStore((s) => s.language);
@@ -90,7 +92,7 @@ export default function ProgressSummary({
   };
 
   return (
-    <section className="lws-card jh-prog" aria-labelledby="jh-prog-title">
+    <section className={`lws-card jh-prog${className ? ` ${className}` : ''}`} aria-labelledby="jh-prog-title">
       <div className="lws-section__head">
         <h3 id="jh-prog-title">{L('Ta progression', 'Pwogrè ou')}</h3>
       </div>

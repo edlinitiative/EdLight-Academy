@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ListChecks, Lightbulb, Target, Clock, Repeat, LogOut, ChevronRight, Info } from '../../icons';
+import { ListChecks, Lightbulb, Target, Clock, Repeat, LogOut, ChevronRight, ChevronDown, Info } from '../../icons';
 import type { ResolvedScope } from './practiceScope';
 
 type Tx = (fr: string, ht: string) => string;
@@ -12,8 +12,13 @@ export type PracticeMode = 'quiz' | 'practice';
  * miss and shows the correction once the question is resolved; neither mode
  * has a timer or stores a score.
  */
-export function ModeRules({ mode, count, tries, tx }: { mode: PracticeMode; count: number; tries: number; tx: Tx }) {
-  const rows = mode === 'quiz'
+export function ModeRules({ mode, count, tries, tx, part = 'all' }: {
+  mode: PracticeMode; count: number; tries: number; tx: Tx;
+  /** The phone confirmation shows the three that decide how it feels
+   *  ('essential') and keeps the fourth in its Détails ('extra'). */
+  part?: 'all' | 'essential' | 'extra';
+}) {
+  const all = mode === 'quiz'
     ? [
       { Icon: ListChecks, text: tx(`${count} question${count > 1 ? 's' : ''}, l’une après l’autre. Tu vois toujours où tu en es.`, `${count} kesyon, youn apre lòt. Ou toujou wè ki kote ou ye.`) },
       { Icon: Lightbulb, text: tx(`Correction après chaque question : ${tries} essais, avec un indice après chaque erreur.`, `Koreksyon apre chak kesyon : ${tries} esè, ak yon endis apre chak erè.`) },
@@ -26,6 +31,12 @@ export function ModeRules({ mode, count, tries, tx }: { mode: PracticeMode; coun
       { Icon: LogOut, text: tx('Tu t’arrêtes quand tu veux avec « Terminer » et tu vois ton bilan.', 'Ou kanpe lè ou vle ak « Fini » epi ou wè rezilta ou.') },
       { Icon: Clock, text: tx('Pas de score, pas de chrono.', 'Pa gen nòt, pa gen kwonomèt.') },
     ];
+  // Quiz: the score line is the extra (the result explains it again);
+  // practice: the "no score, no chrono" line is.
+  const extraIdx = mode === 'quiz' ? 2 : 3;
+  const rows = part === 'all' ? all
+    : part === 'essential' ? all.filter((_, i) => i !== extraIdx)
+      : all.filter((_, i) => i === extraIdx);
   return (
     <ul className="pe-rules">
       {rows.map(({ Icon, text }) => (
@@ -50,6 +61,25 @@ export function SaveNote({ signedIn, onSignIn, tx }: { signedIn: boolean; onSign
       )}
     </p>
   );
+}
+
+/** Below 900px the confirmation is one column; that is when it must be
+ *  recomposed so "Commencer" sits in the first screen (LJ audit #3). */
+const NARROW_QUERY = '(max-width: 899px)';
+function useNarrow(): boolean {
+  const get = () => (typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+    ? window.matchMedia(NARROW_QUERY).matches
+    : false);
+  const [narrow, setNarrow] = useState(get);
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
+    const mq = window.matchMedia(NARROW_QUERY);
+    const on = () => setNarrow(mq.matches);
+    on();
+    if (mq.addEventListener) mq.addEventListener('change', on); else mq.addListener(on);
+    return () => { if (mq.removeEventListener) mq.removeEventListener('change', on); else mq.removeListener(on); };
+  }, []);
+  return narrow;
 }
 
 /**
@@ -94,35 +124,136 @@ export default function PracticeEntry({
   const pool = scope.poolCount;
   const canQuiz = quizLength > 0;
   const chapter = scope.unitIndex ? tx(`Chapitre ${scope.unitIndex}`, `Chapit ${scope.unitIndex}`) : '';
+  const narrow = useNarrow();
+  const [details, setDetails] = useState(false);
+  const poolLine = tx(`${pool} question${pool > 1 ? 's' : ''} dans ce chapitre`, `${pool} kesyon nan chapit sa a`);
+  const quizName = tx('Quiz', 'Kwiz');
+  const quizCount = tx(`${quizLength} questions`, `${quizLength} kesyon`);
+  const practiceName = tx('Entraînement libre', 'Pratik lib');
+  const modeNotes = (
+    <>
+      {!canQuiz && (
+        <p className="pe-note">{tx('Aucune question de ce chapitre ne se corrige automatiquement : le quiz avec score n’est pas possible ici.', 'Okenn kesyon nan chapit sa a pa korije otomatikman : kwiz ak nòt pa posib isit la.')}</p>
+      )}
+      {canQuiz && mode === 'quiz' && quizLength < 10 && (
+        <p className="pe-note">{tx(`Ce chapitre a ${quizLength} question${quizLength > 1 ? 's' : ''} corrigeable${quizLength > 1 ? 's' : ''} : le quiz en aura ${quizLength}.`, `Chapit sa a gen ${quizLength} kesyon ki ka korije : kwiz la ap genyen ${quizLength}.`)}</p>
+      )}
+    </>
+  );
+  const scopeLine = scope.lesson ? (
+    <p className="pe-scope">
+      <Info size={16} aria-hidden="true" />
+      <span>{tx('Ces questions couvrent tout le chapitre : elles ne sont pas encore classées leçon par leçon.', 'Kesyon sa yo kouvri tout chapit la : yo poko klase leson pa leson.')}</span>
+    </p>
+  ) : null;
+  const backLink = backHref && scope.lesson ? (
+    <Link className="pe__back" to={backHref}>
+      {tx('Retour à la leçon', 'Retounen nan leson an')}
+    </Link>
+  ) : null;
+  const eyebrow = (
+    <p className="pe__eyebrow">
+      {scope.lesson
+        ? <>{tx('Après la leçon', 'Apre leson')} <span className="pe__lesson">« {scope.lesson.title} »</span></>
+        : tx('Pratique du chapitre', 'Pratik chapit la')}
+    </p>
+  );
+  const startButton = (
+    <button type="button" className="button button--primary button--lg pe-actions__start" onClick={onStart} disabled={mode === 'quiz' && !canQuiz}>
+      {tx('Commencer', 'Kòmanse')}
+      <ChevronRight size={18} aria-hidden="true" />
+    </button>
+  );
+  const changeButton = (
+    <button type="button" className="pe-actions__text" onClick={onChange}>
+      {tx('Choisir un autre chapitre', 'Chwazi yon lòt chapit')}
+    </button>
+  );
+
+  // ── Phone / narrow: topic → mode with its real count → three rules →
+  // Commencer, all in the first screen. Coverage, what is kept and the last
+  // rule are one "Détails" disclosure below the action, closed by default.
+  if (narrow) {
+    return (
+      <section className="pe pe--compact" aria-labelledby="pe-title">
+        {backLink}
+        <div className="pe__headtext">
+          {eyebrow}
+          <h1 id="pe-title" className="pe__title">{unitTitle}</h1>
+          <p className="pe__meta">{[subjectLabel, levelLabel, chapter].filter(Boolean).join(' · ')}</p>
+        </div>
+
+        <div className="pe-mode">
+          <p className="pe-mode__label" id="pe-mode-label">{tx('Comment veux-tu t’entraîner ?', 'Kijan ou vle antrene ?')}</p>
+          <div className="pe-mode__chips pe-mode__chips--seg" role="radiogroup" aria-labelledby="pe-mode-label">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={mode === 'quiz'}
+              aria-label={`${quizName} · ${quizCount}`}
+              className={mode === 'quiz' ? 'is-on' : ''}
+              disabled={!canQuiz}
+              onClick={() => onMode('quiz')}
+            >
+              <span className="pe-mode__name">{quizName}</span>
+              <span className="pe-mode__sub">{quizCount}</span>
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={mode === 'practice'}
+              aria-label={practiceName}
+              className={mode === 'practice' ? 'is-on' : ''}
+              onClick={() => onMode('practice')}
+            >
+              <span className="pe-mode__name">{practiceName}</span>
+              <span className="pe-mode__sub">{tx('à ton rythme', 'nan ritm ou')}</span>
+            </button>
+          </div>
+          {modeNotes}
+          <ModeRules mode={mode} count={quizLength} tries={tries} tx={tx} part="essential" />
+        </div>
+
+        <div className="pe-actions">{startButton}</div>
+
+        <div className="pe-more">
+          <button
+            type="button"
+            className="pe-more__toggle"
+            aria-expanded={details}
+            aria-controls="pe-details"
+            onClick={() => setDetails((v) => !v)}
+          >
+            <span><strong>{tx('Détails', 'Detay')}</strong> · {poolLine}</span>
+            <ChevronDown size={18} aria-hidden="true" className="pe-more__chev" />
+          </button>
+          <div id="pe-details" className="pe-more__panel" hidden={!details}>
+            {scopeLine}
+            <ModeRules mode={mode} count={quizLength} tries={tries} tx={tx} part="extra" />
+            <SaveNote signedIn={signedIn} onSignIn={onSignIn} tx={tx} />
+          </div>
+          {changeButton}
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="pe" aria-labelledby="pe-title">
       <div className="pe__topic">
-        {backHref && scope.lesson && (
-          <Link className="pe__back" to={backHref}>
-            {tx('Retour à la leçon', 'Retounen nan leson an')}
-          </Link>
-        )}
+        {backLink}
         <div className="pe__head">
           <div className="pe__headtext">
-            <p className="pe__eyebrow">
-              {scope.lesson
-                ? <>{tx('Après la leçon', 'Apre leson')} <span className="pe__lesson">« {scope.lesson.title} »</span></>
-                : tx('Pratique du chapitre', 'Pratik chapit la')}
-            </p>
+            {eyebrow}
             <h1 id="pe-title" className="pe__title">{unitTitle}</h1>
             <p className="pe__meta">
               {[subjectLabel, levelLabel, chapter].filter(Boolean).join(' · ')}
-              <span className="pe__count">{tx(`${pool} question${pool > 1 ? 's' : ''} dans ce chapitre`, `${pool} kesyon nan chapit sa a`)}</span>
+              <span className="pe__count">{poolLine}</span>
             </p>
           </div>
           {thumb && <img className="pe__thumb" src={thumb} alt="" width={96} height={68} decoding="async" />}
         </div>
-        {scope.lesson && (
-          <p className="pe-scope">
-            <Info size={16} aria-hidden="true" />
-            <span>{tx('Ces questions couvrent tout le chapitre : elles ne sont pas encore classées leçon par leçon.', 'Kesyon sa yo kouvri tout chapit la : yo poko klase leson pa leson.')}</span>
-          </p>
-        )}
+        {scopeLine}
         <SaveNote signedIn={signedIn} onSignIn={onSignIn} tx={tx} />
       </div>
 
@@ -138,7 +269,7 @@ export default function PracticeEntry({
               disabled={!canQuiz}
               onClick={() => onMode('quiz')}
             >
-              {tx('Quiz', 'Kwiz')} · {tx(`${quizLength} questions`, `${quizLength} kesyon`)}
+              {quizName} · {quizCount}
             </button>
             <button
               type="button"
@@ -147,26 +278,16 @@ export default function PracticeEntry({
               className={mode === 'practice' ? 'is-on' : ''}
               onClick={() => onMode('practice')}
             >
-              {tx('Entraînement libre', 'Pratik lib')}
+              {practiceName}
             </button>
           </div>
-          {!canQuiz && (
-            <p className="pe-note">{tx('Aucune question de ce chapitre ne se corrige automatiquement : le quiz avec score n’est pas possible ici.', 'Okenn kesyon nan chapit sa a pa korije otomatikman : kwiz ak nòt pa posib isit la.')}</p>
-          )}
-          {canQuiz && mode === 'quiz' && quizLength < 10 && (
-            <p className="pe-note">{tx(`Ce chapitre a ${quizLength} question${quizLength > 1 ? 's' : ''} corrigeable${quizLength > 1 ? 's' : ''} : le quiz en aura ${quizLength}.`, `Chapit sa a gen ${quizLength} kesyon ki ka korije : kwiz la ap genyen ${quizLength}.`)}</p>
-          )}
+          {modeNotes}
           <ModeRules mode={mode} count={quizLength} tries={tries} tx={tx} />
         </div>
 
         <div className="pe-actions">
-          <button type="button" className="button button--primary button--lg pe-actions__start" onClick={onStart} disabled={mode === 'quiz' && !canQuiz}>
-            {tx('Commencer', 'Kòmanse')}
-            <ChevronRight size={18} aria-hidden="true" />
-          </button>
-          <button type="button" className="pe-actions__text" onClick={onChange}>
-            {tx('Choisir un autre chapitre', 'Chwazi yon lòt chapit')}
-          </button>
+          {startButton}
+          {changeButton}
         </div>
       </div>
     </section>

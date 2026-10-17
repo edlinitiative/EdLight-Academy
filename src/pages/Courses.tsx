@@ -15,7 +15,7 @@ import useStore from '../contexts/store';
 import { useTranslation } from 'react-i18next';
 import { SUBJECT_COVERS } from '../utils/subjectCovers';
 import { firstThumb } from '../utils/videoThumb';
-import { courseCover } from '../utils/courseCovers';
+import { courseCover, courseCoverPosition } from '../utils/courseCovers';
 import '../styles/pf.css';
 import './Courses.css';
 import LearnWorkspace from './courses/LearnWorkspace';
@@ -933,7 +933,7 @@ export default function Courses({ mode = 'catalog' }: { mode?: 'catalog' | 'work
                       <button key={course.id} type="button" className={`cl-card cl-card--${course.subject}`} onClick={() => navigate(`/courses/${course.id}`, { state: { from: window.location.pathname + window.location.search } })}>
                         <span className="cl-card__cover">
                           {cover
-                            ? <img src={cover} alt="" loading="lazy" />
+                            ? <img src={cover} alt="" loading="lazy" style={{ objectPosition: courseCoverPosition(course.id) }} />
                             : SUBJECT_COVERS[course.subject] ? <img src={SUBJECT_COVERS[course.subject]} alt="" loading="lazy" /> : null}
                           <span className="cl-card__level">{levelLabel(lvl)}</span>
                           {mineHere && <span className="cl-card__mine">{L('Ta classe', 'Klas ou')}</span>}

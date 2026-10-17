@@ -911,14 +911,18 @@
 }
 .qz-top__quit:hover { background: var(--surface-muted, #eef2f8); color: var(--text-900); }
 .qz-top__quit:focus-visible { outline: 2px solid var(--primary-500); outline-offset: 2px; }
-.qz-top__where {
-  overflow: hidden;
+.qz-top__where,
+.qz .qz-top h1.qz-top__where {
+  min-width: 0;
+  margin: 0;
   color: var(--text-600);
+  font-family: inherit;
   font-size: 0.95rem;
   font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0;
   text-align: center;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 .qz-top__count {
   color: var(--text-900);
@@ -940,8 +944,11 @@
   background: var(--surface);
   box-shadow: 0 1px 2px rgba(15, 30, 56, 0.04), 0 24px 48px -32px rgba(15, 30, 56, 0.3);
 }
-/* The page already says what this is; the card keeps only its tries chip. */
-.qz--taking .qz-question .quiz-card__title { visibility: hidden; }
+/* The page already says what this is, and the tries are said under the card
+   ("3 essais, avec un indice…") and after each miss. The card header — once a
+   hidden title plus a tries chip, then a second "Correct" verdict — would
+   only leave an empty band once answered, so it is not drawn here (LJ #6). */
+.qz--taking .qz-question .quiz-card__header { display: none; }
 .qz--taking .qz-next {
   display: flex;
   justify-content: flex-end;
@@ -958,6 +965,21 @@
   .qz-top { grid-template-columns: auto 1fr; }
   .qz-top__where { display: none; }
   .qz-top__count { justify-self: end; }
+  /* Quiz: the subject/chapter stays as one quiet wrapped line under the
+     leave · position row (LJ audit #8), never ellipsised away. */
+  .qz-top.qz-top--session {
+    grid-template-areas: "quit count" "where where";
+    row-gap: 0.15rem;
+  }
+  .qz-top--session .qz-top__quit { grid-area: quit; }
+  .qz-top--session .qz-top__count { grid-area: count; }
+  .qz .qz-top--session h1.qz-top__where {
+    display: block;
+    grid-area: where;
+    padding-left: 0.4rem;
+    font-size: 0.875rem;
+    text-align: left;
+  }
   .qz--taking .qz-question { border-radius: 20px; }
   .qz--taking .qz-next__primary { width: 100%; }
 }
@@ -1019,6 +1041,33 @@
   color: var(--text-700);
   font-size: 1.05rem;
   font-weight: 600;
+}
+/* Interrupted quiz: what was answered leads; the first-try score follows. */
+.qr-score__lead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.5rem;
+  margin: 1rem 0 0;
+  font-variant-numeric: tabular-nums;
+}
+.qr-score__lead-main {
+  color: var(--text-900);
+  font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif);
+  font-size: clamp(1.3rem, 1.1rem + 1vw, 1.6rem);
+  font-weight: 750;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+.qr-score__lead-sep { color: var(--text-500); font-weight: 700; }
+.qr-score__lead-sub {
+  color: var(--text-700);
+  font-size: 1.0625rem;
+  font-weight: 650;
+}
+@media (max-width: 600px) {
+  .qr-score__lead { flex-direction: column; align-items: flex-start; }
+  .qr-score__lead-sep { display: none; }
 }
 .qr-score__verdict {
   margin: 1rem 0 0;
@@ -1095,6 +1144,11 @@
 }
 
 /* Review */
+[data-theme="dark"] .qr .qz__back,
+[data-theme="dark"] .qr-actions__text,
+[data-theme="dark"] .qr-save a,
+[data-theme="dark"] .qr-save__link { color: var(--accent-ink, #6FA8F5); }
+
 .qr-review {
   margin-top: clamp(2.5rem, 6vw, 3.5rem);
   scroll-margin-top: 88px;

@@ -139,6 +139,12 @@ export default function CourseDetail() {
   const [view, setView] = useState('overview'); // 'overview' | 'lesson'
   const [activeModule, setActiveModule] = useState(0);
   const [activeLesson, setActiveLesson] = useState(0);
+  // Deep-link restore bookkeeping (see "Relaunch / deep link" below).
+  // `restoredForRef`: the course whose `?lesson=` has been honoured.
+  // `pendingRestoreRef`: the lesson id the restore just asked for, until the
+  // view has actually switched to it — the URL sync must not run in between.
+  const restoredForRef = useRef<string | null>(null);
+  const pendingRestoreRef = useRef<string | null>(null);
   const [showQuiz, setShowQuiz] = useState(false);
   const [showFlashcards, setShowFlashcards] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false); // Mobile sidebar toggle
@@ -342,15 +348,14 @@ export default function CourseDetail() {
   const nextTarget = findNextTarget(activeModule, activeLesson);
 
   // ── Going to a specific lesson ─────────────────────────────────────────────
-  // Changing the module runs an effect that resets the lesson to the first one
-  // of that module — the safety net for a module picked on its own. It also
-  // used to undo every RESUME: "Reprendre · Unité 3 · Leçon 4" set both values
-  // in one commit, then the effect put the learner back on Leçon 1. This ref
-  // records that a lesson was asked for deliberately, so the reset can tell a
-  // module-only change from a lesson the student chose.
-  const requestedLessonRef = useRef<{ module: number; lesson: number } | null>(null);
+  // Module and lesson always change TOGETHER, in one commit. There used to be
+  // an effect that reset the lesson to 0 whenever the module changed, with a
+  // ref to tell it "this one was deliberate" — and that pair is what broke the
+  // deep link: when the course was already cached, the restore, the module
+  // effect and the lesson effect all ran in the same mount commit, the lesson
+  // effect wiped the ref, and the next render reset "Unité 3 · Leçon 4" to
+  // Leçon 1. Every module change now names its lesson, so no reset is needed.
   const goToLesson = (mIdx, lIdx) => {
-    requestedLessonRef.current = { module: mIdx, lesson: lIdx };
     setActiveModule(mIdx);
     setActiveLesson(lIdx);
   };
@@ -422,7 +427,15 @@ export default function CourseDetail() {
     return () => document.body.classList.remove('no-scroll');
   }, [showSidebar]);
 
+  // Declared BEFORE the restore below, which it must precede: it hands the
+  // new course a clean slate, and the restore then opens the linked lesson.
+  // It also re-arms that restore. React's StrictMode (dev) runs every mount
+  // effect twice; with a one-shot "already restored" ref the second pass reset
+  // the view to the overview and the restore, thinking its job done, never
+  // ran again — the audit's "Reprendre" link landed on the course overview.
   useEffect(() => {
+    restoredForRef.current = null;
+    pendingRestoreRef.current = null;
     setView('overview');
     setActiveModule(0);
     setActiveLesson(0);
@@ -433,6 +446,7 @@ export default function CourseDetail() {
   useEffect(() => {
     if (modules.length > 0 && activeModule >= modules.length) {
       setActiveModule(0);
+      setActiveLesson(0);
     }
   }, [modules.length, activeModule]);
 
@@ -442,7 +456,6 @@ export default function CourseDetail() {
   // overview with their place lost. The lesson id in the query string is the
   // one part of a lesson view that survives a refresh — and it is the field
   // Sandra's panel reads to know which lesson is on screen.
-  const restoredForRef = useRef<string | null>(null);
   const lessonParam = searchParams.get('lesson');
   // A `?lesson=` that no longer exists in this course (renamed, removed).
   const [staleLesson, setStaleLesson] = useState(false);
@@ -459,6 +472,7 @@ export default function CourseDetail() {
       const lIdx = getModuleLessons(m).findIndex((lsn) => lsn?.id === lessonParam);
       if (lIdx >= 0) {
         restoredForRef.current = courseId;
+        pendingRestoreRef.current = lessonParam;
         goToLesson(m, lIdx);
         setView('lesson');
         trackJourney('lesson_resume_resolved', { source: 'link', course_id: courseId, lesson_id: lessonParam, outcome: 'opened' });
@@ -488,6 +502,13 @@ export default function CourseDetail() {
     // course overview with the lesson lost. Verified in the browser: the
     // param disappeared from the URL before the lesson could open.
     if (restoredForRef.current !== courseId) return;
+    // Nor in the commit where the restore asked for the lesson: this render's
+    // `view` is still 'overview', so syncing now would delete the very
+    // `?lesson=` being opened. Wait until the lesson view is on screen.
+    if (pendingRestoreRef.current) {
+      if (view !== 'lesson') return;
+      pendingRestoreRef.current = null;
+    }
     const id = (view === 'lesson' && activeLessonData?.id) || null;
     if (id === (searchParams.get('lesson') || null)) return;
     setSearchParams((prev) => {
@@ -500,19 +521,11 @@ export default function CourseDetail() {
   }, [view, activeLessonData?.id, courseId, searchParams]);
 
   useEffect(() => {
-    // Reset to the module's first lesson — UNLESS the student asked for a
-    // specific lesson in this module (resume, deep link, lesson list, next).
-    const requested = requestedLessonRef.current;
-    requestedLessonRef.current = null;
-    if (!requested || requested.module !== activeModule) setActiveLesson(0);
     setShowQuiz(false);
     setShowFlashcards(false);
   }, [activeModule]);
 
   useEffect(() => {
-    // A lesson-only change consumes the request too, so it can never be
-    // honoured later by a module-only change.
-    requestedLessonRef.current = null;
     setShowQuiz(false);
     setShowFlashcards(false);
   }, [activeLesson]);
