@@ -313,7 +313,7 @@ const ExamLanding = () => {
             <label className="xp-search">
               <Search size={18} aria-hidden="true" />
               <input type="search" value={query} onChange={(e) => setQuery(e.target.value)}
-                placeholder={L('Chercher une matière, une année, une notion…', 'Chèche yon matyè, yon ane, yon nosyon…')}
+                placeholder={L('Matière, année, notion…', 'Matyè, ane, nosyon…')}
                 aria-label={L('Rechercher un sujet', 'Chèche yon sijè')} />
             </label>
           </div>

@@ -1676,9 +1676,16 @@ const ExamTake = () => {
             </button>
             <div className="exam-take__exam-info">
               <span className="exam-take__q-of">
-                {currentGrp.end > currentGrp.start
-                  ? `${t('Questions', 'Kesyon')} ${currentGrp.start + 1}–${currentGrp.end + 1} ${t('sur', 'sou')} ${questions.length}`
-                  : `${t('Question', 'Kesyon')} ${currentQ + 1} ${t('sur', 'sou')} ${questions.length}`}
+                <span className="exam-take__q-of-full">
+                  {currentGrp.end > currentGrp.start
+                    ? `${t('Questions', 'Kesyon')} ${currentGrp.start + 1}–${currentGrp.end + 1} ${t('sur', 'sou')} ${questions.length}`
+                    : `${t('Question', 'Kesyon')} ${currentQ + 1} ${t('sur', 'sou')} ${questions.length}`}
+                </span>
+                <span className="exam-take__q-of-short" aria-hidden="true">
+                  {currentGrp.end > currentGrp.start
+                    ? `Q${currentGrp.start + 1}–${currentGrp.end + 1}/${questions.length}`
+                    : `Q${currentQ + 1}/${questions.length}`}
+                </span>
               </span>
               <span className="exam-take__title-short" title={normalizeExamTitle(exam)}>
                 {String(normalizeExamTitle(exam) || '').toLowerCase().startsWith(String(subject || '').toLowerCase())
