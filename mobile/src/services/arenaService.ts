@@ -20,6 +20,9 @@
  * without a renderer — see utils/__tests__/arenaLobby.test.ts.
  */
 
+import { createObservedFetch } from '../../../shared/observedFetch';
+import { trackEvent } from './telemetry';
+
 import { Share } from 'react-native';
 import { collection, doc, getDoc, getDocs, onSnapshot, query, where, Timestamp, type Unsubscribe } from 'firebase/firestore';
 import { auth, db } from './firebase';
@@ -28,6 +31,8 @@ import type { ArenaState } from '../../../shared/arena/state';
 import { TIER_FULL_MS, TIER_HALF_MS, type AnswerTier } from '../../../shared/arena/scoring';
 import { cachedDeviceHash } from '../utils/integrity';
 import { attestationToken } from '../utils/attestation';
+
+const observedFetch = createObservedFetch(trackEvent, 'arena');
 
 const API_BASE = 'https://academy.edlight.org/api/arena';
 
@@ -611,7 +616,7 @@ async function authedPost(url: string, payload: Record<string, unknown>): Promis
   const attestation = await attestationToken();
 
   try {
-    const res = await fetch(url, {
+    const res = await observedFetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

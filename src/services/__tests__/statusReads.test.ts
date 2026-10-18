@@ -27,14 +27,12 @@ jest.mock('../notificationService', () => ({ notifyAchievement: jest.fn(), notif
 jest.mock('../streakService', () => ({ recordActivity: jest.fn() }));
 jest.mock('../../utils/analytics', () => ({ track: jest.fn() }));
 
-/* eslint-disable import/first */
 import { readMastery, readMasteryResult, readCourseMastery, readCourseMasteryResult } from '../masteryService';
 import { getAllUserProgress, getAllUserProgressResult, getCourseProgress, getCourseProgressResult } from '../progressTracking';
 import {
   loadReviewMap, loadReviewMapResult, loadDueReviewIdsResult, recordReviewOutcome, flushReviewPush,
   ReviewFlushError, __resetReviewCacheForTests,
 } from '../reviewService';
-/* eslint-enable import/first */
 
 const snap = (data: any) => ({ exists: () => data != null, data: () => data });
 const offline = () => Object.assign(new Error('Failed to get document because the client is offline.'), { code: 'unavailable' });

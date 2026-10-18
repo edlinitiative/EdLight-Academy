@@ -18,6 +18,9 @@
  * SIGNED-IN ONLY, also Ted's call: registration writes a player row keyed by
  * uid, so it needs an identity before it can mean anything.
  */
+import { createObservedFetch } from '../../shared/observedFetch';
+import { trackEvent } from '../utils/telemetry';
+
 import { collection, doc, onSnapshot, query, where, type Unsubscribe } from 'firebase/firestore';
 import { db, getIdToken } from './firebase';
 import {
@@ -36,6 +39,8 @@ import {
   type ArenaStandings,
   type ArenaTournament,
 } from '../utils/arenaPlay';
+
+const observedFetch = createObservedFetch(trackEvent, 'arena');
 
 const REGISTER_URL = '/api/arena/register';
 const ANSWER_URL = '/api/arena/answer';
@@ -89,7 +94,7 @@ export async function registerForTournament(opts: {
   if (!token) return { ok: false, error: 'not_signed_in' };
 
   try {
-    const res = await fetch(REGISTER_URL, {
+    const res = await observedFetch(REGISTER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({
@@ -272,7 +277,7 @@ async function arenaPost(
   const token = await getIdToken();
   if (!token) return { ok: false, error: 'not_signed_in' };
   try {
-    const res = await fetch(url, {
+    const res = await observedFetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(payload),

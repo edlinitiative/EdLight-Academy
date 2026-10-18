@@ -24,7 +24,6 @@ jest.mock('../../../../utils/learningJourney', () => ({
   trackJourney: (...a: any[]) => mockTrack(...a),
 }));
 
-// eslint-disable-next-line import/first
 import Quizzes from '../../../../pages/Quizzes';
 
 const renderAt = (url: string) => render(<MemoryRouter initialEntries={[url]}><Quizzes /></MemoryRouter>);

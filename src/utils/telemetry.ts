@@ -1,18 +1,11 @@
-/**
- * Minimal, dependency-free observability layer.
- *
- * Captures uncaught errors, unhandled promise rejections, and explicit
- * `reportError()` / `trackEvent()` calls. By default it logs to the console in
- * dev and is quiet in production — but it is intentionally shaped so a real
- * provider (Sentry, LogRocket, GA4, …) can be wired in one place via
- * `setTelemetrySink()` without touching call sites across the app.
- */
+import { createDiagnosticTransport } from '../../shared/telemetry';
 
 export type TelemetryEvent = {
   type: 'error' | 'event';
   name: string;
   detail?: Record<string, unknown>;
   error?: unknown;
+  context?: Record<string, unknown>;
   timestamp: number;
 };
 
@@ -20,6 +13,11 @@ type Sink = (event: TelemetryEvent) => void;
 
 let sink: Sink | null = null;
 let installed = false;
+let context: Record<string, unknown> = {};
+
+export function setTelemetryContext(next: Record<string, unknown>) {
+  context = { ...context, ...next };
+}
 
 /** Register the production reporter (e.g. forward to Sentry). */
 export function setTelemetrySink(next: Sink | null) {
@@ -28,7 +26,7 @@ export function setTelemetrySink(next: Sink | null) {
 
 function emit(event: TelemetryEvent) {
   try {
-    sink?.(event);
+    sink?.({ ...event, context: { ...context, ...event.context } });
   } catch {
     /* never let telemetry throw */
   }
@@ -53,6 +51,25 @@ export function trackEvent(name: string, detail?: Record<string, unknown>) {
 export function initTelemetry() {
   if (installed || typeof window === 'undefined') return;
   installed = true;
+
+  setTelemetryContext({ platform: 'web',
+    release: process.env.EDLIGHT_RELEASE || 'local',
+    environment: process.env.NODE_ENV || 'development' });
+  if (process.env.NODE_ENV === 'production') {
+    const transport = createDiagnosticTransport({
+      send: (events, signal) => fetch('/api/telemetry', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ events }), signal, keepalive: true,
+        credentials: 'omit',
+      }),
+    });
+    setTelemetrySink(transport.enqueue);
+    window.addEventListener('online', () => { void transport.flush(); });
+    window.addEventListener('pagehide', () => { void transport.flush(); });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') void transport.flush();
+    });
+  }
 
   window.addEventListener('error', (e) => {
     emit({

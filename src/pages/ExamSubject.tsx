@@ -246,7 +246,7 @@ export default function ExamSubject() {
           <label className="xp-search">
             <Search size={18} aria-hidden="true" />
             <input type="search" value={query} onChange={(ev) => setQuery(ev.target.value)}
-              placeholder={L('Chercher une année, une notion…', 'Chèche yon ane, yon nosyon…')}
+              placeholder={L('Année, notion…', 'Ane, nosyon…')}
               aria-label={L('Chercher dans les sujets', 'Chèche nan sijè yo')} />
           </label>
         </div>

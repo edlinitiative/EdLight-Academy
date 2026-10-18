@@ -19,7 +19,7 @@ import {
 import { registerForPushNotifications } from './src/services/pushService';
 import { syncMasteryOnLogin, startMasterySync, disposeMasterySync } from './src/services/masterySync';
 import { hydrateQueryCache, persistQueryCacheOnChange } from './src/services/queryPersistence';
-import { installGlobalErrorHandlers, reportError } from './src/services/telemetry';
+import { installGlobalErrorHandlers, installProductionTelemetry, reportError } from './src/services/telemetry';
 import AppErrorBoundary from './src/components/AppErrorBoundary';
 import { queryClient } from './src/lifecycle/queryClient';
 import { installQueryLifecycle } from './src/lifecycle/queryLifecycle';
@@ -34,6 +34,7 @@ import {
 
 // Report errors nothing else caught (JS exceptions, unhandled rejections in
 // release), tagged with the build / OTA update that produced them.
+installProductionTelemetry();
 installGlobalErrorHandlers();
 // NetInfo → onlineManager, AppState → focusManager (see lifecycle/queryLifecycle).
 installQueryLifecycle();

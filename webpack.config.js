@@ -4,6 +4,14 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const fs = require('fs');
+const { DefinePlugin } = require('webpack');
+const { execFileSync } = require('child_process');
+
+function releaseId() {
+  if (process.env.VERCEL_GIT_COMMIT_SHA) return process.env.VERCEL_GIT_COMMIT_SHA;
+  try { return execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(); }
+  catch { return 'local'; }
+}
 
 // Records the files of each named chunk group (e.g. "home", the landing page)
 // in build/client-assets.json, outside dist/ so it is never deployed.
@@ -77,6 +85,7 @@ module.exports = {
     extensions: ['.tsx', '.ts', '.jsx', '.js']
   },
   plugins: [
+    new DefinePlugin({ 'process.env.EDLIGHT_RELEASE': JSON.stringify(releaseId()) }),
     new HtmlWebpackPlugin({
       // No `favicon` option: it appended <link rel="icon" href="/logo.png">
       // after the template's own favicon set, and browsers take the last icon,
