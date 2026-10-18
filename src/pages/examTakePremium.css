@@ -1,0 +1,584 @@
+/* ══ Exam take — premium layer (Stitch, 2026-10-18) ═════════════════════════
+   The immersive /take screen and its read-first preview, restyled onto the
+   examPremium.css tokens (`.xp`). The markup and behaviour stay ExamTake's;
+   this file only re-skins it. Every selector carries `.xp.xp-take` so it
+   outranks the legacy `.exam-take__*` rules in index.css and ExamTake.css
+   whatever order the lazy chunks load in.
+
+   Anatomy (DIRECTION-EXAMS §4): opaque top bar (close · "Question n sur N" ·
+   navy timer · tonal Remettre) + 4px azure progress; question navigator card
+   at the left; one white question card; answer wells with no borders; an
+   on-demand hint disclosure; tonal Précédente + the screen's one solid
+   Suivante. */
+
+.xp.xp-take { --xp-take-gap: 24px; }
+.xp.xp-take .container { max-width: 1232px; }
+
+/* ── Header: opaque, no glass ────────────────────────────────────────────── */
+.xp.xp-take .exam-take__header {
+  background: var(--background, #F7F9FC);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.xp.xp-take .exam-take__topbar {
+  gap: 16px;
+  min-height: 72px;
+  padding: 12px 16px 12px 12px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--xp-surface);
+  box-shadow: var(--xp-shadow);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.xp.xp-take .exam-take__back,
+.xp.xp-take .exam-take__back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--xp-azure-soft);
+  color: var(--xp-azure-ink);
+  font: 700 15px/1 var(--xp-body);
+  cursor: pointer;
+}
+.xp.xp-take .exam-take__back { width: 44px; padding: 0; }
+.xp.xp-take .exam-take__back:hover,
+.xp.xp-take .exam-take__back-btn:hover { background: var(--xp-azure-soft-hover); color: var(--xp-azure-ink); }
+.xp.xp-take .exam-take__exam-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.xp.xp-take .exam-take__q-of { font: 800 18px/1.2 var(--xp-display); color: var(--xp-ink); white-space: nowrap; }
+.xp.xp-take .exam-take__title-short {
+  overflow: hidden;
+  max-width: 52ch;
+  color: var(--xp-muted);
+  font: 400 15px/1.3 var(--xp-body);
+  letter-spacing: 0;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.xp.xp-take .exam-take__subject { color: var(--xp-azure-ink); font: 700 15px/1.3 var(--xp-body); }
+.xp.xp-take .exam-take__topbar-sep { color: var(--xp-muted); }
+.xp.xp-take .exam-take__topbar-right { display: flex; align-items: center; gap: 12px; }
+.xp.xp-take .exam-take__progress { color: var(--xp-muted); font-size: 15px; }
+.xp.xp-take .exam-take__progress strong { color: var(--xp-ink); }
+.xp.xp-take .exam-take__timer,
+.xp.xp-take .exam-take__timer-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--xp-navy);
+  color: #FFFFFF;
+  font: 800 16px/1 var(--xp-display);
+  font-variant-numeric: tabular-nums;
+}
+[data-theme="dark"] .xp.xp-take .exam-take__timer,
+[data-theme="dark"] .xp.xp-take .exam-take__timer-badge { background: #22324D; }
+.xp.xp-take .exam-take__timer--warning { background: var(--xp-rose); color: var(--xp-rose-ink); }
+
+.xp.xp-take .exam-take__progress-bar {
+  height: 4px;
+  margin: 10px 4px 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--xp-track);
+  box-shadow: none;
+}
+.xp.xp-take .exam-take__progress-fill { border-radius: 999px; background: var(--xp-azure); box-shadow: none; }
+
+.xp.xp-take .exam-take__state-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 10px 4px 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.xp.xp-take .exam-take__state-policy { color: var(--xp-muted); font-size: 15px; }
+.xp.xp-take .exam-take__state-untimed { color: var(--xp-muted); font-size: 15px; }
+.xp.xp-take .exam-take__save {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--xp-well);
+  color: var(--xp-muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+.xp.xp-take .exam-take__save--saved { background: var(--xp-mint); color: var(--xp-mint-ink); }
+.xp.xp-take .exam-take__save--anonymous,
+.xp.xp-take .exam-take__save--uncertain { background: var(--xp-amber); color: var(--xp-amber-ink); }
+.xp.xp-take .exam-take__save--failed { background: var(--xp-rose); color: var(--xp-rose-ink); }
+.xp.xp-take .exam-take__save-retry { border: 0; background: none; color: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
+
+/* ── Body: navigator card + question column ──────────────────────────────── */
+.xp.xp-take .exam-take__body {
+  grid-template-columns: 248px minmax(0, 1fr);
+  gap: var(--xp-take-gap);
+  margin-top: 24px;
+}
+.xp.xp-take .exam-take__nav {
+  top: 132px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--xp-surface);
+  box-shadow: var(--xp-shadow);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.xp.xp-take .exam-take__nav-progress { display: flex; flex-direction: column; gap: 4px; padding: 0; border: 0; background: none; }
+.xp.xp-take .exam-take__nav-progress-title { color: var(--xp-muted); font: 600 15px/1.3 var(--xp-body); }
+.xp.xp-take .exam-take__nav-progress-num { font: 600 18px/1.1 var(--xp-display); color: var(--xp-muted); }
+.xp.xp-take .exam-take__nav-progress-num b { font-size: 32px; font-weight: 800; color: var(--xp-ink); letter-spacing: -0.02em; }
+.xp.xp-take .exam-take__nav-progress-detail { color: var(--xp-muted); font-size: 14px; margin-bottom: 6px; }
+
+.xp.xp-take .exam-take__nav-gap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--xp-amber);
+  color: var(--xp-amber-ink);
+  text-align: left;
+  cursor: pointer;
+}
+.xp.xp-take .exam-take__nav-gap-count {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 32px; height: 32px; border-radius: 10px;
+  background: var(--xp-surface); color: var(--xp-amber-ink);
+  font: 800 15px/1 var(--xp-display);
+}
+.xp.xp-take .exam-take__nav-gap-label { display: flex; flex-direction: column; gap: 2px; font-size: 14px; line-height: 1.3; font-weight: 600; }
+.xp.xp-take .exam-take__nav-gap-label small { font-size: 14px; font-weight: 700; text-decoration: underline; }
+.xp.xp-take .exam-take__nav-complete {
+  display: flex; align-items: center; gap: 8px; margin: 0;
+  padding: 10px 14px; border: 0; border-radius: 14px;
+  background: var(--xp-mint); color: var(--xp-mint-ink); font-size: 14px; font-weight: 600;
+}
+
+.xp.xp-take .exam-take__nav-sections { display: flex; flex-direction: column; gap: 14px; max-height: none; }
+.xp.xp-take .exam-take__nav-section { padding: 0; border: 0; border-radius: 0; background: none; }
+.xp.xp-take .exam-take__nav-section-title {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin: 0 0 8px; padding: 0; border: 0; background: none;
+}
+.xp.xp-take .exam-take__nav-section-name {
+  overflow: hidden; color: var(--xp-muted);
+  font: 600 14px/1.3 var(--xp-body); text-transform: none; letter-spacing: 0;
+  white-space: nowrap; text-overflow: ellipsis;
+}
+.xp.xp-take .exam-take__nav-section-title--current .exam-take__nav-section-name { color: var(--xp-ink); }
+.xp.xp-take .exam-take__nav-section-badge {
+  display: inline-flex; align-items: center; gap: 2px;
+  padding: 2px 8px; border: 0; border-radius: 999px;
+  background: var(--xp-well); color: var(--xp-muted); font-size: 14px; font-weight: 700;
+}
+.xp.xp-take .exam-take__nav-section-badge--done { background: var(--xp-mint); color: var(--xp-mint-ink); }
+.xp.xp-take .exam-take__nav-section-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.xp.xp-take .exam-take__nav-section-grid .exam-take__nav-btn,
+.xp.xp-take .exam-take__nav-btn {
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: var(--xp-well);
+  color: var(--xp-muted);
+  font: 700 14px/1 var(--xp-body);
+  box-shadow: none;
+  transform: none;
+}
+.xp.xp-take .exam-take__nav-section-grid .exam-take__nav-btn:hover,
+.xp.xp-take .exam-take__nav-btn:hover { background: var(--xp-azure-soft-hover); color: var(--xp-azure-ink); transform: none; box-shadow: none; }
+.xp.xp-take .exam-take__nav-section-grid .exam-take__nav-btn--answered,
+.xp.xp-take .exam-take__nav-btn--answered { background: var(--xp-azure-soft); color: var(--xp-azure-ink); }
+.xp.xp-take .exam-take__nav-section-grid .exam-take__nav-btn--correct,
+.xp.xp-take .exam-take__nav-btn--correct { background: var(--xp-mint); color: var(--xp-mint-ink); }
+.xp.xp-take .exam-take__nav-section-grid .exam-take__nav-btn--incorrect,
+.xp.xp-take .exam-take__nav-btn--incorrect { background: var(--xp-rose); color: var(--xp-rose-ink); }
+.xp.xp-take .exam-take__nav-section-grid .exam-take__nav-btn--partial,
+.xp.xp-take .exam-take__nav-btn--partial { background: var(--xp-amber); color: var(--xp-amber-ink); }
+.xp.xp-take .exam-take__nav-section-grid .exam-take__nav-btn--current,
+.xp.xp-take .exam-take__nav-btn--current,
+.xp.xp-take .exam-take__nav-section-grid .exam-take__nav-btn--current:hover,
+.xp.xp-take .exam-take__nav-btn--current:hover { background: var(--xp-ink); color: var(--xp-surface); box-shadow: none; }
+.xp.xp-take .exam-take__nav-btn-check { display: none; }
+
+.xp.xp-take .exam-take__nav-legend { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; color: var(--xp-muted); font-size: 14px; }
+.xp.xp-take .exam-take__nav-legend li { display: flex; align-items: center; gap: 8px; }
+.xp.xp-take .exam-take__nav-legend-key { width: 14px; height: 14px; border: 0; border-radius: 4px; background: var(--xp-well); }
+.xp.xp-take .exam-take__nav-legend-key--current { background: var(--xp-ink); }
+.xp.xp-take .exam-take__nav-legend-key--answered { background: var(--xp-azure-soft); }
+.xp.xp-take .exam-take__nav-legend-key--correct { background: var(--xp-mint); }
+.xp.xp-take .exam-take__nav-legend-key--incorrect { background: var(--xp-rose); }
+
+/* ── Section header & context blocks ─────────────────────────────────────── */
+.xp.xp-take .exam-take__section-header {
+  margin: 0 0 16px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.xp.xp-take .exam-take__section-header-top h3 { font: 800 20px/1.3 var(--xp-display); color: var(--xp-ink); text-transform: none; letter-spacing: 0; }
+.xp.xp-take .exam-take__section-header .instruction-renderer {
+  margin-top: 6px; padding: 0; border: 0; background: none;
+  color: var(--xp-muted); font-size: 16px; line-height: 1.55;
+}
+.xp.xp-take .exam-take__section-toggle { border: 0; border-radius: 10px; background: var(--xp-azure-soft); color: var(--xp-azure-ink); }
+.xp.xp-take .exam-take__subex-header,
+.xp.xp-take .exam-take__word-pool,
+.xp.xp-take .exam-take__temporal-note,
+.xp.xp-take .exam-take__track-banner,
+.xp.xp-take .exam-take__missing-passage {
+  border: 0;
+  border-radius: 14px;
+  background: var(--xp-well);
+  box-shadow: none;
+  color: var(--xp-ink);
+  font-size: 15px;
+}
+.xp.xp-take .exam-take__temporal-note-icon { color: var(--xp-muted); }
+.xp.xp-take .exam-take__reading-passage {
+  border: 0;
+  border-radius: 20px;
+  background: var(--xp-surface);
+  box-shadow: var(--xp-shadow);
+}
+.xp.xp-take .exam-take__group-counter { color: var(--xp-muted); font-size: 15px; }
+
+/* ── The question card ───────────────────────────────────────────────────── */
+.xp.xp-take .exam-take__question-card,
+.xp.xp-take .exam-take__question-card.card {
+  margin-bottom: 16px;
+  padding: 28px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--xp-surface);
+  box-shadow: var(--xp-shadow);
+}
+.xp.xp-take .exam-take__question-header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 0 14px; }
+.xp.xp-take .exam-take__question-number { font: 400 15px/1.2 var(--xp-body); color: var(--xp-muted); }
+.xp.xp-take .exam-take__question-num-label { font: 800 22px/1.2 var(--xp-display); color: var(--xp-ink); }
+.xp.xp-take .exam-take__question-num-total { color: var(--xp-muted); font-size: 15px; }
+.xp.xp-take .exam-take__question-points {
+  padding: 4px 12px; border: 0; border-radius: 999px;
+  background: var(--xp-well); color: var(--xp-muted);
+  font-size: 14px; font-weight: 700;
+}
+.xp.xp-take .exam-take__question-text,
+.xp.xp-take .exam-take__question-text .instruction-renderer,
+.xp.xp-take .exam-take__question-text .instruction-renderer__p {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--xp-ink);
+  font-size: 17px;
+  line-height: 1.65;
+}
+.xp.xp-take .exam-take__answer-area { margin-top: 20px; }
+
+/* Answer controls: wells, no borders; selection is a wash + an ink ring. */
+.xp.xp-take .exam-take__text-input,
+.xp.xp-take .exam-take__short-answer-input,
+.xp.xp-take .exam-take__inline-blank,
+.xp.xp-take .ka-scaffold__text-input,
+.xp.xp-take .ka-step__input,
+.xp.xp-take .ka-proof__answer-input {
+  border: 0;
+  border-radius: 12px;
+  background: var(--xp-well);
+  color: var(--xp-ink);
+  font-size: 16px;
+  box-shadow: none;
+}
+.xp.xp-take .exam-take__text-input { min-height: 56px; padding: 14px 16px; }
+.xp.xp-take .exam-take__text-input::placeholder,
+.xp.xp-take .exam-take__short-answer-input::placeholder { color: var(--xp-muted); }
+.xp.xp-take .exam-take__text-input:focus,
+.xp.xp-take .exam-take__short-answer-input:focus,
+.xp.xp-take .exam-take__inline-blank:focus,
+.xp.xp-take .ka-scaffold__text-input:focus,
+.xp.xp-take .ka-step__input:focus {
+  outline: 0;
+  border: 0;
+  box-shadow: 0 0 0 2px var(--xp-azure);
+}
+.xp.xp-take .exam-take__inline-blank { border-bottom: 0; }
+
+.xp.xp-take .exam-take__mcq-options { gap: 10px; }
+.xp.xp-take .exam-take__mcq-option,
+.xp.xp-take .exam-take__tf-option {
+  align-items: center;
+  min-height: 56px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--xp-well);
+  color: var(--xp-ink);
+  box-shadow: none;
+}
+.xp.xp-take .exam-take__mcq-option:hover,
+.xp.xp-take .exam-take__tf-option:hover { background: var(--xp-azure-soft); }
+.xp.xp-take .exam-take__mcq-option--selected,
+.xp.xp-take .exam-take__tf-option--selected {
+  background: var(--xp-azure-soft);
+  box-shadow: inset 0 0 0 2px var(--xp-azure);
+}
+.xp.xp-take .exam-take__mcq-key {
+  width: 32px; height: 32px; border-radius: 10px;
+  background: var(--xp-surface); color: var(--xp-azure-ink);
+  font: 800 14px/1 var(--xp-display);
+}
+.xp.xp-take .exam-take__mcq-text { color: var(--xp-ink); font-size: 16px; }
+.xp.xp-take .exam-take__multi-hint { color: var(--xp-muted); font-size: 14px; font-style: normal; }
+
+/* ── Action row: on-demand hint + check ──────────────────────────────────── */
+.xp.xp-take .exam-take__action-row {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  margin-top: 20px;
+  padding: 0;
+  border: 0;
+}
+.xp.xp-take .exam-take__action-row:empty { display: none; }
+.xp.xp-take .qa-hints { display: block; margin: 0; }
+.xp.xp-take .qa-hints__btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--xp-azure-soft);
+  color: var(--xp-ink);
+  font: 400 15px/1.35 var(--xp-body);
+  text-align: left;
+  box-shadow: none;
+  cursor: pointer;
+}
+.xp.xp-take .qa-hints__btn svg { flex: 0 0 auto; color: var(--xp-azure-ink); }
+.xp.xp-take .qa-hints__btn strong { color: var(--xp-azure-ink); font-weight: 700; }
+.xp.xp-take .qa-hints__btn:hover { background: var(--xp-azure-soft-hover); }
+.xp.xp-take .qa-hints__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--xp-azure-soft);
+}
+.xp.xp-take .qa-hints__item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--xp-surface);
+  animation: none;
+}
+.xp.xp-take .qa-hints__counter { color: var(--xp-muted); font: 600 14px/1.2 var(--xp-body); }
+.xp.xp-take .qa-hints__text { color: var(--xp-ink); font-size: 15px; line-height: 1.55; background: none; padding: 0; }
+.xp.xp-take .qa-hints__actions { display: flex; gap: 20px; }
+.xp.xp-take .qa-hints__hide { color: var(--xp-muted); }
+
+.xp.xp-take .exam-take__check-answer { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.xp.xp-take .exam-take__check-btn {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--xp-azure-soft);
+  color: var(--xp-azure-ink);
+  font: 700 15px/1 var(--xp-body);
+  box-shadow: none;
+  cursor: pointer;
+}
+.xp.xp-take .exam-take__check-btn:disabled { opacity: 0.55; cursor: default; }
+.xp.xp-take .exam-take__check-hint { color: var(--xp-muted); font-size: 14px; }
+.xp.xp-take .exam-take__locked-note {
+  display: flex; align-items: center; gap: 8px; margin: 14px 0 0;
+  color: var(--xp-muted); font-size: 14px;
+}
+
+/* Immediate feedback: a wash, never a coloured edge. */
+.xp.xp-take .exam-take__feedback {
+  margin-top: 16px;
+  border: 0;
+  border-left: 0;
+  border-radius: 14px;
+  background: var(--xp-well);
+  box-shadow: none;
+}
+.xp.xp-take .exam-take__feedback--correct { background: var(--xp-mint); }
+.xp.xp-take .exam-take__feedback--incorrect { background: var(--xp-rose); }
+.xp.xp-take .exam-take__feedback--partial { background: var(--xp-amber); }
+.xp.xp-take .exam-take__feedback-banner { border: 0; background: none; color: var(--xp-ink); font-size: 15px; }
+.xp.xp-take .exam-take__feedback--correct .exam-take__feedback-label { color: var(--xp-mint-ink); }
+.xp.xp-take .exam-take__feedback--incorrect .exam-take__feedback-label { color: var(--xp-rose-ink); }
+
+/* ── Bottom navigation ───────────────────────────────────────────────────── */
+.xp.xp-take .exam-take__question-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.xp.xp-take .exam-take__question-nav .xp-btn { min-width: 160px; }
+
+/* ── Modals ──────────────────────────────────────────────────────────────── */
+.xp.xp-take .exam-take__overlay { background: rgba(11, 27, 51, 0.48); backdrop-filter: none; -webkit-backdrop-filter: none; }
+.xp.xp-take .exam-take__modal,
+.xp.xp-take .exam-take__modal.card {
+  padding: 28px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--xp-surface);
+  box-shadow: 0 24px 48px rgba(11, 27, 51, 0.2);
+  color: var(--xp-ink);
+}
+.xp.xp-take .exam-take__modal h3 { font: 800 22px/1.25 var(--xp-display); color: var(--xp-ink); }
+.xp.xp-take .exam-take__modal p { color: var(--xp-muted); font-size: 16px; line-height: 1.5; }
+.xp.xp-take .exam-take__modal-warning { color: var(--xp-amber-ink); background: none; border: 0; }
+.xp.xp-take .exam-take__modal-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; }
+.xp.xp-take .exam-take__modal-jump-title { color: var(--xp-muted); font-size: 14px; }
+.xp.xp-take .exam-take__modal-jump-buttons .button {
+  min-height: 36px; border: 0; border-radius: 10px;
+  background: var(--xp-well); color: var(--xp-ink); font-size: 14px; box-shadow: none;
+}
+.xp.xp-take .exam-take__passage-panel { background: var(--xp-surface); border: 0; }
+
+/* ── Read-first preview (former cover) ───────────────────────────────────── */
+.xp.xp-take .exam-take__topbar--preview { margin-bottom: 20px; }
+.xp.xp-take .exam-take__topbar-center { display: flex; align-items: center; gap: 8px; min-width: 0; overflow: hidden; }
+.xp.xp-take .exam-take__topbar-center .exam-take__title-short { color: var(--xp-ink); font-weight: 700; }
+.xp.xp-take .exam-take__preview-scroll,
+.xp.xp-take .exam-take__preview-scroll.card {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 32px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--xp-surface);
+  box-shadow: var(--xp-shadow);
+}
+.xp.xp-take .exam-cover__hero { text-align: left; padding: 0; border: 0; background: none; }
+.xp.xp-take .exam-cover__badge {
+  display: inline-flex; padding: 4px 12px; border-radius: 999px;
+  background: var(--xp-azure-soft); color: var(--xp-azure-ink);
+  font: 700 14px/1.2 var(--xp-body); text-transform: none; letter-spacing: 0;
+}
+.xp.xp-take .exam-cover__title { margin: 12px 0 4px; font: 800 28px/1.2 var(--xp-display); color: var(--xp-ink); text-align: left; }
+.xp.xp-take .exam-cover__year { color: var(--xp-muted); font-size: 15px; text-align: left; }
+.xp.xp-take .exam-cover__stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px; margin-top: 20px; }
+.xp.xp-take .exam-cover__stat { padding: 16px; border: 0; border-radius: 14px; background: var(--xp-well); box-shadow: none; text-align: left; }
+.xp.xp-take .exam-cover__stat-value { font: 800 26px/1 var(--xp-display); color: var(--xp-ink); }
+.xp.xp-take .exam-cover__stat-label { margin-top: 4px; color: var(--xp-muted); font-size: 14px; text-transform: none; letter-spacing: 0; }
+.xp.xp-take .exam-cover__body > .exam-cover__panel,
+.xp.xp-take .exam-cover__panel,
+.xp.xp-take .exam-cover__feedback-mode { margin-top: 20px; padding: 0; border: 0; background: none; box-shadow: none; }
+.xp.xp-take .exam-cover__panel-heading {
+  display: flex; align-items: center; gap: 8px; margin: 0 0 12px;
+  font: 800 18px/1.3 var(--xp-display); color: var(--xp-ink);
+  text-transform: none; letter-spacing: 0;
+}
+.xp.xp-take .exam-cover__panel-heading svg { color: var(--xp-azure-ink); }
+.xp.xp-take .exam-cover__section-list { display: flex; flex-direction: column; gap: 8px; }
+.xp.xp-take .exam-cover__section-row {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+  border: 0; border-radius: 12px; background: var(--xp-well); font-size: 15px;
+}
+.xp.xp-take .exam-cover__section-dot { display: none; }
+.xp.xp-take .exam-cover__section-qty {
+  margin-left: auto; padding: 2px 10px; border-radius: 999px;
+  background: var(--xp-surface); color: var(--xp-muted); font-size: 14px; font-weight: 700;
+}
+.xp.xp-take .exam-cover__rule-item { color: var(--xp-muted); font-size: 15px; }
+.xp.xp-take .exam-cover__feedback-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.xp.xp-take .exam-cover__feedback-option {
+  padding: 16px; border: 0; border-radius: 14px; background: var(--xp-well); box-shadow: none; cursor: pointer;
+}
+.xp.xp-take .exam-cover__feedback-option--selected { background: var(--xp-azure-soft); box-shadow: inset 0 0 0 2px var(--xp-azure); }
+.xp.xp-take .exam-cover__feedback-content strong { color: var(--xp-ink); font-size: 16px; }
+.xp.xp-take .exam-cover__feedback-content p { color: var(--xp-muted); font-size: 14px; line-height: 1.45; }
+.xp.xp-take .exam-take__preview-hint { color: var(--xp-muted); font-size: 15px; }
+.xp.xp-take .exam-take__preview-section-header { border: 0; background: none; }
+.xp.xp-take .exam-take__preview-section-instructions,
+.xp.xp-take .exam-take__preview-passage { border: 0; border-radius: 14px; background: var(--xp-well); }
+.xp.xp-take .exam-take__preview-question { border: 0; }
+.xp.xp-take .exam-take__preview-question-number { color: var(--xp-azure-ink); font-weight: 800; }
+.xp.xp-take .exam-take__preview-question-points { color: var(--xp-muted); font-size: 14px; }
+.xp.xp-take .exam-take__preview-cta { border-top: 0; padding-top: 24px; text-align: center; }
+.xp.xp-take .exam-take__preview-cta-hint { color: var(--xp-muted); font-size: 15px; }
+
+/* ── Phone ───────────────────────────────────────────────────────────────── */
+@media (max-width: 1023px) {
+  .xp.xp-take .exam-take__body { grid-template-columns: minmax(0, 1fr); }
+  .xp.xp-take .exam-take__nav { position: static; order: 2; }
+}
+@media (max-width: 640px) {
+  .xp.xp-take .exam-take__topbar { flex-wrap: nowrap; min-height: 64px; padding: 10px; gap: 10px; border-radius: 0 0 18px 18px; }
+  .xp.xp-take .exam-take__progress { display: none; }
+  .xp.xp-take .exam-take__q-of { font-size: 16px; }
+  .xp.xp-take .exam-take__title-short { max-width: 40vw; font-size: 14px; }
+  .xp.xp-take .exam-take__timer { min-height: 36px; padding: 0 10px; font-size: 14px; }
+  .xp.xp-take .exam-take__timer svg { display: none; }
+  .xp.xp-take .exam-take__topbar-right { gap: 8px; }
+  .xp.xp-take .exam-take__topbar-right .xp-btn--sm { padding: 0 12px; min-height: 36px; font-size: 14px; }
+  .xp.xp-take .exam-take__question-card,
+  .xp.xp-take .exam-take__question-card.card { padding: 20px; }
+  .xp.xp-take .exam-take__question-text,
+  .xp.xp-take .exam-take__question-text .instruction-renderer,
+  .xp.xp-take .exam-take__question-text .instruction-renderer__p { font-size: 16px; }
+  .xp.xp-take .exam-take__question-nav .xp-btn { flex: 1; min-width: 0; }
+  .xp.xp-take .exam-take__preview-scroll,
+  .xp.xp-take .exam-take__preview-scroll.card { padding: 20px; }
+  .xp.xp-take .exam-take__nav-section-grid { grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xp.xp-take .qa-hints__item { animation: none; }
+}
+
+/* Corrections found in the first rendered pass. */
+.xp.xp-take .exam-take__nav-progress { align-items: flex-start; text-align: left; }
+.xp.xp-take .exam-take__nav-legend { padding-top: 0; border-top: 0; }
+.xp.xp-take .exam-take__section-header .instruction-renderer,
+.xp.xp-take .exam-take__section-header .instruction-renderer__p,
+.xp.xp-take .exam-take__section-header p { font-weight: 400; }
+.xp.xp-take .exam-take__preview-hint { margin-top: 24px; }
+.xp.xp-take .exam-cover__hero, .xp.xp-take .exam-cover__stat, .xp.xp-take .exam-cover__section-row { box-shadow: none; }
+.xp.xp-take .exam-take__nav-gap-label,
+.xp.xp-take .exam-take__nav-gap-label small { color: var(--xp-amber-ink); }
+.xp.xp-take .exam-take__modal-jump-more { color: var(--xp-muted); font-size: 14px; }

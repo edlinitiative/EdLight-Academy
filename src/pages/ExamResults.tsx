@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import './ExamResults.css';
+import './examPremium.css';
+import './examResultsPremium.css';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { BookOpen, BarChart3, Clock, Lightbulb, RefreshCw, PenLine, Target, Check, X, Eye } from '../components/icons';
+import { BookOpen, BarChart3, Clock, Lightbulb, RefreshCw, PenLine, Target, Check, X, Eye, ChevronLeft } from '../components/icons';
 import useStore from '../contexts/store';
 import FigureRenderer from '../components/FigureRenderer';
 import InstructionRenderer from '../components/InstructionRenderer';
@@ -554,7 +556,7 @@ const ExamResults = () => {
     : null;
 
   return (
-    <section className="section exam-results">
+    <section className="section exam-results xp xp-res">
       <div className="container">
         {/*
           S11: the paper is the title, its status sits under it, and the score
@@ -562,8 +564,8 @@ const ExamResults = () => {
           adjective. The tally and the caveats below carry the nuance.
         */}
         <header className="exam-results__head">
-          <button className="exam-results__back" onClick={() => navigate(`/exams/${level || ''}`)} type="button">
-            ← {t('Examens', 'Egzamen')}
+          <button className="xp-back" onClick={() => navigate(`/exams/${level || ''}`)} type="button">
+            <ChevronLeft size={16} aria-hidden /> {t('Examens', 'Egzamen')}
           </button>
           <p className="exam-results__context">
             {[subject, storedLevel].filter(Boolean).join(' · ')}
@@ -595,30 +597,31 @@ const ExamResults = () => {
           <p className="exam-results__points-label">
             {t(`points obtenus sur cette épreuve · ${pct} %`, `pwen ou genyen nan eprèv sa a · ${pct} %`)}
           </p>
+          <div className="xp-bar xp-bar--8 exam-results__bar" aria-hidden="true"><span style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} /></div>
 
           <ul className="exam-results__tally" aria-label={t('Détail des réponses', 'Detay repons yo')}>
-            <li className="exam-results__tally-item exam-results__tally-item--right">
+            <li className="exam-results__tally-item exam-results__tally-item--right xp-pill xp-pill--mint">
               <Check size={15} aria-hidden />
               <strong>{tally.right}</strong> {t('juste', 'kòrèk')}{tally.right !== 1 ? t('s', '') : ''}
             </li>
             {tally.partial > 0 && (
-              <li className="exam-results__tally-item exam-results__tally-item--partial">
+              <li className="exam-results__tally-item exam-results__tally-item--partial xp-pill xp-pill--amber">
                 <span aria-hidden>◐</span>
                 <strong>{tally.partial}</strong> {t('partielle', 'pasyèl')}{tally.partial !== 1 ? t('s', '') : ''}
               </li>
             )}
-            <li className="exam-results__tally-item exam-results__tally-item--wrong">
+            <li className="exam-results__tally-item exam-results__tally-item--wrong xp-pill xp-pill--rose">
               <X size={15} aria-hidden />
               <strong>{tally.wrong}</strong> {t('fausse', 'fo')}{tally.wrong !== 1 ? t('s', '') : ''}
             </li>
             {tally.blank > 0 && (
-              <li className="exam-results__tally-item">
+              <li className="exam-results__tally-item xp-pill xp-pill--well">
                 <span aria-hidden>—</span>
                 <strong>{tally.blank}</strong> {t('sans réponse', 'san repons')}
               </li>
             )}
             {tally.pending > 0 && (
-              <li className="exam-results__tally-item exam-results__tally-item--pending">
+              <li className="exam-results__tally-item exam-results__tally-item--pending xp-pill">
                 <Eye size={15} aria-hidden />
                 <strong>{tally.pending}</strong> {t('à corriger', 'pou korije')}
               </li>
@@ -638,7 +641,7 @@ const ExamResults = () => {
           {summary.coefficient && summary.coefficient > 1 && trackInfo && (
             <p className="exam-results__weighted-line">
               <BarChart3 size={14} aria-hidden />
-              {t('Filière', 'Filyè')} {trackInfo.icon} {trackInfo.shortLabel} · {t('coefficient', 'koyefisyan')}{' '}
+              {t('Filière', 'Filyè')} {trackInfo.shortLabel} · {t('coefficient', 'koyefisyan')}{' '}
               <span className="exam-results__coeff-badge">×{summary.coefficient}</span>{' '}
               <span className="exam-results__weighted-value">
                 {summary.weightedEarned} / {summary.weightedTotal} {t('points pondérés', 'pwen pondere')}
@@ -740,7 +743,7 @@ const ExamResults = () => {
         component — it was pasted into GroupScoreBar once and cost 18 type
         errors.
       */}
-      <div className="exam-results__next" style={{ '--next-accent': color } as React.CSSProperties}>
+      <div className="exam-results__next">
         <div className="exam-results__next-head">
           <div className="exam-results__next-copy">
             <h2 className="exam-results__next-title">{t('Et maintenant', 'E kounye a')}&nbsp;?</h2>
@@ -780,37 +783,37 @@ const ExamResults = () => {
         <div className="exam-results__next-actions">
           {reviewCount > 0 ? (
             <>
-              <button className="button button--primary" onClick={() => setPracticeOpen(true)} type="button">
+              <button className="xp-btn" onClick={() => setPracticeOpen(true)} type="button">
                 <Target size={16} aria-hidden />{' '}
                 {isCreole
                   ? `Refè ${reviewCount} kesyon sa yo`
                   : `Reprendre ces ${reviewCount} question${reviewCount !== 1 ? 's' : ''}`}
               </button>
-              <button className="button button--ghost" onClick={focusOnMistakes} type="button">
+              <button className="xp-btn xp-btn--tonal" onClick={focusOnMistakes} type="button">
                 <Eye size={16} aria-hidden /> {t('Voir la correction', 'Wè koreksyon an')}
               </button>
             </>
           ) : offerDueReview ? (
             <>
               {/* Labelled by source: these are exercise mistakes, not exam ones. */}
-              <button className="button button--primary" onClick={() => navigate('/revision')} type="button">
+              <button className="xp-btn" onClick={() => navigate('/revision')} type="button">
                 <Target size={16} aria-hidden />{' '}
                 {isCreole
                   ? `Revize ${dueCount} erè egzèsis`
                   : `Revoir ${dueCount} erreur${dueCount !== 1 ? 's' : ''} d’exercices`}
               </button>
-              <button className="button button--ghost" onClick={() => navigate(studyTarget)} type="button">
+              <button className="xp-btn xp-btn--tonal" onClick={() => navigate(studyTarget)} type="button">
                 {courseCode ? t(`S'entraîner en ${subject}`, `Antrene nan ${subject}`) : t('Réviser cette matière', 'Revize matyè sa a')}
               </button>
             </>
           ) : (
-            <button className="button button--primary" onClick={() => navigate(studyTarget)} type="button">
+            <button className="xp-btn" onClick={() => navigate(studyTarget)} type="button">
               <Target size={16} aria-hidden />{' '}
               {courseCode ? t(`S'entraîner en ${subject}`, `Antrene nan ${subject}`) : t('Réviser cette matière', 'Revize matyè sa a')}
             </button>
           )}
           {showsReadiness && (
-            <button className="button button--ghost" onClick={() => navigate(readinessTarget)} type="button">
+            <button className="xp-btn xp-btn--tonal" onClick={() => navigate(readinessTarget)} type="button">
               <BarChart3 size={16} aria-hidden /> {t('Voir ma préparation au Bac', 'Wè preparasyon Bak mwen')}
             </button>
           )}
@@ -830,7 +833,7 @@ const ExamResults = () => {
       <div className="exam-results__details">
         <div className="exam-results__details-head">
           <h2 className="exam-results__details-title">{t('Détails par question', 'Detay dapre kesyon')}</h2>
-          <div className="exam-results__filter-chips" role="tablist" aria-label={t('Filtrer les questions', 'Filtre kesyon yo')}>
+          <div className="exam-results__filter-chips xp-seg" role="tablist" aria-label={t('Filtrer les questions', 'Filtre kesyon yo')}>
             <button
               type="button"
               role="tab"
@@ -979,13 +982,13 @@ const ExamResults = () => {
       */}
       <div className="exam-results__actions">
         <button
-          className="button button--secondary"
+          className="xp-btn xp-btn--tonal"
           onClick={() => navigate(`/exams/${level}/${examId}/take`, { state: { autostart: true } })}
           type="button"
         >
           <RefreshCw size={16} aria-hidden /> {t('Refaire cet examen', 'Refè egzamen sa a')}
         </button>
-        <button className="button button--ghost" onClick={() => navigate(`/exams/${level || ''}`)} type="button">
+        <button className="xp-btn xp-btn--tonal" onClick={() => navigate(`/exams/${level || ''}`)} type="button">
           <PenLine size={16} aria-hidden /> {t('Choisir un autre examen', 'Chwazi yon lòt egzamen')}
         </button>
       </div>

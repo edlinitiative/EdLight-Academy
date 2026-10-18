@@ -1,18 +1,16 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { History, ChevronRight, PlayCircle, Target, ArrowRight, Lightbulb } from '../components/icons';
+import { ChevronRight, Target } from '../components/icons';
 import useStore from '../contexts/store';
 import { useExamAttempts } from '../hooks/useExamAttempts';
 import { listRecentExamAttempts } from '../services/userActivity';
 import { loadDueReviewIds } from '../services/reviewService';
 import { normalizeExamCatalog } from '../utils/examCatalog';
-import { subjectColor, examDisplayTitle } from '../utils/examUtils';
+import { examDisplayTitle } from '../utils/examUtils';
 import { LEVEL_SLUG_LABELS, levelToSlug } from '../utils/examLevels';
-import { EmptyState } from '../components/StateViews';
 import { Skeleton } from '../components/Skeleton';
-import './ExamOverview.css'; // shared .exam-overview__crumbs
-import './ExamHistory.css';
+import './examPremium.css';
 
 /**
  * ExamHistory — /exams/resultats ("Mes résultats")
@@ -175,7 +173,6 @@ export default function ExamHistory() {
       subject: exam._subject || exam.subject || '',
       year: exam.year || '',
       levelLabel: LEVEL_SLUG_LABELS[slug]?.[ht ? 'ht' : 'fr'] || slug,
-      color: subjectColor(exam._subject),
     };
   };
 
@@ -226,10 +223,17 @@ export default function ExamHistory() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [catalog, byKey, attempts, ht]);
 
-  const scoreTone = (pct: number | null) =>
-    pct == null ? '' : pct >= 60 ? 'good' : pct >= 40 ? 'mid' : 'low';
+  const leadTone = (pct: number | null) =>
+    pct == null ? 'well' : pct >= 60 ? 'mint' : pct >= 40 ? 'amber' : 'rose';
 
-  const [latest, ...older] = rows;
+  const [sortBy, setSortBy] = useState<'recent' | 'best'>('recent');
+  const sorted = useMemo(
+    () => (sortBy === 'best'
+      ? [...rows].sort((a: any, b: any) => (b.percentage ?? -1) - (a.percentage ?? -1))
+      : rows),
+    [rows, sortBy],
+  );
+  const latest = rows[0];
   const dueCount = dueIds.length;
   const hasAnything = drafts.length > 0 || rows.length > 0;
 
@@ -237,92 +241,70 @@ export default function ExamHistory() {
   const frS = (n: number) => (n > 1 ? 's' : '');
 
   return (
-    <div className="section exam-history">
-      <div className="container exam-history__container">
-        <nav className="exam-overview__crumbs" aria-label={L('Fil d’Ariane', 'Chemen')}>
-          <Link to="/exams">{L('Examens', 'Egzamen')}</Link>
-          <span aria-hidden>›</span>
-          <span>{L('Mes résultats', 'Rezilta mwen')}</span>
-        </nav>
-
-        <header className="exam-history__head">
-          <h1>{L('Mes résultats', 'Rezilta mwen')}</h1>
-          <p className="exam-history__lede">
-            {L(
-              'Ce que vous avez commencé, ce que vous avez terminé, et par quoi continuer.',
-              'Sa ou kòmanse, sa ou fini, ak sa pou kontinye.',
-            )}
-          </p>
-          {rows.length > 0 && (
-            <p className="exam-history__count">
-              {L(
-                `${rows.length} examen${frS(rows.length)} corrigé${frS(rows.length)}`,
-                `${rows.length} egzamen korije`,
-              )}
-              {latest?.submittedAtMs
-                ? ` · ${L('dernière correction le', 'dènye koreksyon an')} ${formatDate(latest.submittedAtMs)}`
-                : ''}
+    <div className="xp">
+      <div className="xp-page xp-page--narrow">
+        <header className="xp-head">
+          <div>
+            <nav className="xp-crumbs" aria-label={L('Fil d’Ariane', 'Chemen')}>
+              <Link to="/exams">{L('Examens', 'Egzamen')}</Link>
+              <span aria-hidden>›</span>
+              <span aria-current="page">{L('Mes résultats', 'Rezilta mwen')}</span>
+            </nav>
+            <h1 className="xp-title">{L('Mes résultats', 'Rezilta mwen')}</h1>
+            <p className="xp-lede">
+              {rows.length > 0
+                ? <>
+                    {L(`${rows.length} examen${frS(rows.length)} corrigé${frS(rows.length)}`, `${rows.length} egzamen korije`)}
+                    {latest?.submittedAtMs ? ` · ${L('dernière correction le', 'dènye koreksyon an')} ${formatDate(latest.submittedAtMs)}` : ''}
+                  </>
+                : L('Tes épreuves commencées et corrigées.', 'Egzamen ou kòmanse ak sa ki korije yo.')}
             </p>
-          )}
+          </div>
         </header>
 
-        {/* 1. Unfinished first — the most actionable thing on the page. */}
+        {/* 1. Unfinished first — the most actionable thing on the page, and
+            where the page's one solid button lives. */}
         {drafts.length > 0 && (
-          <section className="exam-history__block" aria-labelledby="exam-history-resume">
-            <div className="exam-history__block-head">
-              <h2 id="exam-history-resume" className="exam-history__block-title">
-                <PlayCircle size={18} aria-hidden />
-                {L('Examens commencés', 'Egzamen ou kòmanse')}
-              </h2>
-              {/*
-                This note said "saved on this device" back when the list read
-                localStorage only. It now merges the account's Firestore
-                attempts too, so it has to tell the truth for whichever
-                sources the visitor actually has (§8, offline/cached: name
-                what is available).
-              */}
-              <p className="exam-history__block-note">
+          <section className="xp-section" aria-labelledby="xp-h-resume">
+            <div className="xp-section__head">
+              <h2 id="xp-h-resume" className="xp-h2">{L('En cours', 'Ap fèt')}</h2>
+              {/* Names the sources the visitor actually has. */}
+              <span className="xp-meta">
                 {isAuthenticated
-                  ? L(
-                      'Enregistrés sur votre compte et sur cet appareil. Reprenez là où vous vous êtes arrêté.',
-                      'Anrejistre sou kont ou ak sou aparèy sa a. Kontinye kote ou te rete a.',
-                    )
-                  : L(
-                      'Enregistrés sur cet appareil uniquement. Reprenez là où vous vous êtes arrêté.',
-                      'Anrejistre sou aparèy sa a sèlman. Kontinye kote ou te rete a.',
-                    )}
-              </p>
+                  ? L('Enregistrés sur ton compte et cet appareil', 'Anrejistre sou kont ou ak aparèy sa a')
+                  : L('Enregistrés sur cet appareil seulement', 'Anrejistre sou aparèy sa a sèlman')}
+              </span>
             </div>
-
-            <ul className="exam-history__resume-list">
-              {drafts.map((d) => {
+            <ul className="xp-rows">
+              {drafts.map((d, i) => {
                 const date = formatDate(d.updatedAtMs);
                 return (
-                  <li key={d.examKey} className="exam-history__resume">
-                    <span className="exam-history__resume-bar" style={{ background: d.color }} aria-hidden />
-                    <div className="exam-history__resume-body">
-                      <span className="exam-history__title">{d.title}</span>
-                      <span className="exam-history__meta">
-                        {[d.subject, d.levelLabel, d.year].filter(Boolean).join(' · ')}
+                  <li key={d.examKey}>
+                    <div className="xp-row">
+                      <span className="xp-row__body">
+                        <span className="xp-row__title">{d.title}</span>
+                        <span className="xp-row__meta">
+                          {[
+                            d.subject,
+                            d.year,
+                            d.answered > 0
+                              ? L(`${d.answered} réponse${frS(d.answered)} enregistrée${frS(d.answered)}`, `${d.answered} repons anrejistre`)
+                              : L('aucune réponse encore', 'poko gen repons'),
+                            date,
+                          ].filter(Boolean).join(' · ')}
+                        </span>
                       </span>
-                      <span className="exam-history__resume-progress">
-                        {d.answered > 0
-                          ? L(
-                              `${d.answered} réponse${frS(d.answered)} enregistrée${frS(d.answered)}`,
-                              `${d.answered} repons anrejistre`,
-                            )
-                          : L('Commencé, aucune réponse encore', 'Kòmanse, poko gen repons')}
-                        {date ? ` · ${date}` : ''}
+                      <span className="xp-row__end">
+                        <Link
+                          className={`xp-btn xp-btn--sm${i === 0 ? '' : ' xp-btn--tonal'}`}
+                          to={`/exams/${d.slug}/${d.examKey}`}
+                          aria-label={L(`Reprendre : ${d.title}`, `Kontinye : ${d.title}`)}
+                          style={{ display: 'inline-flex' }}
+                        >
+                          {L('Reprendre', 'Kontinye')}
+                        </Link>
                       </span>
                     </div>
-                    <Link
-                      className="button button--primary button--sm"
-                      to={`/exams/${d.slug}/${d.examKey}`}
-                      aria-label={L(`Reprendre : ${d.title}`, `Kontinye : ${d.title}`)}
-                    >
-                      {L('Reprendre', 'Kontinye')}
-                      <ArrowRight size={15} aria-hidden />
-                    </Link>
                   </li>
                 );
               })}
@@ -330,200 +312,115 @@ export default function ExamHistory() {
           </section>
         )}
 
-        {/* 2. Corrected exams — most recent featured, the rest compact. */}
-        <section className="exam-history__block" aria-labelledby="exam-history-graded">
-          <div className="exam-history__block-head">
-            <h2 id="exam-history-graded" className="exam-history__block-title">
-              <History size={18} aria-hidden />
-              {L('Examens corrigés', 'Egzamen korije')}
-            </h2>
+        {/* 2. Corrected exams, each led by its score. */}
+        <section className="xp-section" aria-labelledby="xp-h-graded">
+          <div className="xp-section__head">
+            <h2 id="xp-h-graded" className="xp-h2">{L('Corrigés', 'Korije')}</h2>
+            {rows.length > 1 && (
+              <div className="xp-seg" role="group" aria-label={L('Trier', 'Klase')} style={{ width: 'auto' }}>
+                <button type="button" aria-pressed={sortBy === 'recent'} onClick={() => setSortBy('recent')}>{L('Récents', 'Resan')}</button>
+                <button type="button" aria-pressed={sortBy === 'best'} onClick={() => setSortBy('best')}>{L('Meilleurs', 'Pi bon')}</button>
+              </div>
+            )}
           </div>
 
           {isPending ? (
-            <div aria-busy="true" className="exam-history__list">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} width="100%" height={72} radius={16} />
-              ))}
+            <div aria-busy="true" className="xp-skel">
+              {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} width="100%" height={84} radius={18} />)}
             </div>
           ) : isError ? (
-            /*
-             * Every row on this page is built by joining a stored result to the
-             * exam catalog index. When that index cannot be fetched there is
-             * nothing to join against, and the page used to answer with
-             * "Aucun résultat pour le moment" — telling a student their work
-             * was gone because a JSON file had not downloaded. §8: an error
-             * says what happened, in plain language, and offers a retry.
-             */
-            <EmptyState
-              icon={<History size={28} strokeWidth={1.75} aria-hidden />}
-              title={L('Liste des examens indisponible', 'Lis egzamen yo pa disponib')}
-              message={L(
-                'Vos résultats sont enregistrés, mais la liste des examens n’a pas pu être chargée — souvent une connexion coupée. Réessayez.',
-                'Rezilta ou yo anrejistre, men lis egzamen yo pa t ka chaje — anpil fwa se koneksyon an. Eseye ankò.',
-              )}
-              action={{ label: L('Réessayer', 'Eseye ankò'), onClick: () => { void refetch(); } }}
-              secondaryAction={{ label: L('Choisir un examen', 'Chwazi yon egzamen'), onClick: () => navigate('/exams') }}
-            />
+            /* Every row joins a stored result to the catalog index. When the
+               index cannot be fetched, say so — never "aucun résultat". */
+            <div className="xp-empty">
+              <h3>{L('Liste des examens indisponible', 'Lis egzamen yo pa disponib')}</h3>
+              <p>{L('Tes résultats sont enregistrés, mais la liste des examens n’a pas pu être chargée, souvent une connexion coupée. Réessaie.',
+                'Rezilta ou yo anrejistre, men lis egzamen yo pa t ka chaje, anpil fwa se koneksyon an. Eseye ankò.')}</p>
+              <div className="xp-empty__actions">
+                <button type="button" className="xp-btn" onClick={() => { void refetch(); }}>{L('Réessayer', 'Eseye ankò')}</button>
+                <button type="button" className="xp-btn xp-btn--tonal" onClick={() => navigate('/exams')}>{L('Choisir un examen', 'Chwazi yon egzamen')}</button>
+              </div>
+            </div>
           ) : rows.length === 0 ? (
-            <EmptyState
-              icon={<History size={28} strokeWidth={1.75} aria-hidden />}
-              title={L('Aucun résultat pour le moment', 'Poko gen rezilta')}
-              message={
-                isAuthenticated
-                  ? L(
-                      'Passez votre premier examen blanc : sa correction détaillée et vos points faibles apparaîtront ici.',
-                      'Fè premye egzamen blan ou : koreksyon detaye a ak pwen fèb ou yo ap parèt isit la.',
-                    )
-                  : L(
-                      'Vos résultats restent sur cet appareil tant que vous n’êtes pas connecté. Connectez-vous pour les retrouver partout.',
-                      'Rezilta ou yo rete sou aparèy sa a toutotan ou pa konekte. Konekte pou jwenn yo tout kote.',
-                    )
-              }
-              action={
-                isAuthenticated
-                  ? { label: L('Choisir un examen', 'Chwazi yon egzamen'), onClick: () => navigate('/exams') }
-                  : { label: L('Se connecter', 'Konekte'), onClick: () => toggleAuthModal() }
-              }
-              secondaryAction={
-                isAuthenticated
-                  ? undefined
-                  : { label: L('Choisir un examen', 'Chwazi yon egzamen'), onClick: () => navigate('/exams') }
-              }
-            />
+            <div className="xp-empty">
+              <h3>{L('Aucun résultat pour le moment', 'Poko gen rezilta')}</h3>
+              <p>
+                {isAuthenticated
+                  ? L('Passe ton premier examen blanc : sa correction détaillée apparaîtra ici.', 'Fè premye egzamen blan ou : koreksyon detaye a ap parèt isit la.')
+                  : L('Tes résultats restent sur cet appareil tant que tu n’es pas connecté. Connecte-toi pour les retrouver partout.',
+                    'Rezilta ou yo rete sou aparèy sa a toutotan ou pa konekte. Konekte pou jwenn yo tout kote.')}
+              </p>
+              <div className="xp-empty__actions">
+                {isAuthenticated || drafts.length > 0 ? (
+                  <button type="button" className={`xp-btn${drafts.length > 0 ? ' xp-btn--tonal' : ''}`} onClick={() => navigate('/exams')}>{L('Choisir un examen', 'Chwazi yon egzamen')}</button>
+                ) : (
+                  <>
+                    <button type="button" className="xp-btn" onClick={() => toggleAuthModal()}>{L('Se connecter', 'Konekte')}</button>
+                    <button type="button" className="xp-btn xp-btn--tonal" onClick={() => navigate('/exams')}>{L('Choisir un examen', 'Chwazi yon egzamen')}</button>
+                  </>
+                )}
+              </div>
+            </div>
           ) : (
-            <>
-              {latest && (
-                /*
-                  No tone modifier on the surface itself: the score value is
-                  already coloured and labelled, and a second tinted surface
-                  would be the same state said twice (§7 wants semantic colour
-                  reinforced by text, not repeated). The left border carries
-                  the SUBJECT colour via --exam-accent.
-                */
-                <div
-                  className="exam-history__feature"
-                  style={{ '--exam-accent': latest.color } as React.CSSProperties}
-                >
-                  <div className="exam-history__feature-main">
-                    <span className="exam-history__feature-eyebrow">
-                      {L('Dernier examen corrigé', 'Dènye egzamen korije')}
-                    </span>
-                    <h3 className="exam-history__feature-title">{latest.title}</h3>
-                    <p className="exam-history__meta">
-                      {[latest.subject, latest.levelLabel, latest.year, formatDate(latest.submittedAtMs)]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </p>
-                  </div>
-                  {latest.percentage != null && (
-                    <p className={`exam-history__feature-score exam-history__feature-score--${scoreTone(latest.percentage)}`}>
-                      <span className="exam-history__feature-score-value">{latest.percentage}%</span>
-                      {/*
-                        Not "best score": only one correction per exam is ever
-                        stored, so there is no series to take a maximum of.
-                        This is the score of the correction the button opens.
-                      */}
-                      <span className="exam-history__feature-score-label">
-                        {L('Score de cette correction', 'Nòt koreksyon sa a')}
+            <ul className="xp-rows">
+              {sorted.map((r: any) => {
+                const date = formatDate(r.submittedAtMs);
+                const meta = [r.levelLabel, date].filter(Boolean).join(' · ');
+                return (
+                  <li key={r.examKey}>
+                    <Link
+                      className="xp-row"
+                      to={`/exams/${r.slug}/${r.examKey}/results`}
+                      aria-label={[r.title, meta, r.percentage != null ? L(`score ${r.percentage} %`, `nòt ${r.percentage} %`) : ''].filter(Boolean).join(' — ')}
+                    >
+                      {/* The score of the correction this row opens — never
+                          called "best": only one correction per exam exists. */}
+                      <span className={`xp-row__lead xp-row__lead--inline xp-row__lead--${leadTone(r.percentage)}`} aria-hidden="true">
+                        {r.percentage != null ? <>{r.percentage}<small>%</small></> : '—'}
                       </span>
-                    </p>
-                  )}
-                  <div className="exam-history__feature-actions">
-                    <Link className="button button--primary button--sm" to={`/exams/${latest.slug}/${latest.examKey}/results`}>
-                      {L('Revoir la correction', 'Gade koreksyon an')}
+                      <span className="xp-row__body">
+                        <span className="xp-row__title">{r.title}</span>
+                        <span className="xp-row__meta">{meta}</span>
+                      </span>
+                      <span className="xp-row__end">
+                        <span className="xp-btn xp-btn--tonal xp-btn--sm" aria-hidden="true">{L('Voir la correction', 'Wè koreksyon an')}</span>
+                        <ChevronRight size={18} className="xp-row__chev" aria-hidden />
+                      </span>
                     </Link>
-                    <Link className="button button--ghost button--sm" to={`/exams/${latest.slug}/${latest.examKey}`}>
-                      {L('Refaire l’examen', 'Refè egzamen an')}
-                    </Link>
-                  </div>
-                </div>
-              )}
-
-              {older.length > 0 && (
-                <div className="exam-history__list">
-                  {older.map((r) => {
-                    const tone = scoreTone(r.percentage);
-                    const date = formatDate(r.submittedAtMs);
-                    const meta = [r.subject, r.levelLabel, r.year, date].filter(Boolean).join(' · ');
-                    return (
-                      <Link
-                        key={r.examKey}
-                        className="exam-history__row"
-                        to={`/exams/${r.slug}/${r.examKey}/results`}
-                        aria-label={[
-                          r.title,
-                          meta,
-                          r.percentage != null ? L(`score ${r.percentage} %`, `nòt ${r.percentage} %`) : '',
-                        ]
-                          .filter(Boolean)
-                          .join(' — ')}
-                      >
-                        <span className="exam-history__swatch" style={{ background: r.color }} aria-hidden />
-                        <span className="exam-history__body">
-                          <span className="exam-history__title">{r.title}</span>
-                          <span className="exam-history__meta">{meta}</span>
-                        </span>
-                        {r.percentage != null && (
-                          <span className={`exam-history__score exam-history__score--${tone}`}>{r.percentage}%</span>
-                        )}
-                        <ChevronRight size={17} className="exam-history__chevron" aria-hidden />
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </section>
 
-        {/* 3. Next action — same loop ExamResults closes on. */}
-        {hasAnything && (
-          <section className="exam-history__next" aria-labelledby="exam-history-next">
-            <span className="exam-history__next-icon" aria-hidden>
-              <Lightbulb size={20} />
-            </span>
-            <div className="exam-history__next-copy">
-              <h2 id="exam-history-next" className="exam-history__next-title">
-                {L('Et maintenant', 'E kounye a')}&nbsp;?
-              </h2>
-              <p className="exam-history__next-sub">
-                {/*
-                  dueCount is quiz-bank questions missed in EXERCISES (the
-                  shared review doc). Naming the source keeps it from reading
-                  as "N questions from your exams", which it is not.
-                */}
+        {/* 3. Next action — the same loop ExamResults closes on. dueCount is
+            quiz-bank questions missed in EXERCISES, and the copy says so. */}
+        {rows.length > 0 && (
+          <section className="xp-note" aria-labelledby="xp-h-next">
+            <div>
+              <strong id="xp-h-next">{L('Et maintenant ?', 'E kounye a ?')}</strong>
+              <span>
                 {dueCount > 0
-                  ? L(
-                      `${dueCount} question${frS(dueCount)} ratée${frS(dueCount)} dans vos exercices attend${dueCount > 1 ? 'ent' : ''} d’être revue${frS(dueCount)}. Reprendre ses erreurs fait progresser plus vite qu’un nouvel examen.`,
-                      `${dueCount} kesyon ou rate nan egzèsis yo ap tann pou w revize yo. Travay sou erè ou yo fè ou pwogrese pi vit pase yon lòt egzamen.`,
-                    )
-                  : L(
-                      'Passez un nouvel examen blanc pour voir où vous en êtes, ou retravaillez une correction déjà ouverte.',
-                      'Fè yon lòt egzamen blan pou wè kote ou ye, oswa retounen sou yon koreksyon ou deja louvri.',
-                    )}
-              </p>
-              <div className="exam-history__next-actions">
-                {dueCount > 0 && (
-                  <Link className="button button--primary button--sm" to="/revision">
-                    <Target size={15} aria-hidden />{' '}
-                    {L('Revoir mes erreurs d’exercices', 'Revize erè egzèsis mwen')} ({dueCount})
-                  </Link>
-                )}
-                <Link className={`button button--${dueCount > 0 ? 'ghost' : 'primary'} button--sm`} to="/exams">
-                  {L('Choisir un examen', 'Chwazi yon egzamen')}
+                  ? L(`${dueCount} question${frS(dueCount)} ratée${frS(dueCount)} dans tes exercices attend${dueCount > 1 ? 'ent' : ''} d’être revue${frS(dueCount)}.`,
+                    `${dueCount} kesyon ou rate nan egzèsis yo ap tann pou w revize yo.`)
+                  : L('Passe un nouvel examen blanc, ou retravaille une correction déjà ouverte.', 'Fè yon lòt egzamen blan, oswa retounen sou yon koreksyon ou deja louvri.')}
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', flex: '0 0 auto' }}>
+              {dueCount > 0 && (
+                <Link className="xp-btn xp-btn--tonal xp-btn--sm" to="/revision">
+                  <Target size={15} aria-hidden /> {L('Revoir mes erreurs', 'Revize erè mwen')} ({dueCount})
                 </Link>
-              </div>
+              )}
+              <Link className="xp-btn xp-btn--tonal xp-btn--sm" to="/exams">{L('Choisir un examen', 'Chwazi yon egzamen')}</Link>
             </div>
           </section>
         )}
 
         {!isAuthenticated && hasAnything && (
-          <p className="exam-history__signin">
-            {L(
-              'Ces résultats sont enregistrés sur cet appareil uniquement.',
-              'Rezilta sa yo anrejistre sou aparèy sa a sèlman.',
-            )}{' '}
-            <button type="button" className="exam-history__signin-link" onClick={() => toggleAuthModal()}>
+          <p className="xp-meta">
+            {L('Ces résultats sont enregistrés sur cet appareil uniquement.', 'Rezilta sa yo anrejistre sou aparèy sa a sèlman.')}{' '}
+            <button type="button" className="xp-link" onClick={() => toggleAuthModal()}>
               {L('Se connecter pour les retrouver partout', 'Konekte pou jwenn yo tout kote')}
             </button>
           </p>
