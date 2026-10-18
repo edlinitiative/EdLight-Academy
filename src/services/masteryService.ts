@@ -67,44 +67,74 @@ export function toProgressMap(sources: any): ProgressMap {
   return out;
 }
 
-/** The whole mastery map for a student. `{}` when signed out or unreachable. */
-export async function readMastery(userId?: string | null): Promise<ProgressMap> {
-  if (!userId) return {};
+/**
+ * A read that says whether it worked. The plain readers below return `{}` on
+ * failure, which a surface cannot tell apart from "nothing earned yet" — so a
+ * failed read used to render as a fresh start. Learning-journey surfaces use
+ * these and show their failed + retry state on `error`.
+ *
+ * A read served from Firestore's offline cache is `ok`: it is the student's
+ * real (if possibly stale) record, not a failure.
+ */
+export type ReadResult<T> = { status: 'ok'; data: T } | { status: 'error'; data: T; error: unknown };
+
+/** The whole mastery map, with a status. Signed out is `ok` with `{}`. */
+export async function readMasteryResult(userId?: string | null): Promise<ReadResult<ProgressMap>> {
+  if (!userId) return { status: 'ok', data: {} };
   try {
     const snap = await getDoc(masteryDoc(userId));
     const lessons = snap.exists() ? snap.data()?.lessons : null;
-    return lessons && typeof lessons === 'object' ? toProgressMap({ lessons }) : {};
-  } catch {
-    return {};
+    return { status: 'ok', data: lessons && typeof lessons === 'object' ? toProgressMap({ lessons }) : {} };
+  } catch (error) {
+    console.warn('[mastery] read failed:', error);
+    return { status: 'error', data: {}, error };
   }
+}
+
+/** The whole mastery map for a student. `{}` when signed out or unreachable. */
+export async function readMastery(userId?: string | null): Promise<ProgressMap> {
+  return (await readMasteryResult(userId)).data;
 }
 
 /**
  * Every lesson's mastery record, with one course's legacy `completedLessons`
- * folded in so lessons that were only watched still read as `seen`.
+ * folded in so lessons that were only watched still read as `seen` — and a
+ * status, so a failed read is not mistaken for an untouched course.
  *
  * The returned map covers ALL courses (it is one document); passing a courseId
  * only decides whose `completed` flags get merged. Callers render by lesson id,
  * so the extra entries are harmless — and it means a caller showing two
  * courses needs one read, not two.
  */
-export async function readCourseMastery(
+export async function readCourseMasteryResult(
   userId?: string | null,
   courseId?: string | null,
-): Promise<ProgressMap> {
-  if (!userId) return {};
+): Promise<ReadResult<ProgressMap>> {
+  if (!userId) return { status: 'ok', data: {} };
   try {
     const [masterySnap, progressSnap] = await Promise.all([
       getDoc(masteryDoc(userId)),
       courseId ? getDoc(doc(db, 'users', userId, 'progress', courseId)) : Promise.resolve(null),
     ]);
-    return toProgressMap({
-      lessons: masterySnap.exists() ? masterySnap.data()?.lessons : null,
-      completedLessons: progressSnap?.exists() ? progressSnap.data()?.completedLessons : null,
-    });
-  } catch {
-    return {};
+    return {
+      status: 'ok',
+      data: toProgressMap({
+        lessons: masterySnap.exists() ? masterySnap.data()?.lessons : null,
+        completedLessons: progressSnap?.exists() ? progressSnap.data()?.completedLessons : null,
+      }),
+    };
+  } catch (error) {
+    console.warn('[mastery] course read failed:', error);
+    return { status: 'error', data: {}, error };
   }
+}
+
+/** `readCourseMasteryResult` without the status: `{}` when unreachable. */
+export async function readCourseMastery(
+  userId?: string | null,
+  courseId?: string | null,
+): Promise<ProgressMap> {
+  return (await readCourseMasteryResult(userId, courseId)).data;
 }
 
 /**

@@ -9,7 +9,13 @@ jest.mock('../../../../hooks/useData', () => {
   return { useAppData: () => value };
 });
 const mockMap = { current: {} as any };
-jest.mock('../../../../services/reviewService', () => ({ loadReviewMap: jest.fn(() => Promise.resolve(mockMap.current)) }));
+const mockFail = { current: false };
+jest.mock('../../../../services/reviewService', () => ({
+  loadReviewMap: jest.fn(() => Promise.resolve(mockMap.current)),
+  loadReviewMapResult: jest.fn(() => Promise.resolve(mockFail.current
+    ? { status: 'error', data: {}, error: new Error('offline') }
+    : { status: 'ok', data: mockMap.current })),
+}));
 jest.mock('../../../../services/answerEventsService', () => ({ logAnswerEvent: jest.fn() }));
 jest.mock('../../../../utils/shared', () => ({ useKatex: () => true, renderWithKatex: (s: string) => ({ __html: s }) }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (_k: string, d: string) => d, i18n: { language: 'fr' } }) }));
@@ -26,6 +32,7 @@ const renderAt = async (url: string) => {
 };
 
 beforeEach(() => {
+  mockFail.current = false;
   mockTrack.mockClear();
   useStore.setState({ user: { uid: 'u1' }, language: 'fr' } as any);
 });
@@ -52,4 +59,15 @@ it('a key-less question is never put in a review session', async () => {
   mockMap.current = { r9: { missedAt: 9 } };
   await renderAt('/revision');
   expect(screen.getByText('Rien à réviser pour le moment')).toBeInTheDocument();
+});
+
+it('a failed read shows failed + retry, never "Rien à réviser"', async () => {
+  mockFail.current = true;
+  mockMap.current = { r1: { missedAt: 5 } };
+  await renderAt('/revision');
+  expect(screen.getByText('Ta liste de révision n’a pas pu se charger')).toBeInTheDocument();
+  expect(screen.queryByText('Rien à réviser pour le moment')).not.toBeInTheDocument();
+  mockFail.current = false;
+  await act(async () => { fireEvent.click(document.querySelector('.state-view__retry') as HTMLElement); });
+  expect(screen.getByText('Question r1 ?')).toBeInTheDocument();
 });

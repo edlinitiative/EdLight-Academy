@@ -21,7 +21,7 @@ import { logoutUser } from '../services/authService';
 import { STREAK_MILESTONES } from '../services/streakService';
 import { setLeaderboardOptIn as saveBoardIdentity } from '../services/triviaService';
 import { isValidAlias } from '../services/leaderboardService';
-import { readMastery } from '../services/masteryService';
+import { readMasteryResult } from '../services/masteryService';
 import ReadinessCard from '../components/ReadinessCard';
 import { Skeleton } from '../components/Skeleton';
 import SchoolField from '../components/arena/SchoolField';
@@ -636,9 +636,12 @@ const SUBJECT_NAMES: Record<string, [string, string]> = {
 };
 const LEVEL_ROMAN: Record<string, string> = { NS1: 'NS I', NS2: 'NS II', NS3: 'NS III', NS4: 'NS IV' };
 
-export function CourseProgressCard({ allProgress, loading, isCreole, onExplore, mastery = null }: {
+export function CourseProgressCard({ allProgress, loading, failed = false, onRetry, isCreole, onExplore, mastery = null }: {
   allProgress: any[];
   loading: boolean;
+  /** The progress (or mastery) read failed — an empty list is then NOT "no courses". */
+  failed?: boolean;
+  onRetry?: () => void;
   isCreole: boolean;
   onExplore: () => void;
   /** The shared mastery map (practised / mastered). Null while unknown. */
@@ -696,6 +699,23 @@ export function CourseProgressCard({ allProgress, loading, isCreole, onExplore, 
             <Skeleton key={i} variant="rect" height={56} radius={14} />
           ))}
         </div>
+      </section>
+    );
+  }
+
+  if (failed) {
+    return (
+      <section className="pr-card" aria-labelledby="pr-courses-title" ref={cardRef}>
+        {head}
+        <p className="pr-muted" role="alert">
+          {t(
+            'Tes cours n’ont pas pu se charger. Rien n’est perdu : ta progression est enregistrée sur ton compte.',
+            'Kou ou yo pa t ka chaje. Anyen pa pèdi : pwogrè ou anrejistre sou kont ou.',
+          )}
+        </p>
+        <button type="button" className="pr-tonal pr-tonal--start" onClick={onRetry}>
+          {t('Réessayer', 'Eseye ankò')}
+        </button>
       </section>
     );
   }
@@ -869,17 +889,24 @@ export default function Profile() {
   const progressLive = useAllProgress();
   const allProgress = preview ? preview.allProgress : progressLive.progress;
   const progressLoading = preview ? false : progressLive.loading;
+  const progressFailed = preview ? false : progressLive.failed;
   const [showTrackSelector, setShowTrackSelector] = React.useState(false);
 
   // Practised / mastered for "Tes cours": the one shared mastery doc.
   const liveUid = !preview && store.isAuthenticated ? store.user?.uid || null : null;
   const [masteryLive, setMasteryLive] = React.useState<ProgressMap | null>(null);
+  const [masteryFailed, setMasteryFailed] = React.useState(false);
+  const [masteryTry, setMasteryTry] = React.useState(0);
   React.useEffect(() => {
     if (!liveUid) return undefined;
     let live = true;
-    readMastery(liveUid).then((m) => { if (live) setMasteryLive(m || {}); }).catch(() => { if (live) setMasteryLive({}); });
+    readMasteryResult(liveUid).then((r) => {
+      if (!live) return;
+      setMasteryLive(r.data || {});
+      setMasteryFailed(r.status === 'error');
+    }).catch(() => { if (live) { setMasteryLive({}); setMasteryFailed(true); } });
     return () => { live = false; };
-  }, [liveUid]);
+  }, [liveUid, masteryTry]);
   const mastery = preview ? preview.mastery : masteryLive;
 
   const [identity, setIdentity] = React.useState<IdentityState>({ dirty: false, aliasOk: true, status: 'idle' });
@@ -1185,6 +1212,11 @@ export default function Profile() {
     <CourseProgressCard
       allProgress={allProgress}
       loading={progressLoading}
+      failed={progressFailed || masteryFailed}
+      onRetry={() => {
+        if (progressFailed) progressLive.retry();
+        if (masteryFailed) setMasteryTry((n) => n + 1);
+      }}
       isCreole={isCreole}
       onExplore={() => navigate('/courses')}
       mastery={mastery}

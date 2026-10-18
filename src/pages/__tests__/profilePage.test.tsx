@@ -42,7 +42,7 @@ jest.mock('../../hooks/useTrivia', () => ({
   useTrivia: () => ({ profile: mockProfile, level: { level: 3, xp: 340, xpToNext: 60, progressPct: 70 }, isLoading: false }),
 }));
 jest.mock('../../hooks/useStreak', () => ({ useStreak: () => ({ streak: { currentStreak: 4, longestStreak: 9, milestones: [] } }) }));
-jest.mock('../../hooks/useProgress', () => ({ useAllProgress: () => ({ progress: [], loading: false }) }));
+jest.mock('../../hooks/useProgress', () => ({ useAllProgress: () => ({ progress: [], loading: false, failed: false, retry: jest.fn() }) }));
 jest.mock('../../hooks/useLeaderboard', () => ({
   useLeaderboard: () => ({
     myRank: 2,
@@ -72,13 +72,17 @@ jest.mock('../../services/reviewService', () => ({
     q3: { missedAt: 1, correctAt: 9, subjectCode: 'CHEM-NSI', unitNo: 1 }, // resolved — not due
   }),
 }));
-jest.mock('../../services/masteryService', () => ({
-  readMastery: jest.fn().mockResolvedValue({
+jest.mock('../../services/masteryService', () => {
+  const map = {
     'ECON-NSI-U1-L1': { masteredAt: 1 },
     'ECON-NSI-U1-L2': { bestPct: 100 },
     'ECON-NSI-U2-L1': { completed: true },
-  }),
-}));
+  };
+  return {
+    readMastery: jest.fn().mockResolvedValue(map),
+    readMasteryResult: jest.fn().mockResolvedValue({ status: 'ok', data: map }),
+  };
+});
 jest.mock('../../components/MySchoolCard', () => () => <div>school-card</div>);
 jest.mock('../../components/ReadinessCard', () => () => <div>readiness-card</div>);
 jest.mock('../../components/arena/SchoolField', () => ({ picked }: any) => <div>school-field:{picked?.label}</div>);

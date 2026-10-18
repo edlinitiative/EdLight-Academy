@@ -7,7 +7,7 @@ import { lessonFrame } from '../../utils/lessonFrames';
 import SubjectFrame, { subjectKey } from '../../components/journey/media/SubjectFrame';
 import useStore from '../../contexts/store';
 import { listRecentExamAttempts } from '../../services/userActivity';
-import { loadReviewMap } from '../../services/reviewService';
+import { loadReviewMapResult } from '../../services/reviewService';
 import { dueQuestionIds } from '../../utils/review';
 import { normalizeExamCatalog } from '../../utils/examCatalog';
 import { buildExamIndex, displayStoredExamTitle } from '../../utils/examUtils';
@@ -75,7 +75,8 @@ function levelToUrl(levelLabel?: string) {
 
 export default function LearnWorkspace({
   courses, courseLevel, subjectName, levelLabel, myLevel: myLevelProp, progressByCourseId: realProgress, L,
-  coursesLoading = false, coursesFailed = false, onRetryCourses, retryingCourses = false, progressLoading = false, preview = null,
+  coursesLoading = false, coursesFailed = false, onRetryCourses, retryingCourses = false, progressLoading = false,
+  progressFailed = false, onRetryProgress, preview = null,
 }: {
   courses: any[];
   /** Kept for the caller's signature; stats are computed here from the same progress. */
@@ -93,6 +94,9 @@ export default function LearnWorkspace({
   onRetryCourses?: () => void;
   retryingCourses?: boolean;
   progressLoading?: boolean;
+  /** The progress read failed — NOT "no progress yet". */
+  progressFailed?: boolean;
+  onRetryProgress?: () => void;
   /** Dev-only fixtures (/dashboard?preview=…); never set in production. */
   preview?: HomePreview | null;
 }) {
@@ -117,7 +121,7 @@ export default function LearnWorkspace({
     for (const p of preview.progress) m.set(p.courseId, p);
     return m;
   }, [preview, realProgress]);
-  const { mastery: realMastery, loading: masteryLoading } = useCourseMastery(null);
+  const { mastery: realMastery, loading: masteryLoading, failed: masteryFailed, refresh: refreshMastery } = useCourseMastery(null);
   const mastery = preview ? preview.mastery : realMastery;
   const [classSkipped, setClassSkipped] = useState(false);
 
@@ -200,8 +204,9 @@ export default function LearnWorkspace({
     if (!uid) return undefined;
     let alive = true;
     setWeak(null);
-    loadReviewMap(uid).then((map) => {
-      if (alive) setWeak(group(map));
+    // An unreadable list is said to be unreadable — never "nothing due".
+    loadReviewMapResult(uid).then((res) => {
+      if (alive) setWeak(res.status === 'ok' ? group(res.data) : 'failed');
     }).catch(() => { if (alive) setWeak('failed'); });
     return () => { alive = false; };
   }, [uid, preview, reviewTry]);
@@ -283,8 +288,17 @@ export default function LearnWorkspace({
   const recordsLoading = preview ? !!preview.loading : (progressLoading || masteryLoading);
   const catalogLoading = preview ? !!preview.loading : (coursesLoading && courses.length === 0);
   const catalogFailed = preview ? !!preview.coursesFailed : (coursesFailed && courses.length === 0);
+  // The student's own records (progress docs, mastery doc) could not be read:
+  // the continuation, progress and subject cards would otherwise draw a fresh
+  // start ("Commencer : leçon 1") over work the student has done.
+  const recordsFailed = !catalogFailed && !recordsLoading && (preview ? !!preview.recordsFailed : (progressFailed || masteryFailed));
+  const retryRecords = useCallback(() => {
+    if (preview) return;
+    if (progressFailed) onRetryProgress?.();
+    if (masteryFailed) void refreshMastery();
+  }, [preview, progressFailed, masteryFailed, onRetryProgress, refreshMastery]);
   const continuation = useMemo(() => {
-    if (catalogLoading || catalogFailed || recordsLoading) return null;
+    if (catalogLoading || catalogFailed || recordsLoading || recordsFailed) return null;
     return resolveContinuation({
       courses,
       courseLevel,
@@ -295,14 +309,14 @@ export default function LearnWorkspace({
       classSkipped: classSkipped || (gradeChosen && !grade),
       readPosition: (cid, lid) => {
         // A position is promised only for the lesson THIS account last had
-        // open (lastActivity is cleared on logout); the browser store itself
-        // is per device, not per account.
+        // open (lastActivity is cleared on logout), read from this account's
+        // own bucket of the browser store (utils/videoPositions.ts).
         const last = parseLessonPath(lastActivity?.type === 'lesson' ? lastActivity.path : null);
         if (!last || last.courseId !== cid || last.lessonId !== lid) return 0;
-        return preview ? (preview.positionSec || 0) : readResumeSeconds(cid, lid);
+        return preview ? (preview.positionSec || 0) : readResumeSeconds(cid, lid, uid);
       },
     });
-  }, [catalogLoading, catalogFailed, recordsLoading, courses, courseLevel, lastActivity, progressByCourseId, mastery, grade, classSkipped, gradeChosen, preview]);
+  }, [catalogLoading, catalogFailed, recordsLoading, recordsFailed, courses, courseLevel, lastActivity, progressByCourseId, mastery, grade, classSkipped, gradeChosen, preview, uid]);
 
   const examAnswered = useMemo(() => {
     if (continuation?.kind !== 'exam') return null;
@@ -313,7 +327,7 @@ export default function LearnWorkspace({
 
   // ── LJ-10: evidence per course the student has actually worked in ────────
   const summaryRows: SummaryRow[] = useMemo(() => {
-    if (catalogLoading || catalogFailed || recordsLoading) return [];
+    if (catalogLoading || catalogFailed || recordsLoading || recordsFailed) return [];
     const focus = continuation?.kind === 'lesson' ? continuation.course.id : null;
     return live
       .map((course) => ({ course, summary: summarizeCourse(course, progressByCourseId.get(course.id), mastery) }))
@@ -321,7 +335,7 @@ export default function LearnWorkspace({
       .sort((a, b) => (a.course.id === focus ? -1 : b.course.id === focus ? 1 : 0)
         || b.summary.opened - a.summary.opened)
       .slice(0, 4);
-  }, [catalogLoading, catalogFailed, recordsLoading, continuation, live, progressByCourseId, mastery]);
+  }, [catalogLoading, catalogFailed, recordsLoading, recordsFailed, continuation, live, progressByCourseId, mastery]);
 
   return (
     <div className="lws lws--premium">
@@ -332,9 +346,10 @@ export default function LearnWorkspace({
           <HomeContinuation
             state={continuation}
             loading={catalogLoading || (!catalogFailed && recordsLoading)}
-            failed={catalogFailed}
-            onRetry={() => onRetryCourses?.()}
-            retrying={retryingCourses}
+            failed={catalogFailed || recordsFailed}
+            failedKind={catalogFailed ? 'catalog' : 'records'}
+            onRetry={() => (catalogFailed ? onRetryCourses?.() : retryRecords())}
+            retrying={catalogFailed ? retryingCourses : false}
             dueCount={dueCount}
             examAnswered={examAnswered}
             grade={grade}
@@ -353,7 +368,8 @@ export default function LearnWorkspace({
             onRetryReview={() => setReviewTry((n) => n + 1)}
             rows={summaryRows}
             progressLoading={catalogLoading || (!catalogFailed && recordsLoading)}
-            progressFailed={catalogFailed}
+            progressFailed={catalogFailed || recordsFailed}
+            onRetryProgress={recordsFailed ? retryRecords : undefined}
             subjectName={subjectName}
             levelLabel={levelLabel}
             courseLevel={courseLevel}
@@ -381,13 +397,16 @@ export default function LearnWorkspace({
                   return !isCreole && n > 1 ? `${w}s` : w;
                 };
                 const started = stats.completed > 0 || ev.opened > 0;
+                // Records unreadable: catalogue facts only, and a neutral
+                // "Ouvrir" — never "Commencer" over work already done.
+                const cta = recordsFailed ? L('Ouvrir', 'Louvri') : started ? L('Continuer', 'Kontinye') : L('Commencer', 'Kòmanse');
                 return (
                   <li key={code}>
                     <Link to={`/courses/${course.id}`} className="lws-subj">
                       <SubjectFrame subject={code} still={frameFor(course, nextLesson)} size="md" className="lws-subj__frame" />
                       <span className="lws-subj__body">
                         <strong className="lws-subj__title">{subjectName(code)}</strong>
-                        {nextUnit ? (
+                        {recordsFailed ? null : nextUnit ? (
                           <span className="lws-subj__next">
                             <span className="lws-subj__label">{L('Prochaine étape', 'Pwochen etap')}</span>
                             <span className="lws-subj__label lws-subj__label--inline">{L('Prochaine étape : ', 'Pwochen etap : ')}</span>
@@ -399,7 +418,7 @@ export default function LearnWorkspace({
                           </span>
                         )}
                         <span className="lws-subj__meta">
-                          {stats.completed > 0 || ev.mastered > 0
+                          {!recordsFailed && (stats.completed > 0 || ev.mastered > 0)
                             ? [
                               L(`${stats.completed} ${word('completed', stats.completed)} sur ${stats.total}`, `${stats.completed} ${word('completed', stats.completed)} sou ${stats.total}`),
                               ev.mastered > 0 ? `${ev.mastered} ${word('mastered', ev.mastered)}` : '',
@@ -407,7 +426,7 @@ export default function LearnWorkspace({
                             : L(`${stats.total} leçons · ${unitsTotal} unités`, `${stats.total} leson · ${unitsTotal} inite`)}
                         </span>
                         <span className="lws-subj__cta">
-                          {started ? L('Continuer', 'Kontinye') : L('Commencer', 'Kòmanse')} <ArrowRight size={16} aria-hidden="true" />
+                          {cta} <ArrowRight size={16} aria-hidden="true" />
                         </span>
                       </span>
                       <ChevronRight size={20} aria-hidden="true" className="lws-subj__chev" />
@@ -463,8 +482,8 @@ export default function LearnWorkspace({
             className="jh-desk-only"
             rows={summaryRows}
             loading={catalogLoading || (!catalogFailed && recordsLoading)}
-            failed={catalogFailed}
-            onRetry={() => onRetryCourses?.()}
+            failed={catalogFailed || recordsFailed}
+            onRetry={() => (catalogFailed ? onRetryCourses?.() : retryRecords())}
             subjectName={subjectName}
             levelLabel={levelLabel}
             courseLevel={courseLevel}

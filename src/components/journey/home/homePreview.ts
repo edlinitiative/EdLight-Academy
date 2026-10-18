@@ -21,11 +21,13 @@ export type HomePreview = {
   reviewMap: ReviewMap | 'failed';
   attempts: any[];
   coursesFailed?: boolean;
+  /** The student's progress / mastery reads failed (catalogue fine). */
+  recordsFailed?: boolean;
   loading?: boolean;
   positionSec?: number;
 };
 
-export const PREVIEW_SCENARIOS = ['returning', 'new', 'noclass', 'uncovered', 'exam', 'failed', 'loading', 'stale', 'caughtup'];
+export const PREVIEW_SCENARIOS = ['returning', 'new', 'noclass', 'uncovered', 'exam', 'failed', 'loading', 'stale', 'caughtup', 'recordsfailed'];
 
 export function buildHomePreview(scenario: string, courses: any[], courseLevel: (c: any) => string): HomePreview | null {
   if (!PREVIEW_SCENARIOS.includes(scenario)) return null;
@@ -67,6 +69,7 @@ export function buildHomePreview(scenario: string, courses: any[], courseLevel: 
     case 'uncovered': return { ...base, grade: '9e' };
     case 'exam': return { ...returning, lastActivity: { type: 'exam', path: '/exams/terminale/preview-2/take', title: 'Physique · Bac 2024 — Série SMP', ts: now }, attempts: [{ exam_id: 'preview-2', status: 'in_progress', answers: { a: 1, b: 2, c: 3, d: 4 }, level: 'Baccalauréat' }] };
     case 'failed': return { ...returning, coursesFailed: true, reviewMap: due };
+    case 'recordsfailed': return { ...returning, recordsFailed: true, progress: [], mastery: {}, reviewMap: 'failed' };
     case 'loading': return { ...returning, loading: true };
     case 'stale': return { ...base, lastActivity: { type: 'lesson', path: `/courses/${chem.id}?lesson=GONE-L99`, title: chem.name, ts: now }, progress: returning.progress, mastery: returning.mastery, reviewMap: 'failed' };
     case 'caughtup': return { ...base, progress: live.filter((c) => courseLevel(c) === 'NSI').map((c) => ({ courseId: c.id, completedLessons: flatLessons(c).map((r) => r.lesson.id), watchedVideos: {} })) };

@@ -90,6 +90,8 @@ export default function CourseOverview({
   mastery = null,
   staleLesson = false,
   backTo = '/courses',
+  progressFailed = false,
+  onRetryProgress,
 }: {
   course: any;
   modules?: any[];
@@ -107,6 +109,9 @@ export default function CourseOverview({
   staleLesson?: boolean;
   /** The catalogue URL to return to (with its filters when known). */
   backTo?: string;
+  /** The student's progress / mastery read failed — never drawn as 0/N. */
+  progressFailed?: boolean;
+  onRetryProgress?: () => void;
 }) {
   const navigate = useNavigate();
   const { i18n } = useTranslation();
@@ -166,7 +171,7 @@ export default function CourseOverview({
   });
 
   const showProgress = isEnrolled && totalLessons > 0;
-  const hasRail = showProgress || outcomes.length > 0;
+  const hasRail = showProgress || progressFailed || outcomes.length > 0;
 
   const evidenceLine = (e: { done: number; practised: number; mastered: number }) => {
     const parts: string[] = [];
@@ -306,7 +311,16 @@ export default function CourseOverview({
 
       </div>
       <aside className="co__rail">
-      {showProgress && (
+      {progressFailed && totalLessons > 0 ? (
+        <section className="co__card co__progress co__progress--failed" aria-labelledby="co-progress-title">
+          <h2 id="co-progress-title" className="co__card-title">{L('Ta progression', 'Pwogrè ou')}</h2>
+          <p className="co__progress-fail" role="alert">
+            {L('Ta progression n’a pas pu se charger. Rien n’est perdu : elle est enregistrée sur ton compte.',
+              'Pwogrè ou pa t ka chaje. Anyen pa pèdi : li anrejistre sou kont ou.')}
+          </p>
+          <button type="button" className="co__tonal co__retry" onClick={onRetryProgress}>{L('Réessayer', 'Eseye ankò')}</button>
+        </section>
+      ) : showProgress && (
         <section className="co__card co__progress" aria-labelledby="co-progress-title">
           <h2 id="co-progress-title" className="co__card-title">{L('Ta progression', 'Pwogrè ou')}</h2>
           <p className="co__progress-big">

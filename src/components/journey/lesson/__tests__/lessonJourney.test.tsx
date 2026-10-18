@@ -6,7 +6,6 @@ import { chapterPractice, lessonQuestionCount } from '../chapterPractice';
 import { catalogReturnPath, levelFromCourseId } from '../catalogReturn';
 import { useLessonCompletion } from '../useLessonCompletion';
 import LessonCompleteAction from '../LessonCompleteAction';
-import LessonCompletionPanel from '../LessonCompletionPanel';
 import { readPracticeHandoff } from '../../../../utils/learningJourney';
 
 const mockTrack = jest.fn();
@@ -69,18 +68,8 @@ function Harness({ save, offline = false, lesson = 'L1' }: { save: any; offline?
       <span data-testid="active">{active}</span>
       <button type="button" onClick={() => setActive('L2')}>go-L2</button>
       {confirmed ? (
-        <LessonCompletionPanel
-          isCreole={false}
-          fresh={c.freshId === active}
-          practice={{ status: 'ready', unit: 'U1', count: 12, href: '/quizzes?course=MATH-NSI&unit=U1&lesson=L1&mode=quiz&from=lesson' }}
-          courseCode="MATH-NSI"
-          courseId="math-ns1"
-          lessonId={active}
-          unitTitle="Nombres"
-          next={{ title: 'Fractions' }}
-          onNext={() => {}}
-          onOutline={() => {}}
-        />
+        // The lesson page's confirmed mark (CourseDetail's lx-done) in miniature.
+        <span className="lx-done">Terminée</span>
       ) : (
         <LessonCompleteAction entry={c.entryFor(active)} isCreole={false} onComplete={() => c.complete(active)} />
       )}
@@ -168,47 +157,5 @@ describe('lesson completion', () => {
     // L2 still offers its own, untouched action.
     expect(screen.getByRole('button', { name: 'Terminer la leçon' })).toBeEnabled();
     expect(screen.queryByText('Terminée')).not.toBeInTheDocument();
-  });
-});
-
-describe('LessonCompletionPanel', () => {
-  const base = {
-    isCreole: false, fresh: false, courseCode: 'MATH-NSI', courseId: 'math-ns1', lessonId: 'MATH-NSI-U1-L2',
-    unitTitle: 'Nombres', next: { title: 'Fractions' }, onNext: () => {}, onOutline: () => {},
-  };
-  beforeEach(() => mockTrack.mockClear());
-
-  it('one primary: chapter practice with the real count, labelled unit-wide; next lesson secondary', () => {
-    const href = '/quizzes?course=MATH-NSI&unit=U1&lesson=MATH-NSI-U1-L2&mode=quiz&from=lesson';
-    render(<MemoryRouter><LessonCompletionPanel {...base} practice={{ status: 'ready', unit: 'U1', count: 25, href }} /></MemoryRouter>);
-    const link = screen.getByRole('link', { name: 'Pratiquer ce chapitre · 25 questions' });
-    expect(link).toHaveAttribute('href', href);
-    expect(link).toHaveClass('button--primary');
-    expect(screen.getByRole('button', { name: /Leçon suivante/ })).toHaveClass('button--ghost');
-    expect(screen.getByText('Questions de tout le chapitre « Nombres ».')).toBeInTheDocument();
-    expect(screen.queryByText(/cette leçon/i)).not.toBeInTheDocument();
-    expect(screen.getByText('La maîtrise se construit avec la pratique.')).toBeInTheDocument();
-    fireEvent.click(link);
-    expect(mockTrack).toHaveBeenCalledWith('practice_handoff_opened', expect.objectContaining({ unit: 'U1', count: 25, scope: 'unit', source: 'lesson_completion' }));
-  });
-
-  it('no mapped practice: says so, next lesson becomes the primary', () => {
-    render(<MemoryRouter><LessonCompletionPanel {...base} practice={{ status: 'none', unit: 'U4' }} /></MemoryRouter>);
-    expect(screen.queryByRole('link', { name: /Pratiquer ce chapitre/ })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Leçon suivante/ })).toHaveClass('button--primary');
-    expect(screen.getByText(/pas encore de questions d’entraînement/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Choisir d’autres exercices' })).toHaveAttribute('href', '/quizzes?course=MATH-NSI&from=lesson');
-  });
-
-  it('while the bank loads it never claims "0 questions"', () => {
-    render(<MemoryRouter><LessonCompletionPanel {...base} practice={{ status: 'loading' }} /></MemoryRouter>);
-    expect(screen.queryByText(/0 question/)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Leçon suivante/ })).toBeEnabled();
-  });
-
-  it('speaks Kreyòl', () => {
-    render(<MemoryRouter><LessonCompletionPanel {...base} isCreole practice={{ status: 'ready', unit: 'U1', count: 3, href: '/q' }} /></MemoryRouter>);
-    expect(screen.getByRole('link', { name: 'Pratike chapit sa a · 3 kesyon' })).toBeInTheDocument();
-    expect(screen.getByText('Fini')).toBeInTheDocument();
   });
 });

@@ -139,6 +139,19 @@ const fetchQuizzesFromFirestore = async () => {
 };
 
 /**
+ * Authored learning outcomes off a course document, whichever field name the
+ * author used (`outcomes`, `learningOutcomes`, `learning_outcomes`), as a clean
+ * string list — or undefined when none were written. CourseOverview's
+ * "Ce que tu sauras faire" renders only these; nothing is ever generated.
+ */
+export const courseOutcomes = (course): string[] | undefined => {
+  const raw = course?.outcomes ?? course?.learningOutcomes ?? course?.learning_outcomes;
+  const list = Array.isArray(raw) ? raw : typeof raw === 'string' ? raw.split(/\n+/) : [];
+  const clean = list.map((x) => String(x ?? '').trim()).filter(Boolean);
+  return clean.length ? clean : undefined;
+};
+
+/**
  * Transform Firestore courses to app format and enrich with video/quiz data
  * @param {Object[]} firestoreCourses - Courses from Firestore with units structure
  * @param {Map} videosMap - Map of video ID to video data from Firestore
@@ -251,6 +264,9 @@ const transformFirestoreCourses = (firestoreCourses, videosMap = new Map(), quiz
       duration: course.length || 0,
       modules: modules,
       instructor: 'EdLight Academy',
+      // Authored outcomes pass through (they used to be dropped here, so the
+      // overview could never show them); absent when the doc has none.
+      ...(courseOutcomes(course) ? { outcomes: courseOutcomes(course) } : {}),
       // `coming_soon` courses stay in the catalog but render as a disabled
       // teaser; clearing the flag (on migration) makes them normal automatically.
       comingSoon: !!course.coming_soon,
@@ -423,3 +439,6 @@ export const loadAppData = async () => {
  */
 export const getQuizzesForVideo = (videoId, quizzes) => 
   quizzes.filter(q => q.video_id === videoId);
+
+/** Test seam: the Firestore → app course transform. */
+export const __transformCoursesForTests = (...args: Parameters<typeof transformFirestoreCourses>) => transformFirestoreCourses(...args);

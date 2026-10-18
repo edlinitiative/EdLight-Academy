@@ -147,6 +147,8 @@
 .co__triple div { display: flex; flex-direction: column-reverse; gap: 2px; }
 .co__triple dd { margin: 0; color: var(--co-ink); font-family: var(--co-display); font-size: 22px; font-weight: 800; }
 .co__triple dt { color: var(--co-muted); font-size: 14px; }
+.co__progress-fail { margin: 0 0 14px; color: var(--co-muted); font-size: 15px; line-height: 1.5; }
+.co__retry { margin: 0; }
 .co__words { margin-top: 14px; color: var(--co-muted); font-size: 14px; }
 .co__words summary { min-height: 32px; color: var(--co-azure-ink); font-weight: 650; cursor: pointer; }
 .co__words ul { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 6px; }

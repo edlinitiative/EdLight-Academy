@@ -40,11 +40,11 @@ import { Link, useLocation } from 'react-router-dom';
 import { Brain, Check, Info } from '../components/icons';
 import DirectBankQuiz, { MAX_ATTEMPTS } from '../components/DirectBankQuiz';
 import { Skeleton, SkeletonText } from '../components/Skeleton';
-import { EmptyState } from '../components/StateViews';
+import { EmptyState, ErrorState } from '../components/StateViews';
 import { useAppData } from '../hooks/useData';
 import useStore from '../contexts/store';
 import { toDirectItemFromRow } from '../services/quizBank';
-import { loadReviewMap } from '../services/reviewService';
+import { loadReviewMapResult } from '../services/reviewService';
 import { dueQuestionIds, type ReviewMap } from '../utils/review';
 import { findCourse, isGradable, normalizeCourseCode, unitOptionsFor } from '../components/journey/practice/practiceScope';
 import { useJourneyOnce } from '../components/journey/practice/useJourneyOnce';
@@ -102,12 +102,21 @@ export default function Revision() {
   const scoped = !!topic.course && !widened;
 
   const [reviewMap, setReviewMap] = useState<ReviewMap | null>(null);
+  // The server list could not be read: an empty deck would then be a lie
+  // ("rien à réviser"), so the page says it failed and offers a retry.
+  const [reviewFailed, setReviewFailed] = useState(false);
+  const [reviewTry, setReviewTry] = useState(0);
+  const [retrying, setRetrying] = useState(false);
   useEffect(() => {
     let alive = true;
     if (!user?.uid) { setReviewMap(null); return undefined; }
-    loadReviewMap(user.uid).then((map) => { if (alive) setReviewMap({ ...map }); });
+    loadReviewMapResult(user.uid).then((res) => {
+      if (!alive) return;
+      setRetrying(false);
+      if (res.status === 'ok') { setReviewFailed(false); setReviewMap({ ...res.data }); } else setReviewFailed(true);
+    });
     return () => { alive = false; };
-  }, [user?.uid]);
+  }, [user?.uid, reviewTry]);
 
   // Frozen deck: built once when both the review map and the quiz bank are in.
   const [items, setItems] = useState<any[] | null>(null);
@@ -179,8 +188,8 @@ export default function Revision() {
   useEffect(() => {
     if (!finished || !user?.uid) return undefined;
     let alive = true;
-    loadReviewMap(user.uid)
-      .then((map) => { if (alive) setRemainingDue(countReviewable(map, rows)); })
+    loadReviewMapResult(user.uid)
+      .then((res) => { if (alive) setRemainingDue(res.status === 'ok' ? countReviewable(res.data, rows) : null); })
       .catch(() => { if (alive) setRemainingDue(null); });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -258,6 +267,19 @@ export default function Revision() {
     );
   }
 
+  if (reviewFailed && items === null) {
+    return shell(
+      <ErrorState
+        title={t('Ta liste de révision n’a pas pu se charger', 'Lis revizyon ou pa t ka chaje')}
+        message={t('Tes questions à revoir sont gardées sur ton compte. Vérifie ta connexion, puis réessaie.',
+          'Kesyon ou pou revize yo kenbe sou kont ou. Tcheke koneksyon ou, epi eseye ankò.')}
+        onRetry={() => { setRetrying(true); setReviewTry((n) => n + 1); }}
+        retrying={retrying}
+        action={{ label: t('Faire des exercices', 'Fè egzèsis'), href: '/quizzes', variant: 'ghost' }}
+      />,
+    );
+  }
+
   if (dataLoading || items === null) {
     // Question-card-shaped skeleton (label + heading + question + options) so
     // the layout doesn't jump when the deck arrives.
@@ -302,11 +324,11 @@ export default function Revision() {
 
   if (items.length === 0) {
     /*
-     * An empty deck is NOT proof that nothing is due. `loadReviewMap` swallows
-     * a failed Firestore read and returns {} (services/reviewService.ts), and a
-     * due id whose question has left the quiz bank is skipped here, so this
-     * branch covers "nothing due", "we could not read your review list" and
-     * "your due questions are no longer in the bank" alike.
+     * An empty deck is NOT proof that nothing is due: a due id whose question
+     * has left the quiz bank is skipped here, so this branch covers "nothing
+     * due" and "your due questions are no longer in the bank" alike. (A failed
+     * read no longer reaches it — `loadReviewMapResult` reports it and the
+     * failed + retry state above renders instead.)
      *
      * The old copy picked the flattering one — "tu as corrigé toutes tes
      * erreurs !" — which §13 lists as a generic success message before
@@ -339,7 +361,7 @@ export default function Revision() {
       setScore(0);
       setFinished(false);
       setRemainingDue(null);
-      loadReviewMap(user.uid).then((m) => setReviewMap({ ...m }));
+      setReviewTry((n) => n + 1); // re-read through the status path
     };
 
     return shell(

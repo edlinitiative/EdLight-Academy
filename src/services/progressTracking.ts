@@ -442,48 +442,51 @@ async function checkAchievements(userId, courseId) {
   }
 }
 
+export type ProgressReadResult<T> = { status: 'ok'; data: T } | { status: 'error'; data: T; error: unknown };
+
 /**
- * Get user's progress for a course
+ * One course's progress doc, with a status. The plain `getCourseProgress`
+ * returns null on failure — indistinguishable from "never opened" — so
+ * learning-journey surfaces read through this and show a failed + retry state
+ * on `error`. A read answered from Firestore's offline cache is `ok`.
  */
-export async function getCourseProgress(userId, courseId) {
-  if (!userId) return null;
-  
+export async function getCourseProgressResult(userId, courseId): Promise<ProgressReadResult<any | null>> {
+  if (!userId) return { status: 'ok', data: null };
   try {
-    const progressRef = doc(db, 'users', userId, 'progress', courseId);
-    const progressDoc = await getDoc(progressRef);
-    
-    if (!progressDoc.exists()) {
-      return null;
-    }
-    
-    return progressDoc.data();
+    const progressDoc = await getDoc(doc(db, 'users', userId, 'progress', courseId));
+    return { status: 'ok', data: progressDoc.exists() ? progressDoc.data() : null };
   } catch (error) {
     console.error('[Progress] Error getting course progress:', error);
-    return null;
+    return { status: 'error', data: null, error };
+  }
+}
+
+/** Get user's progress for a course (null when absent or unreachable). */
+export async function getCourseProgress(userId, courseId) {
+  return (await getCourseProgressResult(userId, courseId)).data;
+}
+
+/**
+ * Every course's progress doc, with a status (see getCourseProgressResult).
+ */
+export async function getAllUserProgressResult(userId): Promise<ProgressReadResult<any[]>> {
+  if (!userId) return { status: 'ok', data: [] };
+  try {
+    const snapshot = await getDocs(collection(db, 'users', userId, 'progress'));
+    const progress: any[] = [];
+    snapshot.forEach((d) => {
+      progress.push({ courseId: d.id, ...d.data() });
+    });
+    return { status: 'ok', data: progress };
+  } catch (error) {
+    console.error('[Progress] Error getting all user progress:', error);
+    return { status: 'error', data: [], error };
   }
 }
 
 /**
- * Get all progress for a user across all courses
+ * Get all progress for a user across all courses (`[]` when unreachable).
  */
 export async function getAllUserProgress(userId) {
-  if (!userId) return [];
-  
-  try {
-    const progressCollection = collection(db, 'users', userId, 'progress');
-    const snapshot = await getDocs(progressCollection);
-    
-    const progress = [];
-    snapshot.forEach(doc => {
-      progress.push({
-        courseId: doc.id,
-        ...doc.data()
-      });
-    });
-    
-    return progress;
-  } catch (error) {
-    console.error('[Progress] Error getting all user progress:', error);
-    return [];
-  }
+  return (await getAllUserProgressResult(userId)).data;
 }

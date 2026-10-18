@@ -26,6 +26,8 @@ import type { ProgressMap } from '../../shared/mastery';
 export function useCourseMastery(courseId?: string | null) {
   const [mastery, setMastery] = useState<ProgressMap>({});
   const [loading, setLoading] = useState(true);
+  // A read that failed is not "nothing earned": surfaces show failed + retry.
+  const [failed, setFailed] = useState(false);
   const user = useStore((s: any) => s.user);
 
   const load = useCallback(async () => {
@@ -34,24 +36,27 @@ export function useCourseMastery(courseId?: string | null) {
     // just be denied by the rules.
     if (!user?.uid) {
       setMastery({});
+      setFailed(false);
       setLoading(false);
       return;
     }
     // Loaded here, only for a signed-in student, so the Firebase SDK stays off
     // the critical path of a course page for everyone else.
-    const [{ getCurrentUser }, { readCourseMastery }] = await Promise.all([
+    const [{ getCurrentUser }, { readCourseMasteryResult }] = await Promise.all([
       import('../services/firebase'),
       import('../services/masteryService'),
     ]);
     const authedUid = getCurrentUser()?.uid;
     if (!authedUid || authedUid !== user.uid) {
       setMastery({});
+      setFailed(false);
       setLoading(false);
       return;
     }
     setLoading(true);
-    const map = await readCourseMastery(user.uid, courseId);
-    setMastery(map);
+    const res = await readCourseMasteryResult(user.uid, courseId);
+    setMastery(res.data);
+    setFailed(res.status === 'error');
     setLoading(false);
   }, [user?.uid, courseId]);
 
@@ -62,7 +67,7 @@ export function useCourseMastery(courseId?: string | null) {
   // Exposed so a surface that just finished a quiz can pull the new rung in
   // without a full remount — the write happens in UnitQuiz, which has no way
   // to reach back into whoever is rendering the ladder.
-  return { mastery, loading, refresh: load };
+  return { mastery, loading, failed, refresh: load };
 }
 
 export default useCourseMastery;

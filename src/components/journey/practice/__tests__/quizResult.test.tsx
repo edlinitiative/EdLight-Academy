@@ -5,7 +5,11 @@ import QuizResult, { entryStatus, reviewIdsOf, type QuizLogEntry } from '../../.
 
 jest.mock('../../../../utils/shared', () => ({ useKatex: () => true, renderWithKatex: (s: string) => ({ __html: s }) }));
 const mockDue = jest.fn((_uid?: string) => Promise.resolve([] as string[]));
-jest.mock('../../../../services/reviewService', () => ({ loadDueReviewIds: (uid: string) => mockDue(uid) }));
+// The status read wraps the plain list; a test may resolve a full result instead.
+jest.mock('../../../../services/reviewService', () => ({
+  loadDueReviewIdsResult: (uid: string) => mockDue(uid).then((r: any) => (Array.isArray(r) ? { status: 'ok', data: r } : r)),
+  flushReviewPush: () => Promise.resolve(),
+}));
 jest.mock('../../../../utils/learningJourney', () => ({ trackJourney: jest.fn() }));
 beforeAll(() => { window.scrollTo = jest.fn() as any; });
 
@@ -56,35 +60,42 @@ it('signed out: never claims the errors were kept', () => {
 });
 
 describe('review confirmation honesty (signed in)', () => {
-  beforeEach(() => { jest.useFakeTimers(); });
-  afterEach(() => { jest.useRealTimers(); });
-
-  it('says pending until the server copy shows the misses, then confirmed', async () => {
-    const since = 1000;
-    const read = jest.fn()
-      .mockResolvedValueOnce({ map: {}, pending: false }) // push not landed yet
-      .mockResolvedValueOnce({ map: { b: { missedAt: 1500 }, c: { missedAt: 1600 } }, pending: false });
-    renderResult({ signedIn: true, uid: 'u1', sessionStart: since, confirmRead: read, confirmDelays: [10, 20, 30] });
+  it('says pending until the push is acknowledged, then confirmed', async () => {
+    let ack: () => void = () => {};
+    const flush = jest.fn(() => new Promise<void>((res) => { ack = res; }));
+    renderResult({ signedIn: true, uid: 'u1', sessionStart: 1000, confirmFlush: flush });
+    expect(flush).toHaveBeenCalledWith(['b', 'c']);
     expect(screen.getByText(/pas encore confirmé/)).toBeInTheDocument();
     expect(screen.queryByText(/sont dans ta/)).not.toBeInTheDocument();
-    await act(async () => { jest.advanceTimersByTime(15); });
-    await act(async () => { jest.advanceTimersByTime(15); });
+    await act(async () => { ack(); });
     expect(screen.getByText(/2 questions ratées au premier essai sont dans ta/)).toBeInTheDocument();
   });
 
-  it('an old miss of the same question does not count as this session’s write', async () => {
-    const read = jest.fn().mockResolvedValue({ map: { b: { missedAt: 10 }, c: { missedAt: 10 } }, pending: false });
-    renderResult({ signedIn: true, uid: 'u1', sessionStart: 1000, confirmRead: read, confirmDelays: [10, 20, 30] });
-    for (let i = 0; i < 4; i += 1) { await act(async () => { jest.advanceTimersByTime(15); }); }
+  it('a rejected push (offline / timeout) is unconfirmed, and "Vérifier à nouveau" flushes again', async () => {
+    const flush = jest.fn()
+      .mockRejectedValueOnce(new Error('timeout'))
+      .mockResolvedValueOnce(undefined);
+    await act(async () => { renderResult({ signedIn: true, uid: 'u1', sessionStart: 1000, confirmFlush: flush }); });
     expect(screen.getByText(/Pas encore confirmé/)).toBeInTheDocument();
     expect(screen.queryByText(/sont dans ta/)).not.toBeInTheDocument();
+    await act(async () => { screen.getByRole('button', { name: 'Vérifier à nouveau' }).click(); });
+    expect(flush).toHaveBeenCalledTimes(2);
+    expect(screen.getByText(/2 questions ratées au premier essai sont dans ta/)).toBeInTheDocument();
   });
 
-  it('pending local writes are not a confirmation', async () => {
-    const read = jest.fn().mockResolvedValue({ map: { b: { missedAt: 1500 }, c: { missedAt: 1600 } }, pending: true });
-    renderResult({ signedIn: true, uid: 'u1', sessionStart: 1000, confirmRead: read, confirmDelays: [10, 20] });
-    for (let i = 0; i < 3; i += 1) { await act(async () => { jest.advanceTimersByTime(15); }); }
-    expect(screen.getByText(/Pas encore confirmé/)).toBeInTheDocument();
+  it('an unreadable review list never reads as "nothing due in this chapter"', async () => {
+    mockDue.mockResolvedValueOnce({ status: 'error', data: [], error: new Error('x') } as any);
+    const clean = [item('a')];
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <QuizResult deck={clean} log={[{ tries: 1, solved: true, answers: ['x'] }]} title="Quiz terminé" context="" tx={tx}
+            signedIn uid="u1" onSignIn={jest.fn()} onReplay={jest.fn()} onChangeUnit={jest.fn()} examHref={null}
+            scopeIds={['a', 'z']} />
+        </MemoryRouter>,
+      );
+    });
+    expect(screen.queryByText(/Rien à revoir dans ce chapitre/)).not.toBeInTheDocument();
   });
 });
 
