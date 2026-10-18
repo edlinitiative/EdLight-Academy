@@ -88,14 +88,14 @@ export default function ReadinessCard({ collapsedCount = 4 }) {
       <div className="readiness-card readiness-card--empty">
         <div className="readiness-card__empty-icon"><Target size={28} /></div>
         <div className="readiness-card__empty-body">
-          <h3 className="readiness-card__title">{t('Score de préparation au Bac', 'Nòt preparasyon Bak')}</h3>
+          <h2 className="readiness-card__title">{t('Score de préparation au Bac', 'Nòt preparasyon Bak')}</h2>
           <p className="text-muted">
             {t(
-              'Choisissez votre filière pour activer votre score de préparation personnalisé.',
+              'Choisis ta filière pour activer ton score de préparation personnalisé.',
               'Chwazi filyè ou pou aktive nòt preparasyon pèsonalize ou.',
             )}
           </p>
-          <button className="button button--primary" onClick={() => navigate('/exams')}>
+          <button type="button" className="readiness-card__btn" onClick={() => navigate('/exams')}>
             {t('Choisir ma filière', 'Chwazi filyè m')}
           </button>
         </div>
@@ -121,9 +121,9 @@ export default function ReadinessCard({ collapsedCount = 4 }) {
   return (
     <div className="readiness-card" data-tone={band.tone}>
       <div className="readiness-card__header">
-        <span className="readiness-card__eyebrow">
-          <Target size={15} /> {t('Préparation au Bac', 'Preparasyon Bak')}
-        </span>
+        <h2 className="readiness-card__eyebrow">
+          <Target size={18} aria-hidden="true" /> {t('Préparation au Bac', 'Preparasyon Bak')}
+        </h2>
         {strongest && hasData && (
           <span className="readiness-card__strong" title={t('Votre point fort', 'Pwen fò ou')}>
             <TrendingUp size={13} /> {localizeSubject(strongest.subject, language)}{' '}
@@ -180,11 +180,11 @@ export default function ReadinessCard({ collapsedCount = 4 }) {
       <p className="readiness-card__caption text-muted">
         {hasData
           ? t(
-              'Score pondéré par les coefficients de votre filière.',
+              'Score pondéré par les coefficients de ta filière.',
               'Nòt ki kalkile selon koyefisyan filyè ou.',
             )
           : t(
-              'Faites un examen blanc pour générer votre score.',
+              'Fais un examen blanc pour générer ton score.',
               'Fè yon egzamen blan pou jenere nòt ou.',
             )}
       </p>
@@ -233,7 +233,7 @@ export default function ReadinessCard({ collapsedCount = 4 }) {
           )}
         </div>
       ) : (
-        <button className="button button--primary readiness-card__cta" onClick={() => navigate('/exams')}>
+        <button type="button" className="readiness-card__btn readiness-card__cta" onClick={() => navigate('/exams')}>
           <ClipboardList size={16} /> {t('Commencer un examen blanc', 'Kòmanse yon egzamen blan')}
         </button>
       )}
@@ -248,7 +248,7 @@ export default function ReadinessCard({ collapsedCount = 4 }) {
           <span className="readiness-focus__text">
             {focus.hasData
               ? t(
-                  `Concentrez-vous sur ${localizeSubject(focus.subject, language)} cette semaine.`,
+                  `Concentre-toi sur ${localizeSubject(focus.subject, language)} cette semaine.`,
                   `Konsantre sou ${localizeSubject(focus.subject, language)} semèn sa a.`,
                 )
               : t(

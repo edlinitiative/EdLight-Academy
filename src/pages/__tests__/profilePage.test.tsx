@@ -105,19 +105,39 @@ async function renderPage(path = '/profile') {
   await screen.findByText('Inéquations et Bijection');
 }
 
-it('shows the title bar, the three figures and the five numbered sections', async () => {
+it('shows the identity row and the cards, with no stat strip', async () => {
   await renderPage();
   expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Naïka Merisier');
   expect(screen.getByText('@Naïka M.')).toBeInTheDocument();
-  ['Informations', 'Objectifs', 'Réseau', 'Préférences', 'Compte'].forEach((s) => {
+  expect(screen.getByText('NS III')).toBeInTheDocument();
+  ['Tes cours', 'Informations', 'Objectifs', 'Préférences', 'Compte', 'Ta régularité'].forEach((s) => {
     expect(screen.getByRole('heading', { name: s })).toBeInTheDocument();
   });
-  expect(screen.getByText('#2')).toBeInTheDocument();
-  expect(screen.getByText('60 XP du #1')).toBeInTheDocument();
+  // The old strip's figures live in cards now: streak + level here, the
+  // weekly rank in Ton classement (MySchoolCard, mocked in this file).
+  expect(document.querySelector('.pr-stats')).toBeNull();
+  expect(screen.getByText('4 jours de suite')).toBeInTheDocument();
+  expect(screen.getByText('Niveau 3')).toBeInTheDocument();
+  expect(screen.getByText('340 XP')).toBeInTheDocument();
+  expect(screen.getByText('school-card')).toBeInTheDocument();
   expect(document.getElementById('reglages')).not.toBeNull();
 });
 
-it('saves the pseudo from the title bar, keeping the board opt-in as it was', async () => {
+it('renders the dev preview from the fixture without touching the account', async () => {
+  const qc = new QueryClient();
+  render(
+    <QueryClientProvider client={qc}>
+      <MemoryRouter initialEntries={['/profile?preview=signed-in']}><Profile /></MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(screen.getByText(/Aperçu de développement — données fictives/)).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Élève Aperçu');
+  expect(screen.getByText('5 jours de suite')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('switch', { name: 'Visible au classement' }));
+  expect(mockSaveBoard).not.toHaveBeenCalled();
+});
+
+it('saves the pseudo from the Informations card, keeping the board opt-in as it was', async () => {
   const before = mockProfile.leaderboard;
   // As the real hook would after setQueryData: the next render reads the saved profile.
   mockSaveBoard.mockImplementation(async () => {
@@ -202,7 +222,7 @@ it('keeps the account links and sign-out', async () => {
   expect(screen.getByRole('link', { name: /Supprimer mon compte/ })).toHaveAttribute('href', '/delete-account');
   expect(screen.getByRole('link', { name: /Relevé de progression/ })).toHaveAttribute('href', '/releve');
   expect(screen.getByRole('link', { name: /Confidentialité/ })).toHaveAttribute('href', '/privacy');
-  expect(screen.getByRole('button', { name: /Déconnexion/ })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Se déconnecter/ })).toBeInTheDocument();
 });
 
 it('lands in the pseudo field from /profile#reglages when there is no pseudo', async () => {

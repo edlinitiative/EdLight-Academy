@@ -1,0 +1,117 @@
+/* SubjectFrame — one mat per subject, one inset, one crop, 16:9 everywhere.
+   Stitch web direction §0.8. No borders, no glow, no gradients. */
+
+.sf {
+  --sf-mat: #F2F5FA;
+  --sf-ink: #51627A;
+  --sf-inset: 6px;
+  --sf-art-bg: transparent;
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  padding: var(--sf-inset);
+  border-radius: 14px;
+  background: var(--sf-mat);
+  box-sizing: border-box;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.sf--lg { --sf-inset: 10px; }
+.sf--sm { border-radius: 10px; --sf-inset: 4px; }
+
+.sf--chem    { --sf-mat: #E7F6EE; --sf-ink: #127A4B; }
+.sf--math    { --sf-mat: #EAF2FE; --sf-ink: #1859B8; }
+.sf--econ    { --sf-mat: #FFF3DC; --sf-ink: #8A5300; }
+.sf--phys    { --sf-mat: #EEF0FF; --sf-ink: #4447B8; }
+.sf--svt     { --sf-mat: #EAF6E2; --sf-ink: #3B6E1C; }
+.sf--neutral { --sf-mat: #F2F5FA; --sf-ink: #51627A; }
+
+.sf__inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--sf-art-bg);
+}
+.sf--sm .sf__inner { border-radius: 7px; }
+.sf--still .sf__inner { background: #0B1B33; }
+/* 2% ink veil: unifies white balance across differently exposed boards. */
+.sf--still .sf__inner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(11, 27, 51, 0.02);
+  pointer-events: none;
+}
+
+.sf__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Centred: the sd/hq stills are 16:9 pictures letterboxed in 4:3, so any
+     vertical offset would reveal a black bar. */
+  object-position: center 50%;
+}
+
+/* Artwork: 45% of the frame height, centred slightly left. */
+.sf__art {
+  position: absolute;
+  top: 50%;
+  left: 47%;
+  height: 45%;
+  width: auto;
+  aspect-ratio: 48 / 40;
+  transform: translate(-50%, -50%);
+  color: var(--sf-ink);
+  overflow: visible;
+}
+.sf__art * { vector-effect: non-scaling-stroke; }
+.sf--lg.sf--art .sf__art,
+.sf--md.sf--art .sf__art { top: 46%; }
+
+.sf__pill {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  max-width: calc(100% - 24px);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #FFFFFF;
+  color: var(--sf-ink);
+  font: 600 14px/1.25 'Source Sans 3', system-ui, sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sf--md .sf__pill { left: 8px; bottom: 8px; }
+
+.sf__play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 56px;
+  height: 56px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: #FFFFFF;
+  box-shadow: 0 8px 24px rgba(11, 27, 51, 0.12);
+  display: grid;
+  place-items: center;
+}
+.sf--lg .sf__play { width: 64px; height: 64px; }
+.sf--sm .sf__play { width: 28px; height: 28px; }
+.sf__play svg { width: 44%; height: 44%; fill: #1B6FE0; margin-left: 8%; }
+
+/* Dark: mats sink into the surface, inks lift; the white pill and play disc
+   become the dark surface so nothing glows. */
+[data-theme="dark"] .sf--chem    { --sf-mat: #12302A; --sf-ink: #6FD59F; }
+[data-theme="dark"] .sf--math    { --sf-mat: #14284A; --sf-ink: #9DC2FA; }
+[data-theme="dark"] .sf--econ    { --sf-mat: #33270F; --sf-ink: #F3C171; }
+[data-theme="dark"] .sf--phys    { --sf-mat: #22244A; --sf-ink: #B9BCFA; }
+[data-theme="dark"] .sf--svt     { --sf-mat: #1D2F14; --sf-ink: #A6D98A; }
+[data-theme="dark"] .sf--neutral { --sf-mat: #1C2638; --sf-ink: #AFC0D4; }
+[data-theme="dark"] .sf__pill { background: #0F1A2B; }
+[data-theme="dark"] .sf__play { background: #F7F9FC; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35); }

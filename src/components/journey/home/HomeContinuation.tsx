@@ -1,21 +1,24 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, RefreshCw, RotateCcw, Play } from '../../icons';
+import { ArrowRight, RefreshCw } from '../../icons';
 import { evidenceLabel, trackJourney } from '../../../utils/learningJourney';
-import { lessonFrame } from '../../../utils/lessonFrames';
+import { lessonFrame, isWeakStill } from '../../../utils/lessonFrames';
 import { GRADES } from '../../../../shared/trackConfig';
 import useStore from '../../../contexts/store';
 import { Skeleton } from '../../Skeleton';
+import SubjectFrame from '../media/SubjectFrame';
 import { formatClock, lessonHref, flatLessons, type Continuation } from './homeJourney';
 
 /**
  * HomeContinuation — LJ-01's one dominant next action on the signed-in Home.
  *
- * It is a single row on the page canvas, not a banner and not the old
- * « Reprendre où tu en étais » card: the exact destination (lesson title,
- * subject, class, unit, recorded status) on the left of one primary button,
- * with a compact review count and a quiet browse link beside it. The student
- * can read where the button goes before pressing it.
+ * Stitch web direction §1.1 / §1.2: one card, a 320px media column (desktop)
+ * or a full-width frame on top (phone), then context, the lesson title, its
+ * recorded status and the page's ONE solid button, with a tonal review count
+ * beside it. The media is always a SubjectFrame: the lesson's own still on its
+ * subject mat, or the subject artwork on that mat — never an empty tinted
+ * block (RECHECK item 1). The student can read where the button goes before
+ * pressing it.
  *
  * Every state the PRD's matrix asks of Home is drawn here: loading (a
  * skeleton the shape of the row), load failure (retry, while the rest of the
@@ -61,20 +64,12 @@ export default function HomeContinuation({
   const select = (action: string, extra?: Record<string, string | number | boolean | null | undefined>) =>
     trackJourney('learning_next_action_selected', { source: 'home', action, ...extra });
 
-  // ── Secondary actions: one compact review count, one quiet browse link ──
-  const secondary = (
-    <>
-      {typeof dueCount === 'number' && dueCount > 0 && (
-        <Link to="/revision" className="jh-next__alt jh-next__alt--review" onClick={() => select('review', { due: dueCount })}>
-          <RotateCcw size={16} aria-hidden="true" />
-          {L(`${dueCount} question${dueCount > 1 ? 's' : ''} à revoir`, `${dueCount} kesyon pou revize`)}
-        </Link>
-      )}
-      <Link to="/courses" className="jh-next__alt jh-next__alt--quiet" onClick={() => select('browse')}>
-        {L('Parcourir les cours', 'Gade tout kou yo')}
-      </Link>
-    </>
-  );
+  // ── Secondary action: one tonal review count (browse lives in the nav) ──
+  const secondary = typeof dueCount === 'number' && dueCount > 0 ? (
+    <Link to="/revision" className="jh-btn jh-btn--tonal jh-next__alt--review" onClick={() => select('review', { due: dueCount })}>
+      {L(`${dueCount} question${dueCount > 1 ? 's' : ''} à revoir`, `${dueCount} kesyon pou revize`)}
+    </Link>
+  ) : null;
 
   const classChooser = (
     <div className="jh-class" role="group" aria-label={L('Choisis ta classe', 'Chwazi klas ou')}>
@@ -100,12 +95,12 @@ export default function HomeContinuation({
   if (loading) {
     return (
       <section className="jh-next jh-next--loading" aria-busy="true" aria-label={L('Ta prochaine leçon', 'Pwochen leson ou')}>
-        <span className="jh-next__media"><Skeleton width="100%" height="100%" radius={14} /></span>
+        <span className="jh-next__media jh-next__media--skel"><Skeleton width="100%" height="100%" radius={14} /></span>
         <div className="jh-next__body">
           <Skeleton width="38%" height={14} />
           <Skeleton width="72%" height={26} style={{ margin: '0.6rem 0 0.5rem' }} />
           <Skeleton width="46%" height={14} />
-          <Skeleton width={190} height={52} radius={12} style={{ marginTop: '1rem' }} />
+          <Skeleton width={210} height={48} radius={12} style={{ marginTop: '1.5rem' }} />
         </div>
         <span className="jh-sr" role="status">{L('Chargement de ta prochaine leçon…', 'N ap chaje pwochen leson ou…')}</span>
       </section>
@@ -122,7 +117,7 @@ export default function HomeContinuation({
               'Tcheke koneksyon ou, epi eseye ankò. Egzamen ak revizyon ou yo anba a toujou disponib.')}
           </p>
           <div className="jh-next__actions">
-            <button type="button" className="button button--primary button--lg" onClick={onRetry} disabled={retrying}>
+            <button type="button" className="jh-btn jh-btn--solid" onClick={onRetry} disabled={retrying}>
               <RefreshCw size={18} aria-hidden="true" />
               {retrying ? L('Nouvel essai…', 'N ap eseye…') : L('Réessayer', 'Eseye ankò')}
             </button>
@@ -160,7 +155,7 @@ export default function HomeContinuation({
           <div className="jh-next__actions">
             <button
               type="button"
-              className="button button--primary button--lg"
+              className="jh-btn jh-btn--solid"
               onClick={() => {
                 select('resume_exam');
                 navigate(state.path, { state: { autostart: true, resume: true } });
@@ -177,24 +172,22 @@ export default function HomeContinuation({
 
   // ── A real lesson: resume, next, recent course or a first lesson ─────────
   if (state.kind === 'lesson') {
-    const { course, unit, unitIndex, lesson, reason, evidence, positionSec, otherLevel } = state;
+    const { course, unit, unitIndex, lesson, lessonIndex, reason, evidence, positionSec, otherLevel } = state;
     const lvl = courseLevel(course);
     const href = lessonHref(course.id, lesson.id);
-    // The lesson's OWN best still. When none of its stills is usable we show
-    // the subject-tinted block, not another lesson's frame: the picture must
-    // be of the lesson the button opens.
+    // The lesson's OWN best still; SubjectFrame draws the subject artwork on
+    // the same mat when it has none — never another lesson's frame, never an
+    // empty block.
     const frame = lessonFrame(lesson.videoUrl);
     const unitNo = Number(unit?.unit_no) || unitIndex + 1;
     const total = flatLessons(course).length;
-    const verb = reason === 'resume' ? L('Reprendre :', 'Kontinye :')
-      : reason === 'start' ? L('Commencer :', 'Kòmanse :')
-        : L('Leçon suivante :', 'Pwochen leson :');
+    const inUnit = Array.isArray(unit?.lessons) ? unit.lessons.length : 0;
     const cta = reason === 'resume' ? L('Reprendre la leçon', 'Kontinye leson an')
       : reason === 'start' ? L('Commencer la leçon', 'Kòmanse leson an')
         : L('Ouvrir la leçon', 'Louvri leson an');
     const status: string[] = [];
     if (reason === 'resume' && positionSec > 0) {
-      status.push(L(`La vidéo reprend à ${formatClock(positionSec)} sur cet appareil`, `Videyo a ap repran nan ${formatClock(positionSec)} sou aparèy sa a`));
+      status.push(L(`Reprend à ${formatClock(positionSec)} sur cet appareil`, `Ap repran nan ${formatClock(positionSec)} sou aparèy sa a`));
     }
     if (reason === 'next') status.push(L('Tu as terminé la leçon précédente', 'Ou fini leson anvan an'));
     if (reason === 'start') {
@@ -210,19 +203,27 @@ export default function HomeContinuation({
     };
     return (
       <section className="jh-next" aria-labelledby="jh-next-title">
-        <span className={`jh-next__media jh-next__media--${course.subject}`} aria-hidden="true">
-          {frame ? <img src={frame} alt="" /> : null}
-          <span className="jh-next__play"><Play size={20} /></span>
+        <span className="jh-next__media">
+          {/* The subject pill belongs to the artwork; on a real still the
+              subject is already named in the context line. */}
+          <SubjectFrame subject={course.subject} still={frame} size="lg" label={!frame || isWeakStill(frame) ? subjectName(course.subject) : undefined} />
         </span>
         <div className="jh-next__body">
           <p className="jh-next__context">
-            <span>{subjectName(course.subject)} · {levelLabel(lvl)}</span>
+            {reason === 'start' && lessonIndex === 0 && unitIndex === 0 && (
+              <span className="jh-next__first">{L('Ta première leçon', 'Premye leson ou')} · </span>
+            )}
+            <span>{subjectName(course.subject)} {levelLabel(lvl)}</span>
             <span aria-hidden="true"> · </span>
-            <span>{L(`Unité ${unitNo}`, `Inite ${unitNo}`)}{unit?.title ? ` — ${unit.title}` : ''}</span>
+            <span>{unit?.title || L(`Unité ${unitNo}`, `Inite ${unitNo}`)}</span>
+            {inUnit > 0 && (
+              <>
+                <span aria-hidden="true"> · </span>
+                <span>{L(`Leçon ${lessonIndex + 1} sur ${inUnit}`, `Leson ${lessonIndex + 1} sou ${inUnit}`)}</span>
+              </>
+            )}
           </p>
-          <h2 id="jh-next-title" className="jh-next__title">
-            <span className="jh-next__verb">{verb}</span> {lesson.title}
-          </h2>
+          <h2 id="jh-next-title" className="jh-next__title">{lesson.title}</h2>
           <p className="jh-next__status">
             <span className={`jh-ev jh-ev--${evidence || 'new'}`}>
               {evidence ? evidenceLabel(evidence, isCreole) : L('Pas encore commencée', 'Poko kòmanse')}
@@ -236,7 +237,7 @@ export default function HomeContinuation({
           </p>
           {staleNote}
           <div className="jh-next__actions">
-            <Link to={href} className="button button--primary button--lg" onClick={go}>
+            <Link to={href} className="jh-btn jh-btn--solid" onClick={go}>
               {cta} <ArrowRight size={18} aria-hidden="true" />
             </Link>
             {secondary}
@@ -262,7 +263,7 @@ export default function HomeContinuation({
             {s && (
               <Link
                 to={lessonHref(s.course.id, s.lesson.id)}
-                className="button button--secondary"
+                className="jh-btn jh-btn--tonal jh-btn--wrap"
                 onClick={() => select('start_lesson', { reason: 'no_class', course_id: s.course.id, lesson_id: s.lesson.id })}
               >
                 {L('Commencer sans choisir :', 'Kòmanse san chwazi :')} {s.lesson.title} · {subjectName(s.course.subject)} {levelLabel(courseLevel(s.course))}
@@ -303,11 +304,11 @@ export default function HomeContinuation({
           {staleNote}
           <div className="jh-next__actions">
             {exam ? (
-              <Link to={exam.to} className="button button--primary button--lg" onClick={() => select('uncovered_exams', { grade: g })}>
+              <Link to={exam.to} className="jh-btn jh-btn--solid" onClick={() => select('uncovered_exams', { grade: g })}>
                 {L(exam.fr, exam.ht)} <ArrowRight size={18} aria-hidden="true" />
               </Link>
             ) : (
-              <Link to="/courses?niveau=NSI" className="button button--primary button--lg" onClick={() => select('uncovered_browse', { grade: g })}>
+              <Link to="/courses?niveau=NSI" className="jh-btn jh-btn--solid" onClick={() => select('uncovered_browse', { grade: g })}>
                 {L('Voir les cours de NS I', 'Gade kou NS I yo')} <ArrowRight size={18} aria-hidden="true" />
               </Link>
             )}
@@ -337,7 +338,7 @@ export default function HomeContinuation({
           </p>
           {staleNote}
           <div className="jh-next__actions">
-            <Link to="/courses" className="button button--primary button--lg" onClick={() => select('browse', { reason: 'level_empty' })}>
+            <Link to="/courses" className="jh-btn jh-btn--solid" onClick={() => select('browse', { reason: 'level_empty' })}>
               {L('Parcourir les cours', 'Gade tout kou yo')} <ArrowRight size={18} aria-hidden="true" />
             </Link>
             {changeClass}
@@ -363,11 +364,11 @@ export default function HomeContinuation({
         {staleNote}
         <div className="jh-next__actions">
           {due > 0 ? (
-            <Link to="/revision" className="button button--primary button--lg" onClick={() => select('review', { due, reason: 'caught_up' })}>
+            <Link to="/revision" className="jh-btn jh-btn--solid" onClick={() => select('review', { due, reason: 'caught_up' })}>
               {L(`Revoir ${due} question${due > 1 ? 's' : ''}`, `Revize ${due} kesyon`)} <ArrowRight size={18} aria-hidden="true" />
             </Link>
           ) : (
-            <Link to="/quizzes" className="button button--primary button--lg" onClick={() => select('practice', { reason: 'caught_up' })}>
+            <Link to="/quizzes" className="jh-btn jh-btn--solid" onClick={() => select('practice', { reason: 'caught_up' })}>
               {L('S’entraîner', 'Pratike')} <ArrowRight size={18} aria-hidden="true" />
             </Link>
           )}

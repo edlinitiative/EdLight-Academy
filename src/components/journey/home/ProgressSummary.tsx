@@ -91,11 +91,13 @@ export default function ProgressSummary({
     trackJourney('progress_summary_opened', { source: 'home', courses: rows.length });
   };
 
+  // Hidden until there is evidence: a new student is shown nothing rather
+  // than a card of zeroes (Stitch web direction §1.4).
+  if (!loading && !failed && rows.length === 0) return null;
+
   return (
-    <section className={`lws-card jh-prog${className ? ` ${className}` : ''}`} aria-labelledby="jh-prog-title">
-      <div className="lws-section__head">
-        <h3 id="jh-prog-title">{L('Ta progression', 'Pwogrè ou')}</h3>
-      </div>
+    <section className={`jh-card jh-prog${className ? ` ${className}` : ''}`} aria-labelledby="jh-prog-title">
+      <h2 id="jh-prog-title" className="jh-card__title">{L('Ta progression', 'Pwogrè ou')}</h2>
 
       {loading ? (
         <div aria-hidden="true" className="jh-prog__skel">
@@ -113,11 +115,6 @@ export default function ProgressSummary({
             'Pwogrè ou pa t ka chaje. Anyen pa pèdi : li anrejistre sou kont ou.')}</p>
           <button type="button" className="jh-prog__retry" onClick={onRetry}>{L('Réessayer', 'Eseye ankò')}</button>
         </div>
-      ) : rows.length === 0 ? (
-        <p className="jh-prog__empty">
-          {L('Rien n’est encore compté. Ta progression apparaîtra ici dès ta première leçon.',
-            'Anyen poko konte. Pwogrè ou ap parèt isit la depi premye leson ou.')}
-        </p>
       ) : (
         <ul className="jh-prog__list">
           {rows.map(({ course, summary: s }) => {

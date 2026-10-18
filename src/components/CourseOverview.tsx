@@ -6,28 +6,34 @@
  * ONE action that enters the right lesson. A deep link to a lesson skips this
  * screen entirely (CourseDetail opens `?lesson=` directly).
  *
+ * Stitch web redesign (DIRECTION-WEB §2.3/2.4): no image band; the header is
+ * type only, the chapters carry the pictures — each on its subject mat
+ * (SubjectFrame), with the honest artwork when a chapter has no good still.
+ *
  * Honesty rules:
+ *  - the summary only when authored — the generated "Cours de … enseigné en
+ *    vidéo par EdLight" template is hidden (utils/lessonCopy);
  *  - duration only when the lessons carry real lengths. `course.length` and
  *    lesson `duration` default to 15 min per lesson in the data layer, so a
  *    total that is just "lessons × 15" is a placeholder and is not shown;
- *  - outcomes only when authored (course.outcomes / learningOutcomes) — never
- *    a list made up from chapter titles;
+ *  - outcomes ("Ce que tu sauras faire") only when authored — never a list
+ *    made up from chapter titles;
  *  - instructors only when a verified one is bound (CourseInstructors);
- *  - completion ("terminées") and mastery stay two different lines.
+ *  - evidence words stay separate statements (terminées · pratiquées ·
+ *    maîtrisées), never summed; a chapter with none says nothing.
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { BookOpen, Clock, Layers, PlayCircle, ChevronRight, ArrowLeft, Check, GraduationCap, Info } from './icons';
+import { BookOpen, Clock, Layers, ChevronRight, ChevronDown, ArrowLeft, Check, Info, Circle, Play } from './icons';
 import CourseInstructors from './CourseInstructors';
-import MasteryBadge from './MasteryBadge';
-import { summarize } from '../../shared/mastery';
-import { subjectCover } from '../utils/subjectCovers';
-import { firstThumb } from '../utils/videoThumb';
+import SubjectFrame from './journey/media/SubjectFrame';
 import { lessonFrame } from '../utils/lessonFrames';
+import { authoredDescription } from '../utils/lessonCopy';
 import { displayCourseName } from '../utils/courseName';
-import { practiceHref } from '../utils/learningJourney';
+import { EVIDENCE, practiceHref } from '../utils/learningJourney';
+import './CourseOverview.css';
 
 function getLessons(module) {
   return Array.isArray(module?.lessons) ? module.lessons : [];
@@ -45,6 +51,12 @@ export function realLessonMinutes(lessons: Array<{ duration?: unknown }>): numbe
   return mins.reduce((a, b) => a + b, 0);
 }
 
+/** One lesson's real minutes, or 0. */
+function lessonMinutes(l: { duration?: unknown }): number {
+  const m = parseInt(String(l?.duration ?? ''), 10);
+  return Number.isFinite(m) && m > 0 && m !== PLACEHOLDER_LESSON_MINUTES ? m : 0;
+}
+
 /** Authored learning outcomes, if the course document carries any. */
 function authoredOutcomes(course): string[] {
   const raw = course?.outcomes ?? course?.learningOutcomes ?? course?.learning_outcomes;
@@ -52,9 +64,17 @@ function authoredOutcomes(course): string[] {
   return list.map((s) => String(s || '').replace(/^\s*[-•*]\s*/, '').trim()).filter(Boolean).slice(0, 6);
 }
 
-/** "NSI" → "NS I" (the catalogue's spelling of a class). */
-function levelLabel(level?: string) {
-  return level ? String(level).replace(/^NS\s*(.*)$/i, 'NS $1') : '';
+/** Independent evidence counts over a set of lessons (same rules as Home). */
+function evidenceOf(lessons: any[], completed: Set<string>, mastery: any) {
+  let done = 0; let practised = 0; let mastered = 0;
+  for (const l of lessons) {
+    if (!l?.id) continue;
+    const rec = mastery?.[l.id];
+    if (completed.has(l.id) || rec?.completed) done += 1;
+    if (typeof rec?.bestPct === 'number') practised += 1;
+    if (rec?.masteredAt) mastered += 1;
+  }
+  return { done, practised, mastered };
 }
 
 export default function CourseOverview({
@@ -66,6 +86,7 @@ export default function CourseOverview({
   hasProgress = false,
   onStart,
   onSelectModule,
+  onSelectLesson,
   mastery = null,
   staleLesson = false,
   backTo = '/courses',
@@ -77,7 +98,10 @@ export default function CourseOverview({
   resumeTarget?: { module: number; lesson: number };
   hasProgress?: boolean;
   onStart: () => void;
+  /** Kept for callers that open a chapter at its first unfinished lesson. */
   onSelectModule?: (idx: number) => void;
+  /** Open one lesson from an expanded chapter. */
+  onSelectLesson?: (moduleIdx: number, lessonIdx: number) => void;
   mastery?: any;
   /** The `?lesson=` this page was opened with doesn't exist in the course. */
   staleLesson?: boolean;
@@ -85,7 +109,7 @@ export default function CourseOverview({
   backTo?: string;
 }) {
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const isCreole = i18n.language === 'ht';
   const L = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -93,17 +117,11 @@ export default function CourseOverview({
   const allLessons = useMemo(() => modules.flatMap((m) => getLessons(m)), [modules]);
   const totalLessons = allLessons.length || course.videoCount || 0;
 
-  const completedLessons: string[] = progress?.completedLessons || [];
-  const completedCount = completedLessons.length;
-  const percent = totalLessons > 0 ? Math.min(100, Math.round((completedCount / totalLessons) * 100)) : 0;
-  const allDone = totalLessons > 0 && allLessons.every((l) => l?.id && completedLessons.includes(l.id));
-
-  // Handed down from CourseDetail, which owns the single read. Mastery is NOT
-  // on the progress doc — it lives in users/{uid}/mastery/lessons, shared with
-  // the mobile app. It answers a different question from the bar above it.
+  const completedSet = useMemo(() => new Set<string>(progress?.completedLessons || []), [progress?.completedLessons]);
   const masteryMap = mastery || {};
-  const allLessonIds = useMemo(() => allLessons.map((l) => l?.id).filter(Boolean), [allLessons]);
-  const courseMastery = useMemo(() => summarize(allLessonIds, masteryMap), [allLessonIds, masteryMap]);
+  const courseEvidence = useMemo(() => evidenceOf(allLessons, completedSet, masteryMap), [allLessons, completedSet, masteryMap]);
+  const percent = totalLessons > 0 ? Math.min(100, Math.round((courseEvidence.done / totalLessons) * 100)) : 0;
+  const allDone = totalLessons > 0 && allLessons.every((l) => l?.id && completedSet.has(l.id));
 
   const totalMinutes = realLessonMinutes(allLessons);
   const formatDuration = (minutes: number) => {
@@ -116,243 +134,169 @@ export default function CourseOverview({
     return `${mins} ${minLabel}`;
   };
 
-  const accent = course.color || 'var(--primary-500)';
-  const description = (course.description || '').trim();
+  const description = authoredDescription(course.description) || '';
   const outcomes = authoredOutcomes(course);
-  const level = levelLabel(course.level);
+  const subject = course.subject || course.code || '';
 
-  const resumeModuleTitle = modules[resumeTarget.module]?.title || '';
   const resumeLesson = getLessons(modules[resumeTarget.module])[resumeTarget.lesson];
   const resumeLessonTitle = resumeLesson?.title || '';
-  // The frame of the lesson the CTA opens — what "Commencer" actually starts —
-  // its best still (utils/lessonFrames). None usable: the course cover below.
-  const resumeFrame = lessonFrame(resumeLesson?.videoUrl);
 
   // ONE action, named after what it opens.
   const ctaLabel = allDone
     ? L('Revoir le cours', 'Revize kou a')
-    : hasProgress
-      ? L('Reprendre', 'Kontinye')
-      : L('Commencer', 'Kòmanse');
-  const ctaSub = resumeLessonTitle
-    ? `${hasProgress && resumeModuleTitle ? `${resumeModuleTitle} · ` : ''}${resumeLessonTitle}`
-    : '';
+    : resumeLessonTitle
+      ? (hasProgress
+          ? L(`Continuer : ${resumeLessonTitle}`, `Kontinye : ${resumeLessonTitle}`)
+          : L(`Commencer : ${resumeLessonTitle}`, `Kòmanse : ${resumeLessonTitle}`))
+      : (hasProgress ? L('Continuer', 'Kontinye') : L('Commencer', 'Kòmanse'));
 
   // The course's practice, as a quiet alternative — not a second primary.
   const coursePracticeHref = course.code ? practiceHref({ course: course.code }) : '/quizzes';
 
-  // The subject's cover art, the one the catalogue and the home hero use.
-  const cover = subjectCover(course.subject);
-  // A course description can run to seven lines; two are enough to decide,
-  // and the student who wants the rest asks for it.
   const [descOpen, setDescOpen] = useState(false);
-  const longDesc = (description || '').length > 180;
+  const longDesc = description.length > 180;
+
+  // The chapter the CTA resumes starts open; any chapter toggles.
+  const [open, setOpen] = useState<Set<number>>(() => new Set([resumeTarget.module]));
+  useEffect(() => { setOpen(new Set([resumeTarget.module])); }, [course.id, resumeTarget.module]);
+  const toggle = (idx: number) => setOpen((prev) => {
+    const next = new Set(prev);
+    if (next.has(idx)) next.delete(idx); else next.add(idx);
+    return next;
+  });
+
+  const showProgress = isEnrolled && totalLessons > 0;
+  const hasRail = showProgress || outcomes.length > 0;
+
+  const evidenceLine = (e: { done: number; practised: number; mastered: number }) => {
+    const parts: string[] = [];
+    if (e.done > 0) parts.push(L(`${e.done} terminée${e.done > 1 ? 's' : ''}`, `${e.done} fini`));
+    if (e.practised > 0) parts.push(L(`${e.practised} pratiquée${e.practised > 1 ? 's' : ''}`, `${e.practised} pratike`));
+    if (e.mastered > 0) parts.push(L(`${e.mastered} maîtrisée${e.mastered > 1 ? 's' : ''}`, `${e.mastered} metrize`));
+    return parts.join(' · ');
+  };
 
   return (
-    <div className="course-overview" style={{ '--course-accent': accent } as React.CSSProperties}>
-      <button type="button" className="course-overview__back" onClick={() => navigate(backTo)}>
-        <ArrowLeft size={16} aria-hidden="true" /> {t('courses.returnToCatalog', 'Retour au catalogue')}
-      </button>
+    <div className={`co${hasRail ? ' co--rail' : ''}`}>
+      <div className="co__main">
+      <div className="co__head">
+        <button type="button" className="co__back" onClick={() => navigate(backTo)}>
+          <ArrowLeft size={16} aria-hidden="true" />
+          <span>{L('Catalogue', 'Katalòg')}<span className="qz__sr-only"> : {L('retour', 'retounen')}</span></span>
+        </button>
 
-      {staleLesson && (
-        <p className="course-overview__notice" role="status">
-          <Info size={16} aria-hidden="true" />
-          {L(
-            'Cette leçon n’est plus disponible dans ce cours. Voici le cours ; reprends où tu en es.',
-            'Leson sa a pa disponib ankò nan kou sa a. Men kou a ; kontinye kote ou te rive a.',
-          )}
-        </p>
-      )}
-
-      <header className={`course-overview__hero${cover || resumeFrame ? ' course-overview__hero--art' : ''}${resumeFrame ? ' course-overview__hero--frame' : ''}`}>
-        {resumeFrame && (
-          // The same action as the button below, as a picture of what it
-          // opens. Pointer-only: keyboard and screen readers get one control.
-          <button type="button" className="course-overview__preview" onClick={onStart} tabIndex={-1} aria-hidden="true">
-            <img src={resumeFrame} alt="" decoding="async" />
-            <span className="course-overview__preview-play"><PlayCircle size={30} /></span>
-            <span className="course-overview__preview-cap">
-              <span>{hasProgress ? ctaLabel : t('courses.firstLesson', 'Première leçon')}</span>
-              <strong>{resumeLessonTitle}</strong>
-            </span>
-          </button>
-        )}
-        {cover && !resumeFrame && (
-          <img
-            className="course-overview__cover"
-            src={cover}
-            alt=""
-            aria-hidden="true"
-            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-          />
-        )}
-        <div className="course-overview__intro">
-          <h1 className="course-overview__title">{displayCourseName(course.name || course.title)}</h1>
-          {description && (
-            <p className={`course-overview__desc${longDesc && !descOpen ? ' is-clamped' : ''}`}>{displayCourseName(description)}</p>
-          )}
-          {longDesc && (
-            <button
-              type="button"
-              className="course-overview__more"
-              aria-expanded={descOpen}
-              onClick={() => setDescOpen((o) => !o)}
-            >
-              {descOpen ? t('common.showLess', 'Voir moins') : t('common.readMore', 'Lire la suite')}
-            </button>
-          )}
-
-          <ul className="course-overview__meta">
-            {level && (
-              <li className="course-overview__meta-item">
-                <GraduationCap size={16} aria-hidden="true" /> {L(`Classe : ${level}`, `Klas : ${level}`)}
-              </li>
+        {staleLesson && (
+          <p className="co__notice" role="status">
+            <Info size={16} aria-hidden="true" />
+            {L(
+              'Cette leçon n’est plus disponible dans ce cours. Voici le cours ; reprends où tu en es.',
+              'Leson sa a pa disponib ankò nan kou sa a. Men kou a ; kontinye kote ou te rive a.',
             )}
-            <li className="course-overview__meta-item">
-              <Layers size={16} aria-hidden="true" /> {L(`${totalModules} chapitre${totalModules === 1 ? '' : 's'}`, `${totalModules} chapit`)}
-            </li>
-            <li className="course-overview__meta-item">
-              <BookOpen size={16} aria-hidden="true" /> {L(`${totalLessons} leçon${totalLessons === 1 ? '' : 's'} vidéo`, `${totalLessons} leson videyo`)}
-            </li>
-            {totalMinutes > 0 && (
-              <li className="course-overview__meta-item">
-                <Clock size={16} aria-hidden="true" /> {formatDuration(totalMinutes)}
-              </li>
+          </p>
+        )}
+
+        <h1 className="co__title">{displayCourseName(course.name || course.title)}</h1>
+        {description && (
+          <>
+            <p className={`co__desc${longDesc && !descOpen ? ' is-clamped' : ''}`}>{displayCourseName(description)}</p>
+            {longDesc && (
+              <button type="button" className="co__more" aria-expanded={descOpen} onClick={() => setDescOpen((o) => !o)}>
+                {descOpen ? L('Voir moins', 'Wè mwens') : L('Lire la suite', 'Li rès la')}
+              </button>
             )}
-          </ul>
+          </>
+        )}
+        <ul className="co__meta">
+          <li><Layers size={16} aria-hidden="true" /> {L(`${totalModules} chapitre${totalModules === 1 ? '' : 's'}`, `${totalModules} chapit`)}</li>
+          <li><BookOpen size={16} aria-hidden="true" /> {L(`${totalLessons} leçon${totalLessons === 1 ? '' : 's'}`, `${totalLessons} leson`)}</li>
+          {totalMinutes > 0 && <li><Clock size={16} aria-hidden="true" /> {formatDuration(totalMinutes)}</li>}
+        </ul>
+      </div>
 
-          {outcomes.length > 0 && (
-            <section className="course-overview__outcomes" aria-labelledby="course-outcomes-title">
-              <h2 id="course-outcomes-title" className="course-overview__outcomes-title">
-                {L('Ce que tu vas apprendre', 'Sa w ap aprann')}
-              </h2>
-              <ul>
-                {outcomes.map((o) => (
-                  <li key={o}><Check size={15} aria-hidden="true" /> {o}</li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {isEnrolled && hasProgress && (
-            <div className="course-overview__progress">
-              <div className="course-overview__progress-head">
-                <span>{t('courses.progress', 'Progression')}</span>
-                <strong>{percent}%</strong>
-              </div>
-              <div className="progress-bar" aria-hidden="true">
-                <span className="progress-bar__fill" style={{ width: `${percent}%` }} />
-              </div>
-              <span className="course-overview__progress-meta">
-                {L(
-                  `${completedCount} leçon${completedCount === 1 ? '' : 's'} terminée${completedCount === 1 ? '' : 's'} sur ${totalLessons}`,
-                  `${completedCount} leson fini sou ${totalLessons}`,
-                )}
-              </span>
-              {/* Mastery, not consumption. Hidden until something has
-                  actually been earned. */}
-              {courseMastery.points > 0 && (
-                <div className="course-overview__mastery">
-                  <span className="course-overview__mastery-label">
-                    {t('courses.masteryLabel', 'Maîtrise')}
-                  </span>
-                  <span className="course-overview__mastery-track" aria-hidden="true">
-                    <span
-                      className="course-overview__mastery-fill"
-                      style={{ width: `${courseMastery.points}%` }}
-                    />
-                  </span>
-                  <strong className="course-overview__mastery-pct">{courseMastery.points}%</strong>
-                  {courseMastery.mastered > 0 && (
-                    <span className="course-overview__mastery-count text-muted">
-                      {t('courses.masteredCount', {
-                        count: courseMastery.mastered,
-                        defaultValue: `${courseMastery.mastered} maîtrisées`,
-                      })}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="course-overview__actions">
-            <button type="button" className="button button--primary course-overview__cta" onClick={onStart}>
-              <PlayCircle size={18} aria-hidden="true" />
-              <span className="course-overview__cta-label">
-                {ctaLabel}
-                {ctaSub && <span className="course-overview__cta-sub">{ctaSub}</span>}
-              </span>
-            </button>
-            <button type="button" className="course-overview__alt" onClick={() => navigate(coursePracticeHref)}>
-              {L('ou s’entraîner sur ce cours', 'oswa pratike sou kou sa a')}
-            </button>
-          </div>
-        </div>
-      </header>
+      <div className="co__actions">
+        <button type="button" className="co__solid" onClick={onStart}>
+          <span className="co__solid-label">{ctaLabel}</span>
+          <ChevronRight size={18} aria-hidden="true" />
+        </button>
+        <button type="button" className="co__tonal" onClick={() => navigate(coursePracticeHref)}>
+          {L('S’entraîner sur ce cours', 'Pratike sou kou sa a')}
+        </button>
+      </div>
 
       {totalModules > 0 && (
-        <section className="course-overview__content" aria-labelledby="course-outline-title">
-          <h2 id="course-outline-title" className="course-overview__content-title">
-            {t('courses.courseContent', 'Contenu du cours')}
-          </h2>
-          <ol className="course-overview__modules">
+        <section className="co__content" aria-labelledby="course-outline-title">
+          <h2 id="course-outline-title" className="co__section-title">{L('Contenu du cours', 'Sa ki nan kou a')}</h2>
+          <ol className="co__chapters">
             {modules.map((module, idx) => {
               const lessons = getLessons(module);
-              const moduleLessonIds = lessons.map((l) => l.id);
-              const doneInModule = moduleLessonIds.filter((id) => completedLessons.includes(id)).length;
-              const moduleDone = lessons.length > 0 && doneInModule >= lessons.length;
+              const ev = evidenceOf(lessons, completedSet, masteryMap);
+              const moduleDone = lessons.length > 0 && ev.done >= lessons.length;
               const moduleMinutes = realLessonMinutes(lessons);
-              // The chapter's own mastery. `summarize` takes a group's level to
-              // be its WEAKEST lesson's, so a green chapter means nothing in it
-              // is still shaky — which is what makes one worth earning.
-              const unit = summarize(moduleLessonIds.filter(Boolean), masteryMap);
-              const thumb = firstThumb(lessons);
+              const still = lessons.map((l) => lessonFrame(l?.videoUrl)).find(Boolean) || null;
+              const isOpen = open.has(idx) && lessons.length > 0;
+              const listId = `co-ch-${module.id ?? idx}`;
+              const evText = isEnrolled ? evidenceLine(ev) : '';
               return (
-                <li key={module.id || idx}>
+                <li key={module.id || idx} className={`co__chapter${isOpen ? ' is-open' : ''}`}>
                   <button
                     type="button"
-                    className={`course-overview__module ${moduleDone ? 'is-done' : ''}`}
-                    onClick={() => onSelectModule?.(idx)}
+                    className="co__chapter-head"
+                    aria-expanded={lessons.length > 0 ? isOpen : undefined}
+                    aria-controls={lessons.length > 0 ? listId : undefined}
+                    onClick={() => (lessons.length > 0 ? toggle(idx) : onSelectModule?.(idx))}
                   >
-                    {thumb ? (
-                      <span className="course-overview__module-thumb">
-                        <img src={thumb.src} alt="" loading="lazy" decoding="async" width={320} height={180} />
-                        <span className="course-overview__module-num" aria-hidden="true">
-                          {moduleDone ? <Check size={13} /> : idx + 1}
-                        </span>
-                      </span>
-                    ) : (
-                      <span className="course-overview__module-index" aria-hidden="true">
-                        {moduleDone ? <Check size={16} /> : String(idx + 1).padStart(2, '0')}
-                      </span>
-                    )}
-                    <span className="course-overview__module-body">
-                      <span className="course-overview__module-title">
+                    <span className="co__thumb">
+                      <SubjectFrame subject={subject} still={still} size="md" />
+                      <span className="co__num" aria-hidden="true">{moduleDone ? <Check size={14} weight="bold" /> : idx + 1}</span>
+                    </span>
+                    <span className="co__chapter-body">
+                      <span className="co__chapter-title">
                         <span className="qz__sr-only">{L(`Chapitre ${idx + 1} : `, `Chapit ${idx + 1} : `)}</span>
                         {module.title}
-                        <MasteryBadge level={unit.level} isCreole={isCreole} />
                       </span>
-                      <span className="course-overview__module-meta">
+                      <span className="co__chapter-meta">
                         {L(`${lessons.length} leçon${lessons.length === 1 ? '' : 's'}`, `${lessons.length} leson`)}
                         {moduleMinutes > 0 ? ` · ${formatDuration(moduleMinutes)}` : ''}
-                        {isEnrolled && lessons.length > 0 && doneInModule > 0
-                          ? (moduleDone
-                              ? ` · ${L('chapitre terminé', 'chapit fini')}`
-                              : ` · ${L(`${doneInModule}/${lessons.length} terminées`, `${doneInModule}/${lessons.length} fini`)}`)
-                          : ''}
                       </span>
-                      {unit.points > 0 && (
-                        <span className="course-overview__module-mastery" aria-hidden="true">
-                          <span
-                            className="course-overview__module-mastery-fill"
-                            style={{ width: `${unit.points}%` }}
-                          />
-                        </span>
-                      )}
+                      {evText && <span className="co__chapter-ev co__chapter-ev--phone">{evText}</span>}
                     </span>
-                    <ChevronRight size={18} className="course-overview__module-chevron" aria-hidden="true" />
+                    {evText && <span className="co__chapter-ev co__chapter-ev--wide">{evText}</span>}
+                    {lessons.length > 0
+                      ? <ChevronDown size={20} className="co__chev" aria-hidden="true" />
+                      : <ChevronRight size={20} className="co__chev" aria-hidden="true" />}
                   </button>
+                  {isOpen && (
+                    <ul className="co__lessons" id={listId}>
+                      {lessons.map((lsn, lidx) => {
+                        const done = !!lsn?.id && completedSet.has(lsn.id);
+                        const current = hasProgress && !allDone && idx === resumeTarget.module && lidx === resumeTarget.lesson;
+                        const mins = lessonMinutes(lsn);
+                        return (
+                          <li key={lsn.id ?? lidx}>
+                            <button
+                              type="button"
+                              className={`co__lesson${current ? ' is-current' : ''}${done ? ' is-done' : ''}`}
+                              aria-current={current ? 'step' : undefined}
+                              onClick={() => (onSelectLesson ? onSelectLesson(idx, lidx) : onSelectModule?.(idx))}
+                            >
+                              <span className="co__lesson-glyph" aria-hidden="true">
+                                {done ? <Check size={16} weight="bold" /> : current ? <Play size={14} weight="fill" /> : <Circle size={16} />}
+                              </span>
+                              {(done || current) && (
+                                <span className="qz__sr-only">
+                                  {[current ? L('En cours', 'An kou') : '', done ? (isCreole ? EVIDENCE.completed.ht : EVIDENCE.completed.fr) : ''].filter(Boolean).join(', ')} :{' '}
+                                </span>
+                              )}
+                              <span className="co__lesson-title"><span className="co__lesson-num">{idx + 1}.{lidx + 1}</span> {lsn.title}</span>
+                              {current
+                                ? <span className="co__lesson-tail co__lesson-tail--current" aria-hidden="true">{L('En cours', 'An kou')}</span>
+                                : mins > 0 ? <span className="co__lesson-tail">{mins} min</span> : null}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
                 </li>
               );
             })}
@@ -360,7 +304,46 @@ export default function CourseOverview({
         </section>
       )}
 
-      <CourseInstructors courseId={course.id} />
+      </div>
+      <aside className="co__rail">
+      {showProgress && (
+        <section className="co__card co__progress" aria-labelledby="co-progress-title">
+          <h2 id="co-progress-title" className="co__card-title">{L('Ta progression', 'Pwogrè ou')}</h2>
+          <p className="co__progress-big">
+            <strong>{courseEvidence.done}/{totalLessons}</strong>
+            <span>{L('leçons terminées', 'leson fini')}</span>
+            <span className="co__progress-pct">{percent} %</span>
+          </p>
+          <div className="co__bar" aria-hidden="true"><span style={{ width: `${percent}%` }} /></div>
+          <dl className="co__triple">
+            <div><dt>{L('terminées', 'fini')}</dt><dd>{courseEvidence.done}</dd></div>
+            <div><dt>{L('pratiquées', 'pratike')}</dt><dd>{courseEvidence.practised}</dd></div>
+            <div><dt>{L('maîtrisées', 'metrize')}</dt><dd>{courseEvidence.mastered}</dd></div>
+          </dl>
+          <details className="co__words">
+            <summary>{L('Que veulent dire ces mots ?', 'Kisa mo sa yo vle di ?')}</summary>
+            <ul>
+              {(['completed', 'practised', 'mastered'] as const).map((k) => (
+                <li key={k}><strong>{isCreole ? EVIDENCE[k].ht : EVIDENCE[k].fr}</strong> — {isCreole ? EVIDENCE[k].helpHt : EVIDENCE[k].helpFr}</li>
+              ))}
+            </ul>
+          </details>
+        </section>
+      )}
+
+      {outcomes.length > 0 && (
+        <section className="co__card co__outcomes" aria-labelledby="course-outcomes-title">
+          <h2 id="course-outcomes-title" className="co__card-title">{L('Ce que tu sauras faire', 'Sa w ap konn fè')}</h2>
+          <ul>
+            {outcomes.map((o) => <li key={o}>{o}</li>)}
+          </ul>
+        </section>
+      )}
+
+      <div className="co__instructors">
+        <CourseInstructors courseId={course.id} />
+      </div>
+      </aside>
     </div>
   );
 }

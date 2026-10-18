@@ -153,7 +153,7 @@ export function Navbar() {
       <div className="container navbar__inner">
         <Link to="/" className="logo" onClick={closeMenu}>
           {/* logo-128.png: logo.png is 500px and 63 KB, shown here at 24-28px. */}
-          <img src="/assets/logo-128.png" alt="EdLight Academy" className="logo__image" />
+          <img src="/assets/logo-128.png" alt="" className="logo__image" />
           <span className="logo__text">EdLight Academy</span>
         </Link>
 
@@ -161,7 +161,7 @@ export function Navbar() {
             (shared `showMobileMenu` store flag), so the top-bar hamburger
             is intentionally omitted to avoid a redundant control. */}
 
-        <nav id="primary-navigation" className={`nav-links ${showMobileMenu ? 'nav-links--mobile-open' : ''}`} ref={navLinksRef}>
+        <nav id="primary-navigation" aria-label={useStore.getState().language === 'ht' ? 'Navigasyon prensipal' : 'Navigation principale'} className={`nav-links ${showMobileMenu ? 'nav-links--mobile-open' : ''}`} ref={navLinksRef}>
           {/* Drawer header (mobile only) */}
           <div className="nav-links__header nav-drawer__header">
             <Link to="/" className="nav-drawer__brand" onClick={closeMenu}>

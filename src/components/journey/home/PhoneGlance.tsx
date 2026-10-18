@@ -1,9 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, RotateCcw } from '../../icons';
-import { evidenceLabel, trackJourney } from '../../../utils/learningJourney';
+import { ChevronRight } from '../../icons';
+import { trackJourney } from '../../../utils/learningJourney';
 import useStore from '../../../contexts/store';
-import type { SummaryRow } from './ProgressSummary';
+import { factsLine, type SummaryRow } from './ProgressSummary';
 
 /**
  * PhoneGlance — the phone's answer to the desktop sidebar (audit 2026-10-17,
@@ -12,10 +12,12 @@ import type { SummaryRow } from './ProgressSummary';
  *
  * Right under the continuation it shows, compactly and from the same data the
  * sidebar uses:
- *   1. the due-review entry, with the real count (or an honest "nothing due",
- *      "loading" or "could not load" — never a made-up 0);
- *   2. a progress summary: one line per course worked in, completed over the
- *      real total, with a thin bar.
+ *   1. "À revoir": the due-review entry with the real count and where it
+ *      comes from (or an honest "loading" / "could not load"); hidden when
+ *      nothing is due, like the desktop card;
+ *   2. "Ta progression": the desktop rows (name, bar, evidence facts over the
+ *      real total); hidden until there is evidence — a new student sees no
+ *      zeroes.
  * Then the page continues with the (compact) subject collection.
  *
  * Phone only (≤ 720px, journeyHome.css); desktop keeps its sidebar. The two
@@ -42,75 +44,55 @@ export default function PhoneGlance({
   due, dueFrom, onRetryReview, rows, progressLoading, progressFailed, subjectName, levelLabel, courseLevel, L,
 }: Props) {
   const isCreole = useStore((s) => s.language) === 'ht';
-  const completedWord = (n: number) => {
-    const w = evidenceLabel('completed', isCreole).toLowerCase();
-    return !isCreole && n > 1 ? `${w}s` : w;
-  };
 
-  let review: React.ReactNode;
+  // Review: hidden when nothing is due (the desktop card is hidden too); the
+  // honest loading / could-not-load states still show, never a made-up 0.
+  let review: React.ReactNode = null;
   if (due === null) {
-    review = (
-      <div className="jh-glance__row jh-glance__row--static" role="status">
-        <span className="jh-glance__icon" aria-hidden="true"><RotateCcw size={18} /></span>
-        <span className="jh-glance__text"><strong>{L('À revoir', 'Pou revize')}</strong><span>{L('Chargement…', 'N ap chaje…')}</span></span>
-      </div>
-    );
+    review = <p className="jh-glance__muted" role="status">{L('Chargement…', 'N ap chaje…')}</p>;
   } else if (due === 'failed') {
     review = (
-      <div className="jh-glance__row jh-glance__row--static">
-        <span className="jh-glance__icon" aria-hidden="true"><RotateCcw size={18} /></span>
-        <span className="jh-glance__text"><strong>{L('À revoir', 'Pou revize')}</strong><span>{L('La liste n’a pas pu se charger.', 'Lis la pa t ka chaje.')}</span></span>
+      <div className="jh-glance__fail">
+        <p className="jh-glance__muted">{L('La liste n’a pas pu se charger.', 'Lis la pa t ka chaje.')}</p>
         <button type="button" className="jh-glance__retry" onClick={onRetryReview}>{L('Réessayer', 'Eseye ankò')}</button>
       </div>
     );
-  } else if (due === 0) {
-    review = (
-      <div className="jh-glance__row jh-glance__row--static">
-        <span className="jh-glance__icon" aria-hidden="true"><RotateCcw size={18} /></span>
-        <span className="jh-glance__text"><strong>{L('Rien à revoir', 'Anyen pou revize')}</strong><span>{L('Une question manquée reviendra ici.', 'Yon kesyon ou rate ap tounen isit la.')}</span></span>
-      </div>
-    );
-  } else {
+  } else if (due > 0) {
     review = (
       <Link
         to="/revision"
         className="jh-glance__row"
         onClick={() => trackJourney('learning_next_action_selected', { source: 'home_phone', action: 'review', due })}
       >
-        <span className="jh-glance__icon jh-glance__icon--due" aria-hidden="true"><RotateCcw size={18} /></span>
         <span className="jh-glance__text">
           <strong>{L(`${due} question${due > 1 ? 's' : ''} à revoir`, `${due} kesyon pou revize`)}</strong>
           {dueFrom.length > 0 && <span>{dueFrom.join(' · ')}</span>}
         </span>
-        <ChevronRight size={18} aria-hidden="true" className="jh-glance__chev" />
+        <ChevronRight size={20} aria-hidden="true" className="jh-glance__chev" />
       </Link>
     );
   }
 
-  let progress: React.ReactNode;
+  // Progress: hidden until there is evidence (no zeroes for a new student).
+  let progress: React.ReactNode = null;
   if (progressLoading) {
     progress = <p className="jh-glance__muted" role="status">{L('Chargement…', 'N ap chaje…')}</p>;
   } else if (progressFailed) {
     progress = <p className="jh-glance__muted">{L('Ta progression s’affichera quand les cours seront chargés.', 'Pwogrè ou ap parèt lè kou yo chaje.')}</p>;
-  } else if (rows.length === 0) {
-    progress = <p className="jh-glance__muted">{L('Ta progression apparaîtra ici dès ta première leçon.', 'Pwogrè ou ap parèt isit la depi premye leson ou.')}</p>;
-  } else {
+  } else if (rows.length > 0) {
     progress = (
-      <ul className="jh-glance__prog">
+      <ul className="jh-prog__list">
         {rows.slice(0, 3).map(({ course, summary: s }) => {
           const name = `${subjectName(course.subject)} ${levelLabel(courseLevel(course))}`;
           const pct = s.total ? Math.round((s.completed / s.total) * 100) : 0;
-          const facts = L(`${s.completed}/${s.total} ${completedWord(s.completed)}`, `${s.completed}/${s.total} ${completedWord(s.completed)}`);
           return (
             <li key={s.courseId}>
-              <Link to={`/courses/${course.id}`} className="jh-glance__course">
-                <span className="jh-glance__course-top">
-                  <strong>{name}</strong>
-                  <span>{facts}</span>
-                </span>
+              <Link to={`/courses/${course.id}`} className="jh-prog__row jh-glance__course">
+                <strong className="jh-prog__name">{name}</strong>
                 <span className="jh-prog__bar" role="img" aria-label={L(`${name} : ${s.completed} leçons terminées sur ${s.total}`, `${name} : ${s.completed} leson fini sou ${s.total}`)}>
                   <span className="jh-prog__fill" style={{ width: `${pct}%` }} />
                 </span>
+                <span className="jh-prog__facts">{factsLine(s, isCreole)}</span>
               </Link>
             </li>
           );
@@ -119,14 +101,21 @@ export default function PhoneGlance({
     );
   }
 
+  if (!review && !progress) return null;
   return (
-    <section className="jh-glance" aria-labelledby="jh-glance-title">
-      <h2 id="jh-glance-title" className="jh-sr">{L('Révision et progression', 'Revizyon ak pwogrè')}</h2>
-      {review}
-      <div className="jh-glance__block">
-        <p className="jh-glance__label">{L('Ta progression', 'Pwogrè ou')}</p>
-        {progress}
-      </div>
-    </section>
+    <div className="jh-glance">
+      {review && (
+        <section className="jh-card jh-glance__card" aria-labelledby="jh-glance-review">
+          <h2 id="jh-glance-review" className="jh-card__title">{L('À revoir', 'Pou revize')}</h2>
+          {review}
+        </section>
+      )}
+      {progress && (
+        <section className="jh-card jh-glance__card" aria-labelledby="jh-glance-prog">
+          <h2 id="jh-glance-prog" className="jh-card__title">{L('Ta progression', 'Pwogrè ou')}</h2>
+          {progress}
+        </section>
+      )}
+    </div>
   );
 }

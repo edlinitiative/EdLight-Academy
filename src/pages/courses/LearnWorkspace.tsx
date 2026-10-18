@@ -1,17 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import {
-  ChevronRight, ClipboardList, RotateCcw, PlayCircle,
-} from '../../components/icons';
-import { firstThumb } from '../../utils/videoThumb';
-import { courseCover, courseCoverPosition } from '../../utils/courseCovers';
+import { ArrowRight, ChevronRight, ClipboardList } from '../../components/icons';
+import { courseCover } from '../../utils/courseCovers';
+import { lessonFrame } from '../../utils/lessonFrames';
+import SubjectFrame, { subjectKey } from '../../components/journey/media/SubjectFrame';
 import useStore from '../../contexts/store';
 import { listRecentExamAttempts } from '../../services/userActivity';
 import { loadReviewMap } from '../../services/reviewService';
 import { dueQuestionIds } from '../../utils/review';
 import { normalizeExamCatalog } from '../../utils/examCatalog';
-import { buildExamIndex, displayStoredExamTitle, subjectColor } from '../../utils/examUtils';
+import { buildExamIndex, displayStoredExamTitle } from '../../utils/examUtils';
 import { sessionRowName } from '../../utils/examNaming';
 import { useExamAttempts } from '../../hooks/useExamAttempts';
 import ExamCountdown from '../../components/ExamCountdown';
@@ -30,18 +29,21 @@ import type { ReviewMap } from '../../utils/review';
 import '../../components/journey/home/journeyHome.css';
 
 /**
- * The Apprendre tab's workspace — Ted's "Espace de travail" mockup, wired to
- * the student's own data and nothing else:
+ * The signed-in Home workspace (/dashboard), Stitch web direction §1
+ * (2026-10-17), wired to the student's own data and nothing else:
  *
- *   command bar   who they are (class, school) + two real shortcuts
- *   subject cards per subject: the course at their level (else the one they
- *                 have progress in), its real completion, the next unfinished
- *                 unit as "prochaine étape"
- *   exams list    their real attempts (users/{uid}/examAttempts), named from
+ *   continuation  one card: SubjectFrame media column + the exact lesson, its
+ *                 status, the ONE solid button and a tonal review count
+ *   subjects      per subject: the course at their level (else the one they
+ *                 have progress in) on a SubjectFrame of its next lesson, the
+ *                 next unfinished unit as "prochaine étape", real counts
+ *   exams         their real attempts (users/{uid}/examAttempts), named from
  *                 the catalogue index, best score from useExamAttempts
- *   sidebar       the real exam countdown, today's quests, weak spots from the
- *                 Revizyon map (missed questions grouped by subject + unit),
- *                 and the school card
+ *   side column   Ta progression (evidence words), À revoir (missed questions
+ *                 grouped by subject + unit; hidden when nothing is due), the
+ *                 real exam countdown, today's quests and the school card
+ *   phone         continuation → À revoir → Ta progression → compact subject
+ *                 rows → exams (PhoneGlance; the side cards hide there)
  *
  * The mockup's offline manager, PDF memo sheets, sync button, coefficients and
  * audio explanations are not features the app has, so they are not drawn.
@@ -72,7 +74,7 @@ function levelToUrl(levelLabel?: string) {
 }
 
 export default function LearnWorkspace({
-  courses, courseLevel, subjectName, levelLabel, myLevel: myLevelProp, progressByCourseId: realProgress, SubjectTile, L,
+  courses, courseLevel, subjectName, levelLabel, myLevel: myLevelProp, progressByCourseId: realProgress, L,
   coursesLoading = false, coursesFailed = false, onRetryCourses, retryingCourses = false, progressLoading = false, preview = null,
 }: {
   courses: any[];
@@ -83,7 +85,8 @@ export default function LearnWorkspace({
   levelLabel: (lv: string) => string;
   myLevel?: string;
   progressByCourseId: Map<string, any>;
-  SubjectTile: React.ComponentType<{ code: string; size?: string }>;
+  /** Kept for the caller; cards now draw SubjectFrame artwork instead. */
+  SubjectTile?: React.ComponentType<{ code: string; size?: string }>;
   L: (fr: string, ht: string) => string;
   coursesLoading?: boolean;
   coursesFailed?: boolean;
@@ -146,7 +149,8 @@ export default function LearnWorkspace({
         const done = new Set<string>(progressByCourseId.get(course.id)?.completedLessons || []);
         const units = Array.isArray(course.modules) ? course.modules : [];
         const nextUnit = units.find((u) => (u?.lessons || []).some((l) => !done.has(l.id)));
-        return { code, course, stats, nextUnit, unitsDone: units.filter((u) => (u?.lessons || []).length > 0 && (u.lessons).every((l) => done.has(l.id))).length, unitsTotal: units.length };
+        const nextLesson = (nextUnit?.lessons || []).find((l) => !done.has(l.id)) || null;
+        return { code, course, stats, nextUnit, nextLesson, unitsDone: units.filter((u) => (u?.lessons || []).length > 0 && (u.lessons).every((l) => done.has(l.id))).length, unitsTotal: units.length };
       });
   }, [live, myLevel, progressByCourseId, courseStats, courseLevel]);
 
@@ -248,12 +252,16 @@ export default function LearnWorkspace({
       rows.push({
         key: id,
         title,
-        year: ex?.year && /^\d{4}$/.test(String(ex.year)) ? String(ex.year) : '',
-        color: ex?._subject ? subjectColor(ex._subject) : '#1B6FE0',
+        subject: subjectKey(ex?._subject || a?.subject || a?.exam_title || a?.examTitle || ''),
         submitted,
-        status: submitted
-          ? (typeof pct === 'number' ? L(`Meilleur score : ${Math.round(pct)} %`, `Pi bon nòt : ${Math.round(pct)} %`) : L('Terminé', 'Fini'))
-          : L(`En cours · ${answered} réponse${answered > 1 ? 's' : ''} enregistrée${answered > 1 ? 's' : ''}`, `An kou · ${answered} repons anrejistre`),
+        pill: submitted ? L('Terminé', 'Fini') : L('En cours', 'An kou'),
+        // Only real facts: the paper's year, the best score, saved answers.
+        detail: [
+          ex?.year && /^\d{4}$/.test(String(ex.year)) ? String(ex.year) : '',
+          submitted
+            ? (typeof pct === 'number' ? L(`Meilleur score : ${Math.round(pct)} %`, `Pi bon nòt : ${Math.round(pct)} %`) : '')
+            : L(`${answered} réponse${answered > 1 ? 's' : ''} enregistrée${answered > 1 ? 's' : ''}`, `${answered} repons anrejistre`),
+        ].filter(Boolean).join(' · '),
         cta: submitted ? L('Corrigé', 'Koreksyon') : L('Reprendre', 'Kontinye'),
         open: () => {
           if (!lvl) return navigate('/exams');
@@ -266,17 +274,10 @@ export default function LearnWorkspace({
     return rows;
   }, [attempts, examByKey, best, isCreole, L, navigate]);
 
-  // The course's curated cover (utils/courseCovers). It used to be a frame of
-  // the next lesson once the student had started, which is luck: the Maths
-  // card showed the iPad ink palette. A course without a curated cover (a new
-  // one) takes a frame a third of the way in.
-  const frameFor = (course: any) => {
-    const all = (course?.modules || []).flatMap((m: any) => m?.lessons || []);
-    const chosen = courseCover(course?.id);
-    if (chosen) return chosen;
-    const from = Math.floor(all.length / 3);
-    return firstThumb([...all.slice(from), ...all.slice(0, from)], 'hq')?.src || null;
-  };
+  // The card's picture: the next lesson's own still when it is a good one
+  // (lessonFrames knows the weak ones), else the course's curated cover;
+  // SubjectFrame draws the subject artwork when neither exists.
+  const frameFor = (course: any, nextLesson: any) => lessonFrame(nextLesson?.videoUrl) || courseCover(course?.id) || null;
 
   // ── LJ-01: the one continuation ─────────────────────────────────────────
   const recordsLoading = preview ? !!preview.loading : (progressLoading || masteryLoading);
@@ -359,106 +360,105 @@ export default function LearnWorkspace({
             L={L}
           />
 
-          {/* ── Subjects: each opens on a frame of its next lesson ─────────── */}
-          <section className="lws-section" aria-labelledby="lws-subjects">
-            <div className="lws-section__head">
-              <h2 id="lws-subjects">{L('Tes matières', 'Matyè ou yo')}</h2>
-              <span className="lws-pill">{myLevel ? levelLabel(myLevel) : L('Programme MENFP', 'Pwogram MENFP')}</span>
+          {/* ── Subjects: each card opens on its next lesson, framed ──────── */}
+          <section className="lws-section jh-subjects" aria-labelledby="lws-subjects">
+            <div className="jh-section-head">
+              <h2 id="lws-subjects" className="jh-section-title">{L('Tes matières', 'Matyè ou yo')}</h2>
+              <span className="jh-chip">{myLevel ? levelLabel(myLevel) : L('Programme MENFP', 'Pwogram MENFP')}</span>
             </div>
             {catalogLoading ? (
               <div className="lws-subjects" aria-hidden="true">
-                {[0, 1, 2, 3].map((i) => <span key={i} className="lws-subj jh-subj-skel"><span className="jh-subj-skel__cover skeleton" /><span className="jh-subj-skel__body"><span className="skeleton" /><span className="skeleton" /></span></span>)}
+                {[0, 1, 2].map((i) => <span key={i} className="lws-subj jh-subj-skel"><span className="jh-subj-skel__cover skeleton" /><span className="jh-subj-skel__body"><span className="skeleton" /><span className="skeleton" /></span></span>)}
               </div>
             ) : catalogFailed ? (
               <p className="jh-section-note">{L('Les matières s’afficheront quand le catalogue sera chargé.', 'Matyè yo ap parèt lè katalòg la chaje.')}</p>
             ) : (
-            <div className="lws-subjects">
-              {subjects.map(({ code, course, stats, nextUnit, unitsDone, unitsTotal }) => {
-                const frame = frameFor(course);
-                const r = 20;
-                const circ = 2 * Math.PI * r;
+            <ul className="lws-subjects">
+              {subjects.map(({ code, course, stats, nextUnit, nextLesson, unitsTotal }) => {
                 const ev = summarizeCourse(course, progressByCourseId.get(course.id), mastery);
                 const word = (e: 'completed' | 'mastered', n: number) => {
                   const w = evidenceLabel(e, isCreole).toLowerCase();
                   return !isCreole && n > 1 ? `${w}s` : w;
                 };
+                const started = stats.completed > 0 || ev.opened > 0;
                 return (
-                  <Link key={code} to={`/courses/${course.id}`} className="lws-subj">
-                    <span className="lws-subj__cover">
-                      {frame ? <img src={frame} alt="" loading="lazy" style={{ objectPosition: courseCoverPosition(course.id) }} /> : <span className="lws-subj__blank"><SubjectTile code={code} size="lg" /></span>}
-                      <span className="lws-subj__level">{levelLabel(courseLevel(course))}</span>
-                      <span className="lws-subj__play" aria-hidden="true"><PlayCircle size={26} /></span>
-                    </span>
-                    <span className="lws-subj__body">
-                      <span className="lws-subj__row">
-                        <strong>{subjectName(code)}</strong>
-                        <span className="lws-ring" aria-label={L(`${stats.completed} leçons terminées sur ${stats.total}`, `${stats.completed} leson fini sou ${stats.total}`)}>
-                          <svg viewBox="0 0 48 48" aria-hidden="true">
-                            <circle cx="24" cy="24" r={r} />
-                            <circle className={`lws-ring__arc lws-stroke--${code}`} cx="24" cy="24" r={r}
-                              strokeDasharray={circ} strokeDashoffset={circ * (1 - stats.pct / 100)} />
-                          </svg>
-                          <b aria-hidden="true" className="jh-ring-frac">{stats.completed}/{stats.total}</b>
+                  <li key={code}>
+                    <Link to={`/courses/${course.id}`} className="lws-subj">
+                      <SubjectFrame subject={code} still={frameFor(course, nextLesson)} size="md" className="lws-subj__frame" />
+                      <span className="lws-subj__body">
+                        <strong className="lws-subj__title">{subjectName(code)}</strong>
+                        {nextUnit ? (
+                          <span className="lws-subj__next">
+                            <span className="lws-subj__label">{L('Prochaine étape', 'Pwochen etap')}</span>
+                            <span className="lws-subj__label lws-subj__label--inline">{L('Prochaine étape : ', 'Pwochen etap : ')}</span>
+                            <span className="lws-subj__name">{nextUnit.title}</span>
+                          </span>
+                        ) : (
+                          <span className="lws-subj__next">
+                            <span className="lws-subj__name">{L('Toutes les unités sont terminées.', 'Tout inite yo fini.')}</span>
+                          </span>
+                        )}
+                        <span className="lws-subj__meta">
+                          {stats.completed > 0 || ev.mastered > 0
+                            ? [
+                              L(`${stats.completed} ${word('completed', stats.completed)} sur ${stats.total}`, `${stats.completed} ${word('completed', stats.completed)} sou ${stats.total}`),
+                              ev.mastered > 0 ? `${ev.mastered} ${word('mastered', ev.mastered)}` : '',
+                            ].filter(Boolean).join(' · ')
+                            : L(`${stats.total} leçons · ${unitsTotal} unités`, `${stats.total} leson · ${unitsTotal} inite`)}
+                        </span>
+                        <span className="lws-subj__cta">
+                          {started ? L('Continuer', 'Kontinye') : L('Commencer', 'Kòmanse')} <ArrowRight size={16} aria-hidden="true" />
                         </span>
                       </span>
-                      {nextUnit
-                        ? <span className="lws-subj__next"><em>{L('Prochaine étape', 'Pwochen etap')}</em>{nextUnit.title}</span>
-                        : <span className="lws-subj__next"><em>{L('Bravo', 'Bravo')}</em>{L('Toutes les unités sont terminées.', 'Tout inite yo fini.')}</span>}
-                      <span className="lws-subj__meta">
-                        {stats.completed > 0 || ev.mastered > 0
-                          ? [
-                            L(`${stats.completed} ${word('completed', stats.completed)} sur ${stats.total}`, `${stats.completed} ${word('completed', stats.completed)} sou ${stats.total}`),
-                            ev.mastered > 0 ? `${ev.mastered} ${word('mastered', ev.mastered)}` : '',
-                          ].filter(Boolean).join(' · ')
-                          : L(`${stats.total} leçons · ${unitsTotal} unités`, `${stats.total} leson · ${unitsTotal} inite`)}
-                        {unitsDone > 0 ? L(` · ${unitsDone}/${unitsTotal} unités`, ` · ${unitsDone}/${unitsTotal} inite`) : ''}
-                      </span>
-                      <span className="lws-subj__cta">
-                        {stats.completed > 0 ? L('Continuer', 'Kontinye') : L('Commencer', 'Kòmanse')} <ChevronRight size={16} aria-hidden="true" />
-                      </span>
-                    </span>
-                  </Link>
+                      <ChevronRight size={20} aria-hidden="true" className="lws-subj__chev" />
+                    </Link>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
             )}
           </section>
 
-          {/* ── Exams ────────────────────────────────────────────────────── */}
-          <section className="lws-section" aria-labelledby="lws-exams">
-            <div className="lws-section__head">
-              <h2 id="lws-exams"><ClipboardList size={20} aria-hidden="true" /> {L('Tes examens blancs', 'Egzamen blan ou yo')}</h2>
-              <Link to="/exams" className="lws-link">{L('Tous les sujets', 'Tout sijè yo')} <ChevronRight size={14} aria-hidden="true" /></Link>
+          {/* ── Exams: one card, one washed row per paper ─────────────────── */}
+          <section className="jh-card jh-exams" aria-labelledby="lws-exams">
+            <div className="jh-section-head jh-section-head--split">
+              <h2 id="lws-exams" className="jh-card__title jh-card__title--lg">{L('Tes examens blancs', 'Egzamen blan ou yo')}</h2>
+              <Link to="/exams" className="jh-link">{L('Tous les sujets', 'Tout sijè yo')} <ChevronRight size={16} aria-hidden="true" /></Link>
             </div>
             {attemptsFailed && !preview ? (
-              <div className="lws-card lws-empty">
+              <div className="jh-empty">
                 <p>{L('Tes épreuves n’ont pas pu se charger. Les sujets restent ouverts.', 'Eprèv ou yo pa t ka chaje. Sijè yo toujou louvri.')}</p>
-                <button type="button" className="lws-btn lws-btn--soft" onClick={() => refetchAttempts()}>{L('Réessayer', 'Eseye ankò')}</button>
+                <button type="button" className="jh-btn jh-btn--tonal" onClick={() => refetchAttempts()}>{L('Réessayer', 'Eseye ankò')}</button>
               </div>
             ) : examRows.length === 0 ? (
-              <div className="lws-card lws-empty">
+              <div className="jh-empty">
                 <p>{L('Aucune épreuve commencée. Les vrais sujets du Bac t’attendent, avec leur durée officielle.', 'Ou poko kòmanse okenn eprèv. Vrè sijè Bak yo ap tann ou, ak dire ofisyèl yo.')}</p>
-                <Link to="/exams" className="lws-btn lws-btn--soft">{L('Choisir un sujet', 'Chwazi yon sijè')}</Link>
+                <Link to="/exams" className="jh-btn jh-btn--tonal">{L('Choisir un sujet', 'Chwazi yon sijè')}</Link>
               </div>
             ) : (
-              <div className="lws-exams2">
+              <ul className="jh-exams__list">
                 {examRows.map((row) => (
-                  <button key={row.key} type="button" className="lws-ex" onClick={row.open}>
-                    <span className="lws-ex__year" style={{ '--sub': row.color } as React.CSSProperties}>{row.year || '—'}</span>
-                    <span className="lws-ex__body">
-                      <strong>{row.title}</strong>
-                      <span className={row.submitted ? 'lws-ex__done' : 'lws-ex__open'}>{row.status}</span>
-                    </span>
-                    <span className="lws-btn lws-btn--soft">{row.cta}</span>
-                  </button>
+                  <li key={row.key}>
+                    <button type="button" className="jh-exam" onClick={row.open}>
+                      <span className={`jh-exam__icon jh-exam__icon--${row.subject}`} aria-hidden="true"><ClipboardList size={20} /></span>
+                      <span className="jh-exam__body">
+                        <strong>{row.title}</strong>
+                        {row.detail && <span>{row.detail}</span>}
+                      </span>
+                      <span className="jh-exam__side">
+                        <span className={`jh-pill ${row.submitted ? 'jh-pill--done' : 'jh-pill--open'}`}>{row.pill}</span>
+                        <span className="jh-btn jh-btn--tonal jh-btn--sm">{row.cta}</span>
+                      </span>
+                    </button>
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
           </section>
         </div>
 
         {/* ── Sidebar ────────────────────────────────────────────────────── */}
-        <aside className="lws-side">
+        <div className="lws-side">
           <ProgressSummary
             className="jh-desk-only"
             rows={summaryRows}
@@ -471,50 +471,57 @@ export default function LearnWorkspace({
             L={L}
           />
 
-          <ExamCountdown />
-
-          {/* Due review, explained as what it is: spacing, not a grade. */}
-          <section className="lws-card lws-weak jh-review jh-desk-only" aria-labelledby="lws-weak">
-            <div className="lws-section__head">
-              <h3 id="lws-weak"><RotateCcw size={18} aria-hidden="true" /> {L('À revoir', 'Pou revize')}</h3>
-            </div>
+          {/* Due review, explained as what it is: spacing, not a grade.
+              Hidden when nothing is due. */}
+          {!(Array.isArray(weak) && weakList.length === 0) && (
+          <section className="jh-card jh-review jh-desk-only" aria-labelledby="lws-weak">
+            <h2 id="lws-weak" className="jh-card__title">{L('À revoir', 'Pou revize')}</h2>
             {weak === null ? (
-              <p className="lws-muted" role="status">{L('Chargement…', 'N ap chaje…')}</p>
+              <p className="jh-muted" role="status">{L('Chargement…', 'N ap chaje…')}</p>
             ) : weak === 'failed' ? (
               <div className="jh-review__fail">
-                <p className="lws-muted">{L('Ta liste de révision n’a pas pu se charger.', 'Lis revizyon ou pa t ka chaje.')}</p>
-                <button type="button" className="lws-btn lws-btn--soft" onClick={() => setReviewTry((n) => n + 1)}>{L('Réessayer', 'Eseye ankò')}</button>
+                <p className="jh-muted">{L('Ta liste de révision n’a pas pu se charger.', 'Lis revizyon ou pa t ka chaje.')}</p>
+                <button type="button" className="jh-btn jh-btn--tonal" onClick={() => setReviewTry((n) => n + 1)}>{L('Réessayer', 'Eseye ankò')}</button>
               </div>
-            ) : weakList.length === 0 ? (
-              <p className="lws-muted">{L('Rien à revoir pour l’instant. Une question manquée dans un quiz reviendra ici pour que tu la retentes plus tard.', 'Pa gen anyen pou revize kounye a. Yon kesyon ou rate nan yon quiz ap tounen isit la pou w eseye l ankò pita.')}</p>
             ) : (
               <>
                 <p className="jh-review__why">
-                  {L('Des questions manquées, gardées pour un nouvel essai. Les revoir quelques jours plus tard aide à retenir : ce n’est pas une note.',
-                    'Kesyon ou te rate, kenbe pou yon lòt esè. Revize yo kèk jou apre ede w sonje : se pa yon nòt.')}
+                  {L('Des questions manquées, gardées pour un nouvel essai.', 'Kesyon ou te rate, kenbe pou yon lòt esè.')}
                 </p>
-                <ul className="lws-weak__list">
-                  {weakList.slice(0, 3).map((w) => (
-                    <li key={`${w.code}-${w.unitNo}`}>
-                      <div>
-                        <strong>{w.code ? weakName(w.code) : L('Divers', 'Divès')}{w.unitNo ? ` · ${L('Unité', 'Inite')} ${w.unitNo}` : ''}</strong>
-                        {unitTitle(w.code, w.unitNo) && <span>{unitTitle(w.code, w.unitNo)}</span>}
-                      </div>
-                      <span className="lws-weak__count">{w.count} {w.count === 1 ? L('question', 'kesyon') : L('questions', 'kesyon')}</span>
-                    </li>
-                  ))}
+                <ul className="jh-review__list">
+                  {weakList.slice(0, 3).map((w) => {
+                    const unit = unitTitle(w.code, w.unitNo);
+                    return (
+                      <li key={`${w.code}-${w.unitNo}`}>
+                        <Link to="/revision" className="jh-review__row">
+                          <strong>{w.code ? weakName(w.code) : L('Divers', 'Divès')}</strong>
+                          {(w.unitNo || unit) && (
+                            <span>{w.unitNo ? L(`Unité ${w.unitNo}`, `Inite ${w.unitNo}`) : ''}{w.unitNo && unit ? ' — ' : ''}{unit}</span>
+                          )}
+                          <span className="jh-review__count">{w.count} {w.count === 1 ? L('question', 'kesyon') : L('questions', 'kesyon')}</span>
+                        </Link>
+                      </li>
+                    );
+                  })}
                 </ul>
-                <Link to="/revision" className="lws-btn lws-btn--soft lws-btn--block">
+                <Link to="/revision" className="jh-btn jh-btn--tonal jh-btn--block">
                   {L(`Revoir ${weakTotal} question${weakTotal > 1 ? 's' : ''}`, `Revize ${weakTotal} kesyon`)}
                 </Link>
+                <details className="jh-prog__how">
+                  <summary>{L('Pourquoi revoir ?', 'Poukisa revize ?')}</summary>
+                  <p>{L('Les revoir quelques jours plus tard aide à retenir : ce n’est pas une note.', 'Revize yo kèk jou apre ede w sonje : se pa yon nòt.')}</p>
+                </details>
               </>
             )}
           </section>
+          )}
+
+          <ExamCountdown />
 
           <div className="lws-quests"><DailyQuests /></div>
 
           <MySchoolCard where="courses" />
-        </aside>
+        </div>
       </div>
     </div>
   );

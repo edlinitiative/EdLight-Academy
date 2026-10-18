@@ -6,11 +6,11 @@
  */
 
 import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  Flame, Trophy, Zap, Bell, Info, Moon, Sun, Languages, GraduationCap, ChevronRight, Check, BookOpen,
-  Loader2, ShieldCheck, MapPin, RefreshCw, AlertTriangle,
+  Bell, Info, Moon, Languages, ChevronRight, ChevronDown, Check, Loader2, ShieldCheck, AlertTriangle,
+  TrendingUp, Trophy, Smartphone, Shield, Flag, Settings,
 } from '../components/icons';
 import * as AppIcons from '../components/icons';
 import useStore from '../contexts/store';
@@ -21,21 +21,25 @@ import { logoutUser } from '../services/authService';
 import { STREAK_MILESTONES } from '../services/streakService';
 import { setLeaderboardOptIn as saveBoardIdentity } from '../services/triviaService';
 import { isValidAlias } from '../services/leaderboardService';
+import { readMastery } from '../services/masteryService';
 import ReadinessCard from '../components/ReadinessCard';
 import { Skeleton } from '../components/Skeleton';
 import SchoolField from '../components/arena/SchoolField';
 import { GRADES, TRACK_BY_CODE } from '../config/trackConfig';
 import { HAITI_DEPARTMENTS, OTHER_CITY, citiesOf, findCity } from '../data/haitiGeo';
 import UserAvatar from '../components/UserAvatar';
+import Avatar from '../arena-art/avatars/Avatar';
 import MySchoolCard from '../components/MySchoolCard';
 import { schoolKey } from '../../shared/schools';
+import type { ProgressMap } from '../../shared/mastery';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import { getFirstName } from '../utils/shared';
 import '../styles/pf.css';
 import './Profile.css';
-import { AccountBlock, GoalRhythm, SectionHead, SkillSpots, Schoolmates, Toggle } from './profile/ProfileSections';
-import { completedLessonsLabel, loadCourseLessonCounts } from './profile/profileData';
-import { evidenceLabel, trackJourney } from '../utils/learningJourney';
+import { AccountBlock, GoalRhythm, Regularity, SettingsRow, SkillSpots, Schoolmates, Toggle } from './profile/ProfileSections';
+import { courseEvidence, evidenceLine, loadCourseLessonCounts, loadCourseLessonIds } from './profile/profileData';
+import { buildProfilePreview, type ProfilePreview } from './profile/profilePreview';
+import { EVIDENCE, trackJourney } from '../utils/learningJourney';
 
 
 
@@ -47,6 +51,32 @@ function TrackSelectorModal({ currentTrack, onClose }: { currentTrack: string | 
       <TrackSelector mode="modal" currentTrack={currentTrack} onClose={onClose} onSelect={onClose} />
     </React.Suspense>
   );
+}
+
+/** Phone layout below 720px (Stitch 08). jsdom has no matchMedia → desktop. */
+function useIsPhone(): boolean {
+  const q = '(max-width: 719px)';
+  const get = () => (typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia(q).matches : false);
+  const [phone, setPhone] = React.useState(get);
+  React.useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
+    const mq = window.matchMedia(q);
+    const on = () => setPhone(mq.matches);
+    on();
+    mq.addEventListener?.('change', on);
+    return () => mq.removeEventListener?.('change', on);
+  }, []);
+  return phone;
+}
+
+/** "NS III" for the secondary classes, the short label otherwise. */
+const ROMAN: Record<string, string> = { NS1: 'NS I', NS2: 'NS II', NS3: 'NS III', NS4: 'NS IV' };
+function gradePill(code: string | null | undefined, isCreole: boolean): string {
+  if (!code) return '';
+  if (ROMAN[code]) return ROMAN[code];
+  if (code === 'POSTBAC') return isCreole ? 'Prefak' : 'Préfac';
+  const g = GRADES.find((x) => x.code === code);
+  return g ? (isCreole ? g.labelHt : g.label) : '';
 }
 
 /**
@@ -74,7 +104,7 @@ function IdentityFields({ isCreole, uid, board, saveRef, accountName, afterSchoo
   isCreole: boolean;
   uid: string | null;
   board: { optedIn?: boolean; displayName?: string | null; school?: string | null; city?: string | null; department?: string | null };
-  /** The title bar's "Enregistrer" calls this. Not a <form>: Enter in the
+  /** The card footer's "Enregistrer" calls this. Not a <form>: Enter in the
       school search (or its "add a school" box) must not save the profile. */
   saveRef: React.MutableRefObject<(() => void) | null>;
   accountName: string;
@@ -166,131 +196,136 @@ function IdentityFields({ isCreole, uid, board, saveRef, accountName, afterSchoo
   saveRef.current = dirty && aliasOk && status !== 'saving' ? save : null;
 
   return (
-    <div className="profile-identity">
+    <div className="pr-form">
       {/* The account name comes from sign-up (Google or e-mail) and is never
           shown to other students — read-only here, the pseudo is what's public. */}
-      <div className="profile-field">
-        <span className="profile-field__label">{t('Nom du compte', 'Non kont lan')}</span>
-        <span className="profile-field__input profile-field__input--readonly">{accountName}</span>
+      <div className="pr-field">
+        <span className="pr-label" id="pr-name-label">{t('Nom complet', 'Non konplè')}</span>
+        <span className="pr-input pr-input--readonly" aria-labelledby="pr-name-label">{accountName}</span>
       </div>
 
-      <label className="profile-field">
-        <span className="profile-field__label">{t('Pseudo affiché', 'Ti non pou afiche')}</span>
+      <div className="pr-field">
+        <label className="pr-label" htmlFor="profile-alias">{t('Pseudo affiché', 'Ti non pou afiche')}</label>
         <input
           id="profile-alias"
-          className="profile-field__input"
+          className="pr-input"
           value={alias}
           maxLength={24}
+          aria-describedby="profile-alias-why"
+          aria-invalid={!aliasOk || undefined}
           onChange={(e) => { setAlias(e.target.value); setStatus('idle'); }}
           placeholder={t('Ex. Naïka M.', 'Egz. Naïka M.')}
         />
-        <small className="profile-field__why">
+        <small className="pr-why" id="profile-alias-why">
           {t(
             'Le seul nom que les autres élèves voient. Ton nom complet n’est jamais affiché.',
             'Se sèl non lòt elèv yo wè. Non konplè ou pa janm parèt.',
           )}
         </small>
         {!aliasOk && (
-          <small className="profile-field__error">
+          <small className="pr-error">
             {t('Le pseudo doit contenir au moins une lettre.', 'Ti non an dwe gen omwen yon lèt.')}
           </small>
         )}
-      </label>
-
-      {/* The /arena picker itself — matcher, duplicate warning and
-          missing-school submission included. */}
-      <SchoolField picked={picked} onPick={(s) => { setPicked(s); setStatus('idle'); }} isCreole={isCreole} signedIn={!!uid} />
-      <p className="profile-field__why">
-        {t(
-          'Ton école sert au championnat interscolaire et au classement par école — on ne te la redemandera pas ailleurs.',
-          'Lekòl ou sèvi pou chanpyona ant lekòl yo ak klasman pa lekòl — nou p ap mande w li yon lòt kote.',
-        )}
-      </p>
+      </div>
 
       {afterSchool}
 
-      <fieldset className="profile-residence">
-        <legend className="profile-field__label">
-          <MapPin size={14} aria-hidden="true" /> {t('Où tu habites', 'Kote ou rete')}
-        </legend>
-        <p className="profile-field__why">
+      {/* The /arena picker itself — matcher, duplicate warning and
+          missing-school submission included. */}
+      <div className="pr-field pr-school">
+        <SchoolField picked={picked} onPick={(s) => { setPicked(s); setStatus('idle'); }} isCreole={isCreole} signedIn={!!uid} />
+        <small className="pr-why">
           {t(
-            'Pour le classement par ville et par département. Ce n’est pas l’adresse de ton école : beaucoup d’élèves étudient dans une autre commune.',
-            'Pou klasman pa vil ak pa depatman. Se pa adrès lekòl ou : anpil elèv etidye nan yon lòt komin.',
+            'Ton école sert au championnat interscolaire et au classement par école — on ne te la redemandera pas ailleurs.',
+            'Lekòl ou sèvi pou chanpyona ant lekòl yo ak klasman pa lekòl — nou p ap mande w li yon lòt kote.',
           )}
-        </p>
-        <div className="profile-residence__row">
-          <label className="profile-field">
-            <span className="profile-field__label">{t('Département', 'Depatman')}</span>
-            <select
-              className="profile-field__input"
-              value={department}
-              onChange={(e) => pickDepartment(e.target.value)}
-            >
-              <option value="">{t('— Choisir —', '— Chwazi —')}</option>
-              {HAITI_DEPARTMENTS.map((d) => (
-                <option key={d.name} value={d.name}>{d.name}</option>
-              ))}
-            </select>
-          </label>
+        </small>
+      </div>
+
+      <fieldset className="pr-residence">
+        <legend className="pr-label">{t('Département / Ville où tu habites', 'Depatman / Vil kote ou rete')}</legend>
+        <div className="pr-residence__row">
+          <div className="pr-field">
+            <label className="pr-sublabel" htmlFor="pr-dept">{t('Département', 'Depatman')}</label>
+            <span className="pr-select">
+              <select
+                id="pr-dept"
+                className="pr-input"
+                value={department}
+                onChange={(e) => pickDepartment(e.target.value)}
+              >
+                <option value="">{t('Choisir', 'Chwazi')}</option>
+                {HAITI_DEPARTMENTS.map((d) => (
+                  <option key={d.name} value={d.name}>{d.name}</option>
+                ))}
+              </select>
+              <ChevronDown size={18} aria-hidden="true" />
+            </span>
+          </div>
 
           {department && (
-            <label className="profile-field">
-              <span className="profile-field__label">{t('Ville', 'Vil')}</span>
+            <div className="pr-field">
+              <label className="pr-sublabel" htmlFor={deptCities.length > 0 ? 'pr-city' : 'pr-city-other'}>{t('Ville', 'Vil')}</label>
               {deptCities.length > 0 && (
-                <select
-                  className="profile-field__input"
-                  value={cityChoice}
-                  onChange={(e) => { setCityChoice(e.target.value); setCustomCity(''); setStatus('idle'); }}
-                >
-                  <option value="">{t('— Choisir —', '— Chwazi —')}</option>
-                  {deptCities.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                  <option value={OTHER_CITY}>{t('Autre ville…', 'Lòt vil…')}</option>
-                </select>
+                <span className="pr-select">
+                  <select
+                    id="pr-city"
+                    className="pr-input"
+                    value={cityChoice}
+                    onChange={(e) => { setCityChoice(e.target.value); setCustomCity(''); setStatus('idle'); }}
+                  >
+                    <option value="">{t('Choisir', 'Chwazi')}</option>
+                    {deptCities.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                    <option value={OTHER_CITY}>{t('Autre ville…', 'Lòt vil…')}</option>
+                  </select>
+                  <ChevronDown size={18} aria-hidden="true" />
+                </span>
               )}
               {cityChoice === OTHER_CITY && (
                 <input
-                  className="profile-field__input"
+                  id="pr-city-other"
+                  className="pr-input"
                   value={customCity}
                   maxLength={60}
+                  aria-label={t('Nom de ta ville', 'Non vil ou')}
                   onChange={(e) => { setCustomCity(e.target.value); setStatus('idle'); }}
                   placeholder={t('Nom de ta ville', 'Non vil ou')}
                 />
               )}
-            </label>
+            </div>
           )}
         </div>
+        <small className="pr-why">
+          {t(
+            'Pour le classement par ville et par département. Ce n’est pas l’adresse de ton école : beaucoup d’élèves étudient dans une autre commune.',
+            'Pou klasman pa vil ak pa depatman. Se pa adrès lekòl ou : anpil elèv etidye nan yon lòt komin.',
+          )}
+        </small>
       </fieldset>
 
-      <p className="profile-field__why">
-        <ShieldCheck size={13} aria-hidden="true" />{' '}
-        {board?.optedIn
-          ? t(
-            'Tu participes au classement : ton pseudo, ton école et ta ville y sont visibles.',
-            'Ou nan klasman an : ti non ou, lekòl ou ak vil ou parèt ladan l.',
-          )
-          : t(
-            'Tu ne participes pas encore au classement — rien de ceci n’est public tant que tu ne l’as pas rejoint.',
-            'Ou poko nan klasman an — anyen nan sa a pa piblik toutotan ou pa antre ladan l.',
-          )}
+      <p className="pr-why pr-why--icon">
+        <ShieldCheck size={16} aria-hidden="true" />
+        <span>
+          {board?.optedIn
+            ? t(
+              'Tu participes au classement : ton pseudo, ton école et ta ville y sont visibles.',
+              'Ou nan klasman an : ti non ou, lekòl ou ak vil ou parèt ladan l.',
+            )
+            : t(
+              'Tu ne participes pas encore au classement — rien de ceci n’est public tant que tu ne l’as pas rejoint.',
+              'Ou poko nan klasman an — anyen nan sa a pa piblik toutotan ou pa antre ladan l.',
+            )}
+        </span>
       </p>
     </div>
   );
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * Visual language
- * ───────────────
- * Taken from the profile mockups: white cards on a tinted canvas, a 44px
- * pastel icon tile opening every row and card, status pills instead of bare
- * ticks, caps micro-labels in the mono face, one gradient feature panel, and
- * hover lifts at 300ms. Plus Jakarta Sans carries the headings; Source Sans 3
- * still carries every word of body copy.
- *
- * `tone` is the one axis of colour. Six named tones map to the semantic tokens
- * the app already has, so nothing here introduces a new hue.
+ * Shared primitives (achievement shelf)
  * ══════════════════════════════════════════════════════════════════════════ */
 
 type Tone = 'azure' | 'amber' | 'emerald' | 'rose' | 'violet' | 'slate';
@@ -329,25 +364,6 @@ function Meter({ pct, tone = 'azure' }: { pct: number; tone?: Tone }) {
     <span className={`pf-meter pf-meter--${tone}`}>
       <span className="pf-meter__fill" style={{ width: `${width}%` }} />
     </span>
-  );
-}
-
-/**
- * HeroStat — one of the three figures beside the identity block.
- *
- * Big number, caps label, one line of context. The context line is the point:
- * "18" is a fact, "18 · prochain palier 30 jours" is a reason to come back.
- */
-function HeroStat({ tone, icon, value, label, sub }: {
-  tone: Tone; icon: React.ReactNode; value: React.ReactNode; label: string; sub: string;
-}) {
-  return (
-    <div className="pf-stat">
-      <IconTile tone={tone} size="sm">{icon}</IconTile>
-      <span className="pf-stat__value num">{value}</span>
-      <span className="pf-stat__label">{label}</span>
-      <span className="pf-stat__sub">{sub}</span>
-    </div>
   );
 }
 
@@ -578,38 +594,72 @@ export function AchievementShelf({ achievements, isCreole }: {
 }
 
 /**
- * CourseProgressCard — the courses you have actually opened.
- *
- * Absorbed from the former <ProgressDashboard />, which this page was the only
- * caller of. Its four summary tiles duplicated numbers shown elsewhere (and
- * its "Série de jours" read the first course's streak rather than the
- * learner's, so it could disagree with the streak in the header); only the
- * per-course list said anything the rest of the page did not.
+ * EvidenceHelp — "Que veulent dire ces mots ?" (DIRECTION §0.6): the three
+ * evidence words with their shared definitions, wherever the triple appears.
  */
-const SUBJECT_TONE: Record<string, Tone> = {
-  MATH: 'azure', PHYS: 'violet', CHEM: 'emerald', ECON: 'amber', BIO: 'rose',
-};
+export function EvidenceHelp({ isCreole }: { isCreole: boolean }) {
+  const [open, setOpen] = React.useState(false);
+  const id = React.useId();
+  const words = (['completed', 'practised', 'mastered'] as const).map((e) => ({
+    e, word: isCreole ? EVIDENCE[e].ht : EVIDENCE[e].fr, help: isCreole ? EVIDENCE[e].helpHt : EVIDENCE[e].helpFr,
+  }));
+  return (
+    <div className="pr-help">
+      <button type="button" className="pr-textbtn" aria-expanded={open} aria-controls={id} onClick={() => setOpen((v) => !v)}>
+        {isCreole ? 'Kisa mo sa yo vle di ?' : 'Que veulent dire ces mots ?'}
+      </button>
+      <dl id={id} className="pr-help__list" hidden={!open}>
+        {words.map((w) => (
+          <div key={w.e} className="pr-help__row">
+            <dt>{w.word}</dt>
+            <dd>{w.help}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
 
-export function CourseProgressCard({ allProgress, loading, isCreole, onExplore }: {
+/**
+ * CourseProgressCard — "Tes cours": the courses you have actually opened,
+ * each with its three evidence facts (LJ-10) over the course's real lesson
+ * total: "12 terminées sur 30 · 7 pratiquées · 4 maîtrisées". A finished
+ * video is "terminée", never mastery; facts that are zero are left out; the
+ * denominator appears only when the catalogue snapshot gives it.
+ */
+const SUBJECT_NAMES: Record<string, [string, string]> = {
+  CHEM: ['Chimie', 'Chimi'],
+  PHYS: ['Physique', 'Fizik'],
+  MATH: ['Mathématiques', 'Matematik'],
+  ECON: ['Économie', 'Ekonomi'],
+  BIO: ['Biologie', 'Byoloji'],
+};
+const LEVEL_ROMAN: Record<string, string> = { NS1: 'NS I', NS2: 'NS II', NS3: 'NS III', NS4: 'NS IV' };
+
+export function CourseProgressCard({ allProgress, loading, isCreole, onExplore, mastery = null }: {
   allProgress: any[];
   loading: boolean;
   isCreole: boolean;
   onExplore: () => void;
+  /** The shared mastery map (practised / mastered). Null while unknown. */
+  mastery?: ProgressMap | null;
 }) {
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
-  // Denominators: lessons per course from the catalogue snapshot. Until (or
-  // unless) it arrives, a row shows the count alone — never a guessed total.
+  // Denominators and lesson ids from the catalogue snapshot. Until (or
+  // unless) it arrives, a row shows the counts alone — never a guessed total.
   const [totals, setTotals] = React.useState<Record<string, number>>({});
+  const [lessonIds, setLessonIds] = React.useState<Record<string, string[]>>({});
   React.useEffect(() => {
     let live = true;
     loadCourseLessonCounts().then((x) => { if (live) setTotals(x); });
+    loadCourseLessonIds().then((x) => { if (live) setLessonIds(x); });
     return () => { live = false; };
   }, []);
 
-  // progress_summary_opened: once, when the course list is actually on screen
-  // (it sits low on the page). Technical context only.
-  const cardRef = React.useRef<HTMLDivElement>(null);
+  // progress_summary_opened: once, when the course list is actually on screen.
+  // Technical context only.
+  const cardRef = React.useRef<HTMLElement>(null);
   const tracked = React.useRef(false);
   const courseCount = allProgress?.length || 0;
   React.useEffect(() => {
@@ -627,97 +677,86 @@ export function CourseProgressCard({ allProgress, loading, isCreole, onExplore }
     return () => io.disconnect();
   }, [loading, courseCount]);
 
-  const doneWord = evidenceLabel('completed', isCreole);
-  const scopeNote = (
-    <p className="pf-scope-note">
-      {t(
-        `« ${doneWord} » = vidéo de la leçon regardée jusqu’au bout, sur le total de leçons du cours. La maîtrise se construit avec la pratique.`,
-        `« ${doneWord} » = ou gade videyo leson an jiska lafen, sou total leson kou a. Metriz la bati ak pratik.`,
-      )}
-    </p>
-  );
-
-  const SUBJECTS: Record<string, string> = {
-    CHEM: t('Chimie', 'Chimi'),
-    PHYS: t('Physique', 'Fizik'),
-    MATH: t('Mathématiques', 'Matematik'),
-    ECON: t('Économie', 'Ekonomi'),
-    BIO: t('Biologie', 'Byoloji'),
-  };
   const parse = (courseId: string) => {
     const [subj, ...rest] = String(courseId || '').split('-');
     const code = (subj || '').toUpperCase();
-    const level = rest.join('-').replace(/^NS([IVX]+)$/i, 'NS $1').toUpperCase();
-    return { code, name: SUBJECTS[code] || subj || courseId, level };
+    const lv = rest.join('-').toUpperCase();
+    const name = SUBJECT_NAMES[code] ? SUBJECT_NAMES[code][isCreole ? 1 : 0] : subj || courseId;
+    return `${name}${lv ? ` ${LEVEL_ROMAN[lv] || lv}` : ''}`;
   };
+
+  const head = <h2 id="pr-courses-title" className="pr-card__title">{t('Tes cours', 'Kou ou yo')}</h2>;
 
   if (loading) {
     return (
-      <div className="pf-card" aria-busy="true">
-        <CardHead eyebrow={t('Progression', 'Pwogrè')} title={t('Tes cours', 'Kou ou yo')} />
-        <div className="pf-rows">
+      <section className="pr-card" aria-labelledby="pr-courses-title" aria-busy="true">
+        {head}
+        <div className="pr-courses">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} variant="rect" height={64} radius={14} />
+            <Skeleton key={i} variant="rect" height={56} radius={14} />
           ))}
         </div>
-      </div>
+      </section>
     );
   }
 
   if (!allProgress || allProgress.length === 0) {
     return (
-      <div className="pf-card" ref={cardRef}>
-        <CardHead eyebrow={t('Progression', 'Pwogrè')} title={t('Tes cours', 'Kou ou yo')} />
-        <p className="pf-empty">
+      <section className="pr-card" aria-labelledby="pr-courses-title" ref={cardRef}>
+        {head}
+        <p className="pr-muted">
           {t(
             'Tu n’as pas encore ouvert de cours. Ta première leçon terminée apparaîtra ici.',
             'Ou poko louvri okenn kou. Premye leson ou fini an ap parèt isit la.',
           )}
         </p>
-        <button type="button" className="pf-btn pf-btn--primary" onClick={onExplore}>
+        <button type="button" className="pr-tonal pr-tonal--start" onClick={onExplore}>
           {t('Explorer les cours', 'Eksplore kou yo')}
-          <ChevronRight size={16} />
+          <ChevronRight size={16} aria-hidden="true" />
         </button>
-      </div>
+      </section>
     );
   }
 
-  // Busiest course first: the list is a record of work done, so the course
-  // with the most of it belongs at the top.
-  const sorted = [...allProgress].sort(
-    (a, b) => (b.completedLessons?.length || 0) - (a.completedLessons?.length || 0),
-  );
+  const rows = allProgress.map((p) => {
+    const id = String(p.courseId || '').toLowerCase();
+    const ev = courseEvidence(p.completedLessons, lessonIds[id], mastery, totals[id]);
+    return { p, id, ev };
+  });
+  // Busiest course first: the list is a record of work done.
+  rows.sort((a, b) => b.ev.completed - a.ev.completed || b.ev.practised - a.ev.practised);
 
   return (
-    <div className="pf-card" ref={cardRef}>
-      <CardHead eyebrow={t('Progression', 'Pwogrè')} title={t('Tes cours', 'Kou ou yo')} />
-      {scopeNote}
-      <ul className="pf-rows">
-        {sorted.map((p) => {
-          const done = p.completedLessons?.length || 0;
-          const { code, name, level } = parse(p.courseId);
+    <section className="pr-card" aria-labelledby="pr-courses-title" ref={cardRef}>
+      {head}
+      <ul className="pr-courses">
+        {rows.map(({ p, ev }) => {
+          const pct = ev.total ? Math.round((ev.completed / ev.total) * 100) : 0;
+          const name = parse(p.courseId);
           return (
             <li key={p.courseId}>
-              <Link className="pf-row" to={`/courses/${p.courseId}`}>
-                <IconTile tone={SUBJECT_TONE[code] || 'azure'}><BookOpen size={20} /></IconTile>
-                <span className="pf-row__body">
-                  <span className="pf-row__title">{name}{level ? ` · ${level}` : ''}</span>
-                  <span className="pf-row__meta">
-                    {/* "x / y" only when the catalogue gives the course's
-                        lesson count; otherwise the count alone, never a
-                        guessed denominator. "Terminée" is the shared
-                        evidence label: completion, not mastery. */}
-                    {completedLessonsLabel(done, totals[String(p.courseId || '').toLowerCase()], isCreole)}
-                    {p.totalPoints ? ` · ${p.totalPoints} ${t('points', 'pwen')}` : ''}
+              <Link className="pr-course" to={`/courses/${p.courseId}`}>
+                <span className="pr-course__name">{name}</span>
+                {ev.total ? (
+                  <span
+                    className="pr-bar"
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={ev.total}
+                    aria-valuenow={ev.completed}
+                    aria-label={t(`${name} : leçons terminées`, `${name} : leson fini`)}
+                  >
+                    <span className="pr-bar__fill" style={{ width: `${pct}%` }} />
                   </span>
-                </span>
-                <ChevronRight size={18} className="pf-row__chev" />
+                ) : null}
+                <span className="pr-course__meta">{evidenceLine(ev, isCreole)}</span>
               </Link>
             </li>
           );
         })}
       </ul>
-    </div>
+      <EvidenceHelp isCreole={isCreole} />
+    </section>
   );
 }
 
@@ -742,46 +781,106 @@ export function rankWindow(entries: any[], uid: string | null) {
 }
 
 
+
+/** The face: the account photo when there is one, else the generated face (seed = uid). */
+function ProfileFace({ uid, photo, name, size }: { uid: string; photo?: string | null; name: string; size: number }) {
+  const real = typeof photo === 'string' && /^https?:\/\//i.test(photo.trim());
+  return (
+    <span className="pr-face" style={{ width: size, height: size }}>
+      {real
+        ? <UserAvatar seed={uid} name={name} uri={photo} size={size} />
+        : <Avatar seed={uid} size={size} still />}
+    </span>
+  );
+}
+
+/** A Préférences row: label on the left, the control on the right. */
+function LanguageSwitch({ isCreole, setLanguage, label }: { isCreole: boolean; setLanguage: (l: 'fr' | 'ht') => void; label: string }) {
+  return (
+    <div className="pr-seg" role="group" aria-label={label}>
+      <button type="button" className={`pr-seg__opt${!isCreole ? ' is-on' : ''}`} aria-pressed={!isCreole} onClick={() => setLanguage('fr')}>Français</button>
+      <button type="button" className={`pr-seg__opt${isCreole ? ' is-on' : ''}`} aria-pressed={isCreole} onClick={() => setLanguage('ht')}>Kreyòl</button>
+    </div>
+  );
+}
+
 /**
- * Profile — "Mon profil & paramètres de compte".
+ * Profile — Stitch web pass (DIRECTION-WEB §3, 2026-10-17).
  *
- * Ted's mockup, kept to what the account really holds. A compact title bar
- * (portrait, name, @pseudo, class, the one Enregistrer), three real figures,
- * then two columns of numbered sections:
+ * No stat band: the identity row sits on the ground, and the three figures
+ * the old strip showed now live where they mean something — the weekly rank
+ * in "Ton classement" (MySchoolCard, profile variant) and the streak + level
+ * in "Ta régularité".
  *
- *   1 Informations  — name, pseudo, school, class, residence, filière
- *   2 Objectifs     — goal + daily rhythm (users/{uid}), weak/strong units
- *   3 Réseau        — your school's standing, schoolmates on the board, invite
- *   4 Préférences   — theme, language, alerts, visibility on the board
- *   5 Compte        — e-mail, password reset, relevé, privacy, delete, logout
+ *   desktop  main: Tes cours · Informations (with its Enregistrer) · Objectifs
+ *                  · Réussites · Préférences · Compte
+ *            side: Ton classement · Élèves de ton école · Ta régularité · Bac
+ *   phone    Ton classement (its "Voir le classement" is the screen's solid)
+ *            · Tes cours · Ta régularité · Réglages (inline accordions, so
+ *            /profile#reglages still lands on the pseudo) · Se déconnecter
  *
- * Saving: the title bar's Enregistrer saves the identity fields of section 1
- * (pseudo, school, residence) — the only fields that write together to the
- * board identity. Everything else applies on tap, as it always has: class,
- * filière, theme, language, goal, rhythm and the board toggle.
+ * Saving: Informations' Enregistrer saves the identity fields (pseudo, school,
+ * residence) — the only fields that write together to the board identity.
+ * Everything else applies on tap, as it always has: class, filière, theme,
+ * language, goal, rhythm and the board toggle.
  *
- * Left out on purpose, because none of it exists: storage/offline meters,
- * MicroSD backup, SMS recovery, an export key, a "candidat officiel" badge,
- * friends and chat, a data-saver mode.
+ * Left out on purpose, because none of it exists: a weekly lesson target, an
+ * e-mail change flow, e-mail reminder settings, friends and chat.
+ *
+ * Dev-only: /profile?preview=signed-in renders this page from the fixture in
+ * profile/profilePreview.ts (fictional, never written); ?preview=school-card
+ * renders the full MySchoolCard used on the workspace and /classement.
  */
 export default function Profile() {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const store = useStore();
   const {
-    user, isAuthenticated, language, setLanguage, theme, toggleTheme,
+    language, setLanguage, theme, toggleTheme,
     setShowNotifications, toggleAuthModal, setActiveTab, logout,
-    grade, setGrade, setGradeChosen, track,
-  } = useStore();
+    setGrade, setGradeChosen, track,
+  } = store;
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  const isPhone = useIsPhone();
 
-  const { level, profile } = useTrivia();
-  const { streak } = useStreak();
-  const { entries: boardEntries, myRank } = useLeaderboard(50);
+  // Dev-only screenshot harness. Never in a production bundle's code path.
+  const [params] = useSearchParams();
+  const previewKey = process.env.NODE_ENV !== 'production' ? params.get('preview') : null;
+  const preview: ProfilePreview | null = React.useMemo(
+    () => (previewKey === 'signed-in' || previewKey === 'school-card' ? buildProfilePreview() : null),
+    [previewKey],
+  );
+  const [previewGrade, setPreviewGrade] = React.useState<string | null>(null);
+
+  const user = preview ? preview.user : store.user;
+  const isAuthenticated = preview ? true : store.isAuthenticated;
+  const grade = preview ? (previewGrade || preview.grade) : store.grade;
+
+  const trivia = useTrivia();
+  const level = preview ? preview.level : trivia.level;
+  const profile = preview ? preview.profile : trivia.profile;
+  const streakLive = useStreak();
+  const streak = preview ? preview.streak : streakLive.streak;
+  const board50 = useLeaderboard(50);
+  const boardEntries = preview ? preview.entries : board50.entries;
   // Hooks run before the guest early-return, as they must; useAllProgress
   // no-ops without a signed-in user.
-  const { progress: allProgress, loading: progressLoading } = useAllProgress();
+  const progressLive = useAllProgress();
+  const allProgress = preview ? preview.allProgress : progressLive.progress;
+  const progressLoading = preview ? false : progressLive.loading;
   const [showTrackSelector, setShowTrackSelector] = React.useState(false);
+
+  // Practised / mastered for "Tes cours": the one shared mastery doc.
+  const liveUid = !preview && store.isAuthenticated ? store.user?.uid || null : null;
+  const [masteryLive, setMasteryLive] = React.useState<ProgressMap | null>(null);
+  React.useEffect(() => {
+    if (!liveUid) return undefined;
+    let live = true;
+    readMastery(liveUid).then((m) => { if (live) setMasteryLive(m || {}); }).catch(() => { if (live) setMasteryLive({}); });
+    return () => { live = false; };
+  }, [liveUid]);
+  const mastery = preview ? preview.mastery : masteryLive;
 
   const [identity, setIdentity] = React.useState<IdentityState>({ dirty: false, aliasOk: true, status: 'idle' });
   const onIdentityState = React.useCallback((s: IdentityState) => setIdentity(s), []);
@@ -789,6 +888,15 @@ export default function Profile() {
 
   const [boardBusy, setBoardBusy] = React.useState(false);
   const [boardFailed, setBoardFailed] = React.useState(false);
+  const [openRow, setOpenRow] = React.useState<string | null>(null);
+
+  const focusAlias = React.useCallback((delay = 0) => {
+    window.setTimeout(() => {
+      const target = document.getElementById('pr-info');
+      target?.scrollIntoView({ behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+      (document.getElementById('profile-alias') as HTMLInputElement | null)?.focus({ preventScroll: true });
+    }, delay);
+  }, []);
 
   // /profile#reglages — the "Choisir un pseudo" links everywhere — lands on
   // the settings and, when there is no pseudo yet, in the pseudo field.
@@ -796,6 +904,7 @@ export default function Profile() {
   const hasAlias = isValidAlias(profile?.leaderboard?.displayName || '');
   React.useEffect(() => {
     if (location.hash !== '#reglages') return;
+    if (isPhone) setOpenRow('info');
     const id = window.setTimeout(() => {
       document.getElementById('reglages')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       if (!hasAlias) (document.getElementById('profile-alias') as HTMLInputElement | null)?.focus({ preventScroll: true });
@@ -808,56 +917,73 @@ export default function Profile() {
     try { return track ? TRACK_BY_CODE[track] : null; } catch { return null; }
   }, [track]);
 
-  // ── Guest view ──────────────────────────────────────────────────────────
+  // ── Guest view (Stitch 09; the same column, 560px, on desktop) ──────────
   if (!isAuthenticated || !user) {
+    const keeps = [
+      { icon: <TrendingUp size={20} />, text: t('Ta progression : leçons terminées, pratiquées, maîtrisées', 'Pwogrè ou : leson fini, pratike, metrize') },
+      { icon: <Trophy size={20} />, text: t('Ta place au classement de ton école', 'Plas ou nan klasman lekòl ou') },
+      { icon: <Smartphone size={20} />, text: t('Tes questions à revoir, sur tous tes appareils', 'Kesyon ou pou revize, sou tout aparèy ou yo') },
+    ];
     return (
-      <section className="section">
-        <div className="container profile-guest">
-          <div className="profile-guest__card">
-            <div className="profile-guest__icon"><GraduationCap size={32} /></div>
-            <h1>{t('Ton profil EdLight', 'Pwofil EdLight ou')}</h1>
-            <p className="text-muted">
-              {t(
-                'Un compte garde ce que tu as déjà fait : ta progression, ton score de préparation, ta série et ta place au classement te suivent d’un appareil à l’autre.',
-                'Yon kont kenbe sa ou deja fè : pwogrè ou, nòt preparasyon ou, seri ou ak plas ou nan klasman an swiv ou sou nenpòt aparèy.',
-              )}
-            </p>
-            <div className="profile-guest__actions">
-              <button
-                className="button button--primary"
-                onClick={() => { setActiveTab('signup'); toggleAuthModal(); }}
-              >
-                {t('Créer un compte', 'Kreye yon kont')}
+      <section className="section pf prx prx--guest">
+        <div className="container prx-guest">
+          <h1 className="prx-guest__title">{t('Profil', 'Pwofil')}</h1>
+
+          <section className="pr-card" aria-labelledby="pr-keeps-title">
+            <h2 id="pr-keeps-title" className="pr-card__title">{t('Ce qu’un compte garde pour toi', 'Sa yon kont kenbe pou ou')}</h2>
+            <ul className="pr-keeps">
+              {keeps.map((k) => (
+                <li key={k.text} className="pr-keeps__row">
+                  <span className="pr-chip-icon" aria-hidden="true">{k.icon}</span>
+                  <span>{k.text}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="pr-stack">
+              <button type="button" className="pr-solid pr-solid--block" onClick={() => { setActiveTab('signup'); toggleAuthModal(); }}>
+                {t('Créer un compte gratuit', 'Kreye yon kont gratis')}
               </button>
-              <button
-                className="button button--ghost"
-                onClick={() => { setActiveTab('signin'); toggleAuthModal(); }}
-              >
+              <button type="button" className="pr-tonal pr-tonal--block" onClick={() => { setActiveTab('signin'); toggleAuthModal(); }}>
                 {t('Se connecter', 'Konekte')}
               </button>
             </div>
             {/* Guest learning stays available — the account is a benefit, not a
                 gate, and this page must not read as one. */}
-            <p className="profile-guest__free">
-              {t(
-                'Sans compte, les cours et les vidéos restent accessibles.',
-                'San kont, kou yo ak videyo yo rete disponib.',
-              )}{' '}
-              <Link to="/courses">{t('Voir les cours', 'Gade kou yo')}</Link>
+            <p className="pr-muted pr-center">
+              {t('Sans compte, les cours et les vidéos restent accessibles.', 'San kont, kou yo ak videyo yo rete disponib.')}{' '}
+              <Link to="/courses" className="pr-link">{t('Voir les cours', 'Gade kou yo')}</Link>
             </p>
-          </div>
+          </section>
 
-          <div className="profile-links profile-links--guest">
-            <Link to="/about" className="profile-link"><Info size={18} /> {t('À propos', 'Sou nou')}<ChevronRight size={16} /></Link>
-            <button className="profile-link" onClick={() => toggleTheme()}>
-              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-              {theme === 'dark' ? t('Mode clair', 'Mòd klè') : t('Mode nuit', 'Mòd lannwit')}
-              <ChevronRight size={16} />
-            </button>
-            <button className="profile-link" onClick={() => setLanguage(isCreole ? 'fr' : 'ht')}>
-              <Languages size={18} /> {isCreole ? 'Français' : 'Kreyòl'}<ChevronRight size={16} />
-            </button>
-          </div>
+          {/* A shape preview of Ton classement — no numbers, nothing invented. */}
+          <section className="pr-card pr-peek" aria-label={t('Aperçu : ton classement', 'Apèsi : klasman ou')}>
+            <div className="pr-peek__top">
+              <span className="pr-muted">{t('Aperçu', 'Apèsi')}</span>
+              <span className="pr-muted">{t('Ton classement', 'Klasman ou')}</span>
+            </div>
+            <div className="pr-peek__row">
+              <span className="pr-peek__shield" aria-hidden="true"><Shield size={26} /></span>
+              <span className="pr-peek__text">
+                <span className="pr-peek__name">{t('Ton école', 'Lekòl ou')}</span>
+                <span className="pr-muted">{t('Choisis ton école à l’inscription', 'Chwazi lekòl ou lè w ap enskri')}</span>
+              </span>
+            </div>
+          </section>
+
+          <section className="pr-card" aria-labelledby="pr-guest-settings">
+            <h2 id="pr-guest-settings" className="pr-card__title">{t('Réglages', 'Paramèt')}</h2>
+            <div className="pr-list">
+              <Toggle on={theme === 'dark'} onChange={() => toggleTheme()} label={t('Mode nuit', 'Mòd lannwit')} />
+              <div className="pr-line">
+                <span className="pr-line__label" id="pr-lang-guest">{t('Langue', 'Lang')}</span>
+                <LanguageSwitch isCreole={isCreole} setLanguage={setLanguage} label={t('Langue', 'Lang')} />
+              </div>
+              <Link to="/about" className="pr-line pr-line--link">
+                <span className="pr-line__label">{t('À propos', 'Sou nou')}</span>
+                <ChevronRight size={18} aria-hidden="true" />
+              </Link>
+            </div>
+          </section>
         </div>
       </section>
     );
@@ -867,26 +993,44 @@ export default function Profile() {
   const uid: string = user.uid;
   const board = profile?.leaderboard || {};
   const unlockedMilestones = new Set<string>(streak?.milestones || []);
-  const courseBadges = new Set<string>((allProgress || []).flatMap((p) => p.badges || []));
+  const courseBadges = new Set<string>((allProgress || []).flatMap((p: any) => p.badges || []));
   // Point badges are awarded per course, so "how close am I" is the best
   // single course, not the total across all of them.
   const bestCoursePoints = (allProgress || []).reduce(
-    (best, p) => Math.max(best, p.totalPoints || 0), 0,
+    (best: number, p: any) => Math.max(best, p.totalPoints || 0), 0,
   );
   const achievements = buildAchievements({
     isCreole, streak, unlockedMilestones, courseBadges, bestCoursePoints,
   });
 
-  const days = streak?.currentStreak || 0;
-  const nextMilestone = STREAK_MILESTONES.find((m) => m.days > days);
-  const { gap } = rankWindow(boardEntries, uid);
-
-  const gradeEntry = GRADES.find((g) => g.code === grade);
-  const gradeLabel = gradeEntry ? (isCreole ? gradeEntry.labelHt : gradeEntry.label) : '';
-  const accountName = user.name || getFirstName(user) || t('Élève', 'Elèv');
+  const accountName = (user as any).name || getFirstName(user) || t('Élève', 'Elèv');
   const alias = hasAlias ? String(board.displayName) : '';
+  const pill = gradePill(grade, isCreole);
+  const photo = (user as any).picture || (user as any).photoURL || null;
+
+  const schoolPreview = preview ? {
+    uid, profile: preview.profile, race: preview.race, entries: preview.entries,
+    myRank: preview.myRank, myEntry: preview.entries.find((e) => e.id === uid) || null,
+  } : null;
+
+  // ?preview=school-card — the FULL card (workspace, /classement), for review.
+  if (preview && previewKey === 'school-card') {
+    return (
+      <section className="section pf prx">
+        <div className="container prx-page">
+          <p className="prx-devnote">{t('Aperçu de développement — données fictives', 'Apèsi devlopman — done fiktif')}</p>
+          <h1 className="prx-guest__title">MySchoolCard</h1>
+          <div className="prx-cardcheck">
+            <div className="prx-cardcheck__narrow"><MySchoolCard where="preview" preview={schoolPreview} /></div>
+            <div className="prx-cardcheck__wide"><MySchoolCard where="preview" preview={schoolPreview} /></div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   const handleLogout = async () => {
+    if (preview) return;
     try { await logoutUser(); } catch {}
     logout();
     navigate('/');
@@ -895,6 +1039,7 @@ export default function Profile() {
   // The board switch writes the same document as the identity form, with
   // everything but `optedIn` passed through unchanged.
   const setOnBoard = async (next: boolean) => {
+    if (preview) return;
     setBoardBusy(true);
     setBoardFailed(false);
     const updated = await saveBoardIdentity(uid, { optedIn: next });
@@ -903,202 +1048,241 @@ export default function Profile() {
     setBoardBusy(false);
   };
 
+  const pickGrade = (code: string) => {
+    if (preview) { setPreviewGrade(code); return; }
+    setGrade(code);
+    setGradeChosen(true);
+  };
+
   const saveLabel = identity.status === 'saving'
     ? t('Enregistrement…', 'Ap anrejistre…')
     : t('Enregistrer', 'Anrejistre');
 
-  return (
-    <section className="section pf pr">
-      <div className="container pr-page">
+  const openInfo = () => {
+    if (isPhone) { setOpenRow('info'); focusAlias(60); } else focusAlias(0);
+  };
 
-        {/* ── Title bar — sticky only while there is something to save ── */}
-        <header className={`pr-titlebar${identity.dirty ? ' is-dirty' : ''}`}>
-          <div className="pr-titlebar__who">
-            <span className="pr-titlebar__avatar">
-              <UserAvatar seed={user.uid} name={user.name || user.email} size={52} />
+  /* ── Pieces shared by both layouts ── */
+  const classPicker = (
+    <div className="pr-field">
+      <label className="pr-label" htmlFor="pr-grade">{t('Classe', 'Klas')}</label>
+      <span className="pr-select">
+        <select id="pr-grade" className="pr-input" value={grade || ''} aria-describedby="pr-grade-why" onChange={(e) => pickGrade(e.target.value)}>
+          {!grade && <option value="">{t('Choisir', 'Chwazi')}</option>}
+          {GRADES.map((g) => (
+            <option key={g.code} value={g.code}>{isCreole ? g.labelHt : g.label}</option>
+          ))}
+        </select>
+        <ChevronDown size={18} aria-hidden="true" />
+      </span>
+      <small className="pr-why" id="pr-grade-why">
+        {t('Appliquée tout de suite : elle choisit tes cours, quiz et examens.', 'Aplike touswit : se li ki chwazi kou, quiz ak egzamen ou.')}
+      </small>
+    </div>
+  );
+
+  const informations = (
+    <>
+      <IdentityFields
+        isCreole={isCreole}
+        uid={preview ? null : uid}
+        board={board}
+        saveRef={saveRef}
+        accountName={accountName}
+        onState={onIdentityState}
+        afterSchool={classPicker}
+      />
+      <div className="pr-field">
+        <span className="pr-label" id="pr-track-label">{t('Filière du Bac', 'Filyè Bak la')}</span>
+        <button type="button" className="pr-wellbtn" aria-describedby="pr-track-label" onClick={() => setShowTrackSelector(true)}>
+          <span>{trackInfo ? trackInfo.label : t('Choisir ma filière', 'Chwazi filyè mwen')}</span>
+          <ChevronRight size={18} aria-hidden="true" />
+        </button>
+      </div>
+      <div className="pr-savebar">
+        <div className="pr-savebar__status">
+          {identity.dirty && identity.status !== 'saving' && (
+            <span className="pr-muted">{t('Modifications non enregistrées', 'Chanjman pa anrejistre')}</span>
+          )}
+          {identity.status === 'saved' && !identity.dirty && (
+            <span className="pr-ok" role="status"><Check size={16} aria-hidden="true" /> {t('Enregistré', 'Anrejistre')}</span>
+          )}
+          {identity.status === 'failed' && (
+            <span className="pr-failed" role="alert">
+              <AlertTriangle size={16} aria-hidden="true" /> {t('Non enregistré — réessayez.', 'Pa anrejistre — eseye ankò.')}
             </span>
-            <div className="pr-titlebar__id">
-              <h1 className="pr-titlebar__name">{accountName}</h1>
-              <div className="pr-titlebar__meta">
-                {alias
-                  ? <span className="pr-handle">@{alias}</span>
-                  : <a href="#reglages" className="pr-handle pr-handle--missing" onClick={(e) => {
-                    e.preventDefault();
-                    document.getElementById('profile-alias')?.focus();
-                  }}>{t('Choisir un pseudo', 'Chwazi yon ti non')}</a>}
-                {gradeLabel && <Pill tone="azure">{gradeLabel}</Pill>}
-              </div>
-            </div>
-          </div>
-          <div className="pr-titlebar__save">
-            {identity.dirty && identity.status !== 'saving' && (
-              <span className="pr-titlebar__hint">{t('Modifications non enregistrées', 'Chanjman pa anrejistre')}</span>
-            )}
-            {identity.status === 'saved' && !identity.dirty && (
-              <span className="pr-ok" role="status"><Check size={14} aria-hidden="true" /> {t('Enregistré', 'Anrejistre')}</span>
-            )}
-            {identity.status === 'failed' && (
-              <span className="pr-failed" role="alert">
-                <AlertTriangle size={14} aria-hidden="true" /> {t('Non enregistré — réessayez.', 'Pa anrejistre — eseye ankò.')}
-              </span>
-            )}
-            <button
-              type="button"
-              className="pr-save"
-              disabled={!identity.dirty || !identity.aliasOk || identity.status === 'saving'}
-              onClick={() => saveRef.current?.()}
-            >
-              {identity.status === 'saving' && <Loader2 size={15} className="profile-spin" aria-hidden="true" />}
-              {saveLabel}
-            </button>
-          </div>
-        </header>
-
-        {/* ── Three figures, each from its own source ── */}
-        <div className="pr-stats">
-          <HeroStat
-            tone="amber"
-            icon={<Flame size={16} />}
-            value={days}
-            label={days === 1 ? t('Jour de suite', 'Jou swit') : t('Jours de suite', 'Jou swit')}
-            sub={nextMilestone
-              ? t(`Prochain palier : ${nextMilestone.days}`, `Pwochen palye : ${nextMilestone.days}`)
-              : t('Tous les paliers atteints', 'Tout palye yo fèt')}
-          />
-          <div className="pf-stat">
-            <IconTile tone="azure" size="sm"><Zap size={16} /></IconTile>
-            <span className="pf-stat__value num">{level.xp}</span>
-            <span className="pf-stat__label">{t(`XP · niveau ${level.level}`, `XP · nivo ${level.level}`)}</span>
-            <Meter pct={level.progressPct} tone="azure" />
-            <span className="pf-stat__sub">{t(`reste ${level.xpToNext} XP`, `rete ${level.xpToNext} XP`)}</span>
-          </div>
-          <HeroStat
-            tone="emerald"
-            icon={<Trophy size={16} />}
-            value={myRank ? `#${myRank}` : '—'}
-            label={t('Classement de la semaine', 'Klasman semèn nan')}
-            sub={!myRank
-              ? (board.optedIn ? t('Pseudo requis', 'Ou bezwen yon ti non') : t('Pas au classement', 'Pa nan klasman an'))
-              : gap > 0
-                ? t(`${gap} XP du #${myRank - 1}`, `${gap} XP pou #${myRank - 1}`)
-                : t('En tête', 'An tèt')}
-          />
+          )}
         </div>
+        <button
+          type="button"
+          className="pr-solid"
+          disabled={!identity.dirty || !identity.aliasOk || identity.status === 'saving'}
+          onClick={() => saveRef.current?.()}
+        >
+          {identity.status === 'saving' && <Loader2 size={16} className="profile-spin" aria-hidden="true" />}
+          {saveLabel}
+        </button>
+      </div>
+    </>
+  );
 
-        <div className="pr-grid" id="reglages">
-          <div className="pr-col">
-            {/* 1 — Informations */}
-            <section className="pr-sec" aria-labelledby="pr-sec-1">
-              <SectionHead n={1} title={t('Informations', 'Enfòmasyon')} sub={t('Renseignées une fois, réutilisées partout.', 'Ranpli yon fwa, sèvi toupatou.')} />
-              <IdentityFields
-                isCreole={isCreole}
-                uid={uid}
-                board={board}
-                saveRef={saveRef}
-                accountName={accountName}
-                onState={onIdentityState}
-                afterSchool={(
-                  <div className="profile-field">
-                    <span className="profile-field__label">{t('Classe', 'Klas')}</span>
-                    <div className="profile-grades">
-                      {GRADES.map((g) => (
-                        <button
-                          key={g.code}
-                          type="button"
-                          className={`profile-grade${grade === g.code ? ' is-on' : ''}`}
-                          aria-pressed={grade === g.code}
-                          onClick={() => { setGrade(g.code); setGradeChosen(true); }}
-                        >
-                          {isCreole ? g.labelHt : g.label}
-                        </button>
-                      ))}
-                    </div>
-                    <small className="profile-field__why">
-                      {t('Appliquée tout de suite : elle choisit tes cours, quiz et examens.', 'Aplike touswit : se li ki chwazi kou, quiz ak egzamen ou.')}
-                    </small>
-                  </div>
-                )}
-              />
-              <div className="profile-field">
-                <span className="profile-field__label">{t('Filière du Bac', 'Filyè Bak la')}</span>
-                <button type="button" className="profile-link" onClick={() => setShowTrackSelector(true)}>
-                  {trackInfo
-                    ? <><span aria-hidden="true">{trackInfo.icon}</span> {trackInfo.label}</>
-                    : <><RefreshCw size={18} /> {t('Choisir ma filière', 'Chwazi filyè mwen')}</>}
-                  <ChevronRight size={16} />
-                </button>
+  const objectives = (
+    <>
+      <GoalRhythm uid={uid} t={t} initial={preview ? preview.studyPrefs : undefined} />
+      <SkillSpots uid={uid} isCreole={isCreole} t={t} preview={preview ? { review: preview.review, mastery: preview.mastery } : undefined} />
+    </>
+  );
+
+  const boardToggle = (
+    <Toggle
+      on={!!board.optedIn}
+      disabled={boardBusy || (!board.optedIn && !hasAlias)}
+      onChange={setOnBoard}
+      label={t('Visible au classement', 'Vizib nan klasman an')}
+      hint={boardFailed
+        ? <span className="pr-failed" role="alert">{t('Non enregistré — réessayez.', 'Pa anrejistre — eseye ankò.')}</span>
+        : !board.optedIn && !hasAlias
+          ? t('Choisis d’abord un pseudo (Informations).', 'Chwazi yon ti non anvan (Enfòmasyon).')
+          : board.optedIn
+            ? t('Ton pseudo, ton école et ta ville apparaissent au classement.', 'Ti non ou, lekòl ou ak vil ou parèt nan klasman an.')
+            : t('Désactivé : tes nouveaux points ne sont pas publiés.', 'Dezaktive : nouvo pwen ou yo pa pibliye.')}
+    />
+  );
+  const alertsRow = (
+    <button type="button" className="pr-line pr-line--link" onClick={() => setShowNotifications(true)}>
+      <span className="pr-line__label">{t('Mes alertes', 'Alèt mwen')}</span>
+      <Bell size={20} aria-hidden="true" />
+    </button>
+  );
+
+  const identityRow = (
+    <header className="pr-id">
+      <ProfileFace uid={uid} photo={photo} name={accountName} size={isPhone ? 64 : 72} />
+      <div className="pr-id__text">
+        <div className="pr-id__nameRow">
+          <h1 className="pr-id__name">{accountName}</h1>
+          {pill && <span className="pr-pill">{pill}</span>}
+        </div>
+        <p className="pr-id__meta">
+          {alias
+            ? <span className="pr-id__handle">@{alias}</span>
+            : <a href="#reglages" className="pr-id__handle pr-id__handle--missing" onClick={(e) => { e.preventDefault(); openInfo(); }}>{t('Choisir un pseudo', 'Chwazi yon ti non')}</a>}
+          {(board.school || board.city) && <span className="pr-id__sep" aria-hidden="true">·</span>}
+          {(board.school || board.city) && (
+            <span className="pr-id__where">{[board.school, board.city].filter(Boolean).join(' · ')}</span>
+          )}
+        </p>
+      </div>
+      <button type="button" className="pr-tonal pr-id__edit" onClick={openInfo}>
+        {isPhone ? t('Modifier', 'Modifye') : t('Modifier le profil', 'Modifye pwofil la')}
+      </button>
+    </header>
+  );
+
+  const devNote = preview ? <p className="prx-devnote">{t('Aperçu de développement — données fictives', 'Apèsi devlopman — done fiktif')}</p> : null;
+  const regularity = <Regularity streak={streak} level={level} isCreole={isCreole} t={t} />;
+  const courses = (
+    <CourseProgressCard
+      allProgress={allProgress}
+      loading={progressLoading}
+      isCreole={isCreole}
+      onExplore={() => navigate('/courses')}
+      mastery={mastery}
+    />
+  );
+
+  // ── Phone (Stitch 08) ──
+  if (isPhone) {
+    const toggleRow = (id: string) => setOpenRow((cur) => (cur === id ? null : id));
+    return (
+      <section className="section pf prx">
+        <div className="container prx-page">
+          {devNote}
+          {identityRow}
+          <MySchoolCard where="profile" variant="profile" solid preview={schoolPreview} />
+          {courses}
+          {regularity}
+          <ReadinessCard />
+          <section className="pr-card pr-card--list" id="reglages" aria-labelledby="pr-settings-title">
+            <h2 id="pr-settings-title" className="pr-card__title">{t('Réglages', 'Paramèt')}</h2>
+            <div className="pr-srows" id="pr-info">
+              <SettingsRow id="pr-row-info" icon={<Info size={20} />} label={t('Informations', 'Enfòmasyon')} open={openRow === 'info'} onToggle={() => toggleRow('info')}>
+                {informations}
+              </SettingsRow>
+              <SettingsRow id="pr-row-goals" icon={<Flag size={20} />} label={t('Objectifs', 'Objektif')} open={openRow === 'goals'} onToggle={() => toggleRow('goals')}>
+                {objectives}
+              </SettingsRow>
+              <div className="pr-srow pr-srow--inline">
+                <span className="pr-srow__icon" aria-hidden="true"><Moon size={20} /></span>
+                <Toggle on={theme === 'dark'} onChange={() => toggleTheme()} label={t('Mode nuit', 'Mòd lannwit')} />
               </div>
+              <SettingsRow id="pr-row-lang" icon={<Languages size={20} />} label={t('Langue', 'Lang')} value={isCreole ? 'Kreyòl' : 'Français'} open={openRow === 'lang'} onToggle={() => toggleRow('lang')}>
+                <LanguageSwitch isCreole={isCreole} setLanguage={setLanguage} label={t('Langue', 'Lang')} />
+              </SettingsRow>
+              <SettingsRow id="pr-row-account" icon={<Settings size={20} />} label={t('Compte', 'Kont')} open={openRow === 'account'} onToggle={() => toggleRow('account')}>
+                {boardToggle}
+                {alertsRow}
+                <AccountBlock email={user.email || null} t={t} onLogout={handleLogout} showLogout={false} />
+              </SettingsRow>
+            </div>
+          </section>
+          <button type="button" className="pr-textbtn pr-logout" onClick={handleLogout}>{t('Se déconnecter', 'Dekonekte')}</button>
+        </div>
+        {showTrackSelector && (
+          <TrackSelectorModal currentTrack={track} onClose={() => setShowTrackSelector(false)} />
+        )}
+      </section>
+    );
+  }
+
+  // ── Desktop (Stitch 07) ──
+  return (
+    <section className="section pf prx">
+      <div className="container prx-page">
+        {devNote}
+        {identityRow}
+
+        <div className="prx-grid" id="reglages">
+          <div className="prx-main">
+            {courses}
+
+            <section className="pr-card" id="pr-info" aria-labelledby="pr-info-title">
+              <h2 id="pr-info-title" className="pr-card__title">{t('Informations', 'Enfòmasyon')}</h2>
+              {informations}
             </section>
 
-            {/* 2 — Objectifs */}
-            <section className="pr-sec">
-              <SectionHead n={2} title={t('Objectifs', 'Objektif')} sub={t('Ce que tu vises, et où tu en es vraiment.', 'Sa ou vize, ak kote ou ye vre.')} />
-              <GoalRhythm uid={uid} t={t} />
-              <SkillSpots uid={uid} isCreole={isCreole} t={t} />
+            <section className="pr-card" aria-labelledby="pr-goals-title">
+              <h2 id="pr-goals-title" className="pr-card__title">{t('Objectifs', 'Objektif')}</h2>
+              {objectives}
             </section>
 
-            {/* 3 — Réseau */}
-            <section className="pr-sec">
-              <SectionHead n={3} title={t('Réseau', 'Rezo')} sub={t('Ton école, et qui la représente avec toi.', 'Lekòl ou, ak kiyès ki reprezante l avè w.')} />
-              <MySchoolCard where="profile" />
-              <Schoolmates entries={boardEntries} uid={uid} school={board.school || ''} t={t} />
-            </section>
-          </div>
+            <AchievementShelf achievements={achievements} isCreole={isCreole} />
 
-          <div className="pr-col">
-            {/* 4 — Préférences */}
-            <section className="pr-sec">
-              <SectionHead n={4} title={t('Préférences', 'Preferans')} />
-              <div className="pr-field">
-                <span className="pr-label">{t('Langue', 'Lang')}</span>
-                <div className="pr-seg" role="group" aria-label={t('Langue', 'Lang')}>
-                  <button type="button" className={`pr-seg__opt${!isCreole ? ' is-on' : ''}`} aria-pressed={!isCreole} onClick={() => setLanguage('fr')}>Français</button>
-                  <button type="button" className={`pr-seg__opt${isCreole ? ' is-on' : ''}`} aria-pressed={isCreole} onClick={() => setLanguage('ht')}>Kreyòl</button>
+            <section className="pr-card" aria-labelledby="pr-prefs-title">
+              <h2 id="pr-prefs-title" className="pr-card__title">{t('Préférences', 'Preferans')}</h2>
+              <div className="pr-list">
+                <Toggle on={theme === 'dark'} onChange={() => toggleTheme()} label={t('Mode nuit', 'Mòd lannwit')} />
+                <div className="pr-line">
+                  <span className="pr-line__label">{t('Langue', 'Lang')}</span>
+                  <LanguageSwitch isCreole={isCreole} setLanguage={setLanguage} label={t('Langue', 'Lang')} />
                 </div>
+                {boardToggle}
+                {alertsRow}
               </div>
-              <Toggle
-                on={theme === 'dark'}
-                onChange={() => toggleTheme()}
-                label={t('Mode nuit', 'Mòd lannwit')}
-              />
-              <Toggle
-                on={!!board.optedIn}
-                disabled={boardBusy || (!board.optedIn && !hasAlias)}
-                onChange={setOnBoard}
-                label={t('Visible au classement', 'Vizib nan klasman an')}
-                hint={boardFailed
-                  ? <span className="pr-failed" role="alert">{t('Non enregistré — réessayez.', 'Pa anrejistre — eseye ankò.')}</span>
-                  : !board.optedIn && !hasAlias
-                    ? t('Choisissez d’abord un pseudo (section 1).', 'Chwazi yon ti non anvan (seksyon 1).')
-                    : board.optedIn
-                      ? t('Ton pseudo, ton école et ta ville apparaissent au classement.', 'Ti non ou, lekòl ou ak vil ou parèt nan klasman an.')
-                      : t('Désactivé : tes nouveaux points ne sont pas publiés.', 'Dezaktive : nouvo pwen ou yo pa pibliye.')}
-              />
-              <button type="button" className="pr-row" onClick={() => setShowNotifications(true)}>
-                <Bell size={16} aria-hidden="true" /> {t('Mes alertes', 'Alèt mwen')}
-                <ChevronRight size={15} className="pr-row__chev" aria-hidden="true" />
-              </button>
             </section>
 
-            {/* 5 — Compte */}
-            <section className="pr-sec">
-              <SectionHead n={5} title={t('Compte', 'Kont')} />
+            <section className="pr-card" aria-labelledby="pr-account-title">
+              <h2 id="pr-account-title" className="pr-card__title">{t('Compte', 'Kont')}</h2>
               <AccountBlock email={user.email || null} t={t} onLogout={handleLogout} />
             </section>
-
-            <ReadinessCard />
           </div>
-        </div>
 
-        {/* ── The record: courses and badges, compact ── */}
-        <div className="pr-journey">
-          <CourseProgressCard
-            allProgress={allProgress}
-            loading={progressLoading}
-            isCreole={isCreole}
-            onExplore={() => navigate('/courses')}
-          />
-          <AchievementShelf achievements={achievements} isCreole={isCreole} />
+          <aside className="prx-side" aria-label={t('Ton classement et ta régularité', 'Klasman ou ak regilarite ou')}>
+            <MySchoolCard where="profile" variant="profile" preview={schoolPreview} />
+            <Schoolmates entries={boardEntries} uid={uid} school={board.school || ''} t={t} />
+            {regularity}
+            <ReadinessCard />
+          </aside>
         </div>
       </div>
 

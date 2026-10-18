@@ -1,0 +1,262 @@
+/* ══ Course overview, Stitch web redesign (2026-10-17) ═════════════════════
+   DIRECTION-WEB §2.3/2.4: no image band, a type-only header, chapter cards on
+   subject mats, evidence on the rows, one solid button. Borderless opaque
+   cards; rows separated by space, never lines. Tokens: lessonPage.css
+   (`.course-detail` --lx-*), redeclared here so the overview stands alone. */
+
+.co {
+  --co-surface: var(--surface, #FFFFFF);
+  --co-well: #F2F5FA;
+  --co-ink: #0B1B33;
+  --co-muted: #51627A;
+  --co-azure: #1B6FE0;
+  --co-azure-hover: #155FC4;
+  --co-azure-soft: #EAF2FE;
+  --co-azure-soft-hover: #DCE9FD;
+  --co-azure-ink: #1559C2;
+  --co-mint-ink: #127A4B;
+  --co-track: rgba(11, 27, 51, 0.08);
+  --co-shadow: 0 8px 24px rgba(11, 27, 51, 0.06);
+  --co-display: 'Plus Jakarta Sans', var(--font-heading, system-ui), sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 880px;
+  padding-bottom: 48px;
+  color: var(--co-ink);
+}
+[data-theme="dark"] .co {
+  --co-well: #1B2840;
+  --co-ink: #E8EEF7;
+  --co-muted: #A9B8CC;
+  --co-azure-hover: #2A7BEA;
+  --co-azure-soft: #1A3358;
+  --co-azure-soft-hover: #21406C;
+  --co-azure-ink: #A8C8FA;
+  --co-mint-ink: #6FD59F;
+  --co-track: rgba(255, 255, 255, 0.1);
+  --co-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
+}
+
+.co__main,
+.co__rail { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+.co__rail:empty { display: none; }
+
+@media (min-width: 961px) {
+  .co.co--rail {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 380px;
+    align-items: start;
+    gap: 48px;
+    max-width: 1280px;
+  }
+  .co--rail .co__rail { position: sticky; top: 88px; }
+}
+
+/* ── Header ───────────────────────────────────────────────────────────── */
+.co__head { display: flex; flex-direction: column; gap: 12px; max-width: 780px; }
+.co__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  min-height: 40px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--co-muted);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.co__back:hover { color: var(--co-azure-ink); }
+.co__notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: var(--co-well);
+  color: var(--co-ink);
+  font-size: 15px;
+}
+.co__title {
+  margin: 4px 0 0;
+  color: var(--co-ink);
+  font-family: var(--co-display);
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+.co__desc { margin: 0; max-width: 68ch; color: var(--co-muted); font-size: 16px; line-height: 1.55; }
+.co__desc.is-clamped { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.co__more {
+  align-self: flex-start;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--co-azure-ink);
+  font-size: 15px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.co__meta { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 0; padding: 0; list-style: none; color: var(--co-muted); font-size: 15px; }
+.co__meta li { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ── Actions: one solid, one tonal ────────────────────────────────────── */
+.co__actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.co__solid,
+.co__tonal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  max-width: 100%;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.co__solid { background: var(--co-azure); color: #FFFFFF; }
+.co__solid:hover { background: var(--co-azure-hover); }
+.co__solid-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.co__tonal { background: var(--co-azure-soft); color: var(--co-azure-ink); }
+.co__tonal:hover { background: var(--co-azure-soft-hover); }
+.co__solid:focus-visible,
+.co__tonal:focus-visible,
+.co__back:focus-visible,
+.co__chapter-head:focus-visible,
+.co__lesson:focus-visible { outline: 3px solid var(--co-azure); outline-offset: 2px; }
+
+/* ── Cards ────────────────────────────────────────────────────────────── */
+.co__card { padding: 24px 28px; border-radius: 20px; background: var(--co-surface); box-shadow: var(--co-shadow); }
+.co__card-title { margin: 0 0 12px; color: var(--co-ink); font-family: var(--co-display); font-size: 20px; font-weight: 800; }
+.co__progress-big { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; color: var(--co-muted); font-size: 15px; }
+.co__progress-big strong { color: var(--co-ink); font-family: var(--co-display); font-size: 32px; font-weight: 800; }
+.co__progress-pct { margin-left: auto; color: var(--co-azure-ink); font-size: 14px; font-weight: 700; }
+.co__bar { height: 8px; border-radius: 999px; background: var(--co-track); overflow: hidden; }
+.co__bar span { display: block; height: 100%; border-radius: inherit; background: var(--co-azure); }
+.co__triple { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0 0; }
+.co__triple div { display: flex; flex-direction: column-reverse; gap: 2px; }
+.co__triple dd { margin: 0; color: var(--co-ink); font-family: var(--co-display); font-size: 22px; font-weight: 800; }
+.co__triple dt { color: var(--co-muted); font-size: 14px; }
+.co__words { margin-top: 14px; color: var(--co-muted); font-size: 14px; }
+.co__words summary { min-height: 32px; color: var(--co-azure-ink); font-weight: 650; cursor: pointer; }
+.co__words ul { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 6px; }
+.co__words strong { color: var(--co-ink); }
+.co__outcomes ul { margin: 0; padding-left: 20px; display: grid; gap: 10px; color: var(--co-ink); font-size: 16px; }
+
+/* ── Chapters ─────────────────────────────────────────────────────────── */
+.co__section-title { margin: 8px 0 16px; color: var(--co-ink); font-family: var(--co-display); font-size: 24px; font-weight: 800; }
+.co__chapters { display: grid; gap: 16px; margin: 0; padding: 0; list-style: none; }
+.co__chapter { border-radius: 18px; background: var(--co-surface); box-shadow: var(--co-shadow); }
+.co__chapter-head {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  padding: 20px 24px;
+  border: 0;
+  border-radius: 18px;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.co__thumb { position: relative; flex: 0 0 140px; width: 140px; }
+.co__thumb .sf { width: 140px; height: 80px; aspect-ratio: auto; }
+.co__num {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--co-surface);
+  color: var(--co-ink);
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(11, 27, 51, 0.12);
+}
+.co__chapter-body { display: grid; gap: 4px; min-width: 0; flex: 1; }
+.co__chapter-title { color: var(--co-ink); font-family: var(--co-display); font-size: 18px; font-weight: 800; line-height: 1.3; }
+.co__chapter-meta { color: var(--co-muted); font-size: 15px; }
+.co__chapter-ev { color: var(--co-muted); font-size: 14px; font-weight: 600; white-space: nowrap; }
+.co__chapter-ev--phone { display: none; }
+.co__chev { flex: none; color: var(--co-muted); transition: transform 0.2s ease; }
+.co__chapter.is-open .co__chev { transform: rotate(180deg); }
+
+.co__lessons { display: grid; gap: 8px; margin: 0; padding: 0 24px 20px; list-style: none; }
+.co__lesson {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: var(--co-ink);
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+.co__lesson:hover { background: var(--co-well); }
+.co__lesson.is-current,
+.co__lesson.is-current:hover { background: var(--co-azure-soft); color: var(--co-azure-ink); font-weight: 600; }
+.co__lesson-glyph { display: inline-grid; place-items: center; flex: 0 0 20px; color: var(--co-muted); }
+.co__lesson.is-done .co__lesson-glyph { color: var(--co-mint-ink); }
+.co__lesson.is-current .co__lesson-glyph { color: var(--co-azure-ink); }
+.co__lesson-title { flex: 1; min-width: 0; }
+.co__lesson-num { color: var(--co-muted); font-variant-numeric: tabular-nums; }
+.co__lesson.is-current .co__lesson-num { color: var(--co-azure-ink); }
+.co__lesson-tail { flex: none; color: var(--co-muted); font-size: 14px; }
+.co__lesson-tail--current { color: var(--co-azure-ink); font-weight: 650; }
+
+/* CourseInstructors keeps its own card; make it borderless like the rest. */
+.co__instructors:empty { display: none; }
+.co__instructors .course-instructors { border: 0; box-shadow: var(--co-shadow); }
+
+/* ── Phone ────────────────────────────────────────────────────────────── */
+@media (max-width: 960px) {
+  .co { gap: 20px; }
+  .co__main, .co__rail { display: contents; }
+  .co__head { order: 1; }
+  .co__progress { order: 2; }
+  .co__actions { order: 3; }
+  .co__content { order: 4; }
+  .co__outcomes { order: 5; }
+  .co__instructors { order: 6; }
+}
+@media (max-width: 700px) {
+  .co__title { font-size: 28px; }
+  .co__card { padding: 16px 18px; }
+  .co__progress .co__card-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .co__progress-big strong { font-size: 22px; }
+  .co__actions { flex-direction: column; }
+  .co__solid, .co__tonal { width: 100%; }
+  .co__solid { min-height: 52px; }
+  .co__section-title { font-size: 22px; margin-top: 4px; }
+  .co__chapter-head { gap: 14px; padding: 14px 16px; }
+  .co__thumb { flex-basis: 88px; width: 88px; }
+  .co__thumb .sf { width: 88px; height: 50px; }
+  .co__num { top: 4px; left: 4px; width: 24px; height: 24px; font-size: 14px; }
+  .co__chapter-title { font-size: 17px; }
+  .co__chapter-ev--wide { display: none; }
+  .co__chapter-ev--phone { display: block; white-space: normal; }
+  .co__lessons { padding: 0 12px 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .co__solid, .co__tonal, .co__chev { transition: none; }
+}

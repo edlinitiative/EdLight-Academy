@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Check, BookOpen, Play } from './icons';
+import { X, Check, BookOpen, Play, Circle, ChevronDown } from './icons';
 import MasteryBadge from './MasteryBadge';
 import { lessonMastery, summarize } from '../../shared/mastery';
 
@@ -250,9 +250,11 @@ export default function CourseSidebar({
                     }}
                     type="button"
                   >
-                    <span className="lesson-list__index">{String(idx + 1).padStart(2, '0')}</span>
                     <span className="lesson-list__meta">
-                      <span className="lesson-list__title">{module.title}</span>
+                      <span className="lesson-list__title">
+                        <span className="lesson-list__chapno">{isCreole ? 'Chapit' : 'Chapitre'} {String(idx + 1).padStart(2, '0')} · </span>
+                        {module.title}
+                      </span>
                     </span>
                     {/* Dot only: the sidebar is narrow and this is a scan
                         column, not a place to read five different words.
@@ -266,6 +268,7 @@ export default function CourseSidebar({
                       isCreole={isCreole}
                       className="lesson-list__mastery"
                     />
+                    {hasLessons && <ChevronDown size={18} className="lesson-list__chev" aria-hidden="true" />}
                   </button>
 
                   {lessonsToShow && (
@@ -291,7 +294,7 @@ export default function CourseSidebar({
                                 a check for a finished lesson, a play mark for
                                 the one on screen, its number otherwise. */}
                             <span className="lesson-list__index" aria-hidden="true">
-                              {isCompleted ? <Check size={14} weight="bold" /> : isActiveLesson ? <Play size={12} weight="fill" /> : `${idx + 1}.${lidx + 1}`}
+                              {isCompleted ? <Check size={16} weight="bold" /> : isActiveLesson ? <Play size={14} weight="fill" /> : <Circle size={16} />}
                             </span>
                             {(isCompleted || isActiveLesson) && (
                               <span className="qz__sr-only">
@@ -307,7 +310,7 @@ export default function CourseSidebar({
                                   {icon}
                                 </span>
                               ) : null}
-                              <span className="lesson-list__title">{lsn.title}</span>
+                              <span className="lesson-list__title"><span className="lesson-list__num">{idx + 1}.{lidx + 1}</span>{lsn.title}</span>
                             </span>
                             <MasteryBadge
                               level={lessonMastery(masteryMap[lsn.id])}
