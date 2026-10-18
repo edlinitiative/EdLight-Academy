@@ -30,6 +30,8 @@ type Props = {
   state: Continuation | null;
   loading: boolean;
   failed: boolean;
+  /** What failed: the catalogue (default) or the student's own records. */
+  failedKind?: 'catalog' | 'records';
   onRetry: () => void;
   retrying?: boolean;
   /** Due review questions; null while unknown (never shown as 0). */
@@ -51,7 +53,7 @@ const gradeLabel = (code: string, isCreole: boolean) => {
 };
 
 export default function HomeContinuation({
-  state, loading, failed, onRetry, retrying, dueCount, examAnswered, grade, onSkipClass,
+  state, loading, failed, failedKind = 'catalog', onRetry, retrying, dueCount, examAnswered, grade, onSkipClass,
   subjectName, levelLabel, courseLevel, L,
 }: Props) {
   const navigate = useNavigate();
@@ -111,11 +113,23 @@ export default function HomeContinuation({
     return (
       <section className="jh-next jh-next--plain" aria-labelledby="jh-next-title">
         <div className="jh-next__body">
-          <h2 id="jh-next-title" className="jh-next__title">{L('Tes cours n’ont pas pu se charger', 'Kou ou yo pa t ka chaje')}</h2>
-          <p className="jh-next__status">
-            {L('Vérifie ta connexion, puis réessaie. Tes examens et tes révisions ci-dessous restent disponibles.',
-              'Tcheke koneksyon ou, epi eseye ankò. Egzamen ak revizyon ou yo anba a toujou disponib.')}
-          </p>
+          {failedKind === 'records' ? (
+            <>
+              <h2 id="jh-next-title" className="jh-next__title">{L('Ta progression n’a pas pu se charger', 'Pwogrè ou pa t ka chaje')}</h2>
+              <p className="jh-next__status">
+                {L('Rien n’est perdu : elle est enregistrée sur ton compte. Vérifie ta connexion, puis réessaie.',
+                  'Anyen pa pèdi : li anrejistre sou kont ou. Tcheke koneksyon ou, epi eseye ankò.')}
+              </p>
+            </>
+          ) : (
+            <>
+              <h2 id="jh-next-title" className="jh-next__title">{L('Tes cours n’ont pas pu se charger', 'Kou ou yo pa t ka chaje')}</h2>
+              <p className="jh-next__status">
+                {L('Vérifie ta connexion, puis réessaie. Tes examens et tes révisions ci-dessous restent disponibles.',
+                  'Tcheke koneksyon ou, epi eseye ankò. Egzamen ak revizyon ou yo anba a toujou disponib.')}
+              </p>
+            </>
+          )}
           <div className="jh-next__actions">
             <button type="button" className="jh-btn jh-btn--solid" onClick={onRetry} disabled={retrying}>
               <RefreshCw size={18} aria-hidden="true" />

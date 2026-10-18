@@ -34,6 +34,8 @@ type Props = {
   rows: SummaryRow[];
   progressLoading: boolean;
   progressFailed: boolean;
+  /** Given when the student's records (not the catalogue) failed: offers a retry. */
+  onRetryProgress?: () => void;
   subjectName: (code: string) => string;
   levelLabel: (lv: string) => string;
   courseLevel: (c: any) => string;
@@ -41,7 +43,7 @@ type Props = {
 };
 
 export default function PhoneGlance({
-  due, dueFrom, onRetryReview, rows, progressLoading, progressFailed, subjectName, levelLabel, courseLevel, L,
+  due, dueFrom, onRetryReview, rows, progressLoading, progressFailed, onRetryProgress, subjectName, levelLabel, courseLevel, L,
 }: Props) {
   const isCreole = useStore((s) => s.language) === 'ht';
 
@@ -77,6 +79,13 @@ export default function PhoneGlance({
   let progress: React.ReactNode = null;
   if (progressLoading) {
     progress = <p className="jh-glance__muted" role="status">{L('Chargement…', 'N ap chaje…')}</p>;
+  } else if (progressFailed && onRetryProgress) {
+    progress = (
+      <div className="jh-glance__fail">
+        <p className="jh-glance__muted">{L('Ta progression n’a pas pu se charger.', 'Pwogrè ou pa t ka chaje.')}</p>
+        <button type="button" className="jh-glance__retry" onClick={onRetryProgress}>{L('Réessayer', 'Eseye ankò')}</button>
+      </div>
+    );
   } else if (progressFailed) {
     progress = <p className="jh-glance__muted">{L('Ta progression s’affichera quand les cours seront chargés.', 'Pwogrè ou ap parèt lè kou yo chaje.')}</p>;
   } else if (rows.length > 0) {

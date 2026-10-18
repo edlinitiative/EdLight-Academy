@@ -88,3 +88,16 @@ it('tracks progress_summary_opened once', async () => {
   expect(mockTrack).toHaveBeenCalledTimes(1);
   expect(mockTrack).toHaveBeenCalledWith('progress_summary_opened', { surface: 'profile', courses: 2 });
 });
+
+it('a failed read says so with a retry — never "Tu n’as pas encore ouvert de cours"', async () => {
+  const onRetry = jest.fn();
+  render(
+    <MemoryRouter>
+      <CourseProgressCard allProgress={[]} loading={false} failed onRetry={onRetry} isCreole={false} onExplore={() => {}} />
+    </MemoryRouter>,
+  );
+  expect(screen.getByText(/Tes cours n’ont pas pu se charger/)).toBeInTheDocument();
+  expect(screen.queryByText(/pas encore ouvert de cours/)).not.toBeInTheDocument();
+  screen.getByRole('button', { name: 'Réessayer' }).click();
+  expect(onRetry).toHaveBeenCalled();
+});

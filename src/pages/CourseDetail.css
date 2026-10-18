@@ -1014,7 +1014,6 @@
   margin-top: 6px; /* centred on the 52px primary beside it */
   gap: 1rem;
 }
-.course-detail .lesson-stage__bar > .lesson-done-panel { flex: 1 1 100%; }
 .course-detail .lesson-stage__bar .lesson-stage__next-primary { margin: 0; }
 
 .course-detail .lesson-complete-action {
@@ -1032,104 +1031,6 @@
 .course-detail .lesson-stage__save svg { flex: 0 0 auto; }
 .course-detail .lesson-stage__save--pending { color: var(--lj-pending-ink); }
 .course-detail .lesson-stage__save--failed { color: var(--lj-danger-ink); font-weight: 600; }
-
-/* ── Completion panel ────────────────────────────────────────────────── */
-.course-detail .lesson-done-panel {
-  display: grid;
-  gap: 0.75rem;
-  min-width: 0;
-}
-.course-detail .lesson-done-panel__ack {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.6rem;
-  margin: 0;
-  color: var(--text-600);
-  font-size: 1rem;
-  line-height: 1.45;
-}
-.course-detail .lesson-done-panel__ack strong {
-  margin-right: 0.45rem;
-  color: var(--lj-success-ink);
-  font-weight: 750;
-}
-.course-detail .lesson-done-panel__mark {
-  display: grid;
-  place-items: center;
-  flex: 0 0 26px;
-  width: 26px;
-  height: 26px;
-  margin-top: -1px;
-  border-radius: 999px;
-  background: var(--success-50);
-  color: var(--lj-success-ink);
-}
-/* The acknowledgment: the check settles once (~800ms) when a confirmation
-   arrives in this visit. Never replays on a revisit; nothing waits on it. */
-.course-detail .lesson-done-panel.is-fresh .lesson-done-panel__mark {
-  animation: lj-ack 820ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
-}
-.course-detail .lesson-done-panel.is-fresh .lesson-done-panel__ack > span:last-child {
-  animation: lj-ack-text 420ms ease-out both;
-}
-@keyframes lj-ack {
-  0% { transform: scale(0.55); opacity: 0; box-shadow: 0 0 0 0 color-mix(in srgb, var(--success-500) 45%, transparent); }
-  45% { transform: scale(1.08); opacity: 1; }
-  100% { transform: scale(1); box-shadow: 0 0 0 12px color-mix(in srgb, var(--success-500) 0%, transparent); }
-}
-@keyframes lj-ack-text { from { opacity: 0; transform: translateY(4px); } }
-
-.course-detail .lesson-done-panel__actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.6rem 0.75rem;
-}
-.course-detail .lesson-done-panel__practice {
-  min-height: var(--btn-h-lg);
-  gap: 0.55rem;
-  padding: 0.6rem 1.4rem;
-  font-size: 1.025rem;
-  font-weight: 750;
-  text-decoration: none;
-}
-.course-detail .lesson-done-panel__next {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.05rem;
-  min-height: var(--btn-h-lg);
-  max-width: 100%;
-  padding: 0.45rem 1.2rem;
-  text-align: left;
-}
-.course-detail .lesson-done-panel__next.button--ghost {
-  border: 1px solid var(--border);
-  background: var(--surface);
-}
-.course-detail .lesson-done-panel__sub {
-  display: block;
-  max-width: 30ch;
-  overflow: hidden;
-  font-size: 0.875rem;
-  font-weight: 550;
-  opacity: 0.85;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.course-detail .lesson-done-panel__scope {
-  flex-basis: 100%;
-  margin: 0;
-  color: var(--text-600);
-  font-size: 0.9375rem;
-  line-height: 1.5;
-}
-.course-detail .lesson-done-panel__placeholder {
-  display: block;
-  width: min(100%, 17rem);
-  height: var(--btn-h-lg);
-  border-radius: var(--r-btn);
-  background: var(--surface-muted);
-}
 
 /* The in-page practice region: its buttons are secondary now. */
 .course-detail .lesson-practice__note { font-size: 0.9375rem; }
@@ -1219,21 +1120,13 @@
   }
   .course-detail .lesson-stage__crumbs { margin-bottom: -0.35rem; }
   .course-detail .lesson-stage__meta > .lesson-stage__state-text::before { content: none; }
-  .course-detail .lesson-stage__bar > .lesson-done-panel { flex: none; }
   .course-detail .lesson-stage__bar { flex-direction: column; align-items: stretch; }
   .course-detail .lesson-stage__bar > .lesson-stage__pager { border: 0; padding: 0; margin-top: 0; }
   .course-detail .lesson-stage__bar > .lesson-stage__pager { margin-left: 0; justify-content: space-between; }
   .course-detail .lesson-complete-action { align-items: stretch; max-width: none; }
-  .course-detail .lesson-done-panel__practice,
-  .course-detail .lesson-done-panel__next { width: 100%; justify-content: center; }
-  .course-detail .lesson-done-panel__next { align-items: center; text-align: center; }
-  .course-detail .lesson-done-panel__sub { max-width: 100%; }
-  .course-detail .lesson-done-panel__placeholder { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .course-detail .lesson-done-panel.is-fresh .lesson-done-panel__mark,
-  .course-detail .lesson-done-panel.is-fresh .lesson-done-panel__ack > span:last-child { animation: none; }
   .course-detail .lesson-sidebar,
   .course-detail .lesson-sidebar.lesson-sidebar--visible { transition: none; }
   .lesson-frame__img, .lesson-frame__play, .lesson-frame__shade { transition: none; }

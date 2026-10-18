@@ -212,9 +212,16 @@ jest.mock('../../../../hooks/useMastery', () => ({ useCourseMastery: () => ({ ma
 jest.mock('../../../../services/userActivity', () => ({
   listRecentExamAttempts: jest.fn(() => Promise.resolve([{ exam_id: '7', status: 'submitted', level: 'Baccalauréat', exam_title: 'Chimie 2023' }])),
 }));
-jest.mock('../../../../services/reviewService', () => ({
-  loadReviewMap: jest.fn(() => Promise.resolve({ q1: { missedAt: 5, subjectCode: 'CHEM-NSI', unitNo: 1 } })),
-}));
+const mockReviewFail = { current: false };
+jest.mock('../../../../services/reviewService', () => {
+  const loadReviewMap = jest.fn((_uid?: string) => Promise.resolve({ q1: { missedAt: 5, subjectCode: 'CHEM-NSI', unitNo: 1 } }) as Promise<any>);
+  return {
+    loadReviewMap,
+    loadReviewMapResult: jest.fn((uid: string) => (mockReviewFail.current
+      ? Promise.resolve({ status: 'error', data: {}, error: new Error('offline') })
+      : loadReviewMap(uid).then((data: any) => ({ status: 'ok', data })))),
+  };
+});
 
 describe('LearnWorkspace sections', () => {
   test('a catalogue failure keeps exams and review usable', async () => {
@@ -273,5 +280,38 @@ describe('LearnWorkspace sections', () => {
     expect(card.querySelector('.lws-ring, em')).toBeNull();
     await waitFor(() => expect(loadReviewMap).toHaveBeenCalled());
     await waitFor(() => expect(screen.queryByRole('heading', { name: 'À revoir' })).not.toBeInTheDocument());
+  });
+
+  test('progress read failed: failed + retry everywhere, never a fresh start or "nothing due"', async () => {
+    // eslint-disable-next-line global-require
+    const LearnWorkspace = require('../../../../pages/courses/LearnWorkspace').default;
+    (global as any).fetch = jest.fn(() => Promise.reject(new Error('offline')));
+    mockReviewFail.current = true;
+    const onRetryProgress = jest.fn();
+    try {
+      render(
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <MemoryRouter>
+            <LearnWorkspace
+              courses={[chem1]} courseLevel={courseLevel} subjectName={subjectName} levelLabel={levelLabel} myLevel="NSI"
+              progressByCourseId={new Map()} L={L} progressFailed onRetryProgress={onRetryProgress}
+            />
+          </MemoryRouter>
+        </QueryClientProvider>,
+      );
+      const next = screen.getByRole('heading', { name: 'Ta progression n’a pas pu se charger' }).closest('section')!;
+      expect(within(next).queryByText(/Commencer/)).not.toBeInTheDocument();
+      within(next).getByRole('button', { name: 'Réessayer' }).click();
+      expect(onRetryProgress).toHaveBeenCalled();
+      // The subject card makes no progress claim and no "Commencer".
+      const card = screen.getByRole('link', { name: /Chimie/ });
+      expect(within(card).queryByText(/Commencer|Continuer|Prochaine étape/)).not.toBeInTheDocument();
+      expect(within(card).getByText(/Ouvrir/)).toBeInTheDocument();
+      // The review card says it failed instead of hiding as "nothing due".
+      const review = await waitFor(() => document.getElementById('lws-weak')!.closest('section')!);
+      await waitFor(() => expect(within(review).getByText('Ta liste de révision n’a pas pu se charger.')).toBeInTheDocument());
+    } finally {
+      mockReviewFail.current = false;
+    }
   });
 });

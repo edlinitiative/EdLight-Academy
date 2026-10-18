@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import useStore from '../contexts/store';
 
 // Firebase and progressTracking are loaded inside the effects, and only for a
@@ -9,81 +9,97 @@ const loadProgressDeps = () =>
   Promise.all([import('../services/firebase'), import('../services/progressTracking')]);
 
 /**
- * Hook to get and track user's progress for a specific course
+ * Hook to get and track user's progress for a specific course.
+ * `failed` is true when the read errored (not when there is no progress yet);
+ * `retry` reads again.
  */
 export function useCourseProgress(courseId) {
-  const [progress, setProgress] = useState(null);
+  const [progress, setProgress] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [round, setRound] = useState(0);
   const { user } = useStore();
-  
+
   useEffect(() => {
     if (!user?.uid || !courseId) {
       setProgress(null);
+      setFailed(false);
       setLoading(false);
       return;
     }
     let alive = true;
 
     const loadProgress = async () => {
-      const [{ getCurrentUser }, { getCourseProgress }] = await loadProgressDeps();
+      const [{ getCurrentUser }, { getCourseProgressResult }] = await loadProgressDeps();
       if (!alive) return;
       const authedUid = getCurrentUser()?.uid;
       if (!authedUid || authedUid !== user.uid) {
         setProgress(null);
+        setFailed(false);
         setLoading(false);
         return;
       }
       setLoading(true);
-      const data = await getCourseProgress(user.uid, courseId);
+      const res = await getCourseProgressResult(user.uid, courseId);
       if (!alive) return;
-      setProgress(data);
+      setProgress(res.data);
+      setFailed(res.status === 'error');
       setLoading(false);
     };
 
     loadProgress();
     return () => { alive = false; };
-  }, [user?.uid, courseId]);
-  
-  return { progress, loading };
+  }, [user?.uid, courseId, round]);
+
+  const retry = useCallback(() => setRound((r) => r + 1), []);
+  return { progress, loading, failed, retry };
 }
 
 /**
- * Hook to get all user's progress across all courses
+ * Hook to get all user's progress across all courses.
+ * `failed` is true when the read errored (an empty list is then NOT "no
+ * courses opened"); `retry` reads again.
  */
 export function useAllProgress() {
-  const [progress, setProgress] = useState([]);
+  const [progress, setProgress] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [round, setRound] = useState(0);
   const { user } = useStore();
-  
+
   useEffect(() => {
     if (!user?.uid) {
       setProgress([]);
+      setFailed(false);
       setLoading(false);
       return;
     }
     let alive = true;
 
     const loadProgress = async () => {
-      const [{ getCurrentUser }, { getAllUserProgress }] = await loadProgressDeps();
+      const [{ getCurrentUser }, { getAllUserProgressResult }] = await loadProgressDeps();
       if (!alive) return;
       const authedUid = getCurrentUser()?.uid;
       if (!authedUid || authedUid !== user.uid) {
         setProgress([]);
+        setFailed(false);
         setLoading(false);
         return;
       }
       setLoading(true);
-      const data = await getAllUserProgress(user.uid);
+      const res = await getAllUserProgressResult(user.uid);
       if (!alive) return;
-      setProgress(data);
+      setProgress(res.data);
+      setFailed(res.status === 'error');
       setLoading(false);
     };
 
     loadProgress();
     return () => { alive = false; };
-  }, [user?.uid]);
-  
-  return { progress, loading };
+  }, [user?.uid, round]);
+
+  const retry = useCallback(() => setRound((r) => r + 1), []);
+  return { progress, loading, failed, retry };
 }
 
 /**

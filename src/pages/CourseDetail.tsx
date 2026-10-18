@@ -13,6 +13,7 @@ import { useFocusMode } from '../hooks/useFocusMode';
 import useStore, { FREE_VIDEO_LIMIT } from '../contexts/store';
 import { chapterTestLessonMap, lessonMastery, masteryNextStep, summarize } from '../../shared/mastery';
 import { useCourseMastery } from '../hooks/useMastery';
+import { clearVideoPosition, resumeSecondsFor, saveVideoPosition } from '../utils/videoPositions';
 import MasteryBadge from '../components/MasteryBadge';
 import ChapterTestCard from '../components/ChapterTestCard';
 import { useAskSandra, SandraFocusPanel } from '../components/SandraWidget';
@@ -54,48 +55,10 @@ const confirmLessonComplete = (uid: string, courseId: string, lessonId: string) 
   loadProgressTracking().then((m) => m.confirmLessonComplete(uid, courseId, lessonId));
 
 // ── Video resume position ("reprendre la vidéo") ───────────────────────────
-// Persist the last playback second per lesson in localStorage so reopening a
-// lesson resumes the video where the learner stopped. Kept local + tiny so it
-// works for signed-out free-preview viewers too, with no backend round-trip.
-const VIDEO_POS_KEY = 'edlight-video-positions';
-
-function readVideoPositions() {
-  try {
-    return JSON.parse(localStorage.getItem(VIDEO_POS_KEY) || '{}') || {};
-  } catch {
-    return {};
-  }
-}
-
-function saveVideoPosition(key, t, d) {
-  if (!key || !Number.isFinite(t)) return;
-  try {
-    const all = readVideoPositions();
-    if (t < 5 || (d && t > d * 0.95)) {
-      // Near the start or essentially finished — drop any resume point.
-      delete all[key];
-    } else {
-      all[key] = { t: Math.floor(t), d: d ? Math.floor(d) : 0 };
-    }
-    // Bound the map so it can never grow without limit.
-    const keys = Object.keys(all);
-    if (keys.length > 200) delete all[keys[0]];
-    localStorage.setItem(VIDEO_POS_KEY, JSON.stringify(all));
-  } catch {
-    /* storage unavailable / quota exceeded — resume is best-effort */
-  }
-}
-
-function clearVideoPosition(key) {
-  if (!key) return;
-  try {
-    const all = readVideoPositions();
-    delete all[key];
-    localStorage.setItem(VIDEO_POS_KEY, JSON.stringify(all));
-  } catch {
-    /* storage unavailable — there is nothing to clear */
-  }
-}
+// The last playback second per lesson, in localStorage — one bucket per
+// student (guests share a guest bucket), see utils/videoPositions.ts. Local +
+// tiny so it works for signed-out free-preview viewers too, with no backend
+// round-trip.
 
 /** m:ss, for telling the learner exactly where playback resumed. */
 function formatClock(total) {
@@ -110,14 +73,6 @@ function realMinutes(d: unknown): number {
   return Number.isFinite(m) && m > 0 && m !== 15 ? m : 0;
 }
 
-function getResumeSeconds(key) {
-  if (!key) return 0;
-  const rec = readVideoPositions()[key];
-  if (!rec || !Number.isFinite(rec.t)) return 0;
-  if (rec.t < 15) return 0; // ignore trivially short watches
-  if (rec.d && rec.t > rec.d * 0.95) return 0; // basically finished
-  return rec.t;
-}
 
 /** Does this text actually need the Markdown/KaTeX renderer? Maths, or any
  *  deliberate markup (emphasis, a heading, a bullet or numbered line, a
@@ -175,7 +130,7 @@ export default function CourseDetail() {
   const { available: sandraAvailable, reason: sandraReason, ask: askSandra } = useAskSandra();
   const freeVideoIds = useStore((s) => s.freeVideoIds);
   const recordActivity = useStore((s) => s.recordActivity);
-  const { progress } = useCourseProgress(courseId);
+  const { progress, failed: progressFailed, retry: retryProgress } = useCourseProgress(courseId);
 
   // Connectivity, used for honest copy only (the app-wide NetworkStatus banner
   // owns the global message). A queued write must not be reported as saved.
@@ -291,7 +246,7 @@ export default function CourseDetail() {
   // `progress` would look free and would cap every lesson at `seen`, since
   // completedLessons is the only rung that array can prove. One read here,
   // handed down to the sidebar and the overview.
-  const { mastery, refresh: refreshMastery } = useCourseMastery(courseId);
+  const { mastery, failed: masteryFailed, refresh: refreshMastery } = useCourseMastery(courseId);
   const activeLessonLevel = lessonMastery(mastery[activeLessonData?.id]);
 
   // Mastery across the ACTIVE unit — the chapter test's gate and its scope.
@@ -666,9 +621,9 @@ export default function CourseDetail() {
   // the lesson changes; the player remounts per video via its key.
   const resumeSeconds = useMemo(() => {
     if (!positionKey || isLessonCompleted) return 0;
-    return getResumeSeconds(positionKey);
+    return resumeSecondsFor(user?.uid, positionKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [positionKey, youtubeVideoId, isLessonCompleted]);
+  }, [positionKey, youtubeVideoId, isLessonCompleted, user?.uid]);
 
   // "Recommencer" — a resume the learner didn't want. Forgetting the stored
   // second and remounting the player (the token is part of its key) is the
@@ -677,7 +632,7 @@ export default function CourseDetail() {
   const [restart, setRestart] = useState({ key: '', token: 0 });
   const startedFrom = restart.key === positionKey ? 0 : resumeSeconds;
   const restartVideo = () => {
-    clearVideoPosition(positionKey);
+    clearVideoPosition(user?.uid, positionKey);
     lastSavedRef.current = { key: '', t: -100 };
     setRestart((r) => ({ key: positionKey, token: r.token + 1 }));
   };
@@ -690,7 +645,7 @@ export default function CourseDetail() {
       const last = lastSavedRef.current;
       if (last.key !== positionKey || Math.abs(currentTime - last.t) >= 5) {
         lastSavedRef.current = { key: positionKey, t: currentTime };
-        saveVideoPosition(positionKey, currentTime, duration);
+        saveVideoPosition(user?.uid, positionKey, currentTime, duration);
       }
     }
 
@@ -823,6 +778,11 @@ export default function CourseDetail() {
             hasProgress={hasProgress}
             staleLesson={staleLesson}
             backTo={catalogReturnPath(location.state)}
+            progressFailed={progressFailed || !!masteryFailed}
+            onRetryProgress={() => {
+              if (progressFailed) retryProgress();
+              if (masteryFailed) void refreshMastery();
+            }}
             onStart={() => {
               const target = getModuleLessons(resumeTarget.module)[resumeTarget.lesson];
               if (hasProgress) {

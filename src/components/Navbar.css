@@ -47,3 +47,20 @@
   background: var(--surface-muted) !important;
   color: var(--primary-600) !important;
 }
+
+/* Phone-only search trigger (the desktop one lives in .nav-actions, which
+   index.css hides under 768px). */
+.navbar .nav-search-btn--phone {
+  width: 44px;
+  height: 44px;
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--text-700, var(--text-600));
+}
+.navbar .nav-search-btn--phone:focus-visible {
+  outline: 2px solid var(--primary-600, #1B6FE0);
+  outline-offset: 2px;
+}
+@media (min-width: 768px) {
+  .navbar .nav-search-btn--phone { display: none; }
+}

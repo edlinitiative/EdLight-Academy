@@ -481,7 +481,7 @@ export default function Courses({ mode = 'catalog' }: { mode?: 'catalog' | 'work
   const L = useCallback((fr: string, ht: string) => (isCreole ? ht : fr), [isCreole]);
   const { t } = useTranslation();
 
-  const { progress: allProgress, loading: progressLoading } = useAllProgress();
+  const { progress: allProgress, loading: progressLoading, failed: progressFailed, retry: retryProgress } = useAllProgress();
   const progressByCourseId = useMemo(() => {
     const m = new Map();
     for (const p of allProgress || []) if (p?.courseId) m.set(p.courseId, p);
@@ -621,6 +621,8 @@ export default function Courses({ mode = 'catalog' }: { mode?: 'catalog' | 'work
             onRetryCourses={() => refetch()}
             retryingCourses={isFetching}
             progressLoading={progressLoading}
+            progressFailed={progressFailed}
+            onRetryProgress={retryProgress}
             preview={preview}
           />
         </div>

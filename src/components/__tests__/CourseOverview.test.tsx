@@ -66,3 +66,19 @@ test('enrolled: progress card with the evidence triple and authored outcomes', (
   expect(screen.getByRole('button', { name: /Continuer : Leçon 1.3/ })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /En cours/ })).toHaveAttribute('aria-current', 'step');
 });
+
+test('a failed progress read shows failed + retry, never 0/N', () => {
+  const onRetryProgress = jest.fn();
+  setup({}, { isEnrolled: true, progressFailed: true, onRetryProgress });
+  expect(screen.getByText(/Ta progression n’a pas pu se charger/)).toBeInTheDocument();
+  expect(screen.queryByText('0/5')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Réessayer' }));
+  expect(onRetryProgress).toHaveBeenCalled();
+});
+
+test('authored outcomes from the course document are shown', () => {
+  setup({ outcomes: ['Convertir des unités', 'Calculer une masse volumique'] });
+  expect(screen.getByRole('heading', { name: 'Ce que tu sauras faire' })).toBeInTheDocument();
+  expect(screen.getByText('Convertir des unités')).toBeInTheDocument();
+});
+

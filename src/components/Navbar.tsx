@@ -270,6 +270,23 @@ export function Navbar() {
           />
         )}
 
+        {/* Phone search trigger: .nav-actions is hidden under 768px, so phones
+            had no visible way into search (⌘K is desktop-only). 44px target;
+            it takes focus before opening so the overlay hands focus back to
+            it on close (iOS Safari does not focus a tapped button). */}
+        <button
+          type="button"
+          className="nav-search-btn nav-search-btn--phone"
+          aria-label={t('nav.search')}
+          aria-haspopup="dialog"
+          onClick={(e) => {
+            e.currentTarget.focus();
+            useStore.getState().setSearchOpen(true);
+          }}
+        >
+          <Search size={22} strokeWidth={2} aria-hidden="true" />
+        </button>
+
         <div className="nav-actions">
           <button
             type="button"

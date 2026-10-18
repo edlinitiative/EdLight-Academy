@@ -2,10 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, ChevronLeft, Clock, AlertCircle, ArrowRight } from './icons';
 import { useKatex, renderWithKatex } from '../utils/shared';
-import { loadDueReviewIds } from '../services/reviewService';
+import { loadDueReviewIdsResult } from '../services/reviewService';
 import { trackJourney } from '../utils/learningJourney';
 import AnswerStatus, { type AnswerStatusKind } from './journey/practice/AnswerStatus';
-import { useReviewConfirmation, type ReadReviewMap } from './journey/practice/useReviewConfirmation';
+import { useReviewConfirmation, type FlushReview } from './journey/practice/useReviewConfirmation';
 import './journey/practice/practice.css';
 
 /** One session question as the quiz page recorded it. */
@@ -56,8 +56,9 @@ type Tx = (fr: string, ht: string) => string;
  * from wrong ones.
  *
  * "These errors are in your Révision" is said only once the server copy of
- * the review map shows them (useReviewConfirmation); before that the line
- * says it is pending, and after a failed read-back it says so.
+ * Firestore acknowledges the push of them (useReviewConfirmation →
+ * flushReviewPush); before that the line says it is pending, and after a
+ * failed or timed-out push it says so, with "Vérifier à nouveau".
  */
 export default function QuizResult({
   deck,
@@ -78,8 +79,7 @@ export default function QuizResult({
   nextLesson,
   backHref = '/practice',
   backLabel,
-  confirmRead,
-  confirmDelays,
+  confirmFlush,
   interrupted = false,
 }: {
   deck: any[];
@@ -102,8 +102,8 @@ export default function QuizResult({
   nextLesson?: { title: string; href: string } | null;
   backHref?: string;
   backLabel?: string;
-  confirmRead?: ReadReviewMap;
-  confirmDelays?: number[];
+  /** Test seam: replaces flushReviewPush. */
+  confirmFlush?: FlushReview;
   /** The student stopped the quiz early: lead with what was answered. */
   interrupted?: boolean;
 }) {
@@ -126,10 +126,7 @@ export default function QuizResult({
 
   const reviewIds = useMemo(() => reviewIdsOf(deck, log), [deck, log]);
   const effectiveUid = signedIn ? (uid || null) : null;
-  const confirm = useReviewConfirmation(effectiveUid, reviewIds, sessionStart, {
-    ...(confirmRead ? { read: confirmRead } : {}),
-    ...(confirmDelays ? { delays: confirmDelays } : {}),
-  });
+  const confirm = useReviewConfirmation(effectiveUid, reviewIds, sessionStart, confirmFlush ? { flush: confirmFlush } : {});
 
   // What is due in this scope now — the session's misses plus older ones.
   // Read from the review cache, which already holds this session's outcomes.
@@ -139,8 +136,13 @@ export default function QuizResult({
     let alive = true;
     if (!effectiveUid || !scopeIds) { setScopeDue(null); return undefined; }
     const inScope = new Set(scopeIds.map(String));
-    loadDueReviewIds(effectiveUid)
-      .then((ids) => { if (alive) setScopeDue(ids.filter((id) => inScope.has(String(id))).length); })
+    // An unreadable server list says nothing about older misses: fall back to
+    // this session's own (dueNow below), never to a count read as "all".
+    loadDueReviewIdsResult(effectiveUid)
+      .then((res) => {
+        if (!alive) return;
+        setScopeDue(res.status === 'ok' ? res.data.filter((id) => inScope.has(String(id))).length : null);
+      })
       .catch(() => { if (alive) setScopeDue(null); });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps

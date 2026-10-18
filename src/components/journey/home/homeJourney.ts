@@ -18,6 +18,7 @@
  */
 import type { ProgressMap } from '../../../../shared/mastery';
 import type { Evidence } from '../../../utils/learningJourney';
+import { resumeSecondsFor } from '../../../utils/videoPositions';
 
 /** Store grade codes the video catalogue covers (same mapping as pages/Courses.tsx). */
 export const GRADE_TO_LEVEL: Record<string, string> = {
@@ -123,19 +124,11 @@ export function lessonHref(courseId: string, lessonId: string) {
 }
 
 // ── Playback position ───────────────────────────────────────────────────────
-// Read-only mirror of CourseDetail's resume point (same key, same thresholds),
-// so Home promises a position only where the lesson will actually restore it.
-const VIDEO_POS_KEY = 'edlight-video-positions';
-export function readResumeSeconds(courseId: string, lessonId: string): number {
-  try {
-    const all = JSON.parse(localStorage.getItem(VIDEO_POS_KEY) || '{}') || {};
-    const rec = all[`${courseId}:${lessonId}`];
-    if (!rec || !Number.isFinite(rec.t) || rec.t < 15) return 0;
-    if (rec.d && rec.t > rec.d * 0.95) return 0;
-    return Math.floor(rec.t);
-  } catch {
-    return 0;
-  }
+// Read-only mirror of CourseDetail's resume point — the same per-student
+// bucket and thresholds (utils/videoPositions.ts) — so Home promises a
+// position only where the lesson will actually restore it, for this student.
+export function readResumeSeconds(courseId: string, lessonId: string, uid?: string | null): number {
+  return resumeSecondsFor(uid, `${courseId}:${lessonId}`);
 }
 export function formatClock(total: number) {
   const s = Math.max(0, Math.floor(Number(total) || 0));
