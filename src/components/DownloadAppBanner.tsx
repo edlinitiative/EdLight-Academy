@@ -9,7 +9,7 @@ import {
   DOWNLOAD_URL,
 } from '../utils/platform';
 import useStore from '../contexts/store';
-import { track } from '../utils/analytics';
+import { trackOutbound } from '../utils/analytics';
 
 const DISMISS_KEY = 'edlight:dl-banner-dismissed';
 const DISMISS_DAYS = 14;
@@ -49,7 +49,7 @@ function showsAndroidStrip(): boolean {
 }
 
 function trackDownload(platform: string) {
-  track('app_download_click', { platform });
+  trackOutbound('app_download_click', { platform });
 }
 
 /**

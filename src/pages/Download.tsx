@@ -8,7 +8,7 @@ import {
 } from '../utils/platform';
 import useStore from '../contexts/store';
 import RouteMeta from '../components/RouteMeta';
-import { track } from '../utils/analytics';
+import { trackOutbound, trackThenLeave } from '../utils/analytics';
 
 /**
  * /download — device-detecting smart link (the QR-code target).
@@ -78,9 +78,17 @@ export default function Download() {
   useEffect(() => {
     if (!platform) return;
     const url = storeUrlFor(platform);
-    track('app_download_redirect', { platform });
-    window.location.replace(url);
-  }, [platform]);
+    // Every phone that reaches the store does it from here: the landing
+    // page's "Télécharger l'application", the Arène links and the QR code all
+    // point at /download. This is the app_download_click that Google Ads
+    // imports, so it must leave before the page does: replace() used to run
+    // at once, before gtag.js had even loaded, and the hit died in dataLayer.
+    trackThenLeave(
+      'app_download_click',
+      { platform: `redirect-${platform}`, from: params.get('from') ?? undefined },
+      () => window.location.replace(url),
+    );
+  }, [platform]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const wrap: React.CSSProperties = {
     minHeight: '100vh',
@@ -153,10 +161,10 @@ export default function Download() {
           <img src="/assets/download-qr.svg" alt={t('Code QR de téléchargement', 'Kòd QR pou telechaje')} width={180} height={180} />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
-          <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer" onClick={() => track('app_download_click', { platform: 'download-page-ios' })} aria-label="Download on the App Store">
+          <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer" onClick={() => trackOutbound('app_download_click', { platform: 'download-page-ios' })} aria-label="Download on the App Store">
             <img src="/assets/appstore-badge.svg" alt="Download on the App Store" style={{ height: 48 }} />
           </a>
-          <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer" onClick={() => track('app_download_click', { platform: 'download-page-android' })} aria-label="Get it on Google Play">
+          <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer" onClick={() => trackOutbound('app_download_click', { platform: 'download-page-android' })} aria-label="Get it on Google Play">
             <img src="/assets/googleplay-badge.png" alt="Get it on Google Play" style={{ height: 48 }} />
           </a>
         </div>
