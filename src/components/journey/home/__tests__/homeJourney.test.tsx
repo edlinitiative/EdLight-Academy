@@ -11,7 +11,6 @@ jest.mock('../../../../utils/learningJourney', () => {
   const actual = jest.requireActual('../../../../utils/learningJourney');
   return { ...actual, trackJourney: jest.fn() };
 });
-// eslint-disable-next-line import/first
 import { trackJourney } from '../../../../utils/learningJourney';
 
 // ── A small real-shaped catalogue ────────────────────────────────────────────

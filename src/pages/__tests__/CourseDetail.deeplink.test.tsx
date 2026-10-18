@@ -31,7 +31,7 @@ const enrichedCourse = () => JSON.parse(JSON.stringify(catalogCourse));
 // ── Data hooks driven from the test ──────────────────────────────────────────
 const mockData: { catalog: any[] | undefined; app: any; loading: boolean } = { catalog: undefined, app: undefined, loading: true };
 const mockListeners = new Set<() => void>();
-function mockUseLive() {
+const mockUseLive = function useLiveData() {
   const R = require('react');
   const [, bump] = R.useState(0);
   R.useEffect(() => {
@@ -39,7 +39,7 @@ function mockUseLive() {
     mockListeners.add(f);
     return () => { mockListeners.delete(f); };
   }, []);
-}
+};
 jest.mock('../../hooks/useData', () => ({
   useAppData: () => {
     mockUseLive();

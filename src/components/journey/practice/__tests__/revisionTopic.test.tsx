@@ -22,7 +22,6 @@ jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (_k: string, d: 
 const mockTrack = jest.fn();
 jest.mock('../../../../utils/learningJourney', () => ({ trackJourney: (...a: any[]) => mockTrack(...a) }));
 
-// eslint-disable-next-line import/first
 import Revision from '../../../../pages/Revision';
 
 const renderAt = async (url: string) => {

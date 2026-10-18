@@ -25,6 +25,9 @@ module.exports = tseslint.config(
       'build/',
       'node_modules/',
       'coverage/',
+      '.claude/', // local agent worktrees contain independent source/build trees
+      '.codex/',
+      '.playwright-mcp/', // browser artifacts are not application source
       'mobile/', // separate app, separate ESLint setup
       'public/',
       'public_original/',

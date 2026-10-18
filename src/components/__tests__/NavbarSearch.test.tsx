@@ -17,10 +17,8 @@ jest.mock('../NotificationBell', () => () => null);
 jest.mock('../Streak', () => ({ StreakBadge: () => null }));
 jest.mock('../Auth', () => ({ UserDropdown: () => null }));
 
-/* eslint-disable import/first */
 import { Navbar } from '../Navbar';
 import SearchOverlay from '../SearchOverlay';
-/* eslint-enable import/first */
 
 beforeEach(() => {
   act(() => { useStore.setState({ searchOpen: false, language: 'fr', isAuthenticated: false, user: null, sandraAsk: null } as any); });
