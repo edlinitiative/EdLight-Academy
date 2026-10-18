@@ -27,6 +27,7 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { requireAuthDecoded } from '../_lib/requireAuth';
 import { checkRateLimit } from '../_lib/rateLimit';
 import { getDb } from '../_lib/firebaseAdmin';
+import { cleanAvatar } from '../../src/arena-art/avatars/avatarConfig';
 import { sendExpoPushToUser } from '../_lib/expoPush';
 
 /** Duel stakes — winner takes WIN_XP, a tie pays TIE_XP to each side. */
@@ -109,6 +110,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   }
   if (!opponentName) opponentName = defaultAlias(tokenName);
 
+  // Their chosen avatar (users/{uid}.avatar), re-sanitized; absent → the
+  // card draws the seeded face.
+  let opponentAvatar: string | null = null;
+  try {
+    opponentAvatar = cleanAvatar((await db.doc(`users/${uid}`).get()).data()?.avatar);
+  } catch {
+    /* best-effort */
+  }
+
   try {
     // One attempt, transactionally: reject if already played, expired, or own.
     const outcome = await db.runTransaction(async (tx) => {
@@ -123,7 +133,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       const total = Number(c.total) || 0;
       const oppScore = Math.min(score, total); // score can't exceed the round
       tx.update(ref, {
-        opponent: { uid, name: opponentName, score: oppScore, playedAt: Timestamp.now() },
+        opponent: { uid, name: opponentName, ...(opponentAvatar ? { avatar: opponentAvatar } : {}), score: oppScore, playedAt: Timestamp.now() },
         status: 'played',
       });
       return {

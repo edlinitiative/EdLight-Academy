@@ -515,6 +515,7 @@ export async function schoolCounts(
  */
 export { isValidAlias, defaultAlias } from '../../shared/alias';
 import { isValidAlias, defaultAlias } from '../../shared/alias';
+import { cleanAvatar } from '../../src/arena-art/avatars/avatarConfig';
 
 /**
  * The name that may appear on the Arena standings: the student's stored board
@@ -540,6 +541,18 @@ export async function publicDisplayName(
     /* best-effort: a missing board entry is the common case, not an error */
   }
   return defaultAlias(tokenName);
+}
+
+/**
+ * The student's chosen avatar (users/{uid}.avatar), re-sanitized to the wire
+ * string, or null (→ the seeded face). Best-effort: never blocks a request.
+ */
+export async function publicAvatar(db: Firestore, uid: string): Promise<string | null> {
+  try {
+    return cleanAvatar((await db.doc(`users/${uid}`).get()).data()?.avatar);
+  } catch {
+    return null;
+  }
 }
 
 export interface ResolvedSchool {

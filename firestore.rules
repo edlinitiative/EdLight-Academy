@@ -9,6 +9,15 @@ service cloud.firestore {
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
+    // The avatar editor's choice (users/{uid}.avatar): absent, or the 17-char
+    // wire string from src/arena-art/avatars/avatarConfig.ts ("1" + 16 base-36
+    // digits). Renderers and /api/users/avatar sanitize again; this only keeps
+    // junk and oversized values off the doc.
+    function validAvatar(data) {
+      return !('avatar' in data)
+        || (data.avatar is string && data.avatar.matches('^1[0-9a-z]{16}$'));
+    }
+
     // Users collection: users can read/write their own document
     match /users/{userId} {
       // Allow user to read their own document, or admins to read any
@@ -18,7 +27,8 @@ service cloud.firestore {
       // privileged role — isAdmin() is derived from this doc's `role` field, so
       // an unrestricted self-write was a full admin-escalation primitive.
       allow create: if request.auth != null && request.auth.uid == userId
-                    && (!('role' in request.resource.data) || request.resource.data.role == 'student');
+                    && (!('role' in request.resource.data) || request.resource.data.role == 'student')
+                    && validAvatar(request.resource.data);
 
       // Allow a user to update their own document, but not change `role`
       // (only admins can change roles — see the admin rule below), nor the
@@ -26,7 +36,8 @@ service cloud.firestore {
       // written only by the Admin SDK in /api/referrals/*; a client that could
       // set them could self-assign a code or fake being referred for the reward).
       allow update: if request.auth != null && request.auth.uid == userId
-                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'referralCode', 'referredBy']);
+                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'referralCode', 'referredBy'])
+                    && validAvatar(request.resource.data);
 
       // Allow admins to update any user (including role changes).
       allow update: if isAdmin();
@@ -150,7 +161,8 @@ service cloud.firestore {
                     && (!('displayName' in request.resource.data)
                         || request.resource.data.displayName == null
                         || (request.resource.data.displayName is string
-                            && request.resource.data.displayName.size() <= 40));
+                            && request.resource.data.displayName.size() <= 40))
+                    && validAvatar(request.resource.data);
       allow update: if request.auth != null
                     && request.auth.uid == entryId
                     && request.resource.data.uid == entryId
@@ -160,7 +172,8 @@ service cloud.firestore {
                     && (!('displayName' in request.resource.data)
                         || request.resource.data.displayName == null
                         || (request.resource.data.displayName is string
-                            && request.resource.data.displayName.size() <= 40));
+                            && request.resource.data.displayName.size() <= 40))
+                    && validAvatar(request.resource.data);
       allow delete: if false;
 
       // ── LOCKED (enable AFTER web + mobile switch to /api/leaderboard/award) ──

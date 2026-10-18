@@ -1,0 +1,171 @@
+/* /profile/avatar — the avatar editor. Scoped under .ave.
+   Opaque surfaces on the page canvas, no borders or stripes: selection reads
+   from a filled azure wash + a ring drawn with box-shadow. 14px type floor. */
+
+.ave {
+  --ave-card: var(--surface);
+  --ave-well: var(--surface-muted);
+  --ave-ink: var(--text-900);
+  --ave-sub: var(--text-600);
+  --ave-azure: #1B6FE0;
+  --ave-azure-hover: #1558B8;
+  --ave-azure-ink: #1558B8;
+  --ave-azure-soft: #EAF2FE;
+  --ave-azure-soft-hover: #DCE9FD;
+  --ave-ring: #1B6FE0;
+  --ave-shadow: 0 1px 2px rgba(15, 30, 56, .05), 0 10px 30px -14px rgba(15, 30, 56, .18);
+  --ave-stage: #14254A;
+  background: var(--background);
+  color: var(--ave-ink);
+  padding-bottom: 120px;
+}
+[data-theme="dark"] .ave {
+  --ave-azure: #2F6FD4;
+  --ave-azure-hover: #245AB5;
+  --ave-azure-ink: #9DC2FA;
+  --ave-azure-soft: #16305A;
+  --ave-azure-soft-hover: #1C3A6B;
+  --ave-ring: #8FBBF7;
+  --ave-shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 12px 30px -14px rgba(0, 0, 0, .6);
+  --ave-stage: #0C1830;
+}
+
+.ave-page { max-width: 1120px; margin: 0 auto; padding-top: 24px; }
+.ave-devnote { margin: 0 0 12px; font-size: 14px; color: var(--ave-sub); }
+.ave-head { margin-bottom: 20px; }
+.ave-back {
+  display: inline-flex; align-items: center; min-height: 44px; font-size: 15px; font-weight: 600;
+  color: var(--ave-azure-ink); text-decoration: none;
+}
+.ave-back:hover { text-decoration: underline; }
+.ave-title { margin: 4px 0 6px; font-family: 'Plus Jakarta Sans', var(--font-sans, sans-serif); font-size: 32px; line-height: 1.15; font-weight: 800; letter-spacing: -.01em; }
+.ave-sub { margin: 0; font-size: 16px; line-height: 1.5; color: var(--ave-sub); }
+
+.ave-layout { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 24px; align-items: start; }
+
+/* ── stage ── */
+.ave-stage {
+  position: sticky; top: 88px;
+  display: flex; flex-direction: column; align-items: center; gap: 18px;
+  padding: 24px 20px; border-radius: 24px; background: var(--ave-card); box-shadow: var(--ave-shadow);
+}
+.ave-stage__face {
+  display: grid; place-items: center; width: 100%; padding: 18px 0; border-radius: 18px;
+  background: radial-gradient(120% 100% at 50% 0%, color-mix(in srgb, var(--ave-azure) 16%, var(--ave-stage)), var(--ave-stage));
+}
+.ave-moods { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.ave-mood {
+  position: relative; display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px;
+  border-radius: 999px; background: var(--ave-well); color: var(--ave-ink); font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.ave-mood.is-on { background: var(--ave-azure-soft); color: var(--ave-azure-ink); box-shadow: inset 0 0 0 2px var(--ave-ring); }
+.ave-stage__actions { display: flex; flex-direction: column; align-items: stretch; gap: 6px; width: 100%; }
+
+/* ── buttons ── */
+.ave-solid, .ave-tonal, .ave-text {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 22px;
+  border: 0; border-radius: 12px; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer;
+  transition: background-color .15s ease;
+}
+.ave-solid { background: var(--ave-azure); color: #fff; }
+.ave-solid:hover:not(:disabled) { background: var(--ave-azure-hover); }
+.ave-solid:disabled { background: var(--ave-well); color: var(--ave-sub); cursor: not-allowed; }
+.ave-tonal { background: var(--ave-azure-soft); color: var(--ave-azure-ink); }
+.ave-tonal:hover { background: var(--ave-azure-soft-hover); }
+.ave-text { background: transparent; color: var(--ave-azure-ink); padding: 0 12px; font-weight: 600; }
+.ave-text:hover:not(:disabled) { background: var(--ave-well); }
+.ave-text:disabled { color: var(--ave-sub); cursor: not-allowed; opacity: .75; }
+.ave-solid:focus-visible, .ave-tonal:focus-visible, .ave-text:focus-visible, .ave-back:focus-visible, .ave-tab:focus-visible {
+  outline: 3px solid var(--ave-ring); outline-offset: 2px;
+}
+
+/* ── editor ── */
+.ave-editor { border-radius: 24px; background: var(--ave-card); box-shadow: var(--ave-shadow); overflow: hidden; }
+.ave-tabs {
+  display: flex; gap: 4px; padding: 10px; background: var(--ave-well);
+  overflow-x: auto; scrollbar-width: none;
+}
+.ave-tabs::-webkit-scrollbar { display: none; }
+.ave-tab {
+  flex: none; min-height: 44px; padding: 0 16px; border: 0; border-radius: 10px;
+  background: transparent; color: var(--ave-sub); font: inherit; font-size: 15px; font-weight: 700; cursor: pointer;
+}
+.ave-tab:hover { color: var(--ave-ink); }
+.ave-tab.is-on { background: var(--ave-card); color: var(--ave-ink); box-shadow: 0 1px 3px rgba(15, 30, 56, .12); }
+.ave-panel { padding: 22px 22px 26px; display: grid; gap: 26px; outline: none; }
+
+.ave-group { margin: 0; padding: 0; border: 0; min-width: 0; }
+.ave-group__legend { padding: 0; margin: 0 0 10px; font-size: 16px; font-weight: 800; color: var(--ave-ink); }
+.ave-group__hint { margin: -4px 0 12px; font-size: 14px; line-height: 1.45; color: var(--ave-sub); max-width: 60ch; }
+.ave-group__opts { display: flex; flex-wrap: wrap; gap: 10px; }
+.ave-group--tile .ave-group__opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
+
+.ave-opt { position: relative; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.ave-opt__input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.ave-opt__visual, .ave-opt__label { pointer-events: none; }
+
+/* tile: a thumbnail of YOUR face with that option */
+.ave-group--tile .ave-opt {
+  display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 8px 10px;
+  border-radius: 16px; background: var(--ave-well); text-align: center;
+}
+.ave-group--tile .ave-opt:hover { background: var(--ave-azure-soft); }
+.ave-group--tile .ave-opt__label { font-size: 14px; font-weight: 600; line-height: 1.25; color: var(--ave-ink); }
+.ave-group--tile .ave-opt.is-on { background: var(--ave-azure-soft); box-shadow: inset 0 0 0 2px var(--ave-ring); }
+.ave-group--tile .ave-opt.is-on .ave-opt__label { color: var(--ave-azure-ink); }
+
+/* pill */
+.ave-group--pill .ave-opt {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: 999px;
+  background: var(--ave-well); font-size: 15px; font-weight: 600;
+}
+.ave-group--pill .ave-opt:hover { background: var(--ave-azure-soft); }
+.ave-group--pill .ave-opt.is-on { background: var(--ave-azure-soft); color: var(--ave-azure-ink); box-shadow: inset 0 0 0 2px var(--ave-ring); }
+
+/* swatch: 48px round chips, ring when chosen */
+.ave-group--swatch .ave-opt { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 999px; }
+.ave-swatch { display: block; width: 40px; height: 40px; border-radius: 999px; box-shadow: inset 0 0 0 1px rgba(15, 30, 56, .12); }
+.ave-group--swatch .ave-opt.is-on { box-shadow: 0 0 0 3px var(--ave-ring); }
+
+.ave-opt:has(.ave-opt__input:focus-visible), .ave-mood:has(.ave-opt__input:focus-visible) { outline: 3px solid var(--ave-ring); outline-offset: 2px; }
+
+/* ── save bar ── */
+.ave-bar {
+  position: sticky; bottom: 16px; z-index: 5;
+  display: flex; align-items: center; gap: 10px; margin-top: 20px; padding: 12px 12px 12px 20px;
+  border-radius: 18px; background: var(--ave-card); box-shadow: 0 10px 30px -10px rgba(15, 30, 56, .3);
+}
+[data-theme="dark"] .ave-bar { box-shadow: 0 10px 30px -10px rgba(0, 0, 0, .7); }
+.ave-bar__note { flex: 1; margin: 0; font-size: 15px; color: var(--ave-sub); }
+.ave-bar__note.is-error { color: #B42318; font-weight: 600; }
+[data-theme="dark"] .ave-bar__note.is-error { color: #FF9C8F; }
+.ave-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ── guest ── */
+.ave-guest { max-width: 560px; margin: 0 auto; padding: 48px 0; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
+.ave-guest__face { display: grid; place-items: center; width: 200px; height: 200px; border-radius: 999px; background: var(--ave-card); box-shadow: var(--ave-shadow); }
+
+@media (max-width: 860px) {
+  .ave-layout { grid-template-columns: 1fr; gap: 16px; }
+  .ave-stage { position: static; padding: 16px; gap: 12px; }
+  .ave-stage__face { padding: 10px 0; }
+  .ave-stage__face svg { width: 168px; height: 168px; }
+  .ave-stage__actions { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+  .ave-title { font-size: 26px; }
+}
+@media (max-width: 560px) {
+  .ave-page { padding-top: 12px; }
+  .ave-panel { padding: 18px 16px 22px; }
+  .ave-group--tile .ave-group__opts { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+  .ave-bar { padding: 10px 10px 10px 14px; flex-wrap: wrap; gap: 6px 10px; }
+  .ave-bar__note { flex-basis: 100%; font-size: 14px; }
+  .ave-bar .ave-solid { flex: 1; }
+}
+/* Clear the fixed bottom tab bar (mobile-premium.css, < 768px). */
+@media (max-width: 767px) {
+  .ave { padding-bottom: 200px; }
+  .ave-bar { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ave-solid, .ave-tonal, .ave-text { transition: none; }
+}

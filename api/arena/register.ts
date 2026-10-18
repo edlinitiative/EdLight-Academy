@@ -61,6 +61,7 @@ import {
   isValidTournamentId,
   normalizeDeviceHash,
   parseBody,
+  publicAvatar,
   publicDisplayName,
   resolveSchool,
   schoolCounts,
@@ -210,10 +211,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return;
     }
 
-    const [displayName, school, geo] = await Promise.all([
+    const [displayName, school, geo, avatar] = await Promise.all([
       publicDisplayName(db, uid, tokenName),
       resolveSchool(db, schoolKey),
       playerGeography(db, uid),
+      publicAvatar(db, uid),
     ]);
 
     // CORRECTION, from an external audit (E9): registration validated the
@@ -306,6 +308,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         tx.set(playerRef, {
           uid,
           displayName,
+          avatar,
           schoolKey,
           schoolLabel: label,
           grade,
@@ -340,6 +343,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         // and a stale null here would leave them off it all night.
         tx.update(playerRef, {
           displayName,
+          avatar,
           schoolKey,
           schoolLabel: label,
           grade,

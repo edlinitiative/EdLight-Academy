@@ -66,6 +66,7 @@ const AnswerVerification = lazyWithRetry(() => import('./pages/AnswerVerificatio
 const StudyPlan = lazyWithRetry(() => import('./pages/StudyPlan'));
 const TriviaGames = lazyWithRetry(() => import('./pages/TriviaGames'));
 const Profile = lazyWithRetry(() => import('./pages/Profile'));
+const AvatarEditor = lazyWithRetry(() => import('./pages/profile/AvatarEditor'));
 const Releve = lazyWithRetry(() => import('./pages/Releve'));
 const Classement = lazyWithRetry(() => import('./pages/Classement'));
 const NotFound = lazyWithRetry(() => import('./pages/NotFound'));
@@ -144,6 +145,7 @@ export default function App() {
                 <Route path="trivia" element={<Navigate to="/jeux" replace />} />
                 <Route path="trivia/:gameId" element={<Navigate to="/jeux" replace />} />
                 <Route path="profile" element={<Profile />} />
+                <Route path="profile/avatar" element={<AvatarEditor />} />
                 {/* Printable progress record. Inside Layout: its signed-out
                     state invites the visitor to sign in, and Layout is what
                     renders <AuthModal>. The print stylesheet hides the chrome. */}

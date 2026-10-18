@@ -1,0 +1,10 @@
+/* Profile identity row: the face is the entry into /profile/avatar. */
+.pr-face-edit { position: relative; display: inline-flex; flex: none; border-radius: 50%; text-decoration: none; }
+.pr-face-edit:focus-visible { outline: 3px solid var(--primary-500); outline-offset: 3px; }
+.pr-face-edit__badge {
+  position: absolute; right: -2px; bottom: -2px;
+  display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
+  background: var(--btn-fill, #1B6FE0); color: #fff;
+  box-shadow: 0 0 0 3px var(--background, #F7F9FC);
+}
+.pr-face-edit:hover .pr-face-edit__badge { background: var(--btn-fill-hover, #1558B8); }

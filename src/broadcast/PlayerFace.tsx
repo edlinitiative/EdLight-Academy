@@ -7,6 +7,7 @@ import type { StandingsSnapshot } from '../../shared/arena/events';
  * A student's face on the broadcast: the generated avatar (seeded by uid, so
  * the same student always looks the same) in their school's colours — the
  * same colours as the school's crest, which is seeded by the full label.
+ * A student who chose an avatar in the editor is drawn with it instead.
  */
 export default function PlayerFace({
   uid, schoolKey, schoolName, standings, mood = 'idle', size = 56, still = false,
@@ -21,9 +22,11 @@ export default function PlayerFace({
   still?: boolean;
 }) {
   const label = standings?.schools.find((s) => s.key === schoolKey)?.label || schoolName || schoolKey || '';
+  // The chosen avatar travels on the standings row (api/arena/aggregate.ts).
+  const avatar = standings?.individuals?.find((p) => p.uid === uid)?.avatar;
   return (
     <span className="stage-face" aria-hidden="true">
-      <Avatar seed={uid} mood={mood} size={size} still={still} colors={label ? schoolColors(label) : undefined} />
+      <Avatar seed={uid} config={avatar} mood={mood} size={size} still={still} colors={label ? schoolColors(label) : undefined} />
     </span>
   );
 }
