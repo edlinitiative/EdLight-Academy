@@ -217,3 +217,94 @@ export function readStudyPrefs(doc: any): StudyPrefs {
   const minutes = (RHYTHMS as readonly number[]).includes(Number(doc?.studyMinutes)) ? Number(doc.studyMinutes) : null;
   return { studyGoal: goal, studyMinutes: minutes };
 }
+
+/* ── Per-course evidence (Tes cours) ─────────────────────────────────────────
+ * The three facts the rest of the product already uses (LJ-10), each counted
+ * on its own: a finished video is "terminée", a recorded exercise score is
+ * "pratiquée", a chapter-test confirmation is "maîtrisée". Same rules as the
+ * Home summary (journey/home/homeJourney.summarizeCourse); never summed. */
+
+/** Lesson ids per course ("chem-ns1" → ["CHEM-NSI-U1-L1", …]), from the snapshot. */
+export function loadCourseLessonIds(): Promise<Record<string, string[]>> {
+  return loadCatalog().then((c: any) => {
+    const out: Record<string, string[]> = {};
+    for (const course of (Array.isArray(c?.courses) ? c.courses : []) as any[]) {
+      const id = String(course?.id || '').toLowerCase();
+      const ids = (Array.isArray(course?.units) ? course.units : [])
+        .flatMap((u: any) => (Array.isArray(u?.lessons) ? u.lessons : []))
+        .map((l: any) => String(l?.lessonId || l?.id || ''))
+        .filter(Boolean);
+      if (id && ids.length) out[id] = ids;
+    }
+    return out;
+  }).catch(() => ({}));
+}
+
+export type CourseEvidence = { completed: number; practised: number; mastered: number; total: number | null };
+
+/**
+ * `completedIds` is the course progress doc's list; `lessonIds` the catalogue's
+ * (may be empty when the snapshot is missing — then practised/mastered stay 0
+ * rather than being guessed from id prefixes).
+ */
+export function courseEvidence(
+  completedIds: string[] | undefined,
+  lessonIds: string[] | undefined,
+  mastery: ProgressMap | null | undefined,
+  total?: number,
+): CourseEvidence {
+  const done = new Set((completedIds || []).map(String));
+  let practised = 0;
+  let mastered = 0;
+  for (const id of lessonIds || []) {
+    const rec: any = mastery?.[id];
+    if (!rec) continue;
+    if (rec.completed) done.add(id);
+    if (typeof rec.bestPct === 'number') practised += 1;
+    if (rec.masteredAt) mastered += 1;
+  }
+  const t = total || (lessonIds && lessonIds.length) || null;
+  return { completed: done.size, practised, mastered, total: t && t >= done.size ? t : null };
+}
+
+const countWord = (n: number, e: 'completed' | 'practised' | 'mastered', isCreole: boolean) => {
+  const w = evidenceLabel(e, isCreole).toLowerCase();
+  return `${n} ${!isCreole && n > 1 ? `${w}s` : w}`;
+};
+
+/** "12 terminées sur 30 · 7 pratiquées · 4 maîtrisées" — zero facts are left out. */
+export function evidenceLine(ev: CourseEvidence, isCreole: boolean): string {
+  const parts = [`${countWord(ev.completed, 'completed', isCreole)}${ev.total ? ` ${isCreole ? 'sou' : 'sur'} ${ev.total}` : ''}`];
+  if (ev.practised > 0) parts.push(countWord(ev.practised, 'practised', isCreole));
+  if (ev.mastered > 0) parts.push(countWord(ev.mastered, 'mastered', isCreole));
+  return parts.join(' · ');
+}
+
+/* ── This week's active days (Ta régularité) ────────────────────────────────
+ * Monday-first, from the streak doc's `activeDays` (local YYYY-MM-DD, the
+ * format streakService writes). Nothing is inferred from the streak count. */
+const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+export type WeekDot = { date: string; active: boolean; future: boolean; today: boolean };
+
+export function weekDots(activeDays: string[] | undefined, now: Date = new Date()): WeekDot[] {
+  const set = new Set(activeDays || []);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const date = ymd(d);
+    return { date, active: set.has(date), future: d > today, today: d.getTime() === today.getTime() };
+  });
+}
+
+/** Rank of `uid` among the weekly entries from the same school (1-based), or null. */
+export function rankInSchool(entries: any[], uid: string | null, school: string | null, norm: (s: string) => string): number | null {
+  if (!uid || !school) return null;
+  const key = norm(school);
+  const mates = (entries || []).filter((e) => e?.school && norm(e.school) === key);
+  const idx = mates.findIndex((e) => e.id === uid);
+  return idx < 0 ? null : idx + 1;
+}

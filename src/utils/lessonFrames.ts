@@ -194,5 +194,16 @@ export function lessonFrame(videoUrl?: string | null): string | null {
   return `https://i.ytimg.com/vi/${id}/${BEST_FRAME[id] || 'sddefault'}.jpg`;
 }
 
+/**
+ * True when a still URL is one of the curated weak frames (any of its four
+ * YouTube stills), so a caller holding a raw thumbnail URL — not a video URL —
+ * can still fall back to subject artwork. Non-YouTube URLs are never weak.
+ */
+export function isWeakStill(still?: string | null): boolean {
+  if (!still) return false;
+  const m = /i\.ytimg\.com\/vi(?:_webp)?\/([\w-]{6,})\//.exec(still);
+  return !!m && NO_GOOD_FRAME.has(m[1]);
+}
+
 /** Exposed for tests. */
 export const __lessonFrameTables = { BEST_FRAME, NO_GOOD_FRAME };

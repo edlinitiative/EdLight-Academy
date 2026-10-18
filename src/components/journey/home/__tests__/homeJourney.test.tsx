@@ -124,11 +124,19 @@ describe('HomeContinuation', () => {
       readPosition: () => 125,
     });
     inRouter(<HomeContinuation {...continuationProps} state={state} dueCount={3} />);
-    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Reprendre : La concentration molaire');
-    expect(screen.getByText(/Chimie · NS I/)).toBeInTheDocument();
-    expect(screen.getByText(/Unité 2 — Les solutions/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(/^La concentration molaire$/);
+    expect(screen.getByText('Chimie NS I')).toBeInTheDocument();
+    expect(screen.getByText('Les solutions')).toBeInTheDocument();
+    expect(screen.getByText('Leçon 1 sur 1')).toBeInTheDocument();
     expect(screen.getByText('Commencée')).toBeInTheDocument();
-    expect(screen.getByText(/reprend à 2:05 sur cet appareil/)).toBeInTheDocument();
+    expect(screen.getByText(/Reprend à 2:05 sur cet appareil/)).toBeInTheDocument();
+    // No still for this lesson: the frame draws the subject artwork with its
+    // pill — never an empty tinted block (RECHECK 1).
+    expect(document.querySelector('.jh-next__media .sf--art')).not.toBeNull();
+    expect(document.querySelector('.jh-next__media .sf__pill')).toHaveTextContent('Chimie');
+    // Browse lives in the nav now; the card has one solid + one tonal action.
+    expect(screen.queryByRole('link', { name: /Parcourir les cours/ })).not.toBeInTheDocument();
+    expect(document.querySelectorAll('.jh-btn--solid')).toHaveLength(1);
     const cta = screen.getByRole('link', { name: /Reprendre la leçon/ });
     expect(cta).toHaveAttribute('href', '/courses/chem-ns1?lesson=CHEM-NSI-U2-L1');
     expect(screen.getByRole('link', { name: /3 questions à revoir/ })).toHaveAttribute('href', '/revision');
@@ -140,7 +148,8 @@ describe('HomeContinuation', () => {
   test('empty account sees a real lesson and no invented progress', () => {
     const state = resolveContinuation({ ...base, grade: 'NS2' });
     inRouter(<HomeContinuation {...continuationProps} grade="NS2" state={state} />);
-    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Commencer : Les fonctions affines');
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(/^Les fonctions affines$/);
+    expect(screen.getByText(/Ta première leçon/)).toBeInTheDocument();
     expect(screen.getByText('Pas encore commencée')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Commencer la leçon/ })).toHaveAttribute('href', '/courses/math-ns2?lesson=MATH-NSII-U1-L1');
     // Nothing claims progress or weakness that does not exist.
@@ -187,6 +196,11 @@ describe('progress evidence', () => {
     expect(screen.getByText('1 terminée sur 3')).toBeInTheDocument();
     expect(screen.queryByText(/%/)).not.toBeInTheDocument();
   });
+
+  test('a new student with no evidence gets no progress card, not a card of zeroes', () => {
+    const { container } = inRouter(<ProgressSummary rows={[]} loading={false} failed={false} onRetry={jest.fn()} subjectName={subjectName} levelLabel={levelLabel} courseLevel={courseLevel} L={L} />);
+    expect(container).toBeEmptyDOMElement();
+  });
 });
 
 // ── Section isolation (QA-16) ───────────────────────────────────────────────
@@ -223,10 +237,41 @@ describe('LearnWorkspace sections', () => {
     within(next).getByRole('button', { name: 'Réessayer' }).click();
     expect(onRetry).toHaveBeenCalled();
     // The other sections still work on their own data.
-    const review = screen.getByRole('heading', { name: /À revoir/ }).closest('section')!;
+    // The desktop side card (the phone's PhoneGlance card says the same; CSS
+    // shows one or the other).
+    const review = document.getElementById('lws-weak')!.closest('section')!;
     await waitFor(() => expect(within(review).getByRole('link', { name: 'Revoir 1 question' })).toHaveAttribute('href', '/revision'));
     await waitFor(() => expect(screen.getByText('Chimie 2023')).toBeInTheDocument());
     expect(screen.getByText('COUNTDOWN')).toBeInTheDocument();
     expect(screen.getByText('SCHOOL')).toBeInTheDocument();
+  });
+
+  test('subjects open on a SubjectFrame with evidence and a next step; nothing due hides À revoir', async () => {
+    // eslint-disable-next-line global-require
+    const LearnWorkspace = require('../../../../pages/courses/LearnWorkspace').default;
+    // eslint-disable-next-line global-require
+    const { loadReviewMap } = require('../../../../services/reviewService');
+    (loadReviewMap as jest.Mock).mockImplementationOnce(() => Promise.resolve({}));
+    (global as any).fetch = jest.fn(() => Promise.reject(new Error('offline')));
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter>
+          <LearnWorkspace
+            courses={[chem1]} courseLevel={courseLevel} subjectName={subjectName} levelLabel={levelLabel} myLevel="NSI"
+            progressByCourseId={new Map([['chem-ns1', { completedLessons: ['CHEM-NSI-U1-L1'] }]])} L={L}
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const card = screen.getByRole('link', { name: /Chimie.*Prochaine étape/ });
+    expect(card).toHaveAttribute('href', '/courses/chem-ns1');
+    expect(card.querySelector('.sf')).not.toBeNull();
+    expect(within(card).getByText('Grandeurs et mesures')).toBeInTheDocument();
+    expect(within(card).getByText('1 terminée sur 3')).toBeInTheDocument();
+    expect(within(card).getByText(/Continuer/)).toBeInTheDocument();
+    // No ring badge, no uppercase eyebrow element left over.
+    expect(card.querySelector('.lws-ring, em')).toBeNull();
+    await waitFor(() => expect(loadReviewMap).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'À revoir' })).not.toBeInTheDocument());
   });
 });

@@ -42,22 +42,44 @@ function renderCard(isCreole = false) {
 
 it('uses the completion label with a denominator only where the total is known', async () => {
   renderCard();
-  expect(await screen.findByText(/3 \/ 33 leçons terminées/)).toBeInTheDocument();
-  // No catalogue total for phys-ns2: the count alone, no invented "/ y".
-  expect(screen.getByText('1 leçon terminée')).toBeInTheDocument();
+  expect(await screen.findByText('3 terminées sur 33')).toBeInTheDocument();
+  // No catalogue total for phys-ns2: the count alone, no invented "sur y".
+  expect(screen.getByText('1 terminée')).toBeInTheDocument();
+  // No practice or chapter test recorded: those facts are left out, never zero-filled.
+  expect(document.querySelector('.pr-courses')!.textContent).not.toMatch(/pratiquée|maîtrisée/i);
+  // The disclosure carries the shared definitions.
+  expect(screen.getByRole('button', { name: 'Que veulent dire ces mots ?' })).toHaveAttribute('aria-expanded', 'false');
   expect(screen.getByText(/La maîtrise se construit avec la pratique/)).toBeInTheDocument();
-  expect(screen.queryByText(/maîtrisée/i)).toBeNull();
+});
+
+it('counts practised and mastered from the mastery map, apart from completion', async () => {
+  (global as any).fetch = jest.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({ courses: [{ id: 'chem-ns1', number_of_lessons: 3, units: [{ lessons: [{ lessonId: 'a' }, { lessonId: 'b' }, { lessonId: 'c' }] }] }] }),
+  });
+  render(
+    <MemoryRouter>
+      <CourseProgressCard
+        allProgress={[{ courseId: 'chem-ns1', completedLessons: ['a'] }]}
+        loading={false}
+        isCreole={false}
+        onExplore={() => {}}
+        mastery={{ a: { bestPct: 80 }, b: { bestPct: 90, masteredAt: 1 } } as any}
+      />
+    </MemoryRouter>,
+  );
+  expect(await screen.findByText('1 terminée sur 3 · 2 pratiquées · 1 maîtrisée')).toBeInTheDocument();
 });
 
 it('speaks Kreyòl with the same evidence words', async () => {
   renderCard(true);
-  expect(await screen.findByText(/3 \/ 33 leson fini/)).toBeInTheDocument();
+  expect(await screen.findByText('3 fini sou 33')).toBeInTheDocument();
   expect(screen.getByText(/Metriz la bati ak pratik/)).toBeInTheDocument();
 });
 
 it('tracks progress_summary_opened once', async () => {
   const { rerender } = renderCard();
-  await screen.findByText(/3 \/ 33/);
+  await screen.findByText('3 terminées sur 33');
   rerender(
     <MemoryRouter>
       <CourseProgressCard allProgress={progress} loading={false} isCreole={false} onExplore={() => {}} />

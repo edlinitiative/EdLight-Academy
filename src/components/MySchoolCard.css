@@ -397,3 +397,124 @@ body.arena-night .myschool__place { background: #1C3254; }
 .myschool__school span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .myschool__school .crest { flex: none; }
 .myschool__line { font-size: 0.9375rem; }
+
+/* ══ Stitch web pass (2026-10-17, DIRECTION-WEB §0 + §3.1) ═════════════════
+   Card spec everywhere the card appears (workspace, classement, arena,
+   trivia results, profile): opaque white, no border, depth from one soft
+   shadow, radius 20. The page owns its one solid azure, so the card's own
+   actions are tonal (azure-soft fill, azure text, no border). */
+.myschool {
+  --ms-soft: #EAF2FE;
+  --ms-soft-hover: #DCE9FD;
+  --ms-ink: #1558B8;
+  --ms-well: #F2F5FA;
+  --ms-muted: #51627A;
+  border: 0;
+  border-radius: 20px;
+  background: var(--surface, #fff);
+  box-shadow: 0 8px 24px rgba(11, 27, 51, 0.06);
+}
+[data-theme="dark"] .myschool {
+  --ms-soft: #16305A;
+  --ms-soft-hover: #1C3A6B;
+  --ms-ink: #A9CBFA;
+  --ms-well: #0F1A30;
+  --ms-muted: #A9BBD8;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+.myschool__place { background: var(--ms-well); }
+.myschool__cta,
+.myschool__ghost {
+  min-height: 48px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--ms-soft);
+  color: var(--ms-ink);
+  font-size: 1rem;
+}
+.myschool__cta:hover:not(:disabled),
+.myschool__ghost:hover:not(:disabled) { background: var(--ms-soft-hover); }
+.myschool__ghost { background: var(--ms-well); color: var(--text-900); }
+
+/* ── Profile variant ── */
+.myschool--profile { gap: 1.25rem; padding: 1.5rem; }
+.myschool__id { display: flex; align-items: center; gap: 0.875rem; min-width: 0; }
+.myschool__id .crest { flex: none; }
+.myschool__shield {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--ms-well);
+  color: var(--ms-muted);
+}
+.myschool__id-text { min-width: 0; }
+.myschool--profile .myschool__heading { font-size: 1.125rem; line-height: 1.25; }
+.myschool__school-name {
+  margin: 0.125rem 0 0;
+  overflow: hidden;
+  color: var(--ms-muted);
+  font-size: 0.875rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.myschool__facts { display: grid; gap: 0.5rem; }
+.myschool__fact { margin: 0; color: var(--text-900); font-size: 0.9375rem; line-height: 1.45; }
+.myschool__fact + .myschool__fact { color: var(--ms-muted); }
+.myschool__num { color: var(--ms-ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.myschool__profile-actions { display: grid; gap: 0.5rem; }
+.myschool__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 48px;
+  padding: 0 1.25rem;
+  border: 0;
+  border-radius: 12px;
+  background: var(--ms-soft);
+  color: var(--ms-ink);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.myschool__btn:hover { background: var(--ms-soft-hover); }
+.myschool__btn--solid { min-height: 52px; background: #1B6FE0; color: #fff; }
+.myschool__btn--solid:hover { background: #1558B8; }
+[data-theme="dark"] .myschool__btn--solid { background: #2F6FD4; }
+[data-theme="dark"] .myschool__btn--solid:hover { background: #245AB5; }
+.myschool__textbtn {
+  justify-self: center;
+  min-height: 44px;
+  padding: 0 0.75rem;
+  border: 0;
+  background: none;
+  color: var(--ms-ink);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.myschool__textbtn:hover:not(:disabled) { text-decoration: underline; }
+.myschool__textbtn:disabled { opacity: 0.55; cursor: default; }
+.myschool__btn:focus-visible,
+.myschool__textbtn:focus-visible,
+.myschool__cta:focus-visible,
+.myschool__ghost:focus-visible { outline: 2px solid #1B6FE0; outline-offset: 2px; }
+.myschool .myschool__link { color: var(--ms-ink); }
+@media (prefers-reduced-motion: reduce) {
+  .myschool__btn, .myschool__cta, .myschool__ghost { transition: none; }
+}
+/* Dark (outside the Arène's night): AA text on the opaque card and wells. */
+[data-theme="dark"] body:not(.arena-night) .myschool__place { background: var(--ms-well); }
+[data-theme="dark"] .myschool__all,
+[data-theme="dark"] .myschool__link { color: var(--ms-ink); }
+[data-theme="dark"] .myschool__eyebrow,
+[data-theme="dark"] .myschool__big span,
+[data-theme="dark"] .myschool__line { color: var(--ms-muted); }
+.myschool__eyebrow { color: var(--ms-muted); }

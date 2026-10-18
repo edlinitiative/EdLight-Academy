@@ -25,7 +25,7 @@
  */
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Share2, Copy, Check, Plus, ChevronRight } from './icons';
+import { Share2, Copy, Check, Plus, ChevronRight, Shield } from './icons';
 import SchoolCrest from '../arena-art/crest/SchoolCrest';
 import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
@@ -38,17 +38,49 @@ import './MySchoolCard.css';
 
 const nf = (n: number) => new Intl.NumberFormat('fr-FR').format(Math.round(n || 0));
 
-export default function MySchoolCard({ where }: { where: string }) {
+/** French ordinal: 1re / 2e (HT: 1e / 2e). */
+const ord = (n: number, isCreole: boolean) => `${n}${n === 1 && !isCreole ? 're' : 'e'}`;
+
+/**
+ * Dev-only fixture for the /profile?preview= harness. When set, the card reads
+ * these instead of the live boards (the hooks still run, as hooks must).
+ */
+export type MySchoolPreview = {
+  uid: string;
+  profile: any;
+  race: any[];
+  entries: any[];
+  myRank: number | null;
+  myEntry: any;
+};
+
+export default function MySchoolCard({ where, variant = 'full', solid = false, preview = null }: {
+  where: string;
+  /** 'profile': the compact side card (crest, two lines, "Voir le classement"). */
+  variant?: 'full' | 'profile';
+  /** Profile on a phone: "Voir le classement" is that screen's one solid button. */
+  solid?: boolean;
+  preview?: MySchoolPreview | null;
+}) {
   const language = useStore((s) => s.language);
-  const user = useStore((s) => s.user);
+  const storeUser = useStore((s) => s.user);
   const setSchoolChosen = useStore((s) => s.setSchoolChosen);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
-  const { profile, isLoading: profileLoading } = useTrivia();
+  const trivia = useTrivia();
+  const profile = preview ? preview.profile : trivia.profile;
+  const profileLoading = preview ? false : trivia.isLoading;
+  const user = preview ? { uid: preview.uid } : storeUser;
   const school: string | null = profile?.leaderboard?.school || null;
-  const { race, isLoading: boardLoading } = useSchoolRace(!!school);
-  const { entries: weekEntries, myRank, myEntry, isLoading: weekLoading } = useLeaderboard(50);
+  const liveRace = useSchoolRace(!!school && !preview);
+  const race = preview ? preview.race : liveRace.race;
+  const boardLoading = preview ? false : liveRace.isLoading;
+  const week = useLeaderboard(50);
+  const weekEntries = preview ? preview.entries : week.entries;
+  const myRank = preview ? preview.myRank : week.myRank;
+  const myEntry = preview ? preview.myEntry : week.myEntry;
+  const weekLoading = preview ? false : week.isLoading;
 
   const [ref, setRef] = useState<{ code: string | null; link: string } | null>(null);
   const [copied, setCopied] = useState(false);
@@ -64,6 +96,33 @@ export default function MySchoolCard({ where }: { where: string }) {
   const hasAlias = isValidAlias(profile?.leaderboard?.displayName || '');
   const ahead = myRank && myRank > 1 ? weekEntries[myRank - 2] || null : null;
   const myXp = myEntry?.xp || 0;
+
+  if (variant === 'profile') {
+    return (
+      <ProfileStanding
+        t={t}
+        isCreole={isCreole}
+        solid={solid}
+        school={school}
+        race={race}
+        boardLoading={boardLoading}
+        weekLoading={weekLoading}
+        weekEntries={weekEntries}
+        uid={user.uid}
+        myRank={myRank}
+        myXp={myXp}
+        hasAlias={hasAlias}
+        onAddSchool={() => setSchoolChosen(false)}
+        inviteReady={!!ref && !!school}
+        onInvite={async () => {
+          if (!ref || !school) return;
+          const k = normalizeName(school);
+          const label = race.find((g) => g.key === k)?.label || school;
+          await sendInvite('whatsapp', schoolInviteMessage(label, ref.code, ref.link, isCreole), where);
+        }}
+      />
+    );
+  }
 
   /** You, this week, nationally — or the one step that puts you on the board. */
   const meBlock = (
@@ -181,6 +240,114 @@ export default function MySchoolCard({ where }: { where: string }) {
           {copied ? <Check size={16} aria-hidden="true" /> : canNativeShare() ? <Share2 size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
           <span>{copied ? t('Copié', 'Kopye') : canNativeShare() ? t('Partager', 'Pataje') : t('Copier', 'Kopye')}</span>
         </button>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * The profile's "Ton classement" (Stitch 07/08): the school crest, where the
+ * school stands in the race, where you stand inside it and nationally this
+ * week, and the way to the full board. The weekly-rank figure that used to sit
+ * in the profile's stat strip lives here now. Every number comes from the same
+ * two boards as the full card; when one is missing the honest state is shown.
+ */
+function ProfileStanding({
+  t, isCreole, solid, school, race, boardLoading, weekLoading, weekEntries, uid, myRank, myXp, hasAlias, onAddSchool, inviteReady, onInvite,
+}: {
+  t: (fr: string, ht: string) => string;
+  isCreole: boolean;
+  solid: boolean;
+  school: string | null;
+  race: any[];
+  boardLoading: boolean;
+  weekLoading: boolean;
+  weekEntries: any[];
+  uid: string;
+  myRank: number | null;
+  myXp: number;
+  hasAlias: boolean;
+  onAddSchool: () => void;
+  inviteReady: boolean;
+  onInvite: () => void;
+}) {
+  const key = school ? normalizeName(school) : '';
+  const mine = school ? race.find((g) => g.key === key) || null : null;
+  const label = mine?.label || school || '';
+  const schoolmates = school ? (weekEntries || []).filter((e: any) => e?.school && normalizeName(e.school) === key) : [];
+  const inSchoolIdx = schoolmates.findIndex((e: any) => e.id === uid);
+  const inSchool = inSchoolIdx >= 0 ? inSchoolIdx + 1 : null;
+
+  const schoolLine = !school ? null
+    : boardLoading ? t('Chargement…', 'N ap chaje…')
+      : !mine ? t('Ton école entre dans la course dès ta prochaine partie.', 'Lekòl ou antre nan kous la depi pwochen pati ou.')
+        : !mine.qualified
+          ? t(`Pas encore classée : ${Math.min(mine.members, TEAM_SIZE)}/${TEAM_SIZE} joueurs, il en manque ${mine.needed}.`,
+            `Poko klase : ${Math.min(mine.members, TEAM_SIZE)}/${TEAM_SIZE} jwè, li manke ${mine.needed}.`)
+          : null;
+
+  const meLine = weekLoading
+    ? t('Chargement…', 'N ap chaje…')
+    : myRank
+      ? [
+        inSchool ? t(`${ord(inSchool, false)} de ton école`, `${ord(inSchool, true)} nan lekòl ou`) : null,
+        t(`${ord(myRank, false)} au national cette semaine`, `${ord(myRank, true)} nan peyi a semèn sa a`),
+        `${nf(myXp)} XP`,
+      ].filter(Boolean).join(' · ')
+      : null;
+
+  return (
+    <section className="myschool myschool--profile" aria-labelledby="myschool-profile-title">
+      <div className="myschool__id">
+        {school
+          ? <SchoolCrest name={label} size={48} />
+          : <span className="myschool__shield" aria-hidden="true"><Shield size={24} /></span>}
+        <div className="myschool__id-text">
+          <h2 id="myschool-profile-title" className="myschool__heading">{t('Ton classement', 'Klasman ou')}</h2>
+          <p className="myschool__school-name">{school ? label : t('Pas encore d’école', 'Poko gen lekòl')}</p>
+        </div>
+      </div>
+
+      <div className="myschool__facts">
+        {!school ? (
+          <p className="myschool__fact">
+            {t('Choisis ton école : chaque partie la fait monter dans la course.', 'Chwazi lekòl ou : chak pati fè l monte nan kous la.')}
+          </p>
+        ) : schoolLine ? (
+          <p className="myschool__fact">{schoolLine}</p>
+        ) : (
+          <p className="myschool__fact">
+            {t('Ton école est ', 'Lekòl ou ')}
+            <strong className="myschool__num">{t(`${ord(mine!.place, false)} sur ${race.length}`, `${ord(mine!.place, true)} sou ${race.length}`)}</strong>
+            {t(' dans la course des écoles', ' nan kous lekòl yo')}
+          </p>
+        )}
+        <p className="myschool__fact">
+          {meLine ? (
+            <>{t('Toi : ', 'Ou menm : ')}{meLine}</>
+          ) : !hasAlias ? (
+            <><Link to="/profile#reglages" className="myschool__link">{t('Choisis un pseudo', 'Chwazi yon pseudo')}</Link>{t(' pour apparaître au classement.', ' pou parèt nan klasman an.')}</>
+          ) : (
+            <><Link to="/jeux" className="myschool__link">{t('Joue une partie', 'Jwe yon pati')}</Link>{t(' cette semaine pour entrer au classement.', ' semèn sa a pou antre nan klasman an.')}</>
+          )}
+        </p>
+      </div>
+
+      <div className="myschool__profile-actions">
+        {!school ? (
+          <button type="button" className={`myschool__btn${solid ? ' myschool__btn--solid' : ''}`} onClick={onAddSchool}>
+            <Plus size={16} aria-hidden="true" /> {t('Choisir mon école', 'Chwazi lekòl mwen')}
+          </button>
+        ) : (
+          <Link to="/classement" className={`myschool__btn${solid ? ' myschool__btn--solid' : ''}`}>
+            {t('Voir le classement', 'Gade klasman an')}
+          </Link>
+        )}
+        {school && (
+          <button type="button" className="myschool__textbtn" disabled={!inviteReady} onClick={onInvite}>
+            {t('Inviter ta classe sur WhatsApp', 'Envite klas ou sou WhatsApp')}
+          </button>
+        )}
       </div>
     </section>
   );

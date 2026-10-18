@@ -69,3 +69,34 @@ describe('evidence labels (LJ-10)', () => {
     expect(completedLessonsLabel(3, 33, true)).toBe('3 / 33 leson fini');
   });
 });
+
+import { courseEvidence, evidenceLine, rankInSchool, weekDots } from '../profileData';
+
+describe('courseEvidence / evidenceLine', () => {
+  it('keeps the three facts apart and leaves zero facts out', () => {
+    const ev = courseEvidence(['A1'], ['A1', 'A2', 'A3'], { A2: { bestPct: 70 }, A3: { bestPct: 95, masteredAt: 1, completed: true } } as any, 3);
+    expect(ev).toEqual({ completed: 2, practised: 2, mastered: 1, total: 3 });
+    expect(evidenceLine(ev, false)).toBe('2 terminées sur 3 · 2 pratiquées · 1 maîtrisée');
+    expect(evidenceLine({ completed: 1, practised: 0, mastered: 0, total: null }, true)).toBe('1 fini');
+  });
+});
+
+describe('weekDots', () => {
+  it('is Monday-first and marks only recorded days', () => {
+    const now = new Date(2026, 9, 15); // Thursday 15 Oct 2026
+    const dots = weekDots(['2026-10-12', '2026-10-15', '2026-10-01'], now);
+    expect(dots.map((d) => d.date)).toEqual(['2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15', '2026-10-16', '2026-10-17', '2026-10-18']);
+    expect(dots.map((d) => d.active)).toEqual([true, false, false, true, false, false, false]);
+    expect(dots[3].today).toBe(true);
+    expect(dots[4].future).toBe(true);
+  });
+});
+
+describe('rankInSchool', () => {
+  it('ranks the student among schoolmates on the board, or null when absent', () => {
+    const norm = (s: string) => s.toLowerCase();
+    const entries = [{ id: 'x', school: 'B' }, { id: 'y', school: 'a' }, { id: 'me', school: 'A' }];
+    expect(rankInSchool(entries, 'me', 'A', norm)).toBe(2);
+    expect(rankInSchool(entries, 'nobody', 'A', norm)).toBeNull();
+  });
+});

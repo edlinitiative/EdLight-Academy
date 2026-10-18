@@ -131,10 +131,28 @@ it('confirmed completion: "Terminée", then chapter practice with the real count
   expect(mockConfirm).toHaveBeenCalledTimes(1);
   expect(mockConfirm).toHaveBeenCalledWith('student-1', 'math-ns1', 'MATH-NSI-U1-L2');
   expect(screen.getByText('Terminée')).toBeInTheDocument();
-  const link = screen.getByRole('link', { name: 'Pratiquer ce chapitre · 25 questions' });
+  expect(screen.getByText('La maîtrise se construit avec la pratique.')).toBeInTheDocument();
+  // The completion action is gone; the practice card's Start is the next step,
+  // with the exact chapter handoff.
+  expect(screen.queryByRole('button', { name: 'Terminer la leçon' })).not.toBeInTheDocument();
+  const link = screen.getByRole('link', { name: 'Commencer l’exercice' });
   expect(link).toHaveAttribute('href', '/quizzes?course=MATH-NSI&unit=U1&lesson=MATH-NSI-U1-L2&mode=quiz&from=lesson');
-  expect(screen.getByText('Questions de tout le chapitre « Nombres ».')).toBeInTheDocument();
+  expect(link).toHaveClass('lx-solid');
+  fireEvent.click(link);
+  expect(mockTrack).toHaveBeenCalledWith('practice_handoff_opened', expect.objectContaining({ source: 'lesson', unit: 'U1', scope: 'unit', count: 25 }));
   expect(mockTrack.mock.calls.filter(([n]) => n === 'lesson_completion_confirmed')).toHaveLength(1);
+});
+
+it('one solid button on the lesson: Start; completion and paging are tonal', async () => {
+  renderLesson();
+  await flush();
+  expect(document.querySelectorAll('.lx-solid')).toHaveLength(1);
+  expect(screen.getByRole('link', { name: 'Commencer l’exercice' })).toHaveClass('lx-solid');
+  expect(screen.getByRole('button', { name: 'Terminer la leçon' })).toHaveClass('lx-tonal');
+  expect(document.querySelector('.button--primary')).toBeNull();
+  // Paging stays: the previous lesson exists, no next one (last lesson).
+  expect(screen.getByRole('button', { name: /Précédente/ })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /^Suivante/ })).not.toBeInTheDocument();
 });
 
 it('offline: the save is queued and pending — no celebration, no practice offer', async () => {
@@ -168,4 +186,55 @@ it('in-page exercises are called lesson-specific only when the bank tags this le
   await flush();
   expect(screen.getByRole('heading', { name: 'S’exercer sur cette leçon' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Exercices de la leçon · 5' })).toBeInTheDocument();
+});
+
+it('without lesson-tagged questions the card says chapter, never "cette leçon"', async () => {
+  renderLesson('MATH-NSI-U1-L1');
+  await flush();
+  // L1 has 20 tagged rows in the mock; drop the tags to check the chapter wording.
+  const rows = mockQuizBank.byUnit['MATH-NSI|U1'];
+  const saved = rows.map((r) => r.Subchapter_Number);
+  rows.forEach((r) => { r.Subchapter_Number = 9; });
+  try {
+    const { unmount } = renderLesson('MATH-NSI-U1-L1');
+    await flush();
+    expect(screen.getAllByRole('heading', { name: 'S’exercer sur ce chapitre' }).length).toBeGreaterThan(0);
+    unmount();
+  } finally {
+    rows.forEach((r, i) => { r.Subchapter_Number = saved[i]; });
+  }
+});
+
+it('question 1 is live: a real bank question, graded in place', async () => {
+  const rows: any[] = mockQuizBank.byUnit['MATH-NSI|U1'];
+  rows.unshift({ id: 'live', Subchapter_Number: 2, question: 'Combien font 2 × 3 ?', option_a: '5', option_b: '6', option_c: '8', option_d: '9', correct_option: 'B' });
+  try {
+    renderLesson();
+    await flush();
+    expect(screen.getByText('Combien font 2 × 3 ?')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '5' }));
+    expect(screen.getByText(/c’était « 6 »/)).toBeInTheDocument();
+    // Answered: the choices lock; Start is still the way on.
+    expect(screen.getByRole('button', { name: '6' })).toBeDisabled();
+    expect(screen.getByRole('link', { name: 'Commencer l’exercice' })).toBeInTheDocument();
+  } finally {
+    rows.shift();
+  }
+});
+
+it('hides the generated lesson description, keeps an authored one', async () => {
+  const lesson: any = mockCourse.modules[0].lessons[1];
+  lesson.description = 'Leçon « Puissance d’un Nombre » du cours de Mathématiques NS1 (EdLight) — chapitre : Nombres.';
+  try {
+    const { unmount } = renderLesson();
+    await flush();
+    expect(screen.queryByText(/du cours de Mathématiques NS1/)).not.toBeInTheDocument();
+    unmount();
+    lesson.description = 'On calcule 2⁵ sans calculatrice.';
+    renderLesson();
+    await flush();
+    expect(screen.getByText('On calcule 2⁵ sans calculatrice.')).toBeInTheDocument();
+  } finally {
+    delete lesson.description;
+  }
 });

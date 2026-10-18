@@ -3,6 +3,9 @@
  * about its save, side by side (PRD §13: a failure sits beside the affected
  * action, never only in a toast).
  *
+ * Tonal, not solid: the lesson page's one solid button is its practice
+ * card's "Commencer l'exercice" (Stitch web direction §2.1).
+ *
  * The button is disabled for as long as a write is pending, so it cannot be
  * submitted twice; the hook behind it refuses a second write anyway. A failed
  * save keeps the same button, relabelled "Réessayer" — nothing is lost.
@@ -37,7 +40,7 @@ export default function LessonCompleteAction({
     <div className="lesson-complete-action">
       <button
         type="button"
-        className="button button--primary lesson-stage__next-primary"
+        className="lx-tonal lesson-complete-action__btn"
         onClick={onComplete}
         disabled={pending}
         aria-describedby={status !== 'idle' ? 'lesson-save-status' : undefined}

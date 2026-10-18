@@ -28,18 +28,24 @@ test('due review first, with the real count and where it comes from; then progre
   expect(review).toHaveAttribute('href', '/revision');
   expect(review).toHaveTextContent('Chimie NS I');
   const course = screen.getAllByRole('link').find((a) => a.getAttribute('href') === '/courses/chem-ns1');
-  expect(screen.getByText('6/33 terminées')).toBeInTheDocument();
-  expect(review.compareDocumentPosition(screen.getByText('6/33 terminées')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  // The same evidence line as the desktop card, over the real total.
+  const facts = screen.getByText('6 terminées sur 33 · 2 maîtrisées');
+  expect(review.compareDocumentPosition(facts) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(screen.getByRole('heading', { name: 'À revoir' }).compareDocumentPosition(screen.getByRole('heading', { name: 'Ta progression' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(course).toBeInTheDocument();
 });
 
-test('never invents a count: loading, failure and nothing due are said as such', () => {
+test('never invents a count: loading and failure are said as such; nothing due and no evidence show nothing', () => {
   const { rerender } = renderIt({ due: null });
   expect(screen.queryByRole('link', { name: /à revoir/ })).not.toBeInTheDocument();
   expect(screen.getAllByText('Chargement…').length).toBeGreaterThan(0);
   rerender(<MemoryRouter><PhoneGlance due="failed" rows={rows} {...base} /></MemoryRouter>);
   expect(screen.getByRole('button', { name: 'Réessayer' })).toBeInTheDocument();
+  rerender(<MemoryRouter><PhoneGlance due={0} rows={rows} {...base} /></MemoryRouter>);
+  expect(screen.queryByRole('heading', { name: 'À revoir' })).not.toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Ta progression' })).toBeInTheDocument();
+  // A new student: no review due, no evidence → no cards of zeroes at all.
   rerender(<MemoryRouter><PhoneGlance due={0} rows={[]} {...base} /></MemoryRouter>);
-  expect(screen.getByText('Rien à revoir')).toBeInTheDocument();
-  expect(screen.getByText(/dès ta première leçon/)).toBeInTheDocument();
+  expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+  expect(screen.queryByText(/0/)).not.toBeInTheDocument();
 });

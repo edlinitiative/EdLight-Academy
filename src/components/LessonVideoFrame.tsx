@@ -29,6 +29,7 @@ export default function LessonVideoFrame({
   offline = false,
   onRetry,
   onPlayingChange,
+  minutes = 0,
 }: {
   src: string;
   title: string;
@@ -39,6 +40,9 @@ export default function LessonVideoFrame({
   /** Told when the real player is on screen, so the page can offer its
    *  fallbacks BELOW the player — never on top of the provider's controls. */
   onPlayingChange?: (playing: boolean) => void;
+  /** Real length in minutes for the duration chip; 0 (unknown or the
+   *  catalogue's placeholder) shows no chip. */
+  minutes?: number;
 }) {
   const L = (fr: string, ht: string) => (isCreole ? ht : fr);
   const id = safeId(src);
@@ -118,9 +122,11 @@ export default function LessonVideoFrame({
       {/* No still to show: the lesson's name holds the frame instead. */}
       {posterFailed && <span className="lesson-frame__name" aria-hidden="true">{title}</span>}
       <span className="lesson-frame__shade" aria-hidden="true" />
+      {/* EdLight's play disc: solid white, azure triangle, no halo. */}
       <span className="lesson-frame__play" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="30" height="30"><path d="M8 5.5v13a1 1 0 0 0 1.52.85l10.4-6.5a1 1 0 0 0 0-1.7L9.52 4.65A1 1 0 0 0 8 5.5Z" fill="currentColor" /></svg>
+        <svg viewBox="0 0 24 24" width="26" height="26"><path d="M8 5.5v13a1 1 0 0 0 1.52.85l10.4-6.5a1 1 0 0 0 0-1.7L9.52 4.65A1 1 0 0 0 8 5.5Z" fill="currentColor" /></svg>
       </span>
+      {minutes > 0 && <span className="lesson-frame__duration">{minutes} min</span>}
     </button>
   );
 }

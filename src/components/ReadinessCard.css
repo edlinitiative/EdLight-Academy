@@ -287,3 +287,90 @@
   .readiness-gauge__value { font-size: 28px; }
   .readiness-gauge__seg { height: 11px; }
 }
+
+/* ══ Stitch web pass (2026-10-17, DIRECTION-WEB §0) ═════════════════════════
+   Same content, the shared card spec: opaque white, no border, one soft
+   shadow, radius 20; no caps mono eyebrows; 14px floor; no row hairlines;
+   actions are tonal (the page owns its one solid azure). */
+.readiness-card {
+  --rc-soft: #EAF2FE;
+  --rc-ink: #1558B8;
+  --rc-well: #F2F5FA;
+  --rc-muted: #51627A;
+  gap: 14px;
+  padding: 24px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--surface, #fff);
+  box-shadow: 0 8px 24px rgba(11, 27, 51, 0.06);
+}
+[data-theme="dark"] .readiness-card {
+  --rc-soft: #16305A;
+  --rc-ink: #A9CBFA;
+  --rc-well: #0F1A30;
+  --rc-muted: #A9BBD8;
+  border: 0;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+.readiness-card__eyebrow,
+.readiness-card__title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.125rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-900);
+}
+.readiness-card__eyebrow svg { color: var(--rc-ink); }
+.readiness-card__strong,
+.readiness-gauge__status,
+.readiness-gauge__foot-label,
+.readiness-subjects__toggle {
+  font-family: inherit;
+  font-size: 0.875rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.readiness-gauge__value small,
+.readiness-subject__pct,
+.readiness-subject__name,
+.readiness-card__caption,
+.readiness-focus__text { font-size: 0.875rem; }
+.readiness-gauge__foot-label, .readiness-card__caption { color: var(--rc-muted); }
+.readiness-subject { border-bottom: 0; padding-top: 6px; padding-bottom: 6px; }
+.readiness-subject__code {
+  border: 0;
+  border-radius: 6px;
+  background: var(--rc-well);
+  font-family: inherit;
+  font-size: 0.875rem;
+}
+.readiness-subject__coeff { font-size: 0.875rem; color: var(--rc-muted); }
+.readiness-subjects__toggle { color: var(--rc-ink); font-weight: 700; }
+.readiness-focus {
+  border: 0;
+  border-radius: 14px;
+  background: var(--rc-well);
+}
+.readiness-focus__cta { color: var(--rc-ink); }
+.readiness-card__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  align-self: flex-start;
+  min-height: 48px;
+  margin-top: 4px;
+  padding: 0 1.25rem;
+  border: 0;
+  border-radius: 12px;
+  background: var(--rc-soft);
+  color: var(--rc-ink);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.readiness-card__btn:focus-visible { outline: 2px solid #1B6FE0; outline-offset: 2px; }
+.readiness-card__empty-icon { border-radius: 14px; background: var(--rc-soft); color: var(--rc-ink); }
