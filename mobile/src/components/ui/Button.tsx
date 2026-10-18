@@ -68,6 +68,11 @@ export default function Button({
     danger: { bg: colors.danger, fg: '#ffffff', border: 'transparent' },
     success: { bg: colors.successFill, fg: '#ffffff', border: 'transparent' },
   }[variant];
+  // Disabled is an OPAQUE neutral step with muted text (no half-transparent
+  // brand colour, which read as washed out); ghost stays a plain muted label.
+  const C = disabled
+    ? { bg: variant === 'ghost' ? 'transparent' : colors.surfaceAlt, fg: colors.faint, border: 'transparent' }
+    : V;
 
   return (
     <PressableScale
@@ -85,9 +90,8 @@ export default function Button({
           gap: 8,
           borderRadius: radius.control,
           borderWidth: 1,
-          borderColor: V.border,
-          backgroundColor: V.bg,
-          opacity: disabled ? 0.45 : 1,
+          borderColor: C.border,
+          backgroundColor: C.bg,
           alignSelf: fullWidth ? 'stretch' : undefined,
           minHeight,
           paddingVertical: 8,
@@ -97,7 +101,7 @@ export default function Button({
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={V.fg} size="small" />
+        <ActivityIndicator color={C.fg} size="small" />
       ) : (
         <>
           {icon}
@@ -105,7 +109,7 @@ export default function Button({
             // 2.0 still prevents a single label from blowing up a row at the
             // very largest accessibility sizes.
             maxFontSizeMultiplier={2}
-            style={{ fontFamily: fonts.bold, color: V.fg, fontSize, lineHeight: fontSize + 5 }}
+            style={{ fontFamily: fonts.bold, color: C.fg, fontSize, lineHeight: fontSize + 5 }}
           >
             {label}
           </Text>

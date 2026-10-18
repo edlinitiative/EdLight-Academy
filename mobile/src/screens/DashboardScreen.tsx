@@ -14,6 +14,7 @@ import { useStreak } from '../hooks/useStreak';
 import { useAllProgress } from '../hooks/useProgress';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import Avatar from '../components/ui/Avatar';
+import { useMyAvatar } from '../hooks/useMyAvatar';
 import PageTitle from '../components/ui/PageTitle';
 import SectionHeader from '../components/ui/SectionHeader';
 import SkeletonCover from '../components/ui/SkeletonCover';
@@ -95,6 +96,7 @@ export default function DashboardScreen() {
   const fab = useSandraFabScroll();
   const { colors } = useTheme();
   const { user, language, enrolledCourses, quizAttempts, lastActivity, grade, gradeChosen, setPendingDailyChallenge, progress: lessonProgress, review } = useStore();
+  const { avatar: myAvatar } = useMyAvatar();
   const centerColumn = useContentContainerStyle('readable'); // iPad: center a capped column
   const scrollRef = React.useRef<any>(null);
   useScrollToTop(scrollRef);
@@ -306,7 +308,7 @@ export default function DashboardScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={t('Ouvrir le profil', 'Louvri pwofil la')}
               >
-                <Avatar name={user?.name || user?.displayName || ''} seed={user?.uid || ''} size={44} radius={22} />
+                <Avatar name={user?.name || user?.displayName || ''} seed={user?.uid || ''} config={myAvatar} size={44} radius={22} />
               </TouchableOpacity>
             </View>
           }

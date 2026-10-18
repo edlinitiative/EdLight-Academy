@@ -51,7 +51,7 @@ function DuelRow({ challenge, isCreole, isNew, onRematch }: {
         backgroundColor: isNew ? C.surfaceRaised : C.surface,
       }}
     >
-      <Avatar seed={challenge.opponent?.uid || who} size={44} mood={result === 'lost' ? 'celebrating' : 'idle'} />
+      <Avatar seed={challenge.opponent?.uid || who} config={challenge.opponent?.avatar} size={44} mood={result === 'lost' ? 'celebrating' : 'idle'} />
       <View style={{ flex: 1, gap: 2 }}>
         <Text style={[nightType.cardTitle, { color: C.ink }]} numberOfLines={1}>{headline}</Text>
         <Text style={[arenaType.status, { color: C.muted }]}>

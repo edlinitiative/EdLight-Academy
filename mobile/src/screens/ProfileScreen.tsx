@@ -4,10 +4,12 @@ import { View, Text, ScrollView, Alert, Image, AppState, Linking } from 'react-n
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Flame, Trophy, Zap, LogOut, Moon, Languages, Trash2, Target, Bell, GraduationCap,
-  Sprout, Brain, Mail, Vibrate, Palette, UserPlus, Eye, Info, Instagram, ChevronRight,
+  Sprout, Brain, Mail, Vibrate, Palette, UserPlus, Eye, Info, Instagram, ChevronRight, Pencil,
 } from 'lucide-react-native';
 import * as Notifications from 'expo-notifications';
 import { Avatar as Face, SchoolCrest } from '../components/arena/art';
+import { schoolColors } from '../components/arena/art/crest/SchoolCrest';
+import { useMyAvatar } from '../hooks/useMyAvatar';
 import PressableScale from '../components/ui/PressableScale';
 import PageTitle from '../components/ui/PageTitle';
 import Button from '../components/ui/Button';
@@ -93,6 +95,7 @@ export default function ProfileScreen() {
   const centerColumn = useContentContainerStyle('readable'); // iPad: center a capped column
 
   const { level, profile } = useTrivia();
+  const { avatar: myAvatar } = useMyAvatar();
   const { streak } = useStreak();
   const { myRank, showingLastWeek } = useLeaderboard(25);
   const queryClient = useQueryClient();
@@ -416,6 +419,7 @@ export default function ProfileScreen() {
   ].filter((a) => (a.isQuiz ? totalQuizzes : (streak?.longestStreak ?? 0)) >= a.target);
 
   const goLeaderboard = () => navigation.navigate('Leaderboard');
+  const goAvatar = () => navigation.navigate('AvatarEditor');
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
@@ -430,11 +434,28 @@ export default function ProfileScreen() {
         {/* Identity — a card, not a band. */}
         <View style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>
           <View style={[cardSurface, { padding: 20, flexDirection: 'row', alignItems: 'center', gap: 16 }]}>
-            {photo ? (
-              <Image source={{ uri: photo }} style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: colors.surfaceAlt }} />
-            ) : (
-              <Face seed={user.uid || displayName} size={64} still />
-            )}
+            {/* The face is the way into the avatar editor. A chosen avatar wins over the photo. */}
+            <PressableScale
+              onPress={goAvatar}
+              accessibilityRole="button"
+              accessibilityLabel={t('Modifier mon avatar', 'Modifye avatar mwen')}
+              pressedScale={0.95}
+              style={{ width: 64, height: 64 }}
+            >
+              {photo && !myAvatar ? (
+                <Image source={{ uri: photo }} style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: colors.surfaceAlt }} />
+              ) : (
+                <Face seed={user.uid || displayName} config={myAvatar} colors={school ? schoolColors(school) : undefined} size={64} still />
+              )}
+              <View
+                style={{
+                  position: 'absolute', right: -4, bottom: -4, width: 26, height: 26, borderRadius: 13,
+                  backgroundColor: colors.azureFill, alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <Pencil size={13} color="#ffffff" strokeWidth={2.6} />
+              </View>
+            </PressableScale>
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text
                 numberOfLines={1}
@@ -444,6 +465,14 @@ export default function ProfileScreen() {
               </Text>
               <Text numberOfLines={2} style={[typeScale.meta, { color: colors.muted, marginTop: 2 }]}>
                 {identityMeta || user.email}
+              </Text>
+              <Text
+                accessibilityRole="link"
+                onPress={goAvatar}
+                suppressHighlighting
+                style={{ fontFamily: fonts.bold, fontSize: 15, lineHeight: 22, color: colors.azureInk, marginTop: 4, alignSelf: 'flex-start' }}
+              >
+                {t('Modifier mon avatar', 'Modifye avatar mwen')}
               </Text>
             </View>
             <PressableScale

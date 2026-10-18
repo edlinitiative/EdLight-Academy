@@ -3,6 +3,7 @@ import { View, Text } from 'react-native';
 import { Clock, Swords } from 'lucide-react-native';
 import useStore from '../../contexts/store';
 import { Avatar } from '../arena/art';
+import { useMyAvatar } from '../../hooks/useMyAvatar';
 import { ArenaButton } from '../arena/ArenaKit';
 import { arenaColors as C, arenaType } from '../../theme/arenaTheme';
 import { tapLight } from '../../utils/haptics';
@@ -33,6 +34,7 @@ export default function ChallengeCard({
 }) {
   const language = useStore((s) => s.language);
   const me = useStore((s) => s.user);
+  const { avatar: myAvatar } = useMyAvatar();
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
 
   const name = challenge.challengerName || t('Un élève', 'Yon elèv');
@@ -73,7 +75,7 @@ export default function ChallengeCard({
           style={{ flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 20, backgroundColor: C.surface }}
         >
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <Avatar seed={challenge.challengerUid || name} size={48} />
+            <Avatar seed={challenge.challengerUid || name} config={challenge.challengerAvatar} size={48} />
             <View style={{ flexShrink: 1 }}>
               <Text numberOfLines={1} style={[arenaType.status, { color: C.muted }]}>{name}</Text>
               <Text style={[arenaType.num, { fontSize: 20, lineHeight: 24, color: C.ink }]}>{challenge.challengerScore}/{challenge.total}</Text>
@@ -87,7 +89,7 @@ export default function ChallengeCard({
               <Text style={[arenaType.status, { color: C.muted }]}>{t('Toi', 'Ou')}</Text>
               <Text style={[arenaType.num, { fontSize: 20, lineHeight: 24, color: C.ink }]}>{mine != null ? `${mine}/${challenge.total}` : '?'}</Text>
             </View>
-            <Avatar seed={me?.uid || 'toi'} size={48} />
+            <Avatar seed={me?.uid || 'toi'} config={myAvatar} size={48} />
           </View>
         </View>
 

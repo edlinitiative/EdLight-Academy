@@ -112,6 +112,12 @@ export default function ArenaWatchScreen() {
     if (next !== answers) { arenaHaptics.choose(); setAnswers(next); }
   };
 
+  // Chosen avatars ride on the standings rows (api/arena/aggregate.ts).
+  const avatarOf = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const p of (standings as any)?.individuals ?? []) if (p?.uid && typeof p.avatar === 'string') m.set(p.uid, p.avatar);
+    return (uid: string) => m.get(uid) ?? null;
+  }, [standings]);
   const rows = useMemo(() => boardRows(standings?.schools ?? [], followKey, boardOpen ? 8 : 3), [standings, followKey, boardOpen]);
   const followed = useMemo(
     () => (followKey ? (standings?.schools ?? []).find((sc) => sc.key === followKey) ?? null : null),
@@ -261,7 +267,7 @@ export default function ArenaWatchScreen() {
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 64, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 20, backgroundColor: C.surfaceRaised }}
               >
                 {story.s.kind === 'PLAYER_ENTERS_TOP_5' && story.s.player ? (
-                  <Avatar seed={story.s.player.uid} size={36} />
+                  <Avatar seed={story.s.player.uid} config={avatarOf(story.s.player.uid)} size={36} />
                 ) : (
                   <SchoolCrest name={story.s.school.name} size={36} />
                 )}
@@ -442,7 +448,7 @@ export default function ArenaWatchScreen() {
             <View style={{ flexDirection: 'row' }}>
               {followed.top5.slice(0, 5).map((uid, i) => (
                 <View key={uid} style={{ marginLeft: i === 0 ? 0 : -10, borderRadius: 18, backgroundColor: C.surface, padding: 2 }}>
-                  <Avatar seed={uid} size={32} />
+                  <Avatar seed={uid} config={avatarOf(uid)} size={32} />
                 </View>
               ))}
             </View>

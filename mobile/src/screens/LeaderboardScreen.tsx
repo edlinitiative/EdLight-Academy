@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft } from 'lucide-react-native';
 import Leaderboard, { type BoardPeriod, type BoardScope } from '../components/Leaderboard';
 import Avatar from '../components/arena/art/avatars/Avatar';
+import { useMyAvatar } from '../hooks/useMyAvatar';
 import SchoolRace from '../components/trivia/SchoolRace';
 import { NightIconButton, nightType } from '../components/games/night';
 import useNightStatusBar from '../components/arena/useNightStatusBar';
@@ -31,6 +32,7 @@ export default function LeaderboardScreen({ onClose }: { onClose: () => void }) 
 
   // Same query the board itself runs — react-query dedupes, so no extra read.
   const { entries, myEntry, myRank, showingLastWeek } = useLeaderboard(50, 'week');
+  const myAvatar = useMyAvatar();
 
   // "45 XP → rang 8": distance to the entry directly above. Rank 1 celebrates.
   const showMeBar =
@@ -79,7 +81,7 @@ export default function LeaderboardScreen({ onClose }: { onClose: () => void }) 
           }}
         >
           <Text style={[arenaType.num, { fontSize: 18, color: C.ink }]} maxFontSizeMultiplier={1.3}>{myRank}{t('e', 'yèm')}</Text>
-          <Avatar seed={(myEntry as any)?.id || ''} size={36} />
+          <Avatar seed={(myEntry as any)?.id || ''} config={myAvatar.loading ? (myEntry as any)?.avatar : myAvatar.avatar} size={36} />
           <View style={{ flex: 1 }}>
             <Text style={[arenaType.name, { color: C.ink }]} numberOfLines={1}>
               {(myEntry as any)?.displayName || t('Élève', 'Elèv')}{t(' (toi)', ' (ou)')}

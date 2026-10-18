@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Crown } from 'lucide-react-native';
 import { ArenaButton } from '../arena/ArenaKit';
 import Avatar from '../arena/art/avatars/Avatar';
+import { useMyAvatar } from '../../hooks/useMyAvatar';
 import PopIn from '../ui/PopIn';
 import { arenaColors as C, arenaType } from '../../theme/arenaTheme';
 import { fonts } from '../../theme/theme';
@@ -28,6 +29,8 @@ import { NightIconButton, NightLink, nightType } from './night';
 export interface ResultPerson {
   seed: string;
   label: string;
+  /** Their chosen avatar (wire string). For `me`, the signed-in student's own is used when absent. */
+  avatar?: string | null;
 }
 
 export interface ResultAction {
@@ -55,7 +58,7 @@ function Face({ person, size, winner, dim }: { person: ResultPerson; size: numbe
     <View style={{ alignItems: 'center', gap: 8, flex: 1, opacity: dim ? 0.8 : 1 }}>
       <View style={{ width: size, height: size }}>
         <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-          <Avatar seed={person.seed} size={size - 6} mood={winner ? 'celebrating' : 'idle'} />
+          <Avatar seed={person.seed} config={person.avatar} size={size - 6} mood={winner ? 'celebrating' : 'idle'} />
         </View>
         {winner ? (
           <View
@@ -100,6 +103,7 @@ export default function NightResult({
   link?: ResultAction | null;
 }) {
   const insets = useSafeAreaInsets();
+  const { avatar: myAvatar } = useMyAvatar();
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       {/* Header */}
@@ -123,7 +127,7 @@ export default function NightResult({
             style={{ padding: 24, gap: 14, borderRadius: 24, backgroundColor: C.surfaceRaised, alignItems: 'center' }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch' }}>
-              <Face person={me} size={opponent ? 76 : 92} winner={winner === 'me'} />
+              <Face person={{ ...me, avatar: me.avatar ?? myAvatar }} size={opponent ? 76 : 92} winner={winner === 'me'} />
               {opponent ? (
                 <>
                   <View style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: C.secondary, marginBottom: 26 }}>

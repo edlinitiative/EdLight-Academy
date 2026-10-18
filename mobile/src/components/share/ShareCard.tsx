@@ -7,6 +7,7 @@ import useStore from '../../contexts/store';
 import { useTrivia } from '../../hooks/useTrivia';
 import { displayLevel } from '../../utils/courseName';
 import Avatar from '../arena/art/avatars/Avatar';
+import { useMyAvatar } from '../../hooks/useMyAvatar';
 import SchoolCrest from '../arena/art/crest/SchoolCrest';
 
 /**
@@ -83,6 +84,7 @@ export default function ShareCard({ data, lang, code, onReady, width = 1080 }: S
 
   // Who is posting — real identity only; nothing is invented.
   const user = useStore((s) => s.user);
+  const { avatar: myAvatar } = useMyAvatar();
   const grade = useStore((s) => s.grade);
   const { profile } = useTrivia();
   const lb: any = profile?.leaderboard || {};
@@ -156,7 +158,7 @@ export default function ShareCard({ data, lang, code, onReady, width = 1080 }: S
         ) : (
           <View style={{ width: u(132), height: u(132) }}>
             <View style={{ width: u(132), height: u(132), borderRadius: u(66), backgroundColor: N.surface, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-              <Avatar seed={user?.uid || 'toi'} size={u(124)} mood="celebrating" />
+              <Avatar seed={user?.uid || 'toi'} config={myAvatar} size={u(124)} mood="celebrating" />
             </View>
             {mySchool ? (
               <View style={{ position: 'absolute', right: u(-4), bottom: u(-2) }}>
