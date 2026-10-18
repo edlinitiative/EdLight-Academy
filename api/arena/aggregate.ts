@@ -48,6 +48,7 @@
  * Response (200):   { ok, state, schools, players, events, seq }
  */
 
+import { cleanAvatar } from '../../src/arena-art/avatars/avatarConfig';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import {
   FieldValue,
@@ -235,6 +236,8 @@ export interface PlayerRow {
   /** Set by the answer endpoint when a round completed clean. Not re-derived. */
   perfectRound: boolean;
   registeredAt?: number;
+  /** Chosen avatar (sanitized wire string) or null → the seeded face. */
+  avatar?: string | null;
 }
 
 export interface SchoolPool {
@@ -450,6 +453,7 @@ export function buildSnapshot(
       rank: standing.rank,
       streak: row ? row.streak : 0,
       perfectRound: row ? row.perfectRound : false,
+      ...(row?.avatar ? { avatar: row.avatar } : {}),
     };
   });
 
@@ -532,6 +536,7 @@ function toPlayerRow(uid: string, data: Row): PlayerRow {
     fullTierCount: num(data.fullTierCount),
     perfectRound: data.perfectRound === true,
     registeredAt: millis(data.registeredAt),
+    avatar: cleanAvatar(data.avatar),
   };
 }
 

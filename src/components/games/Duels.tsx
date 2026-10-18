@@ -255,6 +255,7 @@ function DuelRow({ c, uid, isCreole }: { c: Challenge; uid: string; isCreole: bo
   // The other student's face (their uid seeds the same generated avatar
   // everywhere); before anyone has played a sent duel, the theme's icon.
   const otherUid: string | null = mine ? c.opponent?.uid || null : c.challengerUid || null;
+  const otherAvatar = mine ? c.opponent?.avatar : c.challengerAvatar;
   const myScore = mine ? c.challengerScore : c.opponent?.uid === uid ? c.opponent.score : null;
   const theirScore = mine ? c.opponent?.score ?? null : c.challengerScore;
 
@@ -277,7 +278,7 @@ function DuelRow({ c, uid, isCreole }: { c: Challenge; uid: string; isCreole: bo
     <li>
       <Link to={`/defi/${c.code}`} className="duel-row">
         <span className="duel-row__icon" aria-hidden="true">
-          {otherUid ? <Avatar seed={otherUid} size={40} still /> : <CategoryIcon id={c.categoryId} size={18} />}
+          {otherUid ? <Avatar seed={otherUid} config={otherAvatar} size={40} still /> : <CategoryIcon id={c.categoryId} size={18} />}
         </span>
         <span className="duel-row__body">
           <span className="duel-row__title">{categoryLabel(c.categoryId, isCreole)}</span>
@@ -380,10 +381,13 @@ export function MyDuels({ isCreole }: { isCreole: boolean }) {
 
 /* ─── Head-to-head scoreboard (Defi page result) ────────────────────────── */
 
-export function DuelScoreboard({ leftName, leftScore, rightName, rightScore, total, isCreole, leftSeed = null, rightSeed = null }: {
+export function DuelScoreboard({ leftName, leftScore, rightName, rightScore, total, isCreole, leftSeed = null, rightSeed = null, leftAvatar = null, rightAvatar = null }: {
   /** Stable ids (uids) for the two students' generated faces. */
   leftSeed?: string | null;
   rightSeed?: string | null;
+  /** Chosen avatars (wire strings); absent → the seeded face. */
+  leftAvatar?: string | null;
+  rightAvatar?: string | null;
   leftName: string;
   leftScore: number | null;
   rightName: string;
@@ -396,14 +400,14 @@ export function DuelScoreboard({ leftName, leftScore, rightName, rightScore, tot
   return (
     <div className="duel-board" role="group" aria-label={isCreole ? 'Rezilta defi a' : 'Résultat du défi'}>
       <div className={`duel-board__side${leftWins ? ' is-win' : ''}`}>
-        {leftSeed && <span className="duel-board__face" aria-hidden="true"><Avatar seed={leftSeed} size={56} mood={leftWins ? 'celebrating' : 'idle'} still /></span>}
+        {leftSeed && <span className="duel-board__face" aria-hidden="true"><Avatar seed={leftSeed} config={leftAvatar} size={56} mood={leftWins ? 'celebrating' : 'idle'} still /></span>}
         <span className="duel-board__name">{leftName}</span>
         <span className="duel-board__score" translate="no">{leftScore ?? '–'}<small>/{total}</small></span>
         {leftWins && <span className="duel-board__crown"><Trophy size={14} /> {isCreole ? 'Genyen' : 'Gagnant'}</span>}
       </div>
       <span className="duel-board__vs" aria-hidden="true">{isCreole ? 'kont' : 'contre'}</span>
       <div className={`duel-board__side${rightWins ? ' is-win' : ''}`}>
-        {rightSeed && <span className="duel-board__face" aria-hidden="true"><Avatar seed={rightSeed} size={56} mood={rightWins ? 'celebrating' : 'idle'} still /></span>}
+        {rightSeed && <span className="duel-board__face" aria-hidden="true"><Avatar seed={rightSeed} config={rightAvatar} size={56} mood={rightWins ? 'celebrating' : 'idle'} still /></span>}
         <span className="duel-board__name">{rightName}</span>
         <span className="duel-board__score" translate="no">{rightScore ?? <Clock size={22} />}{rightScore != null && <small>/{total}</small>}</span>
         {rightWins && <span className="duel-board__crown"><Trophy size={14} /> {isCreole ? 'Genyen' : 'Gagnant'}</span>}

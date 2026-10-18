@@ -29,6 +29,8 @@ import { GRADES, TRACK_BY_CODE } from '../config/trackConfig';
 import { HAITI_DEPARTMENTS, OTHER_CITY, citiesOf, findCity } from '../data/haitiGeo';
 import UserAvatar from '../components/UserAvatar';
 import Avatar from '../arena-art/avatars/Avatar';
+import { useMyAvatar } from '../hooks/useMyAvatar';
+import './profile/avatarEntry.css';
 import MySchoolCard from '../components/MySchoolCard';
 import { schoolKey } from '../../shared/schools';
 import type { ProgressMap } from '../../shared/mastery';
@@ -802,15 +804,25 @@ export function rankWindow(entries: any[], uid: string | null) {
 
 
 
-/** The face: the account photo when there is one, else the generated face (seed = uid). */
+/**
+ * The face: the avatar the student built (/profile/avatar) when there is one,
+ * else the account photo, else the generated face (seed = uid). The face is
+ * also the way into the avatar editor.
+ */
 function ProfileFace({ uid, photo, name, size }: { uid: string; photo?: string | null; name: string; size: number }) {
-  const real = typeof photo === 'string' && /^https?:\/\//i.test(photo.trim());
+  const isCreole = useStore((s) => s.language) === 'ht';
+  const { avatar } = useMyAvatar();
+  const real = !avatar && typeof photo === 'string' && /^https?:\/\//i.test(photo.trim());
+  const label = isCreole ? 'Modifye avatar mwen' : 'Modifier mon avatar';
   return (
-    <span className="pr-face" style={{ width: size, height: size }}>
-      {real
-        ? <UserAvatar seed={uid} name={name} uri={photo} size={size} />
-        : <Avatar seed={uid} size={size} still />}
-    </span>
+    <Link to="/profile/avatar" className="pr-face-edit" aria-label={label} title={label}>
+      <span className="pr-face" style={{ width: size, height: size }}>
+        {real
+          ? <UserAvatar seed={uid} name={name} uri={photo} size={size} />
+          : <Avatar seed={uid} config={avatar} size={size} still />}
+      </span>
+      <span className="pr-face-edit__badge" aria-hidden="true"><AppIcons.Pencil size={14} aria-hidden="true" /></span>
+    </Link>
   );
 }
 

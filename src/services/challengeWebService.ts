@@ -29,6 +29,8 @@ const ACCEPT_URL = '/api/challenges/accept';
 
 export interface Challenge extends DuelLike {
   challengerName: string | null;
+  /** The challenger's chosen avatar (wire string), when they made one. */
+  challengerAvatar?: string;
   categoryId: string;
   questionIdxs: number[];
   createdAt: number; // epoch ms
@@ -137,6 +139,7 @@ export function toChallenge(id: string, d: any): Challenge {
     code: id,
     challengerUid: String(d?.challengerUid ?? ''),
     challengerName: d?.challengerName ?? null,
+    ...(typeof d?.challengerAvatar === 'string' ? { challengerAvatar: d.challengerAvatar } : {}),
     categoryId: String(d?.categoryId ?? ''),
     questionIdxs: Array.isArray(d?.questionIdxs) ? d.questionIdxs.map(Number) : [],
     total: Number(d?.total) || 0,
@@ -144,7 +147,10 @@ export function toChallenge(id: string, d: any): Challenge {
     createdAt: ms(d?.createdAt),
     expiresAt: ms(d?.expiresAt),
     opponent: d?.opponent
-      ? { uid: String(d.opponent.uid), name: d.opponent.name ?? null, score: Number(d.opponent.score) || 0, playedAt: ms(d.opponent.playedAt) }
+      ? {
+        uid: String(d.opponent.uid), name: d.opponent.name ?? null, score: Number(d.opponent.score) || 0, playedAt: ms(d.opponent.playedAt),
+        ...(typeof d.opponent.avatar === 'string' ? { avatar: d.opponent.avatar } : {}),
+      }
       : null,
     status: d?.status === 'played' ? 'played' : 'open',
   };

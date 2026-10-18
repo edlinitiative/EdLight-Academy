@@ -4,15 +4,16 @@ import useStore from '../contexts/store';
 import CategoryIcon from '../components/CategoryIcon';
 import { Swords, Clock, Target, Trophy, LogIn, Smartphone, RefreshCw, ArrowLeft } from '../components/icons';
 import Avatar from '../arena-art/avatars/Avatar';
+import { useMyAvatar } from '../hooks/useMyAvatar';
 
 /** The two students, face to face — the Arène's generated faces, seeded by
     uid so each student looks the same here as on the board and the broadcast. */
-function DuelArt({ left, right, leftName, rightName }: { left: string; right: string; leftName: string; rightName: string }) {
+function DuelArt({ left, right, leftName, rightName, leftAvatar = null, rightAvatar = null }: { left: string; right: string; leftName: string; rightName: string; leftAvatar?: string | null; rightAvatar?: string | null }) {
   return (
     <div className="defi__vs" aria-hidden="true">
-      <span className="defi__vs-p"><span className="defi__vs-face"><Avatar seed={left} size={80} mood="ready" /></span><span className="defi__vs-name">{leftName}</span></span>
+      <span className="defi__vs-p"><span className="defi__vs-face"><Avatar seed={left} config={leftAvatar} size={80} mood="ready" /></span><span className="defi__vs-name">{leftName}</span></span>
       <span className="defi__vs-bolt">VS</span>
-      <span className="defi__vs-p"><span className="defi__vs-face"><Avatar seed={right} size={80} mood="focused" /></span><span className="defi__vs-name">{rightName}</span></span>
+      <span className="defi__vs-p"><span className="defi__vs-face"><Avatar seed={right} config={rightAvatar} size={80} mood="focused" /></span><span className="defi__vs-name">{rightName}</span></span>
     </div>
   );
 }
@@ -61,6 +62,7 @@ export default function Defi() {
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const uid: string | null = user?.uid || null;
+  const { avatar: myAvatar } = useMyAvatar();
 
   const [challenge, setChallenge] = useState<Challenge | null | undefined>(undefined);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -273,10 +275,10 @@ export default function Defi() {
           <h1 className="defi__title">{title}</h1>
           <DuelScoreboard
             leftName={challengerName}
-            leftSeed={challenge.challengerUid || null}
+            leftSeed={challenge.challengerUid || null} leftAvatar={challenge.challengerAvatar}
             leftScore={theirs}
             rightName={t('Toi', 'Ou menm')}
-            rightSeed={uid}
+            rightSeed={uid} rightAvatar={myAvatar}
             rightScore={mine}
             total={challenge.total}
             isCreole={isCreole}
@@ -343,9 +345,9 @@ export default function Defi() {
           <DuelTrustNote challenge={challenge} uid={uid} isCreole={isCreole} />
           <DuelScoreboard
             leftName={t('Toi', 'Ou menm')}
-            leftSeed={uid}
+            leftSeed={uid} leftAvatar={myAvatar}
             leftScore={challenge.challengerScore}
-            rightSeed={challenge.opponent?.uid || null}
+            rightSeed={challenge.opponent?.uid || null} rightAvatar={challenge.opponent?.avatar}
             rightName={challenge.opponent?.name || t('Ton ami', 'Zanmi ou')}
             rightScore={challenge.opponent ? challenge.opponent.score : null}
             total={challenge.total}
@@ -390,10 +392,10 @@ export default function Defi() {
           {state === 'played' && (
             <DuelScoreboard
               leftName={challengerName}
-              leftSeed={challenge.challengerUid || null}
+              leftSeed={challenge.challengerUid || null} leftAvatar={challenge.challengerAvatar}
               leftScore={challenge.challengerScore}
               rightName={t('Toi', 'Ou menm')}
-              rightSeed={uid}
+              rightSeed={uid} rightAvatar={myAvatar}
               rightScore={challenge.opponent?.score ?? null}
               total={challenge.total}
               isCreole={isCreole}
@@ -412,7 +414,7 @@ export default function Defi() {
     // Open and yours to play.
     return (
       <div className="defi__card">
-        <DuelArt left={challenge.challengerUid || challengerName} right={uid} leftName={challengerName} rightName={t('Toi', 'Ou menm')} />
+        <DuelArt left={challenge.challengerUid || challengerName} right={uid} leftAvatar={challenge.challengerAvatar} rightAvatar={myAvatar} leftName={challengerName} rightName={t('Toi', 'Ou menm')} />
         <span className="defi__eyebrow"><Swords size={14} aria-hidden="true" /> {t('Défi reçu', 'Defi ou resevwa')}</span>
         <h1 className="defi__title">
           {t(`${challengerName} a fait ${challenge.challengerScore}/${challenge.total}. À toi !`, `${challengerName} fè ${challenge.challengerScore}/${challenge.total}. Se tou pa w !`)}

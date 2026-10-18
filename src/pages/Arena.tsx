@@ -481,7 +481,7 @@ export default function Arena() {
                             )}
                             <li className={`arena-board__row${i < TEAM_SIZE ? ' is-five' : ''}${m.uid && m.uid === user?.uid ? ' is-me' : ''}`}>
                               <span className="arena-board__pos">{i + 1}</span>
-                              <span className="arena-board__avatar" aria-hidden="true"><Avatar seed={m.uid || m.displayName || 'eleve'} size={36} still colors={mySchool ? schoolColors(mySchool) : undefined} /></span>
+                              <span className="arena-board__avatar" aria-hidden="true"><Avatar seed={m.uid || m.displayName || 'eleve'} config={m.avatar} size={36} still colors={mySchool ? schoolColors(mySchool) : undefined} /></span>
                               <span className="arena-board__name">
                                 {m.displayName}
                                 {m.uid && m.uid === user?.uid && <em>{t('toi', 'ou')}</em>}

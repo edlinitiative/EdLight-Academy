@@ -1,6 +1,7 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import Avatar from '../Avatar';
+import { defaultConfigFor, serializeConfig } from '../avatarConfig';
 import {
   avatarTraits, AVATAR_MOODS, HAIR_STYLES, SKIN_TONES, UNIFORM_STYLES, HAIR_COLORS,
 } from '../traits';
@@ -101,5 +102,21 @@ describe('<Avatar />', () => {
     const { container } = render(<Avatar seed="a" colors={{ primary: '#123456', secondary: '#ABCDEF' }} />);
     expect(container.innerHTML).toContain('#123456');
     expect(container.innerHTML).toContain('#ABCDEF');
+  });
+
+  it('falls back to the seeded face when the config is absent or junk', () => {
+    const strip = (h: string) => h.replace(/id="[^"]*"|#[^)"]*\)|aria-labelledby="[^"]*"/g, '');
+    const seeded = strip(render(<Avatar seed="u-fb" still />).container.innerHTML);
+    expect(strip(render(<Avatar seed="u-fb" still config={defaultConfigFor('u-fb')} />).container.innerHTML)).toBe(seeded);
+    expect(strip(render(<Avatar seed="u-fb" still config="<junk>" />).container.innerHTML)).toBe(seeded);
+    expect(strip(render(<Avatar seed="u-fb" still config={null} />).container.innerHTML)).toBe(seeded);
+  });
+
+  it('an explicit config wins over the seeded traits (object or wire string)', () => {
+    const cfg = { ...defaultConfigFor('u-fb'), skin: 13, hair: 'bantu' as const };
+    const html = render(<Avatar seed="u-fb" still config={cfg} />).container.innerHTML;
+    expect(html).toContain('#F1D3B8');
+    expect(render(<Avatar seed="u-fb" still config={serializeConfig(cfg)} />).container.innerHTML.replace(/id="[^"]*"|#[^)"]*\)/g, ''))
+      .toBe(html.replace(/id="[^"]*"|#[^)"]*\)/g, ''));
   });
 });

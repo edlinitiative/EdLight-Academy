@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useMyAvatar } from '../../../hooks/useMyAvatar';
 import { Link } from 'react-router-dom';
 import { Play, Swords, Share2, Check, LogIn, ChevronRight, Users } from '../../icons';
 import PlayerCard from '../../../arena-art/cards/PlayerCard';
@@ -55,6 +56,7 @@ export default function LobbyStrip({
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const nf = (n: number) => new Intl.NumberFormat('fr-FR').format(Math.round(n || 0));
   const [copied, setCopied] = useState(false);
+  const { avatar: myAvatar } = useMyAvatar();
 
   const invite = async () => {
     const ref = await inviteRef();
@@ -130,7 +132,7 @@ export default function LobbyStrip({
             {t('Ton rival', 'Rival ou')} · {rival.scope === 'school' ? t('dans ton école', 'nan lekòl ou') : t('au national', 'nan tout peyi a')}
           </p>
           <div className="lb-rival__who">
-            <span className="lb-face" aria-hidden="true"><Avatar seed={r.id} size={44} still colors={r.school ? schoolColors(r.school) : undefined} /></span>
+            <span className="lb-face" aria-hidden="true"><Avatar seed={r.id} config={(r as { avatar?: string }).avatar} size={44} still colors={r.school ? schoolColors(r.school) : undefined} /></span>
             <div>
               <strong>{rName}</strong>
               <span data-testid="rival-gap">
@@ -171,7 +173,7 @@ export default function LobbyStrip({
   return (
     <div className="lb" aria-label={t('Ton lobby', 'Lobi ou')} role="region">
       <div className="lb-main">
-        <PlayerCard uid={uid || 'toi'} name={name || t('Toi', 'Ou')} school={school?.name || null} level={level} xp={totalXp} size="lg" />
+        <PlayerCard uid={uid || 'toi'} name={name || t('Toi', 'Ou')} school={school?.name || null} level={level} xp={totalXp} avatar={myAvatar} size="lg" />
         <dl className="lb-stats">
           <div>
             <dt>{t('Cette semaine', 'Semèn sa a')}</dt>

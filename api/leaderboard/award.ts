@@ -46,6 +46,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { requireAuthDecoded } from '../_lib/requireAuth';
 import { checkRateLimit } from '../_lib/rateLimit';
 import { getDb } from '../_lib/firebaseAdmin';
+import { cleanAvatar } from '../../src/arena-art/avatars/avatarConfig';
 
 /** A single call can award at most this much XP (bounds injection abuse). */
 const MAX_XP_DELTA = 5000;
@@ -163,6 +164,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     // learner), and an already-stored alias means no derivation is needed.
     const existing = (await allTimeRef.get()).data() as Record<string, unknown> | undefined;
     const hidden = existing?.hidden === true;
+    const avatar = cleanAvatar(existing?.avatar);
     if (!hasAlias && !hidden && !isValidAlias(existing?.displayName)) {
       const derived = defaultAlias(tokenName);
       if (derived) {
@@ -181,6 +183,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       department,
       ...(hasAlias && !hidden ? { displayName } : {}),
       ...(hidden ? { hidden: true } : {}),
+      // The chosen avatar (set by /api/users/avatar on the all-time entry)
+      // rides onto each new weekly entry, re-sanitized.
+      ...(avatar ? { avatar } : {}),
       updatedAt: FieldValue.serverTimestamp(),
     };
 

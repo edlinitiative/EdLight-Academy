@@ -132,7 +132,7 @@ export interface DuelLike {
   total: number;
   expiresAt: number;
   status: 'open' | 'played';
-  opponent: { uid: string; name: string | null; score: number; playedAt: number } | null;
+  opponent: { uid: string; name: string | null; score: number; playedAt: number; avatar?: string } | null;
 }
 
 export type DuelOutcome = 'won' | 'lost' | 'tie';

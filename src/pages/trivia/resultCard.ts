@@ -31,6 +31,8 @@ export interface ResultCardData {
   /** Stable id (uid) for the student's generated face — the Arène's avatar,
       never a photo. Drawn only when a pseudo is shown. */
   faceSeed?: string | null;
+  /** The student's chosen avatar (wire string); absent → the seeded face. */
+  faceAvatar?: string | null;
   school?: string | null;
   level?: number | null;
 }
@@ -284,7 +286,7 @@ export async function drawResultCard(d: ResultCardData): Promise<Blob | null> {
   let x = PAD + 32;
   let crestInline: HTMLImageElement | null = null;
   if (d.faceSeed && d.pseudo) {
-    const face = await svgImage(createElement(Avatar, { seed: d.faceSeed, size: 112, still: true, mood: 'idle', colors: d.school ? schoolColors(d.school) : undefined }));
+    const face = await svgImage(createElement(Avatar, { seed: d.faceSeed, config: d.faceAvatar, size: 112, still: true, mood: 'idle', colors: d.school ? schoolColors(d.school) : undefined }));
     if (face) { ctx.drawImage(face, x - 4, footY + 19, 112, 112); x += 136; }
     if (d.school) crestInline = await svgImage(createElement(SchoolCrest, { name: d.school, size: 40 }));
   } else if (d.school) {

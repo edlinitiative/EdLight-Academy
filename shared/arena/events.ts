@@ -412,6 +412,8 @@ export interface IndividualStanding {
    * copies would drift the first time the tier boundary moves.
    */
   perfectRound?: boolean;
+  /** The student's chosen avatar (17-char wire string, avatarConfig.ts). Absent → seeded face. */
+  avatar?: string;
 }
 
 export interface StandingsSnapshot {

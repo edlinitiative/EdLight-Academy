@@ -1,4 +1,5 @@
 import React from 'react';
+import { useMyAvatar } from '../../hooks/useMyAvatar';
 import { Check, X, Clock, Flame, Zap, Trophy, Crown, Sparkles, RefreshCw } from '../../components/icons';
 import useStore from '../../contexts/store';
 import { useTrivia } from '../../hooks/useTrivia';
@@ -54,6 +55,7 @@ export default function MatchResults(p: MatchResultsProps) {
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const { profile, level } = useTrivia();
   const uid: string | null = useStore((s) => s.user?.uid) || null;
+  const { avatar: myAvatar } = useMyAvatar();
   const reduced = useReducedMotion();
   const sound = useMatchSound();
   const played = React.useMemo(() => answers.map((a) => a.question), [answers]);
@@ -126,6 +128,7 @@ export default function MatchResults(p: MatchResultsProps) {
     facts: facts.slice(0, 2).map((f) => `${f.label} : ${f.value}`),
     pseudo,
     faceSeed: isAuthed ? uid : null,
+    faceAvatar: isAuthed ? myAvatar : null,
     school: isAuthed ? school : null,
     level: isAuthed ? level?.level || null : null,
   };

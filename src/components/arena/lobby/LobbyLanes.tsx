@@ -73,7 +73,7 @@ export default function LobbyLanes({
                   {shown.map((e) => (
                     <li key={e.id} className={e.id === uid ? 'is-me' : ''}>
                       <span className="lb-ladder__n">{ladder.indexOf(e) + 1}</span>
-                      <span className="lb-face lb-face--sm" aria-hidden="true"><Avatar seed={e.id} size={28} still colors={schoolColors(school.name)} /></span>
+                      <span className="lb-face lb-face--sm" aria-hidden="true"><Avatar seed={e.id} config={(e as { avatar?: string }).avatar} size={28} still colors={schoolColors(school.name)} /></span>
                       <span className="lb-ladder__name">{e.id === uid ? t('Toi', 'Ou') : e.displayName}</span>
                       <span className="lb-ladder__xp">{nf(e.xp)} XP</span>
                     </li>

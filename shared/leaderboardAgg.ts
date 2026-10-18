@@ -23,12 +23,16 @@ export interface LeaderboardEntry {
   school?: string;
   city?: string;
   department?: string;
+  /** Chosen avatar wire string (avatarConfig.ts); absent → seeded face. */
+  avatar?: string;
 }
 
 export interface GroupMember {
   uid: string;
   displayName: string;
   xp: number;
+  /** Only present when the student chose one (keeps payloads small). */
+  avatar?: string;
 }
 
 export interface GroupRanking {
@@ -68,6 +72,10 @@ export function normalizeName(raw?: string): string {
 
 const xpOf = (e: LeaderboardEntry) => (typeof e.xp === 'number' && isFinite(e.xp) && e.xp > 0 ? e.xp : 0);
 const nameOf = (e: LeaderboardEntry) => (e.displayName || '').trim();
+// A chosen avatar rides along only when it looks like the 17-char wire form;
+// renderers sanitize again before drawing.
+const avatarOf = (e: LeaderboardEntry) =>
+  (typeof e.avatar === 'string' && /^1[0-9a-z]{16}$/.test(e.avatar) ? { avatar: e.avatar } : {});
 
 /**
  * Rank collectives (schools/cities/departments) by total member XP.
@@ -98,7 +106,7 @@ export function aggregateBy(
     }
     g.total += xp;
     g.labelCounts.set(original, (g.labelCounts.get(original) || 0) + 1);
-    g.members.push({ uid: e.uid || e.id || '', displayName: nameOf(e), xp });
+    g.members.push({ uid: e.uid || e.id || '', displayName: nameOf(e), xp, ...avatarOf(e) });
   }
 
   const rankings: GroupRanking[] = [];
@@ -135,7 +143,7 @@ export function membersOf(
   const target = normalizeName(key);
   return (entries || [])
     .filter((e) => normalizeName(e[field]) === target && nameOf(e))
-    .map((e) => ({ uid: e.uid || e.id || '', displayName: nameOf(e), xp: xpOf(e) }))
+    .map((e) => ({ uid: e.uid || e.id || '', displayName: nameOf(e), xp: xpOf(e), ...avatarOf(e) }))
     .sort((a, b) => b.xp - a.xp);
 }
 

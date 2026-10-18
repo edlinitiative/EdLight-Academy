@@ -34,6 +34,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { requireAuthDecoded } from '../_lib/requireAuth';
 import { checkRateLimit } from '../_lib/rateLimit';
 import { getDb } from '../_lib/firebaseAdmin';
+import { cleanAvatar } from '../../src/arena-art/avatars/avatarConfig';
 
 /** Challenge links stay valid this long. */
 const TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -139,6 +140,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   }
   if (!challengerName) challengerName = defaultAlias(tokenName);
 
+  // Their chosen avatar (users/{uid}.avatar), re-sanitized; absent → the
+  // card draws the seeded face.
+  let challengerAvatar: string | null = null;
+  try {
+    challengerAvatar = cleanAvatar((await db.doc(`users/${uid}`).get()).data()?.avatar);
+  } catch {
+    /* best-effort */
+  }
+
   // ── Mint the challenge (retry on the astronomically unlikely collision) ──
   const now = Date.now();
   try {
@@ -149,6 +159,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           code,
           challengerUid: uid,
           challengerName,
+          ...(challengerAvatar ? { challengerAvatar } : {}),
           categoryId,
           questionIdxs,
           total,

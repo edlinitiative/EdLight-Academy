@@ -91,6 +91,8 @@ const LIMITS: Record<string, Limit> = {
   'tournois-join':   { max: 60, windowSec: 3600 },
   'tournois-play':   { max: 600, windowSec: 3600 },
   'tournois-tick':   { max: 3000, windowSec: 3600 },
+  // Avatar editor saves (api/users/avatar): a few saves per session is normal.
+  'users-avatar':    { max: 30, windowSec: 3600 },
 };
 
 // Endpoints that spend money per call (paid LLM / email). If the limiter can't

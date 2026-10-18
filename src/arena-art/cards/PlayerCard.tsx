@@ -31,12 +31,14 @@ export interface PlayerCardProps {
   size?: 'sm' | 'md' | 'lg';
   mood?: 'idle' | 'ready' | 'focused' | 'celebrating' | 'recovering';
   className?: string;
+  /** The student's chosen avatar (wire string); absent → the seeded face. */
+  avatar?: string | null;
 }
 
 type CardVars = React.CSSProperties & Record<'--pc-primary' | '--pc-secondary', string>;
 
 export default function PlayerCard({
-  uid, name, school, level = 1, xp, rank, title, size = 'md', mood = 'idle', className = '',
+  uid, name, school, level = 1, xp, rank, title, size = 'md', mood = 'idle', className = '', avatar = null,
 }: PlayerCardProps) {
   const isCreole = useStore((s) => s.language) === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -66,7 +68,7 @@ export default function PlayerCard({
   if (size === 'sm') {
     return (
       <div className={cls} data-tier={tier.id} style={vars} aria-label={summary} role="group">
-        <Avatar seed={uid || pseudo} mood={mood} size={36} colors={colors} still />
+        <Avatar seed={uid || pseudo} config={avatar} mood={mood} size={36} colors={colors} still />
         <div className="pcard-main">
           <span className="pcard-name">{pseudo}</span>
           {schoolName && (
@@ -89,7 +91,7 @@ export default function PlayerCard({
     return (
       <article className={cls} data-tier={tier.id} style={vars} aria-label={summary}>
         <div className="pcard-portrait">
-          <Avatar seed={uid || pseudo} mood={mood} size={72} colors={colors} />
+          <Avatar seed={uid || pseudo} config={avatar} mood={mood} size={72} colors={colors} />
           {schoolName && <span className="pcard-portrait-crest"><SchoolCrest name={schoolName} size={30} /></span>}
         </div>
         <div className="pcard-main">
@@ -119,7 +121,7 @@ export default function PlayerCard({
         {place && (
           <span className="pcard-band-place">#{place}<span className="pcard-band-place-l">{placeText}</span></span>
         )}
-        <span className="pcard-avatar"><Avatar seed={uid || pseudo} mood={mood} size={104} colors={colors} /></span>
+        <span className="pcard-avatar"><Avatar seed={uid || pseudo} config={avatar} mood={mood} size={104} colors={colors} /></span>
       </div>
       <div className="pcard-body">
         <span className="pcard-name">{pseudo}</span>
