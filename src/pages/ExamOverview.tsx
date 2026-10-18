@@ -2,19 +2,19 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-  ArrowLeft, ArrowRight, Clock, FileText, Layers, Award, CheckCircle2, Eye,
-  PlayCircle, RotateCcw, History, Save, LogIn,
+  ArrowRight, ChevronRight, CheckCircle2, Eye, PlayCircle, RotateCcw, Save, LogIn,
 } from '../components/icons';
 import useStore from '../contexts/store';
 import { useExamAttempts } from '../hooks/useExamAttempts';
 import { fetchSingleExam, normalizeExamCatalog, resolveExamFromCatalog } from '../utils/examCatalog';
-import { subjectColor, QUESTION_TYPE_META, examDisplayTitle } from '../utils/examUtils';
+import { QUESTION_TYPE_META, examDisplayTitle } from '../utils/examUtils';
+import { durationLabel } from './examHubParts';
 import { TRACK_BY_CODE } from '../config/trackConfig';
 import { loadExamAttemptDraft } from '../services/examAttempts';
 import { LEVEL_SLUG_LABELS, levelToSlug } from '../utils/examLevels';
 import { Skeleton, SkeletonText } from '../components/Skeleton';
 import InstructionRenderer from '../components/InstructionRenderer';
-import './ExamOverview.css';
+import './examPremium.css';
 
 /**
  * ExamOverview — /exams/:level/:examId
@@ -116,7 +116,6 @@ export default function ExamOverview() {
   // NOT exam._title: the single-exam fetch path ships the raw document, so
   // _title is absent here and the fallback was the ministry letterhead.
   const title = examDisplayTitle(exam, L('Examen', 'Egzamen'));
-  const color = exam ? subjectColor(exam._subject) : 'var(--primary-500)';
 
   const sections = full?.sections || [];
   const sectionRows = sections.map((s: any, i: number) => ({
@@ -136,59 +135,43 @@ export default function ExamOverview() {
   const goTake = (autostart: boolean) =>
     navigate(`/exams/${slug}/${examKey}/take`, autostart ? { state: { autostart: true } } : undefined);
 
+  const frame = (children: React.ReactNode, docked = false) => (
+    <div className="xp"><div className={`xp-page${docked ? ' xp-page--docked' : ''}`}>{children}</div></div>
+  );
+
   // ── Loading / not found ────────────────────────────────────────────────────
   if (catalogLoading) {
-    return (
-      <div className="section exam-overview-page">
-        <div className="container exam-overview__container" aria-busy="true">
-          <Skeleton width={180} height={16} radius={999} style={{ marginBottom: '1.25rem' }} />
-          <Skeleton width="65%" height={34} style={{ marginBottom: '1rem' }} />
-          <div className="skeleton-row" style={{ gap: '0.6rem', marginBottom: '1.5rem' }}>
-            <Skeleton width={90} height={26} radius={999} />
-            <Skeleton width={70} height={26} radius={999} />
-          </div>
-          <SkeletonText lines={4} lastWidth="60%" />
+    return frame(
+      <div className="xp-skel" aria-busy="true">
+        <Skeleton width={180} height={16} radius={999} />
+        <Skeleton width="65%" height={40} radius={12} />
+        <div className="xp-facts">
+          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} height={96} radius={18} />)}
         </div>
-      </div>
+        <SkeletonText lines={4} lastWidth="60%" />
+      </div>,
     );
   }
 
   // A failed catalog fetch is NOT "introuvable" — say which one it is, and
   // offer the matching recovery (§8: plain-language error + safe action).
   if (catalogError) {
-    return (
-      <div className="section">
-        <div className="container exam-overview__container">
-          <div className="card card--message">
-            <h1 className="section__title">{L('Catalogue indisponible', 'Katalòg la pa disponib')}</h1>
-            <p className="text-muted">
-              {L(
-                'Nous n’avons pas pu charger cet examen. Vérifiez votre connexion, puis réessayez.',
-                'Nou pa t ka chaje egzamen an. Tcheke koneksyon ou, epi eseye ankò.',
-              )}
-            </p>
-            <button className="button button--primary" onClick={() => refetchCatalog()}>
-              {L('Réessayer', 'Eseye ankò')}
-            </button>
-          </div>
-        </div>
-      </div>
+    return frame(
+      <section className="xp-empty">
+        <h1 className="xp-h2">{L('Catalogue indisponible', 'Katalòg la pa disponib')}</h1>
+        <p>{L('Nous n’avons pas pu charger cet examen. Vérifie ta connexion, puis réessaie.', 'Nou pa t ka chaje egzamen an. Tcheke koneksyon ou, epi eseye ankò.')}</p>
+        <button type="button" className="xp-btn" onClick={() => refetchCatalog()}>{L('Réessayer', 'Eseye ankò')}</button>
+      </section>,
     );
   }
 
   if (!exam) {
-    return (
-      <div className="section">
-        <div className="container exam-overview__container">
-          <div className="card card--message">
-            <h1 className="section__title">{L('Examen introuvable', 'Nou pa jwenn egzamen an')}</h1>
-            <p className="text-muted">{L('Cet examen n’existe pas ou n’est plus disponible.', 'Egzamen sa a pa egziste oswa li pa disponib ankò.')}</p>
-            <button className="button button--primary" onClick={() => navigate(`/exams/${slug}`)}>
-              {L('Voir les examens', 'Gade egzamen yo')}
-            </button>
-          </div>
-        </div>
-      </div>
+    return frame(
+      <section className="xp-empty">
+        <h1 className="xp-h2">{L('Examen introuvable', 'Nou pa jwenn egzamen an')}</h1>
+        <p>{L('Cet examen n’existe pas ou n’est plus disponible.', 'Egzamen sa a pa egziste oswa li pa disponib ankò.')}</p>
+        <button type="button" className="xp-btn" onClick={() => navigate(`/exams/${slug}`)}>{L('Voir les examens', 'Gade egzamen yo')}</button>
+      </section>,
     );
   }
 
@@ -202,12 +185,13 @@ export default function ExamOverview() {
   const tracks = (exam.tracks || []).filter((tr: string) => tr && tr !== 'ALL');
   const topics = (Array.isArray(exam.topics) ? exam.topics : [])
     .filter((tp: unknown): tp is string => typeof tp === 'string' && tp.length > 2 && tp.length < 80)
+    // Section headers ("A.- Recopier…") are instructions, not themes.
+    .filter((tp: string) => !/^[A-Z0-9]{1,2}\s*[.\-–)]/.test(tp))
     .slice(0, 8);
 
   const pct = attempt?.percentage ?? null;
-  const tone = pct == null ? '' : pct >= 60 ? 'good' : pct >= 40 ? 'mid' : 'low';
   const attemptDate = attempt?.submittedAtMs
-    ? new Date(attempt.submittedAtMs).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+    ? new Date(attempt.submittedAtMs).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
     : null;
 
   const primaryLabel = resumable
@@ -217,257 +201,201 @@ export default function ExamOverview() {
       : L('Commencer l’examen', 'Kòmanse egzamen an');
   const PrimaryIcon = resumable ? PlayCircle : attempt ? RotateCcw : ArrowRight;
 
-  return (
-    <div className="section exam-overview-page" style={{ '--exam-accent': color } as React.CSSProperties}>
-      <div className="container exam-overview__container">
-        {/* The trail mirrors how the student got here (niveau → matière →
-            épreuve), so the middle step is one tap back instead of a restart
-            from the level catalog. */}
-        <nav className="exam-overview__crumbs" aria-label={L('Fil d’Ariane', 'Chemen')}>
-          <Link to="/exams">{L('Examens', 'Egzamen')}</Link>
-          <span aria-hidden>›</span>
-          <Link to={`/exams/${slug}`}>{levelLabel}</Link>
-          {subjectName && (
-            <>
-              <span aria-hidden>›</span>
-              <Link to={`/exams/${slug}/matiere/${encodeURIComponent(subjectName)}`}>{subjectName}</Link>
-            </>
-          )}
-        </nav>
+  const durationText = duration > 0 ? durationLabel(duration, ht) : '';
+  const metaLine = [levelLabel, subjectName, exam.year, diff ? (ht ? diff.ht : diff.fr) : '', exam.language && exam.language !== 'fr' ? (LANG_LABEL[exam.language] || String(exam.language).toUpperCase()) : '']
+    .filter(Boolean).join(' · ');
 
-        <header className="exam-overview__head">
-          <div className="exam-overview__badges">
-            <span className="exam-overview__subject" style={{ background: `${color}1f`, color }}>
-              {subjectName}
-            </span>
-            {diff && <span className={`exam-overview__tag exam-overview__tag--${diff.tier}`}>{ht ? diff.ht : diff.fr}</span>}
-            {exam.language && <span className="exam-overview__tag">{LANG_LABEL[exam.language] || String(exam.language).toUpperCase()}</span>}
-          </div>
-          <h1 className="exam-overview__title">{title}</h1>
+  /** "PARTIE A.- Recopier…" → letter A + "Recopier…". */
+  const splitSection = (title: string, i: number) => {
+    const m = /^\s*(?:partie|part|pati)\s+([A-Z0-9]{1,2})\s*[.\-–:)]*\s*[-–]?\s*(.*)$/i.exec(title || '');
+    if (m) return { letter: m[1].toUpperCase(), name: m[2] || title };
+    return { letter: String.fromCharCode(65 + (i % 26)), name: title };
+  };
 
-          {attempt && (
-            <Link className={`exam-overview__attempt exam-overview__attempt--${tone}`} to={`/exams/${slug}/${examKey}/results`}>
-              <CheckCircle2 size={15} aria-hidden />
-              <span>
-                {pct != null ? L(`Meilleur score : ${pct}%`, `Pi bon nòt : ${pct}%`) : L('Déjà tenté', 'Deja eseye')}
-                {attemptDate ? ` · ${attemptDate}` : ''}
-              </span>
-              <span className="exam-overview__attempt-link">{L('Revoir mes résultats', 'Gade rezilta m')} →</span>
-            </Link>
-          )}
-
-          {resumable && (
-            <p className="exam-overview__resume-note">
-              <History size={14} aria-hidden />
-              {L(
-                `Examen en cours — ${answeredCount} réponse${answeredCount > 1 ? 's' : ''} enregistrée${answeredCount > 1 ? 's' : ''}.`,
-                `Egzamen an kòmanse deja — ${answeredCount} repons anrejistre.`,
-              )}
-            </p>
-          )}
-        </header>
-
-        <div className="exam-overview__layout">
-          <div className="exam-overview__main">
-            {/* Key facts — one quiet strip instead of four equal-weight
-                cards (§7: fewer repeated surfaces, whitespace over borders). */}
-            <ul className="exam-overview__facts">
-              <li>
-                <FileText size={15} aria-hidden />
-                <strong>{qCount}</strong> {L('questions', 'kesyon')}
-              </li>
-              {duration > 0 && (
-                <li>
-                  <Clock size={15} aria-hidden />
-                  <strong>{duration}</strong> {L('minutes', 'minit')}
-                </li>
-              )}
-              {points > 0 && (
-                <li>
-                  <Award size={15} aria-hidden />
-                  <strong>{points}</strong> {L('points', 'pwen')}
-                </li>
-              )}
-              <li>
-                <Layers size={15} aria-hidden />
-                <strong>{sectionRows.length || (fullLoading ? '…' : '—')}</strong> {L('sections', 'seksyon')}
-              </li>
-            </ul>
-
-            {/* What taking this exam involves — stated BEFORE the start action
-                (§6.4). Every line is read from real data: the timer only exists
-                when duration_minutes > 0, and answers/results are only persisted
-                for a signed-in student (ExamTake's save effect returns early
-                without a uid). Nothing here is inferred. */}
-            <section className="exam-overview__block exam-overview__brief">
-              <h2>{L('Avant de commencer', 'Anvan ou kòmanse')}</h2>
-              <ul className="exam-overview__brief-list">
-                <li>
-                  <Clock size={16} aria-hidden />
-                  <span>
-                    <strong>{duration > 0 ? L('Épreuve chronométrée', 'Egzamen ak kwonomèt') : L('Sans chronomètre', 'San kwonomèt')}</strong>
-                    {duration > 0
-                      ? L(
-                          `Le compte à rebours démarre à ${duration} minutes et l’examen est remis automatiquement à la fin du temps.`,
-                          `Kwonomèt la kòmanse ak ${duration} minit epi egzamen an voye otomatikman lè tan an fini.`,
-                        )
-                      : L('Aucun minuteur : prenez le temps qu’il vous faut.', 'Pa gen kwonomèt : pran tan ou bezwen an.')}
-                  </span>
-                </li>
-                <li>
-                  {userId ? <Save size={16} aria-hidden /> : <LogIn size={16} aria-hidden />}
-                  <span>
-                    <strong>{userId ? L('Réponses enregistrées', 'Repons yo anrejistre') : L('Résultat non enregistré', 'Rezilta a pa anrejistre')}</strong>
-                    {userId
-                      ? L(
-                          'Vos réponses sont sauvegardées pendant que vous travaillez : vous pouvez fermer et reprendre plus tard.',
-                          'Repons ou yo anrejistre pandan w ap travay : ou ka fèmen epi kontinye pita.',
-                        )
-                      : L(
-                          'Connectez-vous pour enregistrer vos réponses, reprendre plus tard et retrouver ce résultat dans votre historique.',
-                          'Konekte pou anrejistre repons ou yo, kontinye pita epi jwenn rezilta a nan istwa ou.',
-                        )}
-                  </span>
-                </li>
-                {autoGradable > 0 && (
-                  <li>
-                    <CheckCircle2 size={16} aria-hidden />
-                    <span>
-                      {/* Not "immédiate": the body says it happens after the
-                          paper is handed in, which is what the grader does in
-                          the default feedback mode. */}
-                      <strong>{L('Correction automatique', 'Koreksyon otomatik')}</strong>
-                      {ht
-                        ? `${autoGradable} kesyon korije otomatikman apre ou voye egzamen an.`
-                        : `${autoGradable} question${autoGradable !== 1 ? 's' : ''} corrigée${autoGradable !== 1 ? 's' : ''} automatiquement après l’envoi.`}
-                    </span>
-                  </li>
+  return frame(
+    <>
+      <div className="xp-ov">
+        <div className="xp-ov__main">
+          <header className="xp-head">
+            <div>
+              {/* The trail mirrors how the student got here (niveau → matière). */}
+              <nav className="xp-crumbs" aria-label={L('Fil d’Ariane', 'Chemen')}>
+                <Link to="/exams">{L('Examens', 'Egzamen')}</Link>
+                <span aria-hidden>›</span>
+                <Link to={`/exams/${slug}`}>{levelLabel}</Link>
+                {subjectName && (
+                  <>
+                    <span aria-hidden>›</span>
+                    <Link to={`/exams/${slug}/matiere/${encodeURIComponent(subjectName)}`}>{subjectName}</Link>
+                  </>
                 )}
-              </ul>
-            </section>
+              </nav>
+              <h1 className="xp-title xp-title--md">{title}</h1>
+              <p className="xp-lede">{metaLine}</p>
+            </div>
+          </header>
 
-            {/* Structure */}
-            <section className="exam-overview__block">
-              <h2>{L('Structure de l’épreuve', 'Estrikti egzamen an')}</h2>
-              {fullLoading ? (
-                <SkeletonText lines={3} lastWidth="55%" />
-              ) : sectionRows.length > 0 ? (
-                <ol className="exam-overview__sections">
-                  {sectionRows.map((sec, i) => (
+          {/* Three facts, numerals first. Only the ones the data has. */}
+          <ul className="xp-facts">
+            <li className="xp-fact">
+              <span className="xp-fact__num">{durationText || '—'}</span>
+              <span className="xp-fact__label">{duration > 0 ? L('Durée', 'Dire') : L('Sans chronomètre', 'San kwonomèt')}</span>
+            </li>
+            <li className="xp-fact">
+              <span className="xp-fact__num">{qCount || '—'}</span>
+              <span className="xp-fact__label">{L('questions', 'kesyon')}</span>
+            </li>
+            <li className="xp-fact">
+              <span className="xp-fact__num">{points > 0 ? points : (sectionRows.length || (fullLoading ? '…' : '—'))}</span>
+              <span className="xp-fact__label">{points > 0 ? L('points', 'pwen') : L('parties', 'pati')}</span>
+            </li>
+          </ul>
+
+          <section className="xp-card" aria-labelledby="xp-struct">
+            <h2 id="xp-struct" className="xp-card__title">{L('Structure de l’épreuve', 'Estrikti egzamen an')}</h2>
+            {fullLoading ? (
+              <SkeletonText lines={3} lastWidth="55%" />
+            ) : sectionRows.length > 0 ? (
+              <ol className="xp-struct">
+                {sectionRows.map((sec, i) => {
+                  const { letter, name } = splitSection(sec.title, i);
+                  return (
                     <li key={i}>
-                      <span className="exam-overview__section-dot" style={{ background: color }} aria-hidden />
-                      <span className="exam-overview__section-name">{sec.title}</span>
-                      <span className="exam-overview__section-qty">{sec.count} {L('q.', 'k.')}</span>
-                    </li>
-                  ))}
-                </ol>
-              ) : (
-                <p className="text-muted">{L('Structure indisponible.', 'Estrikti pa disponib.')}</p>
-              )}
-            </section>
-
-            {/* Topics */}
-            {topics.length > 0 && (
-              <section className="exam-overview__block">
-                <h2>{L('Sujets couverts', 'Sijè yo kouvri')}</h2>
-                <div className="exam-overview__chips">
-                  {topics.map((tp: string) => (
-                    <span key={tp} className="exam-overview__chip">{tp}</span>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Question types */}
-            {typeEntries.length > 0 && (
-              <section className="exam-overview__block">
-                <h2>{L('Types de questions', 'Kalite kesyon')}</h2>
-                <div className="exam-overview__chips">
-                  {typeEntries.map(([type, count]) => {
-                    const meta = (QUESTION_TYPE_META as Record<string, any>)[type] || (QUESTION_TYPE_META as any).unknown;
-                    return (
-                      <span key={type} className="exam-overview__chip">
-                        {meta.label} <strong>{String(count)}</strong>
+                      <span className="xp-struct__disc" aria-hidden>{letter}</span>
+                      <span className="xp-struct__body">
+                        <strong>{name}</strong>
+                        <span>{sec.count} {L(sec.count > 1 ? 'questions' : 'question', 'kesyon')}</span>
                       </span>
-                    );
-                  })}
-                </div>
-              </section>
+                    </li>
+                  );
+                })}
+              </ol>
+            ) : (
+              <p className="xp-meta">{L('Structure indisponible.', 'Estrikti pa disponib.')}</p>
             )}
+          </section>
 
-            {/* Filières */}
-            {tracks.length > 0 && (
-              <section className="exam-overview__block">
-                <h2>{L('Filières concernées', 'Filyè konsène')}</h2>
-                <div className="exam-overview__chips">
-                  {tracks.map((tr: string) => (
-                    <span key={tr} className="exam-overview__chip exam-overview__chip--track">
-                      {TRACK_BY_CODE[tr]?.shortLabel || tr}
-                    </span>
-                  ))}
+          {topics.length > 0 && (
+            <section className="xp-section" aria-labelledby="xp-topics" style={{ gap: 12 }}>
+              <h2 id="xp-topics" className="xp-card__title" style={{ margin: 0 }}>{L('Thèmes abordés', 'Tèm yo abòde')}</h2>
+              <div className="xp-chips">
+                {topics.map((tp: string) => <span key={tp} className="xp-chip xp-chip--plain">{tp}</span>)}
+              </div>
+            </section>
+          )}
+
+          {(typeEntries.length > 0 || tracks.length > 0) && (
+            <section className="xp-section" aria-labelledby="xp-types" style={{ gap: 12 }}>
+              <h2 id="xp-types" className="xp-card__title" style={{ margin: 0 }}>{L('Types de questions', 'Kalite kesyon')}</h2>
+              <div className="xp-chips">
+                {typeEntries.map(([type, count]) => {
+                  const meta = (QUESTION_TYPE_META as Record<string, any>)[type] || (QUESTION_TYPE_META as any).unknown;
+                  return <span key={type} className="xp-chip xp-chip--plain">{meta.label} <b>{String(count)}</b></span>;
+                })}
+                {tracks.map((tr: string) => (
+                  <span key={tr} className="xp-chip xp-chip--plain">{L('Filière', 'Filyè')} {TRACK_BY_CODE[tr]?.shortLabel || tr}</span>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {sample && (
+            <section className="xp-card" aria-labelledby="xp-sample">
+              <h2 id="xp-sample" className="xp-card__title">{L('Aperçu d’une question', 'Apèsi yon kesyon')}</h2>
+              <div className="xp-sample">
+                <InstructionRenderer text={sample.question} inline={false} />
+              </div>
+              <p className="xp-meta" style={{ marginTop: 12 }}>
+                {ht ? `Kòmanse egzamen an pou wè tout ${qCount} kesyon yo.` : `Commence l’examen pour voir les ${qCount} questions.`}
+              </p>
+            </section>
+          )}
+        </div>
+
+        {/* Action rail: the page's one solid button. */}
+        <aside className="xp-ov__rail">
+          <div className="xp-card xp-rail">
+            {attempt ? (
+              <>
+                <p className="xp-label">{L('Ta dernière correction', 'Dènye koreksyon ou')}</p>
+                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                  {pct != null ? (
+                    <p className="xp-score"><span className="xp-score__num">{pct}</span><span className="xp-score__of">%</span></p>
+                  ) : (
+                    <p className="xp-score"><span className="xp-score__num" style={{ fontSize: 28 }}>{L('Déjà tenté', 'Deja eseye')}</span></p>
+                  )}
+                  <Link className="xp-link" to={`/exams/${slug}/${examKey}/results`}>{L('Voir la correction', 'Wè koreksyon an')} <ChevronRight size={16} aria-hidden /></Link>
                 </div>
-              </section>
-            )}
-
-            {/* Sample question */}
-            {sample && (
-              <section className="exam-overview__block">
-                <h2>{L('Aperçu d’une question', 'Apèsi yon kesyon')}</h2>
-                <div className="exam-overview__sample">
-                  <InstructionRenderer text={sample.question} inline={false} />
-                  <div className="exam-overview__sample-fade" aria-hidden />
-                </div>
-                <p className="exam-overview__sample-note">
-                  {ht ? `Kòmanse egzamen an pou wè tout ${qCount} kesyon yo.` : `Commencez l'examen pour voir les ${qCount} questions.`}
-                </p>
-              </section>
-            )}
-          </div>
-
-          {/* Action rail */}
-          <aside className="exam-overview__rail">
-            <div className="exam-overview__cta-card">
-              {/* One primary action, in the brand azure (§7: brand blue for
-                  principal actions — the subject accent stays on the badge and
-                  the section dots, where it identifies the matière). */}
-              <button
-                type="button"
-                className="button button--primary exam-overview__cta"
-                onClick={() => goTake(true)}
-              >
-                <PrimaryIcon size={18} aria-hidden />
-                {primaryLabel}
-              </button>
-              {/* Say what the primary button will actually do: with a saved
-                  draft ExamTake opens on "Reprendre / Recommencer", so we
-                  promise exactly that and nothing more. */}
-              {resumable ? (
-                <p className="exam-overview__cta-hint">
+                {attemptDate && <p className="xp-meta">{attemptDate}</p>}
+              </>
+            ) : resumable ? (
+              <>
+                <span className="xp-pill" style={{ alignSelf: 'flex-start' }}>{L('En cours', 'Ap fèt')}</span>
+                <p className="xp-meta">
                   {L(
-                    `${answeredCount} réponse${answeredCount > 1 ? 's' : ''} enregistrée${answeredCount > 1 ? 's' : ''} — vous pourrez reprendre où vous en étiez ou recommencer.`,
-                    `${answeredCount} repons anrejistre — ou ka kontinye kote ou te ye a oswa rekòmanse.`,
+                    `${answeredCount} réponse${answeredCount > 1 ? 's' : ''} enregistrée${answeredCount > 1 ? 's' : ''}${qCount ? ` sur ${qCount}` : ''}.`,
+                    `${answeredCount} repons anrejistre${qCount ? ` sou ${qCount}` : ''}.`,
                   )}
                 </p>
-              ) : duration > 0 ? (
-                <p className="exam-overview__cta-hint">
-                  {L(`Prévoyez ${duration} minutes dans les conditions de l'examen.`, `Prevwa ${duration} minit nan kondisyon egzamen an.`)}
-                </p>
-              ) : null}
-              <button type="button" className="button button--ghost exam-overview__cta-secondary" onClick={() => goTake(false)}>
-                <Eye size={16} aria-hidden /> {L('Lire l’épreuve d’abord', 'Li egzamen an anvan')}
-              </button>
-              {attempt && (
-                <Link className="button button--ghost exam-overview__cta-secondary" to={`/exams/${slug}/${examKey}/results`}>
-                  <History size={16} aria-hidden /> {L('Revoir mes résultats', 'Gade rezilta m')}
-                </Link>
-              )}
-            </div>
-            <button type="button" className="exam-overview__back-link" onClick={() => navigate(`/exams/${slug}`)}>
-              <ArrowLeft size={15} aria-hidden /> {L('Tous les examens', 'Tout egzamen yo')} {levelLabel}
+                {qCount > 0 && (
+                  <div className="xp-bar" aria-hidden="true"><span style={{ width: `${Math.min(100, Math.round((answeredCount / qCount) * 100))}%` }} /></div>
+                )}
+              </>
+            ) : null}
+
+            <button type="button" className="xp-btn xp-btn--block xp-rail__solid" onClick={() => goTake(true)}>
+              <PrimaryIcon size={18} aria-hidden />
+              {primaryLabel}
             </button>
-          </aside>
-        </div>
+            {/* Say what the primary button will actually do. */}
+            <p className="xp-rail__hint">
+              {resumable
+                ? L('Tu pourras reprendre où tu en étais ou recommencer.', 'Ou ka kontinye kote ou te ye a oswa rekòmanse.')
+                : duration > 0
+                  ? L(`Chronométré : ${durationText}, remis automatiquement à la fin.`, `Ak kwonomèt : ${durationText}, li voye otomatikman nan fen an.`)
+                  : L('Sans chronomètre : prends le temps qu’il te faut.', 'San kwonomèt : pran tan ou bezwen an.')}
+            </p>
+            <button type="button" className="xp-btn xp-btn--tonal xp-btn--block" onClick={() => goTake(false)}>
+              <Eye size={16} aria-hidden /> {L('Lire l’épreuve d’abord', 'Li egzamen an anvan')}
+            </button>
+          </div>
+
+          {/* What taking this exam involves — every line read from real data:
+              the timer only exists when duration_minutes > 0, and answers are
+              only persisted for a signed-in student. */}
+          <div className="xp-card">
+            <ul className="xp-list-plain">
+              <li>
+                {userId ? <Save size={16} aria-hidden /> : <LogIn size={16} aria-hidden />}
+                <span>
+                  <strong>{userId ? L('Réponses enregistrées', 'Repons yo anrejistre') : L('Résultat non enregistré', 'Rezilta a pa anrejistre')}</strong>
+                  {userId
+                    ? L('Tes réponses sont sauvegardées pendant que tu travailles.', 'Repons ou yo anrejistre pandan w ap travay.')
+                    : L('Connecte-toi pour garder tes réponses et retrouver ce résultat.', 'Konekte pou kenbe repons ou yo epi jwenn rezilta a.')}
+                </span>
+              </li>
+              {autoGradable > 0 && (
+                <li>
+                  <CheckCircle2 size={16} aria-hidden />
+                  <span>
+                    <strong>{L('Correction automatique', 'Koreksyon otomatik')}</strong>
+                    {ht
+                      ? `${autoGradable} kesyon korije otomatikman apre ou remèt egzamen an.`
+                      : `${autoGradable} question${autoGradable !== 1 ? 's' : ''} corrigée${autoGradable !== 1 ? 's' : ''} automatiquement après la remise.`}
+                  </span>
+                </li>
+              )}
+            </ul>
+          </div>
+        </aside>
       </div>
-    </div>
+      <div className="xp-dock">
+        <button type="button" className="xp-btn xp-btn--block" onClick={() => goTake(true)}>
+          <PrimaryIcon size={18} aria-hidden />
+          {primaryLabel}
+        </button>
+      </div>
+    </>,
+    true,
   );
 }

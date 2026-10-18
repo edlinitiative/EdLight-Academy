@@ -29,7 +29,9 @@ import { compileQuestion, isSerializable, responseToStored, storedToResponse } f
 import { Skeleton } from '../components/Skeleton';
 import './ExamTake.css';
 import { balanceMathAcrossBlanks } from '../utils/mathBlanks';
-import { ChevronLeft, Clock } from '../components/icons';
+import { ChevronLeft, ChevronRight, Clock, X, Check, Lock, Lightbulb } from '../components/icons';
+import './examPremium.css';
+import './examTakePremium.css';
 
 /** Per-question grading result stored in the `questionResults` map (immediate
  *  feedback mode). Loosely typed — the grading payload is dynamic. */
@@ -115,7 +117,7 @@ const PROOF_SUBTYPES = [
     key: 'simplify',
     re: /\b(simplifier|réduire|écrire.*sous.*forme|mettre.*sous.*forme)\b/i,
     label: 'Simplification',
-    icon: '✨',
+    icon: '',
     scaffoldSteps: [
       { hint: 'Identifiez et simplifiez chaque terme séparément' },
       { hint: 'Combinez les termes semblables' },
@@ -128,7 +130,7 @@ const PROOF_SUBTYPES = [
     key: 'factor',
     re: /\b(factoriser)\b/i,
     label: 'Factorisation',
-    icon: '🔗',
+    icon: '',
     scaffoldSteps: [
       { hint: 'Identifiez le facteur commun ou l\'identité remarquable' },
       { hint: 'Mettez en facteur' },
@@ -141,7 +143,7 @@ const PROOF_SUBTYPES = [
     key: 'solve',
     re: /\b(résoudre|trouver.*solution|déterminer.*valeur|trouver.*valeur)\b/i,
     label: 'Résolution',
-    icon: '🔍',
+    icon: '',
     scaffoldSteps: [
       { hint: 'Posez l\'équation ou identifiez les données' },
       { hint: 'Isolez l\'inconnue étape par étape' },
@@ -154,7 +156,7 @@ const PROOF_SUBTYPES = [
     key: 'calculate',
     re: /\b(calculer|évaluer|déterminer)\b/i,
     label: 'Calcul',
-    icon: '🧮',
+    icon: '',
     scaffoldSteps: [
       { hint: 'Posez le calcul avec les données' },
       { hint: 'Effectuez les opérations' },
@@ -166,7 +168,7 @@ const PROOF_SUBTYPES = [
     key: 'prove',
     re: /\b(montrer\s+que|démontrer|prouver\s+que|déduire\s+que|vérifier\s+que|justifier\s+que|en\s+déduire)\b/i,
     label: 'Démonstration',
-    icon: '📐',
+    icon: '',
     scaffoldSteps: [
       { hint: 'Partez de l\'hypothèse ou de l\'expression de départ' },
       { hint: 'Développez le raisonnement' },
@@ -179,7 +181,7 @@ const PROOF_SUBTYPES = [
     key: 'develop',
     re: /\b(développer|développer\s+et\s+réduire)\b/i,
     label: 'Développement',
-    icon: '📖',
+    icon: '',
     scaffoldSteps: [
       { hint: 'Appliquez la distributivité ou l\'identité remarquable' },
       { hint: 'Réduisez les termes semblables' },
@@ -191,7 +193,7 @@ const PROOF_SUBTYPES = [
 
 /** Default scaffold for unrecognized proof types */
 const DEFAULT_SCAFFOLD = {
-  key: 'generic', label: 'Raisonnement', icon: '💡',
+  key: 'generic', label: 'Raisonnement', icon: '',
   scaffoldSteps: [
     { hint: 'Première étape de votre raisonnement' },
     { hint: 'Continuez…' },
@@ -368,15 +370,9 @@ const ExamTake = () => {
 
   const totalQ = useMemo(() => sectionSummary.reduce((s, x) => s + x.qCount, 0), [sectionSummary]);
 
-  const ruleIcon = useCallback((rule) => {
-    const r = String(rule || '').toLowerCase();
-    if (r.includes('interdit')) return '🚫';
-    if (r.includes('silence')) return '🤫';
-    if (r.includes('obligatoire')) return '⚠️';
-    if (r.includes('durée') || r.includes('heure')) return '⏰';
-    if (r.includes('coefficient')) return '📊';
-    return 'ℹ️';
-  }, []);
+  // Rule rows are plain text now: the pictograms that used to lead them were
+  // emoji, which the exam pages no longer use.
+  const ruleIcon = useCallback((_rule) => null, []);
 
   const examInfo = useMemo(() => {
     if (!exam) return null;
@@ -692,7 +688,7 @@ const ExamTake = () => {
           >
             <h3 id="exam-restart-dialog-title">{t("Recommencer l'examen ?", 'Rekòmanse egzamen an ?')}</h3>
             <p id="exam-restart-dialog-desc" className="exam-take__modal-warning">
-              ⚠️ {t('Cette action effacera vos réponses enregistrées pour cet examen.', 'Aksyon sa a ap efase repons ou anrejistre pou egzamen sa a.')}
+              {t('Cette action effacera vos réponses enregistrées pour cet examen.', 'Aksyon sa a ap efase repons ou anrejistre pou egzamen sa a.')}
             </p>
             <div className="exam-take__modal-actions">
               <button className="button button--ghost" onClick={() => setShowRestartConfirm(false)} type="button">
@@ -1259,11 +1255,11 @@ const ExamTake = () => {
     // instead of blocking on a full-page spinner. This makes opening an exam
     // feel instant even while its ~250–300 KB paper is still downloading.
     return (
-      <section className="section exam-take exam-take--preview" aria-busy="true">
+      <section className="section exam-take exam-take--preview xp xp-take" aria-busy="true">
         <div className="container">
           <div className="exam-take__topbar exam-take__topbar--preview">
             <button className="exam-take__back-btn" onClick={() => navigate(examKey ? `/exams/${level || ''}/${examKey}` : `/exams/${level || ''}`)} type="button">
-              ← {t('Examen', 'Egzamen')}
+              <ChevronLeft size={16} aria-hidden="true" /> {t('Examen', 'Egzamen')}
             </button>
             <div className="exam-take__topbar-center">
               <Skeleton width={180} height={16} />
@@ -1326,16 +1322,20 @@ const ExamTake = () => {
   // ── Preview mode (read-only continuous view) ───────────────────────────────
   if (viewState === 'preview') {
     return (
-      <section className="section exam-take exam-take--preview">
+      <section className="section exam-take exam-take--preview xp xp-take">
         <div className="container">
           {/* Top bar — mobile-first compact */}
           <div className="exam-take__topbar exam-take__topbar--preview">
             <button className="exam-take__back-btn" onClick={() => navigate(examKey ? `/exams/${level || ''}/${examKey}` : `/exams/${level || ''}`)} type="button">
-              ← {t('Examen', 'Egzamen')}
+              <ChevronLeft size={16} aria-hidden="true" /> {t('Examen', 'Egzamen')}
             </button>
             <div className="exam-take__topbar-center">
-              <span className="exam-take__subject" style={{ color }}>{subject}</span>
-              <span className="exam-take__topbar-sep">·</span>
+              {!String(normalizeExamTitle(exam) || '').toLowerCase().startsWith(String(subject || '').toLowerCase()) && (
+                <>
+                  <span className="exam-take__subject">{subject}</span>
+                  <span className="exam-take__topbar-sep">·</span>
+                </>
+              )}
               <span className="exam-take__title-short">{normalizeExamTitle(exam)}</span>
             </div>
             {durationMin > 0 && (
@@ -1347,7 +1347,7 @@ const ExamTake = () => {
             {/* Inline intro (former cover) for a more uniform, single-flow layout */}
             <div className="exam-take__preview-intro" style={{ '--cover-accent': color }}>
               <div className="exam-cover__hero">
-                <div className="exam-cover__badge" style={{ background: color, color: '#fff' }}>
+                <div className="exam-cover__badge">
                   {subject}
                 </div>
                 <h1 className="exam-cover__title">{normalizeExamTitle(exam)}</h1>
@@ -1403,7 +1403,6 @@ const ExamTake = () => {
                     <ul className="exam-cover__rules-list">
                       {examInfo.rules.map((rule, i) => (
                         <li key={i} className="exam-cover__rule-item">
-                          <span className="exam-cover__rule-icon">{ruleIcon(rule)}</span>
                           <span>{rule}</span>
                         </li>
                       ))}
@@ -1420,7 +1419,6 @@ const ExamTake = () => {
                 <div className="exam-cover__feedback-options">
                   <label
                     className={`exam-cover__feedback-option ${feedbackMode === 'immediate' ? 'exam-cover__feedback-option--selected' : ''}`}
-                    style={feedbackMode === 'immediate' ? { borderColor: color, background: color + '0a' } : undefined}
                   >
                     <input
                       type="radio"
@@ -1431,7 +1429,6 @@ const ExamTake = () => {
                       className="exam-cover__feedback-radio"
                     />
                     <div className="exam-cover__feedback-content">
-                      <span className="exam-cover__feedback-icon">⚡</span>
                       <div>
                         <strong>{t('Résultat immédiat', 'Rezilta imedyat')}</strong>
                         {/* State the consequence up front: checking a question
@@ -1442,7 +1439,6 @@ const ExamTake = () => {
                   </label>
                   <label
                     className={`exam-cover__feedback-option ${feedbackMode === 'end' ? 'exam-cover__feedback-option--selected' : ''}`}
-                    style={feedbackMode === 'end' ? { borderColor: color, background: color + '0a' } : undefined}
                   >
                     <input
                       type="radio"
@@ -1453,7 +1449,6 @@ const ExamTake = () => {
                       className="exam-cover__feedback-radio"
                     />
                     <div className="exam-cover__feedback-content">
-                      <span className="exam-cover__feedback-icon">📋</span>
                       <div>
                         <strong>{t('Résultat à la fin', 'Rezilta nan fen an')}</strong>
                         <p>{t("Voir tous les résultats après avoir soumis l'examen. Vous pouvez modifier vos réponses jusqu'à la remise.", 'Wè tout rezilta yo apre ou fin soumèt egzamen an. Ou ka chanje repons ou yo jiskaske ou remèt.')}</p>
@@ -1494,7 +1489,7 @@ const ExamTake = () => {
                   {(section.passage || (cleanInstructions && cleanInstructions.length > 200)) && (
                     <div className="exam-take__preview-passage">
                       <div className="exam-take__preview-passage-label">
-                        📖 {t('Texte de référence', 'Tèks referans')}
+                        {t('Texte de référence', 'Tèks referans')}
                         {section.passage && section.passage_reconstructed && <ReconstructedBadge />}
                       </div>
                       <InstructionRenderer text={section.passage || cleanInstructions} />
@@ -1540,7 +1535,7 @@ const ExamTake = () => {
                           {/* Word pool (if present) */}
                           {wordPool && (
                             <div className="exam-take__preview-word-pool">
-                              <div className="exam-take__preview-word-pool-label">📚 {t('Vocabulaire', 'Vokabilè')}</div>
+                              <div className="exam-take__preview-word-pool-label">{t('Vocabulaire', 'Vokabilè')}</div>
                               <InstructionRenderer text={wordPool} />
                             </div>
                           )}
@@ -1576,7 +1571,7 @@ const ExamTake = () => {
 
                                   {q.temporal_note && (
                                     <div className="exam-take__temporal-note">
-                                      <span className="exam-take__temporal-note-icon">🕐</span>
+                                      <span className="exam-take__temporal-note-icon"><Clock size={14} aria-hidden="true" /></span>
                                       <span className="exam-take__temporal-note-text">{q.temporal_note}</span>
                                     </div>
                                   )}
@@ -1607,8 +1602,7 @@ const ExamTake = () => {
             {/* CTA to start exam */}
             <div className="exam-take__preview-cta">
               <button
-                className="button button--primary button--lg"
-                style={{ background: color }}
+                className="xp-btn"
                 onClick={() => setViewState('active')}
                 type="button"
               >
@@ -1622,8 +1616,8 @@ const ExamTake = () => {
                   catalogue, and the timer is only rendered when it is set. */}
               <p className="exam-take__preview-cta-hint">
                 {durationMin > 0
-                  ? t('Le chronomètre démarrera quand vous cliquerez sur ce bouton. Bonne chance ! 🍀', 'Kwonomèt la ap kòmanse lè ou klike sou bouton sa a. Bòn chans ! 🍀')
-                  : t('Cette épreuve n’est pas chronométrée : prenez le temps qu’il vous faut. Bonne chance ! 🍀', 'Egzamen sa a pa gen kwonomèt : pran tan ou bezwen an. Bòn chans ! 🍀')}
+                  ? t('Le chronomètre démarrera quand vous cliquerez sur ce bouton. Bonne chance !', 'Kwonomèt la ap kòmanse lè ou klike sou bouton sa a. Bòn chans !')
+                  : t('Cette épreuve n’est pas chronométrée : prenez le temps qu’il vous faut. Bonne chance !', 'Egzamen sa a pa gen kwonomèt : pran tan ou bezwen an. Bòn chans !')}
               </p>
             </div>
           </div>
@@ -1656,9 +1650,9 @@ const ExamTake = () => {
   // were extracted (i.e. cleaning wasn't applied). When rules WERE extracted and
   // cleanedText is '' it means ALL text was consignes — don't show anything.
   const cleanedEntry = examInfo?.cleanedSections?.[currentSectionIdx];
-  const cleanInstructions = cleanedEntry?._hadRules
+  const cleanInstructions = dedupeSentences(cleanedEntry?._hadRules
     ? (cleanedEntry._cleanInstructions || '')
-    : (question.sectionInstructions || '');
+    : (question.sectionInstructions || ''));
 
   // Explicit passage text attached to the section (e.g. reading comprehension)
   const currentSection = (exam.sections || [])[currentSectionIdx];
@@ -1667,7 +1661,7 @@ const ExamTake = () => {
   const passageReference = currentSection?.passage_reference || '';
 
   return (
-    <section className="section exam-take">
+    <section className="section exam-take xp xp-take">
       <div className="container">
         {/* Sticky header block: identity, progress, the timer (only when the
             paper is timed), Soumettre, and the honest state strip. Grouped in
@@ -1677,12 +1671,20 @@ const ExamTake = () => {
         {/* Top bar */}
         <div className="exam-take__topbar">
           <div className="exam-take__topbar-left">
-            <button className="exam-take__back" onClick={() => navigate(examKey ? `/exams/${level || ''}/${examKey}` : `/exams/${level || ''}`)} type="button" aria-label={t('Retour à l’examen', 'Retounen nan egzamen an')}>
-              <ChevronLeft size={18} aria-hidden="true" />
+            <button className="exam-take__back" onClick={() => navigate(examKey ? `/exams/${level || ''}/${examKey}` : `/exams/${level || ''}`)} type="button" aria-label={t('Quitter : tes réponses restent enregistrées', 'Kite : repons ou yo rete anrejistre')}>
+              <X size={18} aria-hidden="true" />
             </button>
             <div className="exam-take__exam-info">
-              <span className="exam-take__subject" style={{ color }}>{subject}</span>
-              <span className="exam-take__title-short" title={normalizeExamTitle(exam)}>{normalizeExamTitle(exam)}</span>
+              <span className="exam-take__q-of">
+                {currentGrp.end > currentGrp.start
+                  ? `${t('Questions', 'Kesyon')} ${currentGrp.start + 1}–${currentGrp.end + 1} ${t('sur', 'sou')} ${questions.length}`
+                  : `${t('Question', 'Kesyon')} ${currentQ + 1} ${t('sur', 'sou')} ${questions.length}`}
+              </span>
+              <span className="exam-take__title-short" title={normalizeExamTitle(exam)}>
+                {String(normalizeExamTitle(exam) || '').toLowerCase().startsWith(String(subject || '').toLowerCase())
+                  ? normalizeExamTitle(exam)
+                  : `${subject} · ${normalizeExamTitle(exam)}`}
+              </span>
             </div>
           </div>
 
@@ -1702,17 +1704,17 @@ const ExamTake = () => {
               </span>
             )}
             <button
-              className="button button--primary button--sm"
+              className="xp-btn xp-btn--tonal xp-btn--sm"
               onClick={() => setShowConfirm(true)}
               type="button"
             >
-              {t('Soumettre', 'Soumèt')}
+              {t('Remettre', 'Remèt')}
             </button>
           </div>
         </div>
 
         {/* Progress bar */}
-        <div className="exam-take__progress-bar" role="progressbar" aria-valuenow={progressPct} aria-valuemin={0} aria-valuemax={100}>
+        <div className="exam-take__progress-bar" role="progressbar" aria-label={t('Questions répondues', 'Kesyon reponn')} aria-valuenow={progressPct} aria-valuemin={0} aria-valuemax={100}>
           <div className="exam-take__progress-fill" style={{ width: `${progressPct}%` }} />
         </div>
 
@@ -1744,9 +1746,8 @@ const ExamTake = () => {
             >
               {saveDisplay === 'anonymous' && (
                 <>
-                  <span aria-hidden="true">⚠</span>{' '}
                   {t(
-                    'Réponses non enregistrées — connectez-vous pour pouvoir reprendre plus tard.',
+                    'Réponses non enregistrées — connecte-toi pour pouvoir reprendre plus tard.',
                     'Repons yo pa anrejistre — konekte pou ou ka kontinye pita.',
                   )}
                 </>
@@ -1758,7 +1759,7 @@ const ExamTake = () => {
               )}
               {saveDisplay === 'saved' && (
                 <>
-                  <span aria-hidden="true">✓</span>{' '}
+                  <Check size={14} aria-hidden="true" />{' '}
                   {t('Enregistré', 'Anrejistre')}
                   {savedAtMs
                     ? ` ${t('à', 'a')} ${new Date(savedAtMs).toLocaleTimeString(isCreole ? 'fr-HT' : 'fr-FR', { hour: '2-digit', minute: '2-digit' })}`
@@ -1767,7 +1768,6 @@ const ExamTake = () => {
               )}
               {saveDisplay === 'uncertain' && (
                 <>
-                  <span aria-hidden="true">⚠</span>{' '}
                   {t(
                     'Hors ligne : enregistré sur cet appareil seulement, pas encore sur votre compte.',
                     'San entènèt : anrejistre sou aparèy sa a sèlman, poko sou kont ou.',
@@ -1776,7 +1776,6 @@ const ExamTake = () => {
               )}
               {saveDisplay === 'failed' && (
                 <>
-                  <span aria-hidden="true">⚠</span>{' '}
                   {t(
                     'Enregistrement échoué. Vos réponses restent sur cet appareil.',
                     'Anrejistreman an echwe. Repons ou yo rete sou aparèy sa a.',
@@ -1794,27 +1793,13 @@ const ExamTake = () => {
         {/* Main area: sidebar + question */}
         <div className="exam-take__body">
           {/* Question navigation sidebar */}
-          <aside className="exam-take__nav" style={{ '--nav-accent': color }}>
-            {/* Progress ring header */}
+          <div className="exam-take__nav">
+            {/* Progress, numerals first. */}
             <div className="exam-take__nav-progress">
-              <div className="exam-take__nav-ring-wrap">
-                <svg className="exam-take__nav-ring" viewBox="0 0 48 48" aria-hidden="true">
-                  <circle className="exam-take__nav-ring-bg" cx="24" cy="24" r="19" />
-                  <circle
-                    className="exam-take__nav-ring-fill"
-                    cx="24" cy="24" r="19"
-                    style={{
-                      strokeDasharray: `${2 * Math.PI * 19}`,
-                      strokeDashoffset: `${2 * Math.PI * 19 * (1 - progressPct / 100)}`,
-                    }}
-                  />
-                </svg>
-                <span className="exam-take__nav-ring-pct">{progressPct}<small>%</small></span>
-              </div>
-              <div className="exam-take__nav-progress-meta">
-                <span className="exam-take__nav-progress-title">{t('Progression', 'Pwogrè')}</span>
-                <span className="exam-take__nav-progress-detail">{answeredCount} {t('sur', 'sou')} {questions.length}</span>
-              </div>
+              <span className="exam-take__nav-progress-title">{t('Ta progression', 'Pwogrè ou')}</span>
+              <span className="exam-take__nav-progress-num"><b>{answeredCount}</b> / {questions.length}</span>
+              <span className="exam-take__nav-progress-detail">{t('répondues', 'reponn')}</span>
+              <div className="xp-bar" aria-hidden="true"><span style={{ width: `${progressPct}%` }} /></div>
             </div>
 
             {/* What is still missing, before the submit dialog has to say it.
@@ -1826,16 +1811,14 @@ const ExamTake = () => {
                   {unansweredIndices.length > 1
                     ? t('questions sans réponse', 'kesyon san repons')
                     : t('question sans réponse', 'kesyon san repons')}
-                  <small>{t('Aller à la suivante →', 'Ale nan pwochen an →')}</small>
+                  <small>{t('Aller à la suivante', 'Ale nan pwochen an')}</small>
                 </span>
               </button>
             ) : (
               <p className="exam-take__nav-complete">
-                <span aria-hidden="true">✓</span> {t('Toutes les questions ont une réponse.', 'Tout kesyon yo gen repons.')}
+                <Check size={14} aria-hidden="true" /> {t('Toutes les questions ont une réponse.', 'Tout kesyon yo gen repons.')}
               </p>
             )}
-
-            <div className="exam-take__nav-divider" />
 
             <div className="exam-take__nav-sections" role="navigation" aria-label={t('Navigation des questions par section', 'Navigasyon kesyon yo pa seksyon')}>
               {sectionGroups.map((sec) => {
@@ -1849,7 +1832,7 @@ const ExamTake = () => {
                     <div className={`exam-take__nav-section-title ${isCurrentSection ? 'exam-take__nav-section-title--current' : ''}`}>
                       <span className="exam-take__nav-section-name">{sec.title}</span>
                       <span className={`exam-take__nav-section-badge ${secDone ? 'exam-take__nav-section-badge--done' : ''}`}>
-                        {secDone ? '✓' : `${secAnswered}/${sec.count}`}
+                        {secDone ? <Check size={13} aria-label={t('Terminée', 'Fini')} /> : `${secAnswered}/${sec.count}`}
                       </span>
                     </div>
                     <div className="exam-take__nav-section-grid">
@@ -1916,7 +1899,7 @@ const ExamTake = () => {
                 </>
               )}
             </ul>
-          </aside>
+          </div>
 
           {/* Question content */}
           <div className="exam-take__content" ref={contentRef}>
@@ -1999,7 +1982,7 @@ const ExamTake = () => {
                 {/* Temporal context note — shown for questions with time-sensitive answers */}
                 {gq.temporal_note && (
                   <div className="exam-take__temporal-note">
-                    <span className="exam-take__temporal-note-icon">🕐</span>
+                    <span className="exam-take__temporal-note-icon"><Clock size={14} aria-hidden="true" /></span>
                     <span className="exam-take__temporal-note-text">{gq.temporal_note}</span>
                   </div>
                 )}
@@ -2094,7 +2077,7 @@ const ExamTake = () => {
                                   {gradingInProgress[qIdx] ? (
                                     <><span className="loading-spinner loading-spinner--inline" /> {t('Évaluation…', 'Koreksyon…')}</>
                                   ) : (
-                                    t('✓ Évaluer', '✓ Korije')
+                                    t('Évaluer', 'Korije')
                                   )}
                                 </button>
                                 <span className="exam-take__check-hint">
@@ -2104,7 +2087,7 @@ const ExamTake = () => {
                                       ? `${wc} ${t('mots · visez', 'mo · vize')} ~${targetWords}`
                                       : wc > maxWords
                                         ? `${wc} ${t('mots · un peu long', 'mo · yon ti jan long')}`
-                                        : `${wc} ${t('mots', 'mo')} ✓`}
+                                        : `${wc} ${t('mots', 'mo')}`}
                                 </span>
                               </>
                             );
@@ -2117,7 +2100,7 @@ const ExamTake = () => {
                           disabled={!answers[qIdx] || answers[qIdx] === ''}
                           onClick={() => gradeQuestionImmediate(qIdx)}
                         >
-                          {t('✓ Vérifier', '✓ Verifye')}
+                          {t('Vérifier', 'Verifye')}
                         </button>
                       )}
                     </div>
@@ -2131,7 +2114,7 @@ const ExamTake = () => {
                     exists), so the answer really is final. */}
                 {isLocked && (
                   <p className="exam-take__locked-note">
-                    <span aria-hidden="true">🔒</span>{' '}
+                    <Lock size={14} aria-hidden="true" />{' '}
                     {t(
                       'Réponse vérifiée — elle ne peut plus être modifiée.',
                       'Repons ou verifye — ou pa ka chanje l ankò.',
@@ -2161,7 +2144,7 @@ const ExamTake = () => {
           {/* Navigation — moves by group */}
           <div className="exam-take__question-nav">
             <button
-              className="button button--ghost"
+              className="xp-btn xp-btn--tonal"
               disabled={isFirstGroup}
               onClick={() => {
                 const prev = questionGroups[currentGroupIdx - 1];
@@ -2169,22 +2152,22 @@ const ExamTake = () => {
               }}
               type="button"
             >
-              ← {t('Précédent', 'Anvan')}
+              <ChevronLeft size={18} aria-hidden="true" /> {t('Précédente', 'Anvan')}
             </button>
             {!isLastGroup ? (
               <button
-                className="button button--primary"
+                className="xp-btn"
                 onClick={() => {
                   const next = questionGroups[currentGroupIdx + 1];
                   if (next) setCurrentQ(next.start);
                 }}
                 type="button"
               >
-                {t('Suivant', 'Pwochen')} →
+                {t('Suivante', 'Pwochen')} <ChevronRight size={18} aria-hidden="true" />
               </button>
             ) : (
               <button
-                className="button button--primary"
+                className="xp-btn"
                 onClick={() => setShowConfirm(true)}
                 type="button"
               >
@@ -2206,13 +2189,13 @@ const ExamTake = () => {
             aria-labelledby="exam-submit-dialog-title"
             aria-describedby="exam-submit-dialog-desc"
           >
-            <h3 id="exam-submit-dialog-title">{t("Soumettre l'examen ?", 'Soumèt egzamen an ?')}</h3>
+            <h3 id="exam-submit-dialog-title">{t("Remettre l'examen ?", 'Remèt egzamen an ?')}</h3>
             <p id="exam-submit-dialog-desc">
               {t('Vous avez répondu à', 'Ou reponn')} <strong>{answeredCount}</strong> {t('sur', 'sou')}{' '}
               <strong>{questions.length}</strong> {t('questions.', 'kesyon.')}
               {answeredCount < questions.length && (
                 <span className="exam-take__modal-warning">
-                  {' '}⚠️ {questions.length - answeredCount} {t(`question${questions.length - answeredCount > 1 ? 's' : ''} sans réponse.`, 'kesyon san repons.')}
+                  {' '}{questions.length - answeredCount} {t(`question${questions.length - answeredCount > 1 ? 's' : ''} sans réponse.`, 'kesyon san repons.')}
                 </span>
               )}
             </p>
@@ -2266,14 +2249,14 @@ const ExamTake = () => {
             )}
 
             <div className="exam-take__modal-actions">
-              <button className="button button--ghost" onClick={() => setShowConfirm(false)} type="button" disabled={submitting}>
+              <button className="xp-btn xp-btn--tonal" onClick={() => setShowConfirm(false)} type="button" disabled={submitting}>
                 {t("Continuer l'examen", 'Kontinye egzamen an')}
               </button>
-              <button className="button button--primary" onClick={handleSubmit} type="button" disabled={submitting}>
+              <button className="xp-btn" onClick={handleSubmit} type="button" disabled={submitting}>
                 {submitting ? (
                   <><span className="loading-spinner loading-spinner--inline" /> {t('Évaluation en cours…', 'Koreksyon an ap fèt…')}</>
                 ) : (
-                  t('Soumettre maintenant', 'Soumèt kounye a')
+                  t('Remettre maintenant', 'Remèt kounye a')
                 )}
               </button>
             </div>
@@ -2333,10 +2316,10 @@ const ExamTake = () => {
           >
             <div className="exam-take__passage-panel-header">
               <h3 id="exam-passage-title">
-                📖 {t('Texte de référence', 'Tèks referans')}
+                {t('Texte de référence', 'Tèks referans')}
                 {sectionPassage && currentSection?.passage_reconstructed && <ReconstructedBadge />}
               </h3>
-              <button className="exam-take__passage-panel-close" onClick={() => setShowPassage(false)} type="button">✕</button>
+              <button className="exam-take__passage-panel-close" onClick={() => setShowPassage(false)} type="button" aria-label={t('Fermer', 'Fèmen')}><X size={18} aria-hidden="true" /></button>
             </div>
             <div className="exam-take__passage-panel-body">
               <InstructionRenderer text={sectionPassage || cleanInstructions} />
@@ -2353,6 +2336,28 @@ const ExamTake = () => {
 
 // ── Section Header (short instructions inline) ─────────────────────────────
 
+/**
+ * Some digitised papers repeat a sentence of their instructions verbatim
+ * ("3 pts par question." twice). Drop a sentence that already appeared,
+ * ignoring case and spacing; everything else is kept as written.
+ */
+export function dedupeSentences(text: string): string {
+  const seen = new Set<string>();
+  // Keep each sentence with the whitespace that followed it, so line breaks
+  // and same-line sentences stay exactly as the paper wrote them.
+  const parts = String(text || '').match(/[^.!?\n]*(?:[.!?]+|\n|$)\s*/g) || [];
+  return parts
+    .filter((part) => {
+      const key = part.trim().toLowerCase().replace(/\s+/g, ' ');
+      if (!key) return true;
+      if (key.length > 4 && seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .join('')
+    .trim();
+}
+
 function SectionHeader({ title, instructions }) {
   const language = useStore((s) => s.language);
   const t = (fr, ht) => (language === 'ht' ? ht : fr);
@@ -2361,20 +2366,20 @@ function SectionHeader({ title, instructions }) {
 
   return (
     <div className="exam-take__section-header">
+      {/* The header row still toggles on a click anywhere, but the only
+          focusable control is the real button (no button inside a button). */}
       <div
         className="exam-take__section-header-top"
         onClick={() => hasInstructions && setCollapsed((c) => !c)}
-        role={hasInstructions ? 'button' : undefined}
-        tabIndex={hasInstructions ? 0 : undefined}
-        onKeyDown={(e) => { if (hasInstructions && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setCollapsed((c) => !c); } }}
       >
         <h3>{title}</h3>
         {hasInstructions && (
           <button
             className="exam-take__section-toggle"
             type="button"
+            aria-expanded={!collapsed}
             aria-label={collapsed ? t('Afficher les instructions', 'Montre konsiy yo') : t('Masquer les instructions', 'Kache konsiy yo')}
-            tabIndex={-1}
+            onClick={(e) => { e.stopPropagation(); setCollapsed((c) => !c); }}
           >
             <ChevronLeft size={18} aria-hidden="true" style={{ transform: collapsed ? 'rotate(180deg)' : 'rotate(-90deg)', transition: 'transform 0.2s ease' }} />
           </button>
@@ -2406,7 +2411,7 @@ function ReconstructedBadge() {
         "Tèks la rekonstwi fidèlman apati kesyon yo ak koreksyon an. Yo pa t numerize eskann orijinal eprèv la."
       )}
     >
-      ✎ {t('Texte reconstitué', 'Tèks rekonstwi')}
+      {t('Texte reconstitué', 'Tèks rekonstwi')}
     </span>
   );
 }
@@ -2422,7 +2427,6 @@ function ReadingPassage({ text, reconstructed }) {
   return (
     <div className={`exam-take__reading-passage ${expanded ? '' : 'exam-take__reading-passage--collapsed'}`}>
       <div className="exam-take__reading-passage-bar" onClick={() => setExpanded((e) => !e)}>
-        <span className="exam-take__reading-passage-icon">📖</span>
         <span className="exam-take__reading-passage-label">{t('Texte de référence', 'Tèks referans')}</span>
         {reconstructed && <ReconstructedBadge />}
         <button
@@ -2465,7 +2469,6 @@ function MissingPassageNotice({ reference }) {
   return (
     <div className="exam-take__missing-passage" role="note">
       <div className="exam-take__missing-passage-head">
-        <span className="exam-take__missing-passage-icon" aria-hidden="true">📄</span>
         <strong>{t('Texte de lecture non disponible', 'Tèks lekti a pa disponib')}</strong>
       </div>
       <p className="exam-take__missing-passage-body">
@@ -2560,26 +2563,35 @@ function QuestionHints({ hints }) {
 
   const canReveal = revealed < hints.length;
 
+  // On demand and progressive: nothing is shown until the student asks, then
+  // one hint at a time. A hint points the way; it never fills the answer in.
   return (
-    <div className="qa-hints">
-      {/* Reveal button — compact icon + counter */}
-      {canReveal && (
-        <button
-          type="button"
-          className="qa-hints__btn"
-          onClick={() => setRevealed(r => r + 1)}
-          title={revealed === 0 ? t('Obtenir un indice', 'Jwenn yon endis') : t('Indice suivant', 'Endis swivan')}
-        >
-          💡 <span className="qa-hints__counter">{revealed}/{hints.length}</span>
+    <div className={`qa-hints${revealed > 0 ? ' qa-hints--open' : ''}`}>
+      {revealed === 0 ? (
+        <button type="button" className="qa-hints__btn" onClick={() => setRevealed(1)}>
+          <Lightbulb size={18} aria-hidden="true" />
+          <span>{t('Besoin d’un coup de pouce ?', 'Ou bezwen yon ti pouse ?')} <strong>{t('Voir un indice', 'Wè yon endis')}</strong></span>
         </button>
-      )}
-
-      {/* Revealed hints — compact inline */}
-      {hints.slice(0, revealed).map((hint, i) => (
-        <div key={i} className="qa-hints__item" style={{ animationDelay: `${i * 0.05}s` }}>
-          <span className="qa-hints__text"><MathText text={hint} /></span>
+      ) : (
+        <div className="qa-hints__panel" aria-live="polite">
+          {hints.slice(0, revealed).map((hint, i) => (
+            <div key={i} className="qa-hints__item">
+              <span className="qa-hints__counter">{t(`Indice ${i + 1} sur ${hints.length}`, `Endis ${i + 1} sou ${hints.length}`)}</span>
+              <span className="qa-hints__text"><MathText text={hint} /></span>
+            </div>
+          ))}
+          <div className="qa-hints__actions">
+            {canReveal && (
+              <button type="button" className="xp-link" onClick={() => setRevealed((r) => r + 1)}>
+                {t('Indice suivant', 'Endis swivan')}
+              </button>
+            )}
+            <button type="button" className="xp-link qa-hints__hide" onClick={() => setRevealed(0)}>
+              {t('Masquer', 'Kache')}
+            </button>
+          </div>
         </div>
-      ))}
+      )}
     </div>
   );
 }
@@ -3389,7 +3401,7 @@ function ImmediateFeedback({ result, question, color }) {
     partial: { icon: '◐', label: t('Partiellement correct', 'Kòrèk an pati'), cls: 'exam-take__feedback--partial' },
     incorrect: { icon: '✗', label: t('Incorrect', 'Pa kòrèk'), cls: 'exam-take__feedback--incorrect' },
     'scaffold-complete': { icon: '✓', label: t('Complété', 'Konplè'), cls: 'exam-take__feedback--correct' },
-    manual: { icon: '👁', label: t('Évaluation manuelle', 'Koreksyon alamen'), cls: 'exam-take__feedback--manual' },
+    manual: { icon: '•', label: t('Évaluation manuelle', 'Koreksyon alamen'), cls: 'exam-take__feedback--manual' },
     unanswered: { icon: '—', label: t('Sans réponse', 'San repons'), cls: 'exam-take__feedback--unanswered' },
   };
   const cfg = statusConfig[status] || statusConfig.manual;
@@ -3413,7 +3425,7 @@ function ImmediateFeedback({ result, question, color }) {
       {essayFeedback && (
         <div className="exam-take__feedback-essay">
           <div className="exam-take__feedback-essay-score">
-            <span>🤖 {t('Note IA :', 'Nòt IA :')}</span> <strong>{essayFeedback.score}</strong>
+            <span>{t('Note IA :', 'Nòt IA :')}</span> <strong>{essayFeedback.score}</strong>
             {essayFeedback.capped && (
               <span className="exam-take__feedback-essay-capped" title={essayFeedback.wordMessage || ''}>
                 {t('· limitée par la longueur', '· limite akoz longè a')}
@@ -3725,11 +3737,11 @@ const JUSTIFICATION_OPTIONS = [
 
 /** Encouraging micro-feedback messages */
 const ENCOURAGEMENTS = [
-  'Bien joué ! 🎉',
-  'Super ! Continue 💪',
-  'Bravo ! 👏',
-  'Excellent travail ! ⭐',
-  'Bien raisonné ! 🧠',
+  'Bien joué !',
+  'Super ! Continue.',
+  'Bravo !',
+  'Excellent travail !',
+  'Bien raisonné !',
 ];
 
 function ProofInput({ question, index, value, onChange, disabled = false }) {
@@ -3781,7 +3793,7 @@ function ProofInput({ question, index, value, onChange, disabled = false }) {
     // Show encouragement when a step is first completed
     if (field === 'math' && val.trim() && !steps[stepIdx].math?.trim()) {
       const msgs = language === 'ht'
-        ? ['Byen fèt ! 🎉', 'Sa bon ! Kontinye 💪', 'Bravo ! 👏', 'Bon travay ! ⭐', 'Byen rezone ! 🧠']
+        ? ['Byen fèt !', 'Sa bon ! Kontinye.', 'Bravo !', 'Bon travay !', 'Byen rezone !']
         : ENCOURAGEMENTS;
       setEncouragement(msgs[Math.floor(Math.random() * msgs.length)]);
       setTimeout(() => setEncouragement(''), 2000);
@@ -3813,7 +3825,7 @@ function ProofInput({ question, index, value, onChange, disabled = false }) {
       {/* Header with type badge and progress */}
       <div className="ka-proof__header">
         <div className="ka-proof__header-left">
-          <span className="ka-proof__type-badge">{subtype.icon || '📐'} {subtype.label}</span>
+          <span className="ka-proof__type-badge">{subtype.label}</span>
         </div>
         <div className="ka-proof__header-right">
           <div className="ka-proof__progress">
@@ -3861,7 +3873,7 @@ function ProofInput({ question, index, value, onChange, disabled = false }) {
                 {/* Hint pill (revealed progressively) */}
                 {hintVisible && hint && !isDone && (
                   <div className="ka-step__hint">
-                    <span className="ka-step__hint-icon">💡</span>
+                    <span className="ka-step__hint-icon"><Lightbulb size={14} aria-hidden="true" /></span>
                     {hint}
                   </div>
                 )}
@@ -3921,7 +3933,7 @@ function ProofInput({ question, index, value, onChange, disabled = false }) {
         </button>
         {canRevealHint && (
           <button type="button" className="ka-proof__hint-btn" onClick={revealNextHint}>
-            💡 {t('Obtenir un indice', 'Jwenn yon endis')}
+            <Lightbulb size={16} aria-hidden="true" /> {t('Obtenir un indice', 'Jwenn yon endis')}
           </button>
         )}
       </div>
@@ -3930,7 +3942,6 @@ function ProofInput({ question, index, value, onChange, disabled = false }) {
       {subtype.askFinalAnswer && (
         <div className="ka-proof__answer">
           <div className="ka-proof__answer-header">
-            <span className="ka-proof__answer-icon">🎯</span>
             <label className="ka-proof__answer-label">{subtype.finalLabel || t('Résultat final', 'Rezilta final')}</label>
             <span className="ka-proof__answer-badge">{t('Vérifié automatiquement', 'Verifye otomatikman')}</span>
           </div>
@@ -3998,7 +4009,7 @@ function JustificationPicker({ value, onChange, disabled = false }) {
         />
       )}
       {!value && (
-        <button type="button" className="ka-justify__close" onClick={() => setOpen(false)}>✕</button>
+        <button type="button" className="ka-justify__close" onClick={() => setOpen(false)} aria-label="Fermer"><X size={16} aria-hidden="true" /></button>
       )}
     </div>
   );
@@ -4107,7 +4118,7 @@ function MultiSelectInput({ question, index, value, onChange, disabled }) {
 
   return (
     <div className="exam-take__mcq-options exam-take__mcq-options--multi">
-      <p className="exam-take__multi-hint">☑️ {t('Plusieurs réponses possibles', 'Plizyè repons posib')}</p>
+      <p className="exam-take__multi-hint">{t('Plusieurs réponses possibles', 'Plizyè repons posib')}</p>
       {entries.map(([key, text]) => {
         const isSelected = selected.includes(key);
         return (
@@ -4138,8 +4149,8 @@ function TrueFalseInput({ index, value, onChange, disabled }) {
   return (
     <div className="exam-take__tf-options">
       {[
-        { key: 'vrai', label: t('✅ Vrai', '✅ Vre') },
-        { key: 'faux', label: t('❌ Faux', '❌ Fo') },
+        { key: 'vrai', label: t('Vrai', 'Vre') },
+        { key: 'faux', label: t('Faux', 'Fo') },
       ].map(({ key, label }) => {
         const isSelected = value === key;
         return (

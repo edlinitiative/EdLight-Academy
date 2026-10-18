@@ -1,20 +1,17 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronRight, CheckCircle2, PlayCircle, Clock, Save, LogIn } from '../components/icons';
+import { ChevronRight, Search } from '../components/icons';
 import useStore from '../contexts/store';
 import { useExamAttempts } from '../hooks/useExamAttempts';
 import { normalizeExamCatalog } from '../utils/examCatalog';
-import { buildExamIndex, subjectColor } from '../utils/examUtils';
+import { buildExamIndex } from '../utils/examUtils';
 import { examTopicTags } from '../../shared/examUtils';
 import { sessionRowName, yearRange } from '../utils/examNaming';
 import { URL_LEVEL_TO_RAW, LEVEL_SLUG_LABELS } from '../utils/examLevels';
-import CardCover from '../components/CardCover';
-import { SUBJECT_GLYPHS } from '../utils/subjectGlyphs';
 import { Skeleton } from '../components/Skeleton';
-import { EmptyState } from '../components/StateViews';
-import './ExamOverview.css'; // shared .exam-overview__crumbs
-import './ExamSubject.css';
+import { durationLabel } from './examHubParts';
+import './examPremium.css';
 
 /**
  * ExamSubject — /exams/:level/matiere/:subject
@@ -108,6 +105,7 @@ export default function ExamSubject() {
   const { data: allExams, isPending, isError, refetch } = useExamCatalog();
   const attempts = useExamAttempts();
   const [statusFilter, setStatusFilter] = useState<'' | 'todo' | 'done'>('');
+  const [query, setQuery] = useState('');
   // In-progress drafts, read once from the synchronous localStorage mirror
   // ExamTake writes. Signed-out students have no draft at all (ExamTake's save
   // effect needs a uid), so an absent key honestly means "not started here".
@@ -135,21 +133,38 @@ export default function ExamSubject() {
     return statusFilter === 'done' ? done : !done;
   });
 
-  const color = subjectColor(subject);
-  const glyph = SUBJECT_GLYPHS[subject] || 'book';
   const levelLabel = LEVEL_SLUG_LABELS[level || '']?.[ht ? 'ht' : 'fr'] || level;
+  const fold = (v: string) => v.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const q = fold(query.trim());
+  const shown = q
+    ? visible.filter((e: any) => fold([e.year, e.exam_title, e._session, ...(Array.isArray(e.topics) ? e.topics : [])].join(' ')).includes(q))
+    : visible;
+
+  // Rows grouped under their year, newest first — the year is what a student
+  // scans for ("le sujet de 2023").
+  const byYear = useMemo(() => {
+    const out: Array<{ year: string; list: any[] }> = [];
+    for (const e of shown) {
+      const y = /^\d{4}$/.test(String(e.year)) ? String(e.year) : L('Sans année', 'San ane');
+      const last = out[out.length - 1];
+      if (last && last.year === y) last.list.push(e);
+      else out.push({ year: y, list: [e] });
+    }
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shown, ht]);
+
+  const frame = (children: React.ReactNode) => (
+    <div className="xp"><div className="xp-page xp-page--narrow">{children}</div></div>
+  );
 
   if (isPending) {
-    return (
-      <section className="section exam-subject">
-        <div className="container exam-subject__container" aria-busy="true">
-          <Skeleton width={220} height={16} radius={999} style={{ marginBottom: '1.2rem' }} />
-          <Skeleton width="100%" height={120} radius={20} style={{ marginBottom: '1.5rem' }} />
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} width="100%" height={64} radius={14} style={{ marginBottom: '0.7rem' }} />
-          ))}
-        </div>
-      </section>
+    return frame(
+      <div className="xp-skel" aria-busy="true">
+        <Skeleton width={220} height={16} radius={999} />
+        <Skeleton width="40%" height={40} radius={12} />
+        {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} width="100%" height={84} radius={18} />)}
+      </div>,
     );
   }
 
@@ -159,202 +174,152 @@ export default function ExamSubject() {
   // after one online load the list really is available offline.
   if (isError) {
     const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
-    return (
-      <section className="section exam-subject">
-        <div className="container exam-subject__container">
-          <EmptyState
-            title={offline
-              ? L('Hors ligne', 'Pa sou entènèt')
-              : L('Catalogue indisponible', 'Katalòg la pa disponib')}
-            message={offline
-              ? L(
-                  'La liste des épreuves n’est pas encore enregistrée sur cet appareil. Connectez-vous une fois pour la charger : ensuite elle reste consultable hors ligne.',
-                  'Lis egzamen yo poko anrejistre sou aparèy sa a. Konekte yon fwa pou chaje l : apre sa ou ka gade l san entènèt.',
-                )
-              : L(
-                  'Nous n’avons pas pu charger les épreuves. Vérifiez votre connexion, puis réessayez.',
-                  'Nou pa t ka chaje egzamen yo. Tcheke koneksyon ou, epi eseye ankò.',
-                )}
-            action={{ label: L('Réessayer', 'Eseye ankò'), onClick: () => { void refetch(); } }}
-          />
-        </div>
-      </section>
+    return frame(
+      <section className="xp-empty">
+        <h1 className="xp-h2">{offline ? L('Hors ligne', 'Pa sou entènèt') : L('Catalogue indisponible', 'Katalòg la pa disponib')}</h1>
+        <p>
+          {offline
+            ? L('La liste des épreuves n’est pas encore enregistrée sur cet appareil. Connecte-toi une fois pour la charger : ensuite elle reste consultable hors ligne.',
+              'Lis egzamen yo poko anrejistre sou aparèy sa a. Konekte yon fwa pou chaje l : apre sa ou ka gade l san entènèt.')
+            : L('Nous n’avons pas pu charger les épreuves. Vérifie ta connexion, puis réessaie.',
+              'Nou pa t ka chaje egzamen yo. Tcheke koneksyon ou, epi eseye ankò.')}
+        </p>
+        <button type="button" className="xp-btn" onClick={() => { void refetch(); }}>{L('Réessayer', 'Eseye ankò')}</button>
+      </section>,
     );
   }
 
   if (exams.length === 0) {
-    return (
-      <section className="section exam-subject">
-        <div className="container exam-subject__container">
-          <EmptyState
-            title={L('Aucune épreuve pour cette matière', 'Pa gen egzamen pou matyè sa a')}
-            message={L('Le catalogue évolue régulièrement — revenez bientôt.', 'Katalòg la ap grandi souvan — tounen talè.')}
-            action={{ label: L('Toutes les matières', 'Tout matyè yo'), onClick: () => navigate(`/exams/${level}`) }}
-          />
-        </div>
-      </section>
+    return frame(
+      <section className="xp-empty">
+        <h1 className="xp-h2">{L('Aucune épreuve pour cette matière', 'Pa gen egzamen pou matyè sa a')}</h1>
+        <p>{L('Le catalogue évolue régulièrement, reviens bientôt.', 'Katalòg la ap grandi souvan, tounen talè.')}</p>
+        <button type="button" className="xp-btn" onClick={() => navigate(`/exams/${level}`)}>{L('Toutes les matières', 'Tout matyè yo')}</button>
+      </section>,
     );
   }
 
-  return (
-    <section className="section exam-subject" style={{ '--exam-accent': color } as React.CSSProperties}>
-      <div className="container exam-subject__container">
-        <nav className="exam-overview__crumbs" aria-label={L('Fil d’Ariane', 'Chemen')}>
-          <Link to="/exams">{L('Examens', 'Egzamen')}</Link>
-          <span aria-hidden>›</span>
-          <Link to={`/exams/${level}`}>{levelLabel}</Link>
-          <span aria-hidden>›</span>
-          <span>{subject}</span>
-        </nav>
-
-        {/* Subject hero */}
-        <header className="exam-subject__hero">
-          <CardCover className="exam-subject__cover" glyph={glyph} color={color} />
-          <div className="exam-subject__hero-body">
-            <h1 className="exam-subject__title">{subject}</h1>
-            <p className="exam-subject__meta">
-              {levelLabel} · {exams.length} {exams.length === 1 ? L('épreuve officielle', 'egzamen ofisyèl') : L('épreuves officielles', 'egzamen ofisyèl')}
-              {yearRange(exams) ? ` · ${yearRange(exams)}` : ''}
-            </p>
-            {doneCount > 0 && (
-              <p className="exam-subject__progress">
-                <CheckCircle2 size={15} aria-hidden />
-                {doneCount}/{exams.length} {L('terminées', 'fini')}
-                {best >= 0 ? ` · ${L('meilleur score', 'pi bon nòt')} ${best}%` : ''}
-              </p>
-            )}
-          </div>
-        </header>
-
-        {/* What these rows are, and what happens to a result — stated once for
-            the list rather than repeated on every row (§6.4). Both lines are
-            read from real behaviour: each row prints its own duration or says
-            it has none, and ExamTake's save effect returns early without a
-            uid, so a signed-out attempt genuinely is not kept. */}
-        <p className="exam-subject__terms">
-          <Clock size={14} aria-hidden />
-          {L(
-            'Épreuves officielles complètes — chaque ligne indique sa durée, ou qu’elle n’est pas chronométrée.',
-            'Epwèv ofisyèl konplè — chak liy montre dire li, oswa li di li pa gen kwonomèt.',
-          )}
-          {userId ? <Save size={14} aria-hidden /> : <LogIn size={14} aria-hidden />}
-          {userId
-            ? L('Vos résultats sont enregistrés.', 'Rezilta ou yo anrejistre.')
-            : L('Résultats non enregistrés hors connexion.', 'Rezilta pa anrejistre si ou pa konekte.')}
-          {!userId && (
-            <button type="button" className="exam-subject__terms-link" onClick={() => setShowAuthModal(true)}>
-              {L('Se connecter', 'Konekte')}
-            </button>
-          )}
-        </p>
-
-        {/* Status filter — the same segmented control as the level browser, so
-            the two steps of the path read as one screen family. Counts are
-            real (attempt records), never estimated. */}
-        <div className="exam-subject__filters" role="group" aria-label={L('Filtrer par statut', 'Filtre dapre eta')}>
-          {([
-            ['', L('Toutes', 'Tout'), exams.length],
-            ['todo', L('À faire', 'Pou fè'), exams.length - doneCount],
-            ['done', L('Terminées', 'Fini'), doneCount],
-          ] as const).map(([value, label, count]) => (
-            <button
-              key={value || 'all'}
-              type="button"
-              className={`exam-subject__chip${statusFilter === value ? ' is-active' : ''}`}
-              onClick={() => setStatusFilter(value as any)}
-              aria-pressed={statusFilter === value}
-              disabled={count === 0 && statusFilter !== value}
-            >
-              {label} <span className="exam-subject__chip-count">{count}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Session list */}
-        <ol className="exam-subject__list">
-          {visible.map((e: any) => {
-            const key = keyOf(e);
-            const name = sessionRowName(e, ht ? 'ht' : 'fr');
-            const attempt = attempts[key];
-            const pct = attempt?.percentage ?? null;
-            const tone = pct == null ? '' : pct >= 60 ? 'good' : pct >= 40 ? 'mid' : 'low';
-            const diff = DIFFICULTY_DOT[e.difficulty as number];
-            const answered = drafts[key];
-            const topicTags = examTopicTags(e.topics);
-            const inProgress = !attempt && answered !== undefined;
-            return (
-              <li key={key}>
-                <Link
-                  className={`exam-session${inProgress ? ' exam-session--resume' : ''}`}
-                  to={`/exams/${level}/${key}`}
-                >
-                  <span className="exam-session__body">
-                    <span className="exam-session__title">{name.title}</span>
-                    <span className="exam-session__meta">
-                      {[
-                        name.subtitle,
-                        seriesLabel(e, ht),
-                        e._questionCount ? `${e._questionCount} ${L('questions', 'kesyon')}` : '',
-                        e.duration_minutes
-                          ? `${e.duration_minutes} min`
-                          : L('non chronométré', 'san kwonomèt'),
-                      ].filter(Boolean).join(' · ')}
-                    </span>
-                    {/*
-                      * What is actually IN this paper.
-                      *
-                      * Without it a session's papers are indistinguishable:
-                      * eleven Baccalauréat 2025 maths papers all render as
-                      * "Session de juillet 2025 · 13 questions · 180 min", and
-                      * `tracks` is `['ALL']` on every one. The topics are the
-                      * only thing that differs, filtered by `examTopicTags`
-                      * because the raw list mixes real subject areas with the
-                      * paper's own section instructions.
-                      */}
-                    {topicTags.length > 0 && (
-                      <span className="exam-session__topics">
-                        {topicTags.map((tag) => (
-                          <span key={tag} className="exam-session__topic">{tag}</span>
-                        ))}
-                      </span>
-                    )}
-                  </span>
-                  {diff && (
-                    <span className={`exam-session__diff exam-session__diff--${diff.cls}`}>
-                      {ht ? diff.ht : diff.fr}
-                    </span>
-                  )}
-                  {/* An unfinished draft must not be labelled "À faire" — the
-                      student expects to resume, not to start over (§6.4). */}
-                  {attempt ? (
-                    <span className={`exam-session__score exam-session__score--${tone}`}>
-                      {pct != null ? `${pct}%` : '✓'}
-                    </span>
-                  ) : inProgress ? (
-                    <span className="exam-session__resume">
-                      <PlayCircle size={14} aria-hidden />
-                      {answered > 0
-                        ? L(`En cours · ${answered} rép.`, `Ap fèt · ${answered} repons`)
-                        : L('En cours', 'Ap fèt')}
-                    </span>
-                  ) : (
-                    <span className="exam-session__todo">{L('À faire', 'Pou fè')}</span>
-                  )}
-                  <ChevronRight size={17} className="exam-session__chevron" aria-hidden />
-                </Link>
-              </li>
-            );
-          })}
-        </ol>
-
-        {visible.length === 0 && (
-          <p className="text-muted exam-subject__none">
-            {statusFilter === 'done'
-              ? L('Aucune épreuve terminée pour le moment.', 'Poko gen egzamen fini.')
-              : L('Tout est terminé — bravo !', 'Tout bagay fini — bravo !')}
+  return frame(
+    <>
+      <header className="xp-head">
+        <div>
+          <nav className="xp-crumbs" aria-label={L('Fil d’Ariane', 'Chemen')}>
+            <Link to="/exams">{L('Examens', 'Egzamen')}</Link>
+            <span aria-hidden>›</span>
+            <Link to={`/exams/${level}`}>{levelLabel}</Link>
+          </nav>
+          <h1 className="xp-title">{subject}</h1>
+          <p className="xp-lede">
+            {exams.length} {L(exams.length > 1 ? 'sujets' : 'sujet', 'sijè')}
+            {yearRange(exams) ? ` · ${yearRange(exams)}` : ''}
+            {doneCount > 0 ? ` · ${doneCount} ${L(doneCount > 1 ? 'terminés' : 'terminé', 'fini')}` : ''}
+            {best >= 0 ? ` · ${L('meilleur score', 'pi bon nòt')} ${best} %` : ''}
           </p>
-        )}
-      </div>
-    </section>
+          {/* Whether a result is kept, said once for the list. ExamTake's save
+              effect returns early without a uid, so signed out it is not. */}
+          {!userId && (
+            <p className="xp-meta" style={{ marginTop: 6 }}>
+              {L('Tes résultats ne sont pas enregistrés sans compte.', 'Rezilta ou pa anrejistre san kont.')}{' '}
+              <button type="button" className="xp-link" onClick={() => setShowAuthModal(true)}>{L('Se connecter', 'Konekte')}</button>
+            </p>
+          )}
+        </div>
+        <div className="xp-tools">
+          {/* Counts are real (attempt records), never estimated. */}
+          <div className="xp-seg" role="group" aria-label={L('Filtrer par statut', 'Filtre dapre eta')}>
+            {([
+              ['', L('Tous', 'Tout'), exams.length],
+              ['todo', L('À faire', 'Pou fè'), exams.length - doneCount],
+              ['done', L('Terminés', 'Fini'), doneCount],
+            ] as const).map(([value, label, count]) => (
+              <button
+                key={value || 'all'}
+                type="button"
+                onClick={() => setStatusFilter(value as any)}
+                aria-pressed={statusFilter === value}
+                disabled={count === 0 && statusFilter !== value}
+              >
+                {label} <b>{count}</b>
+              </button>
+            ))}
+          </div>
+          <label className="xp-search">
+            <Search size={18} aria-hidden="true" />
+            <input type="search" value={query} onChange={(ev) => setQuery(ev.target.value)}
+              placeholder={L('Chercher une année, une notion…', 'Chèche yon ane, yon nosyon…')}
+              aria-label={L('Chercher dans les sujets', 'Chèche nan sijè yo')} />
+          </label>
+        </div>
+      </header>
+
+      {byYear.map((g) => (
+        <section key={g.year} className="xp-yeargroup" aria-labelledby={`xp-y-${g.year}`}>
+          <div className="xp-yeargroup__head">
+            <h2 id={`xp-y-${g.year}`} className="xp-yeargroup__year">{g.year}</h2>
+            <span className="xp-yeargroup__count">{g.list.length} {L(g.list.length > 1 ? 'sujets' : 'sujet', 'sijè')}</span>
+          </div>
+          <ul className="xp-rows">
+            {g.list.map((e: any) => {
+              const key = keyOf(e);
+              const name = sessionRowName(e, ht ? 'ht' : 'fr');
+              const attempt = attempts[key];
+              const pct = attempt?.percentage ?? null;
+              const diff = DIFFICULTY_DOT[e.difficulty as number];
+              const answered = drafts[key];
+              // What is actually IN this paper: without the topics, eleven
+              // 2025 maths papers read identically (`tracks` is ['ALL']).
+              const topicTags = examTopicTags(e.topics);
+              const inProgress = !attempt && answered !== undefined;
+              const meta = [
+                name.subtitle,
+                seriesLabel(e, ht),
+                e._questionCount ? `${e._questionCount} ${L('questions', 'kesyon')}` : '',
+                durationLabel(e.duration_minutes, ht),
+                diff ? (ht ? diff.ht : diff.fr) : '',
+              ].filter(Boolean).join(' · ');
+              return (
+                <li key={key}>
+                  <Link className="xp-row" to={`/exams/${level}/${key}`}>
+                    <span className="xp-row__body">
+                      <span className="xp-row__title">{name.title}</span>
+                      <span className="xp-row__meta">{meta}</span>
+                      {topicTags.length > 0 && (
+                        <span className="xp-row__tags">
+                          {topicTags.map((tag) => <span key={tag} className="xp-row__tag">{tag}</span>)}
+                        </span>
+                      )}
+                      {/* An unfinished draft is never labelled "À faire". */}
+                      {attempt ? (
+                        <span className="xp-pill xp-pill--mint xp-row__status">
+                          {pct != null ? L(`Score ${pct} %`, `Nòt ${pct} %`) : L('Fait', 'Fèt')}
+                        </span>
+                      ) : inProgress ? (
+                        <span className="xp-pill xp-row__status">
+                          {answered > 0 ? L(`En cours · ${answered} rép.`, `Ap fèt · ${answered} rep.`) : L('En cours', 'Ap fèt')}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="xp-row__end">
+                      <span className="xp-btn xp-btn--tonal xp-btn--sm" aria-hidden="true">{L('Voir', 'Wè')}</span>
+                      <ChevronRight size={18} className="xp-row__chev" aria-hidden />
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
+
+      {shown.length === 0 && (
+        <p className="xp-meta">
+          {q
+            ? L('Aucun sujet ne correspond à ta recherche.', 'Okenn sijè pa koresponn ak rechèch ou.')
+            : statusFilter === 'done'
+              ? L('Aucune épreuve terminée pour le moment.', 'Poko gen egzamen fini.')
+              : L('Tout est terminé. Bravo !', 'Tout bagay fini. Bravo !')}
+        </p>
+      )}
+    </>,
   );
 }

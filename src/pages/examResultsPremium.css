@@ -1,0 +1,235 @@
+/* ══ Exam results — premium layer (Stitch, 2026-10-18) ══════════════════════
+   Re-skins ExamResults onto the examPremium.css tokens: the score as a card
+   led by its numeral, tallies as tone pills, a segmented filter, and each
+   correction as two wells (ta réponse / bonne réponse) tinted by verdict.
+   Selectors carry `.section.xp.xp-res` to outrank ExamResults.css
+   (`.section.exam-results …`) and the index.css legacy layer. */
+
+.section.xp.xp-res > .container { max-width: 1012px; }
+
+.section.xp.xp-res .exam-results__head { display: flex; flex-direction: column; gap: 6px; margin: 0 0 24px; }
+.section.xp.xp-res .exam-results__context { margin: 0; color: var(--xp-muted); font-size: 15px; text-transform: none; letter-spacing: 0; }
+.section.xp.xp-res .exam-results__title { margin: 0; font: 800 36px/1.15 var(--xp-display); color: var(--xp-ink); letter-spacing: -0.02em; }
+.section.xp.xp-res .exam-results__status {
+  align-self: flex-start;
+  margin: 6px 0 0;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--xp-mint);
+  color: var(--xp-mint-ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+.section.xp.xp-res .exam-results__status--provisional { background: var(--xp-amber); color: var(--xp-amber-ink); }
+
+/* Score card */
+.section.xp.xp-res .exam-results__overview {
+  margin: 0 0 24px;
+  padding: 32px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--xp-surface);
+  box-shadow: var(--xp-shadow);
+}
+.section.xp.xp-res .exam-results__summary { display: flex; flex-direction: column; gap: 14px; }
+.section.xp.xp-res .exam-results__points { display: flex; align-items: baseline; gap: 8px; margin: 0; }
+.section.xp.xp-res .exam-results__points-value { font: 800 72px/1 var(--xp-display); color: var(--xp-azure-ink); letter-spacing: -0.03em; }
+.section.xp.xp-res .exam-results__points-total { font: 600 24px/1 var(--xp-body); color: var(--xp-muted); }
+.section.xp.xp-res .exam-results__points-label { margin: 0; color: var(--xp-muted); font-size: 15px; }
+.section.xp.xp-res .exam-results__bar { margin: 4px 0 2px; }
+.section.xp.xp-res .exam-results__tally { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; padding: 0; border: 0; list-style: none; }
+.section.xp.xp-res .exam-results__tally-item { min-height: 32px; padding: 0 12px; border: 0; gap: 6px; font-size: 14px; }
+.section.xp.xp-res .exam-results__tally-item strong { color: inherit; font-weight: 800; }
+.section.xp.xp-res .exam-results__tally-item svg { color: inherit; }
+.section.xp.xp-res .exam-results__tally-total { color: var(--xp-muted); font-size: 14px; }
+.section.xp.xp-res .exam-results__caveat {
+  margin: 0;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--xp-azure-soft);
+  color: var(--xp-azure-ink);
+  font-size: 15px;
+}
+.section.xp.xp-res .exam-results__caveat--warn { margin: 0 0 20px; background: var(--xp-amber); color: var(--xp-amber-ink); }
+.section.xp.xp-res .exam-results__weighted-line { margin: 0; color: var(--xp-muted); font-size: 15px; }
+.section.xp.xp-res .exam-results__coeff-badge { padding: 2px 8px; border: 0; border-radius: 999px; background: var(--xp-well); color: var(--xp-ink); font-weight: 700; }
+.section.xp.xp-res .exam-results__how { margin: 0; }
+.section.xp.xp-res .exam-results__how > summary { color: var(--xp-azure-ink); font-size: 15px; font-weight: 700; cursor: pointer; }
+.section.xp.xp-res .exam-results__how-list { margin-top: 10px; color: var(--xp-muted); font-size: 15px; line-height: 1.55; }
+
+/* Where the points went */
+.section.xp.xp-res .exam-results__breakdown {
+  margin: 0 0 24px;
+  padding: 28px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--xp-surface);
+  box-shadow: var(--xp-shadow);
+}
+.section.xp.xp-res .exam-results__breakdown-title { margin: 0 0 4px; font: 800 22px/1.25 var(--xp-display); color: var(--xp-ink); }
+.section.xp.xp-res .exam-results__breakdown-source { margin: 0 0 16px; color: var(--xp-muted); font-size: 15px; }
+.section.xp.xp-res .exam-results__breakdown-sub { color: var(--xp-muted); font: 600 15px/1.3 var(--xp-body); text-transform: none; letter-spacing: 0; }
+.section.xp.xp-res .exam-results__mastery-row { padding: 12px 0; border: 0; }
+.section.xp.xp-res .exam-results__mastery-label { color: var(--xp-ink); font-size: 15px; font-weight: 600; }
+.section.xp.xp-res .exam-results__mastery-track { height: 8px; border: 0; border-radius: 999px; background: var(--xp-track); }
+.section.xp.xp-res .exam-results__mastery-fill,
+.section.xp.xp-res .exam-results__mastery-fill--good,
+.section.xp.xp-res .exam-results__mastery-fill--mid,
+.section.xp.xp-res .exam-results__mastery-fill--low { background: var(--xp-azure); border-radius: 999px; }
+.section.xp.xp-res .exam-results__mastery-pct,
+.section.xp.xp-res .exam-results__mastery-pct--good,
+.section.xp.xp-res .exam-results__mastery-pct--mid,
+.section.xp.xp-res .exam-results__mastery-pct--low { color: var(--xp-azure-ink); font-weight: 800; }
+.section.xp.xp-res .exam-results__mastery-meta { color: var(--xp-muted); font-size: 14px; }
+
+/* Et maintenant ? — the screen's one solid button */
+.section.xp.xp-res .exam-results__next {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+  padding: 28px;
+  border: 0;
+  border-left: 0;
+  border-radius: 20px;
+  background: var(--xp-surface);
+  box-shadow: var(--xp-shadow);
+}
+.section.xp.xp-res .exam-results__next-title { margin: 0 0 6px; font: 800 22px/1.25 var(--xp-display); color: var(--xp-ink); }
+.section.xp.xp-res .exam-results__next-sub { color: var(--xp-ink); font-size: 16px; }
+.section.xp.xp-res .exam-results__next-note { color: var(--xp-muted); font-size: 15px; }
+.section.xp.xp-res .exam-results__next-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.section.xp.xp-res .exam-results__local-note { color: var(--xp-muted); font-size: 15px; }
+
+/* Correction */
+.section.xp.xp-res .exam-results__details { margin-top: 40px; }
+.section.xp.xp-res .exam-results__details-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 0 0 16px; }
+.section.xp.xp-res .exam-results__details-title { font: 800 24px/1.2 var(--xp-display); color: var(--xp-ink); }
+.section.xp.xp-res .exam-results__filter-chip {
+  min-height: 40px;
+  border: 0;
+  box-shadow: none;
+  font-size: 15px;
+}
+.section.xp.xp-res .exam-results__filter-chip--active { background: var(--xp-surface); color: var(--xp-azure-ink); }
+.section.xp.xp-res .card.exam-results__item {
+  margin: 0 0 12px;
+  padding: 24px 28px;
+  border: 0;
+  border-left: 0;
+  border-radius: 20px;
+  background: var(--xp-surface);
+  box-shadow: var(--xp-shadow);
+}
+.section.xp.xp-res .exam-results__item-header { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+.section.xp.xp-res .exam-results__item-number {
+  min-width: 0; height: auto; padding: 0; border-radius: 0;
+  background: none; color: var(--xp-ink);
+  font: 800 18px/1.2 var(--xp-display);
+}
+.section.xp.xp-res .exam-results__item-type { color: var(--xp-muted); font-size: 14px; }
+.section.xp.xp-res .exam-results__item-points { margin-left: auto; color: var(--xp-ink); font-size: 15px; font-weight: 700; }
+.section.xp.xp-res .exam-results__badge { min-height: 28px; padding: 0 12px; font-size: 14px; }
+.section.xp.xp-res .exam-results__badge--correct { background: var(--xp-mint); color: var(--xp-mint-ink); }
+.section.xp.xp-res .exam-results__badge--incorrect { background: var(--xp-rose); color: var(--xp-rose-ink); }
+.section.xp.xp-res .exam-results__badge--partial { background: var(--xp-amber); color: var(--xp-amber-ink); }
+.section.xp.xp-res .exam-results__badge--manual { background: var(--xp-azure-soft); color: var(--xp-azure-ink); }
+.section.xp.xp-res .exam-results__badge--unanswered { background: var(--xp-well); color: var(--xp-muted); }
+.section.xp.xp-res .exam-results__item-question,
+.section.xp.xp-res .exam-results__item-question .instruction-renderer,
+.section.xp.xp-res .exam-results__item-question .instruction-renderer__p {
+  margin: 0; padding: 0; border: 0; background: none;
+  color: var(--xp-ink); font-size: 16px; line-height: 1.6;
+}
+
+/* Ta réponse / Bonne réponse: two wells, tinted by the verdict. */
+.section.xp.xp-res .exam-results__item-answer,
+.section.xp.xp-res .exam-results__item-correct {
+  margin: 14px 0 0;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--xp-well);
+  color: var(--xp-ink);
+  font-size: 16px;
+  font-weight: 400;
+}
+.section.xp.xp-res .exam-results__item-answer > strong,
+.section.xp.xp-res .exam-results__item-correct > strong {
+  display: block;
+  margin-bottom: 4px;
+  color: inherit;
+  opacity: 0.85;
+  font-size: 14px;
+  font-weight: 600;
+}
+.section.xp.xp-res .exam-results__item-correct { background: var(--xp-mint); color: var(--xp-mint-ink); }
+.section.xp.xp-res .exam-results__item--incorrect .exam-results__item-answer,
+.section.xp.xp-res .exam-results__item--unanswered .exam-results__item-answer { background: var(--xp-rose); color: var(--xp-rose-ink); }
+.section.xp.xp-res .exam-results__item--correct .exam-results__item-answer,
+.section.xp.xp-res .exam-results__item--scaffold-complete .exam-results__item-answer { background: var(--xp-mint); color: var(--xp-mint-ink); }
+.section.xp.xp-res .exam-results__item--partial .exam-results__item-answer { background: var(--xp-amber); color: var(--xp-amber-ink); }
+@media (min-width: 720px) {
+  .section.xp.xp-res .exam-results__item-answer + .exam-results__item-correct { margin-top: 10px; }
+}
+
+.section.xp.xp-res .exam-results__item-explanation {
+  margin: 12px 0 0;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--xp-well);
+  color: var(--xp-ink);
+  font-size: 15px;
+}
+.section.xp.xp-res .exam-results__item-solution,
+.section.xp.xp-res .exam-results__item-approaches {
+  margin-top: 12px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--xp-azure-soft);
+}
+.section.xp.xp-res .exam-results__item-solution > summary,
+.section.xp.xp-res .exam-results__item-approaches > summary {
+  padding: 12px 14px;
+  border: 0;
+  background: none;
+  color: var(--xp-azure-ink);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.section.xp.xp-res .exam-results__item-solution-body,
+.section.xp.xp-res .exam-results__item-approaches-body {
+  margin: 0 8px 8px;
+  padding: 14px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--xp-surface);
+  color: var(--xp-ink);
+}
+.section.xp.xp-res .scaffold-result__item { border: 0; border-left: 0; }
+
+.section.xp.xp-res .exam-results__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 32px; }
+.section.xp.xp-res .exam-results__filter-empty { border: 0; border-radius: 18px; background: var(--xp-surface); box-shadow: var(--xp-shadow); }
+
+@media (max-width: 719px) {
+  .section.xp.xp-res .exam-results__title { font-size: 26px; }
+  .section.xp.xp-res .exam-results__overview,
+  .section.xp.xp-res .exam-results__breakdown,
+  .section.xp.xp-res .exam-results__next { padding: 20px; }
+  .section.xp.xp-res .exam-results__points-value { font-size: 56px; }
+  .section.xp.xp-res .card.exam-results__item { padding: 20px; }
+  .section.xp.xp-res .exam-results__next-actions .xp-btn,
+  .section.xp.xp-res .exam-results__actions .xp-btn { width: 100%; }
+  .section.xp.xp-res .exam-results__filter-chips { width: 100%; }
+}
+.section.xp.xp-res .exam-results__mastery-meta strong { color: var(--xp-amber-ink); }
+.section.xp.xp-res .exam-results__tally-item { background: var(--xp-well); color: var(--xp-muted); border-radius: 999px; }
+.section.xp.xp-res .exam-results__tally-item--right { background: var(--xp-mint); color: var(--xp-mint-ink); }
+.section.xp.xp-res .exam-results__tally-item--wrong { background: var(--xp-rose); color: var(--xp-rose-ink); }
+.section.xp.xp-res .exam-results__tally-item--partial { background: var(--xp-amber); color: var(--xp-amber-ink); }
+.section.xp.xp-res .exam-results__tally-item--pending { background: var(--xp-azure-soft); color: var(--xp-azure-ink); }
+.section.xp.xp-res .exam-results__tally-item--right svg,
+.section.xp.xp-res .exam-results__tally-item--wrong svg { color: inherit; }

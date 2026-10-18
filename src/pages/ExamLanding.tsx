@@ -2,20 +2,18 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { History, PlayCircle, ChevronRight, Search } from '../components/icons';
+import { History, ChevronRight, Search, ArrowRight } from '../components/icons';
 import useStore from '../contexts/store';
 import { GRADES, gradeProfile, getCoefficient, DEFAULT_SUBJECT_ORDER } from '../config/trackConfig';
 import { Skeleton } from '../components/Skeleton';
 import { useExamAttempts } from '../hooks/useExamAttempts';
 import { levelToSlug } from '../utils/examLevels';
 import { normalizeExamCatalog } from '../utils/examCatalog';
-import { buildExamIndex, subjectColor, displayStoredExamTitle } from '../utils/examUtils';
+import { buildExamIndex, displayStoredExamTitle } from '../utils/examUtils';
 import { sessionRowName, yearRange } from '../utils/examNaming';
-import { HUB_LEVELS, durationLabel, paperKey, PaperAction, StatusPill, type PaperStatus } from './examHubParts';
+import { HUB_LEVELS, durationLabel, paperKey, type PaperStatus } from './examHubParts';
 import { listRecentExamAttempts } from '../services/userActivity';
-import './ExamLanding.css';
-import './examHub.css';
-import './ExamHome.css';
+import './examPremium.css';
 
 function useExamCatalog() {
   return useQuery({
@@ -225,190 +223,244 @@ const ExamLanding = () => {
      
   }, [levelPapers, query]);
 
+  const yearOf = (e: any) => (/^\d{4}$/.test(String(e?.year)) ? String(e.year) : '');
+
   const PaperRow = ({ e }: { e: any }) => {
     const name = sessionRowName(e, ht ? 'ht' : 'fr');
     const st = statusOf(e);
+    const key = paperKey(e);
+    const year = yearOf(e);
+    const meta = [name.title, name.subtitle, durationLabel(e.duration_minutes, ht)].filter(Boolean).join(' · ');
+    const to = st.kind === 'done' ? `/exams/${slug}/${key}/results` : `/exams/${slug}/${key}`;
     return (
-      <li className="exh-paper">
-        <span className="exh-year" style={{ '--sub': subjectColor(e._subject) } as React.CSSProperties}>{/^\d{4}$/.test(String(e.year)) ? e.year : '—'}</span>
-        <span className="exh-paper__body">
-          <strong>{e._subject}</strong>
-          <span>{[name.title, name.subtitle, durationLabel(e.duration_minutes, ht)].filter(Boolean).join(' · ')}</span>
-        </span>
-        {st.kind !== 'new' && <StatusPill status={st} ht={ht} />}
-        <PaperAction exam={e} status={st} ht={ht} navigate={navigate} />
+      <li>
+        <Link to={to} className="xp-row">
+          <span className={`xp-row__lead${st.kind === 'done' ? ' xp-row__lead--mint' : ''}`} aria-hidden={!year}>{year || '—'}</span>
+          <span className="xp-row__body">
+            <span className="xp-row__title">{e._subject}</span>
+            <span className="xp-row__meta">{meta}</span>
+            {st.kind === 'draft' && (
+              <span className="xp-pill xp-row__status">{L(`En cours · ${st.answered} rép.`, `Ap fèt · ${st.answered} rep.`)}</span>
+            )}
+            {st.kind === 'done' && (
+              <span className="xp-pill xp-pill--mint xp-row__status">{st.pct == null ? L('Fait', 'Fèt') : L(`Score ${st.pct} %`, `Nòt ${st.pct} %`)}</span>
+            )}
+          </span>
+          <span className="xp-row__end">
+            <span className="xp-btn xp-btn--tonal xp-btn--sm" aria-hidden="true">
+              {st.kind === 'done' ? L('Voir', 'Wè') : st.kind === 'draft' ? L('Reprendre', 'Kontinye') : L('Démarrer', 'Kòmanse')}
+            </span>
+            <ChevronRight size={18} className="xp-row__chev" aria-hidden="true" />
+          </span>
+        </Link>
       </li>
     );
   };
 
+  const resumeRows = drafts.map((d) => {
+    const exam = byKey.get(d.examId);
+    const name = exam ? sessionRowName(exam, ht ? 'ht' : 'fr') : { title: d.title, subtitle: '' };
+    const subject = exam?._subject || d.subject;
+    const total = Number(exam?._questionCount) || 0;
+    const levelRaw = exam?.level || d.level;
+    const levelName = HUB_LEVELS.find((l) => l.raw === levelRaw);
+    return {
+      d,
+      subject,
+      title: [subject, name.title].filter(Boolean).join(' · '),
+      total,
+      levelLabel: levelName ? (ht ? levelName.ht : levelName.fr) : '',
+      href: `/exams/${levelToSlug(levelRaw)}/${d.examId}/take`,
+    };
+  });
+  const [lead, ...moreDrafts] = resumeRows;
+  const resumeGo = (href: string) => navigate(href, { state: { autostart: true, resume: true } });
+
   return (
-    <div className="exh container">
-      {/* The hero: what this page is, with the real newest paper drawn as an
-          exam sheet beside it — subject, session, duration, questions. */}
-      <header className="exh-hero exh-hero--flat">
-        <div className="exh-hero__copy">
-          <h1 className="exh-head__title">{L('Examens', 'Egzamen')}</h1>
-          <p className="exh-head__lede">
-            {L('Les vrais sujets officiels, en conditions réelles.', 'Vrè sijè ofisyèl yo, nan vrè kondisyon.')}
-            {!userId && (
-              <> {' '}
-                <button type="button" className="exh-link" onClick={() => setShowAuthModal(true)}>
-                  {L('Connecte-toi', 'Konekte')}
-                </button>
-                {L(' pour garder tes résultats.', ' pou w kenbe rezilta ou.')}
-              </>
-            )}
-          </p>
-          <div className="exh-head__tools">
-            <div className="exam-hub__seg exh-seg" role="group" aria-label={L('Niveau', 'Nivo')}>
+    <div className="xp">
+      <div className="xp-page">
+        {/* One title row and its controls, then content. No band. */}
+        <header className="xp-head">
+          <div>
+            <div className="xp-head__row">
+              <h1 className="xp-title">{L('Examens', 'Egzamen')}</h1>
+              <Link to="/exams/resultats" className="xp-link">
+                <History size={16} aria-hidden="true" /> {t('examLanding.myResults')}
+              </Link>
+            </div>
+            <p className="xp-lede">
+              {L('Les vrais sujets, en conditions réelles.', 'Vrè sijè yo, nan vrè kondisyon.')}
+              {!userId && (
+                <>
+                  {' '}
+                  <button type="button" className="xp-link" onClick={() => setShowAuthModal(true)}>
+                    {L('Connecte-toi', 'Konekte')}
+                  </button>
+                  {L(' pour garder tes résultats.', ' pou w kenbe rezilta ou.')}
+                </>
+              )}
+            </p>
+          </div>
+          <div className="xp-tools">
+            <div className="xp-seg" role="group" aria-label={L('Niveau', 'Nivo')}>
               {HUB_LEVELS.map((l) => (
                 <button key={l.raw} type="button" aria-pressed={level === l.raw}
-                  className={level === l.raw ? 'is-on' : ''} onClick={() => { setLevel(l.raw); setQuery(''); }}>
+                  onClick={() => { setLevel(l.raw); setQuery(''); }}>
                   {ht ? l.ht : l.fr}
                 </button>
               ))}
             </div>
-            <Link to="/exams/resultats" className="exh-results-link">
-              <History size={16} aria-hidden="true" /> {t('examLanding.myResults')}
-            </Link>
+            <label className="xp-search">
+              <Search size={18} aria-hidden="true" />
+              <input type="search" value={query} onChange={(e) => setQuery(e.target.value)}
+                placeholder={L('Chercher une matière, une année, une notion…', 'Chèche yon matyè, yon ane, yon nosyon…')}
+                aria-label={L('Rechercher un sujet', 'Chèche yon sijè')} />
+            </label>
           </div>
-          <label className="exam-hub__search exh-search">
-            <Search size={18} aria-hidden="true" />
-            <input type="search" value={query} onChange={(e) => setQuery(e.target.value)}
-              placeholder={L('Chercher une matière, une année, une notion…', 'Chèche yon matyè, yon ane, yon nosyon…')}
-              aria-label={L('Rechercher', 'Chèche')} />
-          </label>
-        </div>
+        </header>
 
-      </header>
-
-      {offLevel && (
-        <section className="exh-note">
-          <strong>{L('Pas encore d’examen national pour ta classe', 'Poko gen egzamen nasyonal pou klas ou')}</strong>
-          <span>
-            {L(`${gradeLabel ? `En ${gradeLabel}, ` : ''}les quiz et les cours sont plus utiles pour l’instant. Les sujets restent ouverts si tu veux voir à quoi ils ressemblent.`,
-              `${gradeLabel ? `Nan ${gradeLabel}, ` : ''}kiz ak kou yo pi itil pou kounye a. Sijè yo rete louvri si w vle wè jan yo ye.`)}
-          </span>
-          <Link to="/courses" className="exam-hub__btn exam-hub__btn--line">{L('Mes cours', 'Kou mwen yo')}</Link>
-        </section>
-      )}
-
-      {drafts.length > 0 && !results && (
-        <section className="exh-section" aria-labelledby="exh-resume">
-          <h2 id="exh-resume" className="exh-section__title">{t('examLanding.sectionInProgress')}</h2>
-          <div className="exh-resume">
-            {drafts.map((d) => {
-              const exam = byKey.get(d.examId);
-              const name = exam ? sessionRowName(exam, ht ? 'ht' : 'fr') : { title: d.title, subtitle: d.subject };
-              const subject = exam?._subject || d.subject;
-              return (
-                <button key={d.examId} type="button" className="exh-resume__card"
-                  onClick={() => navigate(`/exams/${levelToSlug(exam?.level || d.level)}/${d.examId}/take`, { state: { autostart: true, resume: true } })}>
-                  <span className="exh-year" style={{ '--sub': subjectColor(subject) } as React.CSSProperties}>{exam?.year && /^\d{4}$/.test(String(exam.year)) ? exam.year : '—'}</span>
-                  <span className="exh-resume__body">
-                    <strong>{subject}</strong>
-                    <span>{[name.title, d.answered > 0 ? t('examLanding.resumeAnswered', { count: d.answered }) : ''].filter(Boolean).join(' · ')}</span>
-                  </span>
-                  <span className="exh-resume__cta"><PlayCircle size={18} aria-hidden="true" /> {t('examLanding.resume')}</span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {catalogError && (
-        <section className="exh-note">
-          <span>
-            {typeof navigator !== 'undefined' && navigator.onLine === false
-              ? L('Tu es hors ligne et la liste des examens n’est pas encore enregistrée sur cet appareil.', 'Ou pa sou entènèt e lis egzamen yo poko anrejistre sou aparèy sa a.')
-              : L('Impossible de charger la liste des examens.', 'Nou pa t ka chaje lis egzamen yo.')}
-          </span>
-          <button className="exam-hub__btn exam-hub__btn--primary" type="button" onClick={() => { void refetchCatalog(); }}>
-            {L('Réessayer', 'Eseye ankò')}
-          </button>
-        </section>
-      )}
-
-      {catalogPending && (
-        <div className="exh-subjects" aria-busy="true">
-          {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} height={132} radius={20} />)}
-        </div>
-      )}
-
-      {results && (
-        <section className="exh-section" aria-labelledby="exh-results">
-          <h2 id="exh-results" className="exh-section__title">
-            {results.length
-              ? L(`${results.length} sujet${results.length > 1 ? 's' : ''} trouvé${results.length > 1 ? 's' : ''}`, `${results.length} sijè jwenn`)
-              : L('Aucun sujet ne correspond.', 'Okenn sijè pa koresponn.')}
-          </h2>
-          {results.length > 0 && <ul className="exh-papers">{results.map((e) => <PaperRow key={paperKey(e)} e={e} />)}</ul>}
-        </section>
-      )}
-
-      {!results && !catalogPending && !catalogError && (
-        <>
-          <section className="exh-section exh-shelf" aria-labelledby="exh-subjects">
-            <div className="exh-section__head">
-              <h2 id="exh-subjects" className="exh-section__title">{L('Choisis une matière', 'Chwazi yon matyè')}</h2>
-              <span className="exh-section__meta">{levelPapers.length} {L('sujets officiels', 'sijè ofisyèl')}</span>
+        {offLevel && (
+          <section className="xp-note">
+            <div>
+              <strong>{L('Pas encore d’examen national pour ta classe', 'Poko gen egzamen nasyonal pou klas ou')}</strong>
+              <span>
+                {L(`${gradeLabel ? `En ${gradeLabel}, ` : ''}les quiz et les cours sont plus utiles pour l’instant. Les sujets restent ouverts si tu veux voir à quoi ils ressemblent.`,
+                  `${gradeLabel ? `Nan ${gradeLabel}, ` : ''}kiz ak kou yo pi itil pou kounye a. Sijè yo rete louvri si w vle wè jan yo ye.`)}
+              </span>
             </div>
-            <div className="exh-subjects">
-              {mainSubjects.map((s) => {
-                const color = subjectColor(s.subject);
-                return (
-                  <Link key={s.subject} to={`/exams/${slug}/matiere/${encodeURIComponent(s.subject)}`}
-                    className="exh-subject" style={{ '--sub': color } as React.CSSProperties}>
-                    <span className="exh-subject__count">
-                      <b>{s.count}</b> {L(s.count > 1 ? 'sujets' : 'sujet', 'sijè')}
-                    </span>
-                    <span className="exh-subject__body">
-                      <strong>{s.subject}</strong>
-                      {s.years && <span>{s.years}</span>}
-                    </span>
-                    <span className="exh-subject__foot">
-                      {s.done > 0 ? (
-                        <>
-                          <span className="exh-subject__meter" aria-hidden="true"><span style={{ width: `${Math.min(100, (s.done / s.count) * 100)}%` }} /></span>
-                          <span className="exh-subject__stat">
-                            {L(`${s.done} fait${s.done > 1 ? 's' : ''}`, `${s.done} fèt`)}{s.avg != null ? ` · ${s.avg}%` : ''}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="exh-subject__stat exh-subject__stat--go">{L('Commencer', 'Kòmanse')} <ChevronRight size={16} aria-hidden="true" /></span>
-                      )}
-                    </span>
-                  </Link>
-                );
-              })}
+            <Link to="/courses" className="xp-btn xp-btn--tonal xp-btn--sm">{L('Mes cours', 'Kou mwen yo')}</Link>
+          </section>
+        )}
+
+        {/* Examen en cours — the page's one solid button lives here, and the
+            card is gone when nothing is in progress. */}
+        {lead && !results && (
+          <section className="xp-card xp-resume" aria-labelledby="xp-resume-title">
+            <div className="xp-resume__top">
+              <span className="xp-pill">{L('En cours', 'Ap fèt')}</span>
+              {lead.levelLabel && <span className="xp-meta">{lead.levelLabel}</span>}
             </div>
-            {/* The rest as one quiet row, so the grid above is always two full
-                rows instead of ending on an orphan tile. */}
-            {otherSubjects.length > 0 && (
-              <div className="exh-others">
-                <span className="exh-others__label">{L('Autres matières', 'Lòt matyè')}</span>
-                {otherSubjects.map((s) => (
-                  <Link key={s.subject} to={`/exams/${slug}/matiere/${encodeURIComponent(s.subject)}`} className="exh-other"
-                    style={{ '--sub': subjectColor(s.subject) } as React.CSSProperties}>
-                    {s.subject} <b>{s.count}</b>
-                  </Link>
-                ))}
+            <h2 id="xp-resume-title" className="xp-resume__title">{lead.title}</h2>
+            <p className="xp-meta">
+              {lead.total > 0
+                ? L(`${lead.d.answered} question${lead.d.answered > 1 ? 's' : ''} répondue${lead.d.answered > 1 ? 's' : ''} sur ${lead.total}`,
+                  `${lead.d.answered} kesyon reponn sou ${lead.total}`)
+                : t('examLanding.resumeAnswered', { count: lead.d.answered })}
+            </p>
+            {lead.total > 0 && (
+              <div className="xp-bar" role="progressbar" aria-label={L('Progression', 'Pwogrè')}
+                aria-valuemin={0} aria-valuemax={lead.total} aria-valuenow={Math.min(lead.d.answered, lead.total)}>
+                <span style={{ width: `${Math.min(100, Math.round((lead.d.answered / lead.total) * 100))}%` }} />
+              </div>
+            )}
+            <div className="xp-resume__foot">
+              <button type="button" className="xp-btn" onClick={() => resumeGo(lead.href)}>
+                {L('Continuer', 'Kontinye')} <ArrowRight size={18} aria-hidden="true" />
+              </button>
+            </div>
+            {moreDrafts.length > 0 && (
+              <div className="xp-resume__more">
+                <p className="xp-label">{L('Aussi en cours', 'Lòt ki ap fèt')}</p>
+                <ul className="xp-rows">
+                  {moreDrafts.map((r) => (
+                    <li key={r.d.examId}>
+                      <button type="button" className="xp-row" onClick={() => resumeGo(r.href)}>
+                        <span className="xp-row__lead">{r.d.answered}<small>{r.total ? `/${r.total}` : ''}</small></span>
+                        <span className="xp-row__body">
+                          <span className="xp-row__title">{r.title}</span>
+                          <span className="xp-row__meta">{t('examLanding.resumeAnswered', { count: r.d.answered })}</span>
+                        </span>
+                        <span className="xp-row__end">
+                          <span className="xp-btn xp-btn--tonal xp-btn--sm" aria-hidden="true">{L('Reprendre', 'Kontinye')}</span>
+                          <ChevronRight size={18} className="xp-row__chev" aria-hidden="true" />
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </section>
+        )}
 
-          {latest && (
-            <section className="exh-section exh-shelf" aria-labelledby="exh-latest">
-              <div className="exh-section__head">
-                <h2 id="exh-latest" className="exh-section__title">{L(`Session ${latest.year}`, `Sesyon ${latest.year}`)}</h2>
-                <Link to={`/exams/${slug}`} className="exh-link">{L('Tous les sujets', 'Tout sijè yo')} <ChevronRight size={16} aria-hidden="true" /></Link>
+        {catalogError && (
+          <section className="xp-empty">
+            <h2>{L('Liste des examens indisponible', 'Lis egzamen yo pa disponib')}</h2>
+            <p>
+              {typeof navigator !== 'undefined' && navigator.onLine === false
+                ? L('Tu es hors ligne et la liste des examens n’est pas encore enregistrée sur cet appareil.', 'Ou pa sou entènèt e lis egzamen yo poko anrejistre sou aparèy sa a.')
+                : L('Impossible de charger la liste des examens.', 'Nou pa t ka chaje lis egzamen yo.')}
+            </p>
+            <button className="xp-btn" type="button" onClick={() => { void refetchCatalog(); }}>
+              {L('Réessayer', 'Eseye ankò')}
+            </button>
+          </section>
+        )}
+
+        {catalogPending && (
+          <div className="xp-tiles" aria-busy="true">
+            {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} height={176} radius={20} />)}
+          </div>
+        )}
+
+        {results && (
+          <section className="xp-section" aria-labelledby="xp-results">
+            <h2 id="xp-results" className="xp-h2">
+              {results.length
+                ? L(`${results.length} sujet${results.length > 1 ? 's' : ''} trouvé${results.length > 1 ? 's' : ''}`, `${results.length} sijè jwenn`)
+                : L('Aucun sujet ne correspond.', 'Okenn sijè pa koresponn.')}
+            </h2>
+            {results.length > 0 && <ul className="xp-rows">{results.map((e) => <PaperRow key={paperKey(e)} e={e} />)}</ul>}
+          </section>
+        )}
+
+        {!results && !catalogPending && !catalogError && (
+          <>
+            <section className="xp-section" aria-labelledby="xp-subjects">
+              <div className="xp-section__head">
+                <h2 id="xp-subjects" className="xp-h2">{L('Choisis une matière', 'Chwazi yon matyè')}</h2>
+                <span className="xp-meta">{levelPapers.length} {L(levelPapers.length > 1 ? 'sujets' : 'sujet', 'sijè')}</span>
               </div>
-              <ul className="exh-papers">{latest.papers.map((e) => <PaperRow key={paperKey(e)} e={e} />)}</ul>
+              <div className="xp-tiles">
+                {mainSubjects.map((s) => (
+                  <Link key={s.subject} to={`/exams/${slug}/matiere/${encodeURIComponent(s.subject)}`} className="xp-tile">
+                    <span className="xp-tile__num">{s.count}</span>
+                    <span className="xp-tile__unit">{L(s.count > 1 ? 'sujets' : 'sujet', 'sijè')}</span>
+                    <span className="xp-tile__name">{s.subject}</span>
+                    {s.years && <span className="xp-tile__years">{s.years}</span>}
+                    {s.done > 0 && (
+                      <span className="xp-tile__foot">
+                        <span className="xp-bar" aria-hidden="true"><span style={{ width: `${Math.min(100, (s.done / s.count) * 100)}%` }} /></span>
+                        <span>{L(`${s.done} fait${s.done > 1 ? 's' : ''}`, `${s.done} fèt`)}{s.avg != null ? ` · ${s.avg} %` : ''}</span>
+                      </span>
+                    )}
+                  </Link>
+                ))}
+              </div>
+              {otherSubjects.length > 0 && (
+                <div className="xp-chips">
+                  <span className="xp-label">{L('Autres matières', 'Lòt matyè')}</span>
+                  {otherSubjects.map((s) => (
+                    <Link key={s.subject} to={`/exams/${slug}/matiere/${encodeURIComponent(s.subject)}`} className="xp-chip">
+                      {s.subject} <b>{s.count}</b>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </section>
-          )}
-        </>
-      )}
+
+            {latest && (
+              <section className="xp-section" aria-labelledby="xp-latest">
+                <div className="xp-section__head">
+                  <h2 id="xp-latest" className="xp-h2">{L(`Session ${latest.year}`, `Sesyon ${latest.year}`)}</h2>
+                  <Link to={`/exams/${slug}`} className="xp-link">{L('Tous les sujets', 'Tout sijè yo')} <ChevronRight size={16} aria-hidden="true" /></Link>
+                </div>
+                <ul className="xp-rows">{latest.papers.map((e) => <PaperRow key={paperKey(e)} e={e} />)}</ul>
+              </section>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 };

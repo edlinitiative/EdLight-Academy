@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Search, X, SlidersHorizontal, ChevronRight, Clock, Save, LogIn } from '../components/icons';
+import { Search, X, SlidersHorizontal, ChevronRight, ChevronDown } from '../components/icons';
 import useStore from '../contexts/store';
 import { TRACKS, TRACK_BY_CODE, getCoefficient, DEFAULT_SUBJECT_ORDER, gradeProfile } from '../config/trackConfig';
 import TrackSelector from '../components/TrackSelector';
@@ -9,13 +9,9 @@ import { normalizeExamCatalog } from '../utils/examCatalog';
 import { useExamAttempts } from '../hooks/useExamAttempts';
 import { buildExamIndex, subjectColor } from '../utils/examUtils';
 import { examTopicTags } from '../../shared/examUtils';
-import CardCover from '../components/CardCover';
-import { SUBJECT_GLYPHS } from '../utils/subjectGlyphs';
 import { sessionRowName, yearRange } from '../utils/examNaming';
 import { URL_LEVEL_TO_RAW, RAW_LEVEL_TO_URL, LEVEL_SLUG_LABELS, levelToSlug } from '../utils/examLevels';
-import './ExamOverview.css'; // shared .exam-overview__crumbs (same trail as the subject/exam pages)
-import './ExamSubject.css'; // shared .exam-session row — the same list, one step down
-import './ExamBrowser.css';
+import './examPremium.css';
 import { deriveSignals, selectAdaptiveItems, type AttemptEvent } from '../services/adaptiveEngine';
 import { Skeleton } from '../components/Skeleton';
 
@@ -393,185 +389,99 @@ const ExamBrowser = () => {
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
+  const levelTitle = activeLevel === 'all'
+    ? t('Tous les examens', 'Tout egzamen')
+    : (slugLabel(activeLevel) || t('Examens nationaux', 'Egzamen nasyonal'));
+
   if (isLoading) {
     return (
-      <section className="section">
-        <div className="container" aria-busy="true">
-          <div className="page-header">
-            <h1 className="page-header__title">{t('Examens', 'Egzamen')}</h1>
-            <p className="page-header__subtitle">{t('Chargement du catalogue…', 'Ap chaje katalòg la…')}</p>
+      <div className="xp">
+        <div className="xp-page xp-page--narrow" aria-busy="true">
+          <div className="xp-skel">
+            <Skeleton width={200} height={16} radius={999} />
+            <Skeleton width="45%" height={40} radius={12} />
+            {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} width="100%" height={84} radius={18} />)}
           </div>
-          {/* The skeleton mirrors the subject ROWS this page actually opens
-              with, so the layout doesn't jump when the catalog lands. */}
-          <ul className="exam-subject-rows" style={{ marginTop: '1.5rem' }}>
-            {Array.from({ length: 8 }).map((_, i) => (
-              <li key={i} className="exam-subject-row exam-subject-row--skeleton">
-                <Skeleton width={44} height={44} radius={12} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <Skeleton width="42%" height={16} />
-                  <Skeleton width="62%" height={13} style={{ marginTop: '0.45rem' }} />
-                </div>
-              </li>
-            ))}
-          </ul>
         </div>
-      </section>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <section className="section">
-        <div className="container">
-          <div className="page-header">
-            <h1 className="page-header__title">{t('Examens', 'Egzamen')}</h1>
-          </div>
-          {/* Plain language + a safe recovery action, instead of the raw
-              exception text (§8). Offline is its own state: the service worker
-              keeps this index in DATA_CACHE (stale-while-revalidate), so once
-              it has been loaded once the list really does work offline — which
-              is what the second message promises, and only that. */}
-          <div className="card card--message">
+      <div className="xp">
+        <div className="xp-page xp-page--narrow">
+          <h1 className="xp-title">{t('Examens', 'Egzamen')}</h1>
+          {/* Plain language + a safe recovery action (§8). Offline is its own
+              state: the service worker keeps this index in DATA_CACHE. */}
+          <div className="xp-empty">
             <p>
               {isOffline
-                ? t(
-                    'Vous êtes hors ligne et la liste des examens n’est pas encore enregistrée sur cet appareil. Connectez-vous une fois pour la charger : ensuite elle reste consultable hors ligne.',
-                    'Ou pa sou entènèt e lis egzamen yo poko anrejistre sou aparèy sa a. Konekte yon fwa pou chaje l : apre sa ou ka gade l san entènèt.',
-                  )
-                : t(
-                    'Nous n’avons pas pu charger le catalogue d’examens. Vérifiez votre connexion, puis réessayez.',
-                    'Nou pa t ka chaje katalòg egzamen an. Tcheke koneksyon ou, epi eseye ankò.',
-                  )}
+                ? t('Tu es hors ligne et la liste des examens n’est pas encore enregistrée sur cet appareil. Connecte-toi une fois pour la charger : ensuite elle reste consultable hors ligne.',
+                  'Ou pa sou entènèt e lis egzamen yo poko anrejistre sou aparèy sa a. Konekte yon fwa pou chaje l : apre sa ou ka gade l san entènèt.')
+                : t('Nous n’avons pas pu charger le catalogue d’examens. Vérifie ta connexion, puis réessaie.',
+                  'Nou pa t ka chaje katalòg egzamen an. Tcheke koneksyon ou, epi eseye ankò.')}
             </p>
-            <button className="button button--primary" type="button" onClick={() => refetch()}>
-              {t('Réessayer', 'Eseye ankò')}
-            </button>
+            <button className="xp-btn" type="button" onClick={() => refetch()}>{t('Réessayer', 'Eseye ankò')}</button>
           </div>
         </div>
-      </section>
+      </div>
     );
   }
 
   return (
-    <section className="section">
-      <div className="container">
-        {/* Same trail as the subject and exam pages, so the four steps of the
-            exam path (landing → niveau → matière → épreuve) read as one
-            journey and every step back is one tap. */}
-        <nav className="exam-overview__crumbs" aria-label={t('Fil d’Ariane', 'Chemen')}>
-          <Link to="/exams">{t('Examens', 'Egzamen')}</Link>
-          <span aria-hidden>›</span>
-          <span>
-            {activeLevel === 'all'
-              ? t('Tous les niveaux', 'Tout nivo')
-              : (slugLabel(activeLevel) || t('Examens Nationaux', 'Egzamen Nasyonal'))}
-          </span>
-        </nav>
-
-        {/* Header — reflects the effective (grade-curated) level, not just the URL */}
-        <div className="page-header exam-browser__header">
-          <h1 className="page-header__title">
-            {activeLevel === 'all'
-              ? t('Tous les examens', 'Tout egzamen')
-              : (slugLabel(activeLevel) || t('Examens Nationaux', 'Egzamen Nasyonal'))}
-          </h1>
-          {/* The level is already the h1 and the last crumb — repeating it here
-              was a third copy of the same word (§13 "duplicate headings"). */}
-          {/* An exam here is not a quiz, and the subtitle is where that has to
-              be said — the rows below all lead to a full paper (§6.4). */}
-          <p className="page-header__subtitle">
-            {t(
-              "Banque d'examens officiels du MENFP — des épreuves complètes, pas des quiz rapides.",
-              'Bank egzamen ofisyèl MENFP — epwèv konplè, se pa ti kiz.',
-            )}
-          </p>
-          {/* The count moved into the toolbar, next to the filters that change
-              it (it used to float here, far above the controls). */}
-        </div>
-
-        {/* Grade-curated level context — shown only when the student's grade
-            implies a different pool than the default Bac papers. Gives a one-tap
-            escape to browse every level, then back to their own. Styled from
-            tokens now — the inline rgba()/#1558B8 it used to carry ignored the
-            dark theme. */}
-        {curatedLevel && (
-          <div className="exam-browser__level-note" role="status">
-            <span className="exam-browser__level-note-body">
-              <strong>
-                {activeLevel === curatedLevel
-                  ? slugLabel(curatedLevel)
-                  : t('Tous les niveaux', 'Tout nivo')}
-              </strong>
-              <span>
-                {activeLevel === curatedLevel
-                  ? t('Adapté à ton profil', 'Adapte pou pwofil ou')
-                  : t('Affichage de tous les examens', 'N ap montre tout egzamen')}
-              </span>
-            </span>
-            <button
-              type="button"
-              className="button button--ghost"
-              onClick={toggleLevel}
-            >
-              {activeLevel === curatedLevel
-                ? t('Voir tous les niveaux', 'Wè tout nivo')
-                : t('Mon niveau', 'Nivo mwen')}
-            </button>
+    <div className="xp">
+      <div className="xp-page xp-page--narrow">
+        <header className="xp-head">
+          <div>
+            {/* Same trail as the subject and exam pages. */}
+            <nav className="xp-crumbs" aria-label={t('Fil d’Ariane', 'Chemen')}>
+              <Link to="/exams">{t('Examens', 'Egzamen')}</Link>
+              <span aria-hidden>›</span>
+              <span aria-current="page">{levelTitle}</span>
+            </nav>
+            <h1 className="xp-title">{levelTitle}</h1>
+            {/* What the rows lead to, and whether a result is kept — once. */}
+            <p className="xp-lede">
+              {t('Des épreuves complètes, pas des quiz rapides.', 'Epwèv konplè, se pa ti kiz.')}
+              {' '}
+              {userId
+                ? t('Tes résultats sont enregistrés.', 'Rezilta ou yo anrejistre.')
+                : <>
+                    {t('Sans compte, tes résultats ne sont pas gardés.', 'San kont, rezilta ou pa kenbe.')}{' '}
+                    <button type="button" className="xp-link" onClick={() => setShowAuthModal(true)}>{t('Se connecter', 'Konekte')}</button>
+                  </>}
+            </p>
           </div>
-        )}
 
-        {/* Not this student's level — explain, point at what is, keep browsing. */}
-        {offLevel && (
-          <div className="exam-browser__level-note" role="status">
-            <span className="exam-browser__level-note-body">
-              <strong>{t('Pas encore votre niveau', 'Poko nivo ou')}</strong>
-              <span>
-                {t(
-                  'Les examens nationaux commencent en 9ᵉ AF. Vous pouvez consulter ces épreuves librement.',
-                  'Egzamen nasyonal yo kòmanse nan 9yèm ane. Ou lib pou gade epwèv sa yo.',
-                )}
-              </span>
-            </span>
-            <Link to="/quizzes" className="button button--ghost">
-              {t('Faire un quiz', 'Fè yon kiz')}
-            </Link>
-          </div>
-        )}
-
-        {/* What these rows lead to, and whether a result is kept — once for the
-            list, not on every row. ExamTake's save effect returns early without
-            a uid, so signed out the result really is not stored. */}
-        <p className="exam-browser__terms">
-          <Clock size={14} aria-hidden="true" />
-          {t(
-            'Chaque épreuve indique sa durée, ou qu’elle n’est pas chronométrée.',
-            'Chak epwèv montre dire li, oswa li di li pa gen kwonomèt.',
+          {/* Grade-curated level context, with a one-tap escape. */}
+          {curatedLevel && (
+            <div className="xp-note" role="status">
+              <div>
+                <strong>{activeLevel === curatedLevel ? slugLabel(curatedLevel) : t('Tous les niveaux', 'Tout nivo')}</strong>
+                <span>{activeLevel === curatedLevel ? t('Adapté à ton profil', 'Adapte pou pwofil ou') : t('Affichage de tous les examens', 'N ap montre tout egzamen')}</span>
+              </div>
+              <button type="button" className="xp-btn xp-btn--tonal xp-btn--sm" onClick={toggleLevel}>
+                {activeLevel === curatedLevel ? t('Voir tous les niveaux', 'Wè tout nivo') : t('Mon niveau', 'Nivo mwen')}
+              </button>
+            </div>
           )}
-          {userId ? <Save size={14} aria-hidden="true" /> : <LogIn size={14} aria-hidden="true" />}
-          {userId
-            ? t('Vos résultats sont enregistrés.', 'Rezilta ou yo anrejistre.')
-            : t('Résultats non enregistrés hors connexion.', 'Rezilta pa anrejistre si ou pa konekte.')}
-          {!userId && (
-            <button type="button" className="exam-browser__terms-link" onClick={() => setShowAuthModal(true)}>
-              {t('Se connecter', 'Konekte')}
-            </button>
-          )}
-        </p>
 
-        {/* ── Browse toolbar ──────────────────────────────────────────────────
-            One horizontal row (Coursera's browse pattern): a constrained
-            search field, the status segment, the filters toggle, and the live
-            result count — instead of a full-bleed search banner with a bare
-            icon button bolted on. The three selects and the filière chips
-            drop below on their own rows when opened / relevant. */}
-        <div className="exam-browser__toolbar">
-          <div className="exam-browser__toolbar-row">
-            {/* Search — leading magnifier inside the field, clear affordance
-                on the right once there's a query. */}
-            <div className="exam-browser__search-wrap">
-              <Search className="exam-browser__search-icon" size={17} aria-hidden="true" />
+          {offLevel && (
+            <div className="xp-note" role="status">
+              <div>
+                <strong>{t('Pas encore ton niveau', 'Poko nivo ou')}</strong>
+                <span>{t('Les examens nationaux commencent en 9ᵉ AF. Tu peux consulter ces épreuves librement.', 'Egzamen nasyonal yo kòmanse nan 9yèm ane. Ou lib pou gade epwèv sa yo.')}</span>
+              </div>
+              <Link to="/quizzes" className="xp-btn xp-btn--tonal xp-btn--sm">{t('Faire un quiz', 'Fè yon kiz')}</Link>
+            </div>
+          )}
+
+          {/* Toolbar: search, status, filters, live count. */}
+          <div className="xp-tools">
+            <label className="xp-search">
+              <Search size={18} aria-hidden="true" />
               <input
-                className="exam-browser__search"
                 type="search"
                 placeholder={t('Rechercher une épreuve…', 'Chèche yon egzamen…')}
                 value={search}
@@ -582,107 +492,46 @@ const ExamBrowser = () => {
                 autoCorrect="off"
               />
               {search && (
-                <button
-                  type="button"
-                  className="exam-browser__search-clear"
-                  onClick={() => setSearch('')}
-                  aria-label={t('Effacer la recherche', 'Efase rechèch la')}
-                >
+                <button type="button" className="xp-search__clear" onClick={() => setSearch('')} aria-label={t('Effacer la recherche', 'Efase rechèch la')}>
                   <X size={15} aria-hidden="true" />
                 </button>
               )}
+            </label>
+            <div className="xp-seg" role="group" aria-label={t('Filtrer par statut', 'Filtre dapre eta')}>
+              <button type="button" aria-pressed={!statusFilter} onClick={() => setStatusFilter('')}>{t('Tous', 'Tout')}</button>
+              <button type="button" aria-pressed={statusFilter === 'todo'} onClick={() => setStatusFilter(statusFilter === 'todo' ? '' : 'todo')}>{t('À faire', 'Pou fè')}</button>
+              <button type="button" aria-pressed={statusFilter === 'done'} onClick={() => setStatusFilter(statusFilter === 'done' ? '' : 'done')}
+                disabled={summary.done === 0 && statusFilter !== 'done'}>{t('Terminés', 'Fini')}</button>
             </div>
-
-            {/* Status segment (Tous / À faire / Terminés) */}
-            <div className="exam-browser__status-filter" role="group" aria-label={t('Filtrer par statut', 'Filtre dapre eta')}>
-              <button
-                type="button"
-                className={`exam-browser__status-chip ${!statusFilter ? 'exam-browser__status-chip--active' : ''}`}
-                onClick={() => setStatusFilter('')}
-              >
-                {t('Tous', 'Tout')}
+          </div>
+          <div className="xp-tools">
+            <div className="xp-chips">
+              <button type="button" className="xp-chip" onClick={() => setShowFilters((v) => !v)} aria-expanded={showFilters}>
+                <SlidersHorizontal size={15} aria-hidden="true" /> {t('Filtres', 'Filt')}{dropdownCount > 0 ? <b>{dropdownCount}</b> : null}
               </button>
-              <button
-                type="button"
-                className={`exam-browser__status-chip ${statusFilter === 'todo' ? 'exam-browser__status-chip--active' : ''}`}
-                onClick={() => setStatusFilter(statusFilter === 'todo' ? '' : 'todo')}
-              >
-                {t('À faire', 'Pou fè')}
-              </button>
-              <button
-                type="button"
-                className={`exam-browser__status-chip ${statusFilter === 'done' ? 'exam-browser__status-chip--active' : ''}`}
-                onClick={() => setStatusFilter(statusFilter === 'done' ? '' : 'done')}
-                disabled={summary.done === 0 && statusFilter !== 'done'}
-              >
-                {t('Terminés', 'Fini')}
-              </button>
+              {hasActiveFilters && (
+                <button className="xp-chip" onClick={clearFilters} type="button">
+                  <X size={14} aria-hidden="true" /> {t('Effacer', 'Efase')}
+                </button>
+              )}
             </div>
-
-            {/* Filters toggle — a labelled control, not a bare glyph */}
-            <button
-              type="button"
-              className={`exam-browser__filter-toggle ${showFilters ? 'exam-browser__filter-toggle--open' : ''}`}
-              onClick={() => setShowFilters((v) => !v)}
-              aria-expanded={showFilters}
-            >
-              <SlidersHorizontal size={15} aria-hidden="true" />
-              {t('Filtres', 'Filt')}
-              {dropdownCount > 0 && <span className="exam-browser__filter-badge">{dropdownCount}</span>}
-            </button>
-
-            {/* Live count of what the filters currently match */}
-            <span className="exam-browser__toolbar-count">
+            <span className="xp-meta">
               {summary.exams} {t('examen', 'egzamen')}{summary.exams !== 1 ? t('s', '') : ''}
               {summary.done > 0 && <> · {summary.done} {t('terminé', 'fini')}{summary.done !== 1 ? t('s', '') : ''}</>}
             </span>
-
-            {hasActiveFilters && (
-              <button
-                className="exam-browser__clear-btn"
-                onClick={clearFilters}
-                type="button"
-                aria-label={t('Réinitialiser les filtres', 'Reyinisyalize filt yo')}
-              >
-                <X size={14} aria-hidden="true" />
-                {t('Effacer', 'Efase')}
-              </button>
-            )}
           </div>
 
-          {/* Filter dropdowns (collapsible) */}
           {showFilters && (
-            <div className="exam-browser__filters">
-              <select
-                className="exam-browser__select"
-                value={subjectFilter}
-                onChange={(e) => setSubjectFilter(e.target.value)}
-                aria-label={t('Filtrer par matière', 'Filtre dapre matyè')}
-              >
+            <div className="xp-chips">
+              <select className="xp-select" value={subjectFilter} onChange={(e) => setSubjectFilter(e.target.value)} aria-label={t('Filtrer par matière', 'Filtre dapre matyè')}>
                 <option value="">{t('Toutes les matières', 'Tout matyè')}</option>
-                {subjects.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
+                {subjects.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
-
-              <select
-                className="exam-browser__select"
-                value={yearFilter}
-                onChange={(e) => setYearFilter(e.target.value)}
-                aria-label={t('Filtrer par année', 'Filtre dapre ane')}
-              >
+              <select className="xp-select" value={yearFilter} onChange={(e) => setYearFilter(e.target.value)} aria-label={t('Filtrer par année', 'Filtre dapre ane')}>
                 <option value="">{t('Toutes les années', 'Tout ane')}</option>
-                {years.map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
+                {years.map((y) => <option key={y} value={y}>{y}</option>)}
               </select>
-
-              <select
-                className="exam-browser__select"
-                value={difficultyFilter}
-                onChange={(e) => setDifficultyFilter(e.target.value)}
-                aria-label={t('Filtrer par difficulté', 'Filtre dapre difikilte')}
-              >
+              <select className="xp-select" value={difficultyFilter} onChange={(e) => setDifficultyFilter(e.target.value)} aria-label={t('Filtrer par difficulté', 'Filtre dapre difikilte')}>
                 <option value="">{t('Toute difficulté', 'Tout difikilte')}</option>
                 <option value="easy">{t('Facile', 'Fasil')}</option>
                 <option value="medium">{t('Moyen', 'Mwayen')}</option>
@@ -691,49 +540,27 @@ const ExamBrowser = () => {
             </div>
           )}
 
-          {/* Track filter chips — only for Terminale/Baccalauréat */}
+          {/* Filière chips — Baccalauréat only. */}
           {isTerminale && (
-            <div className="exam-browser__track-bar">
-              <span className="exam-browser__track-label">{t('Filière', 'Filyè')}</span>
-              <button
-                className={`exam-browser__track-chip ${!trackFilter ? 'exam-browser__track-chip--active' : ''}`}
-                onClick={() => setTrackFilter('')}
-                type="button"
-              >
-                {t('Toutes', 'Tout')}
-              </button>
+            <div className="xp-chips" role="group" aria-label={t('Filière', 'Filyè')}>
+              <span className="xp-label">{t('Filière', 'Filyè')}</span>
+              <button className="xp-chip" aria-pressed={!trackFilter} onClick={() => setTrackFilter('')} type="button">{t('Toutes', 'Tout')}</button>
               {TRACKS.map((tr) => (
-                <button
-                  key={tr.code}
-                  className={`exam-browser__track-chip ${trackFilter === tr.code ? 'exam-browser__track-chip--active' : ''}`}
-                  style={{ '--track-color': tr.color } as React.CSSProperties}
-                  onClick={() => setTrackFilter(trackFilter === tr.code ? '' : tr.code)}
-                  type="button"
-                >
+                <button key={tr.code} className="xp-chip" aria-pressed={trackFilter === tr.code}
+                  onClick={() => setTrackFilter(trackFilter === tr.code ? '' : tr.code)} type="button">
                   {tr.shortLabel}
                 </button>
               ))}
               {!userTrack && isAuthenticated && (
-                <button
-                  className="exam-browser__track-chip exam-browser__track-chip--set"
-                  onClick={() => setShowTrackSelector(true)}
-                  type="button"
-                >
-                  {t('Définir ma filière', 'Chwazi filyè m')}
-                </button>
+                <button className="xp-link" onClick={() => setShowTrackSelector(true)} type="button">{t('Définir ma filière', 'Chwazi filyè m')}</button>
               )}
             </div>
           )}
-        </div>
+        </header>
 
-        {/* Clean browse: one compact ROW per subject. This used to be a grid of
-            equal-weight cards, each with a 16:8 cover and a repeated "EdLight
-            Academy" byline — a wall to read rather than a list to scan (§6.2:
-            compact rows with title, relevant progress and one clear action).
-            Every figure below comes from the catalog or the student's own
-            attempts; nothing is estimated. */}
+        {/* Clean browse: one row per subject, led by its real paper count. */}
         {subjectCardView && groups.length > 0 && (
-          <ul className="exam-subject-rows">
+          <ul className="xp-rows">
             {groups.map((g) => {
               const done = g.exams.reduce((n, e) => n + (attempts[examKeyOf(e)] ? 1 : 0), 0);
               const best = g.exams.reduce((mx, e) => {
@@ -741,142 +568,84 @@ const ExamBrowser = () => {
                 return typeof p === 'number' && p > mx ? p : mx;
               }, -1);
               const span = yearRange(g.exams);
-              // The row's own level, not the :level segment. A 9ᵉ student whose
-              // grade curated this page away from the default Bac pool used to
-              // be sent to /exams/terminale/matiere/… — Bac papers under a 9ᵉ
-              // heading, which is the steering §6.4 rules out.
+              // The row's own level, not the :level segment (a curated 9ᵉ page
+              // must not send the student to Bac papers).
               const groupSlug = RAW_LEVEL_TO_URL[g.rawLevel] || activeLevel || level;
               const groupLevel = oneLevel ? '' : rawLevelLabel(g.rawLevel);
+              const meta = [
+                groupLevel,
+                span,
+                g.coef != null ? `${t('coef.', 'koef.')} ${g.coef}` : '',
+                done > 0 ? `${done}/${g.exams.length} ${t('terminés', 'fini')}${best >= 0 ? ` · ${t('meilleur', 'pi bon')} ${best} %` : ''}` : '',
+              ].filter(Boolean).join(' · ');
               return (
                 <li key={g.key}>
-                  <button
-                    type="button"
-                    className="exam-subject-row"
-                    onClick={() => navigate(`/exams/${groupSlug}/matiere/${encodeURIComponent(g.subject)}`)}
-                  >
-                    <CardCover className="exam-subject-row__cover" glyph={SUBJECT_GLYPHS[g.subject] || 'book'} color={g.color} />
-                    <span className="exam-subject-row__body">
-                      <span className="exam-subject-row__name">{g.subject}</span>
-                      <span className="exam-subject-row__meta">
-                        {groupLevel ? `${groupLevel} · ` : ''}
-                        {g.exams.length} {g.exams.length === 1 ? t('épreuve officielle', 'egzamen ofisyèl') : t('épreuves officielles', 'egzamen ofisyèl')}
-                        {span ? ` · ${span}` : ''}
-                        {g.coef != null ? ` · ${t('coef.', 'koef.')} ${g.coef}` : ''}
-                      </span>
+                  <Link className="xp-row" to={`/exams/${groupSlug}/matiere/${encodeURIComponent(g.subject)}`}>
+                    <span className="xp-row__lead">{g.exams.length}<small>{g.exams.length === 1 ? t('sujet', 'sijè') : t('sujets', 'sijè')}</small></span>
+                    <span className="xp-row__body">
+                      <span className="xp-row__title">{g.subject}</span>
+                      {meta && <span className="xp-row__meta">{meta}</span>}
                     </span>
-                    {done > 0 && (
-                      <span className="exam-subject-row__progress">
-                        <span className="exam-subject-row__progress-bar" aria-hidden="true">
-                          <span style={{ width: `${Math.round((done / g.exams.length) * 100)}%` }} />
-                        </span>
-                        <span className="exam-subject-row__progress-text">
-                          {done}/{g.exams.length} {t('terminées', 'fini')}
-                          {best >= 0 ? ` · ${t('meilleur', 'pi bon')} ${best}%` : ''}
-                        </span>
-                      </span>
-                    )}
-                    <ChevronRight size={18} className="exam-subject-row__chevron" aria-hidden="true" />
-                  </button>
+                    <ChevronRight size={18} className="xp-row__chev" aria-hidden="true" />
+                  </Link>
                 </li>
               );
             })}
           </ul>
         )}
 
-        {/* An empty pool used to render nothing at all — a blank page that
-            looked like a failure. Say what happened and offer a way out (§8). */}
+        {/* An empty pool says what happened and offers a way out (§8). */}
         {subjectCardView && groups.length === 0 && (
-          <div className="card card--message exam-browser__empty">
+          <div className="xp-empty">
             <p>
               {trackFilter
-                ? t(
-                    'Aucune épreuve pour cette filière à ce niveau.',
-                    'Pa gen egzamen pou filyè sa a nan nivo sa a.',
-                  )
-                : t(
-                    'Aucune épreuve disponible pour ce niveau pour le moment.',
-                    'Pa gen egzamen disponib pou nivo sa a pou kounye a.',
-                  )}
+                ? t('Aucune épreuve pour cette filière à ce niveau.', 'Pa gen egzamen pou filyè sa a nan nivo sa a.')
+                : t('Aucune épreuve disponible pour ce niveau pour le moment.', 'Pa gen egzamen disponib pou nivo sa a pou kounye a.')}
             </p>
             {trackFilter ? (
-              <button className="button button--ghost" type="button" onClick={() => setTrackFilter('')}>
-                {t('Voir toutes les filières', 'Wè tout filyè yo')}
-              </button>
+              <button className="xp-btn xp-btn--tonal" type="button" onClick={() => setTrackFilter('')}>{t('Voir toutes les filières', 'Wè tout filyè yo')}</button>
             ) : (
-              <button className="button button--ghost" type="button" onClick={() => navigate('/exams')}>
-                {t('Choisir un autre niveau', 'Chwazi yon lòt nivo')}
-              </button>
+              <button className="xp-btn xp-btn--tonal" type="button" onClick={() => navigate('/exams')}>{t('Choisir un autre niveau', 'Chwazi yon lòt nivo')}</button>
             )}
           </div>
         )}
 
         {/* Detailed results — active search / filters */}
         {!subjectCardView && (filtered.length === 0 ? (
-          <div className="card card--message exam-browser__empty">
-            <p>{t('Aucun examen trouvé. Essayez de modifier vos filtres.', 'Nou pa jwenn okenn egzamen. Eseye chanje filt ou yo.')}</p>
+          <div className="xp-empty">
+            <p>{t('Aucun examen trouvé. Essaie de modifier tes filtres.', 'Nou pa jwenn okenn egzamen. Eseye chanje filt ou yo.')}</p>
             {hasActiveFilters && (
-              <button
-                className="button button--ghost"
-                onClick={clearFilters}
-                type="button"
-              >
-                {t('Réinitialiser les filtres', 'Reyinisyalize filt yo')}
-              </button>
+              <button className="xp-btn xp-btn--tonal" onClick={clearFilters} type="button">{t('Réinitialiser les filtres', 'Reyinisyalize filt yo')}</button>
             )}
           </div>
         ) : (
-          <div className="exam-browser__results">
-            {/* The count lives in the toolbar now; this row keeps only the
-                expand/collapse control. */}
-            <div className="exam-browser__results-head">
-              {groups.length > 1 && !forceOpen && (
-                <button
-                  type="button"
-                  className="exam-browser__expand-all"
-                  onClick={() => setAllOpen(!allOpen)}
-                >
-                  {allOpen ? t('Tout réduire', 'Fèmen tout') : t('Tout développer', 'Louvri tout')}
-                </button>
-              )}
-            </div>
-
+          <div className="xp-section">
+            {groups.length > 1 && !forceOpen && (
+              <button type="button" className="xp-link" style={{ alignSelf: 'flex-end' }} onClick={() => setAllOpen(!allOpen)}>
+                {allOpen ? t('Tout réduire', 'Fèmen tout') : t('Tout développer', 'Louvri tout')}
+              </button>
+            )}
             {groups.map((g) => {
               const open = isSectionOpen(g.key);
               const groupLevel = oneLevel ? '' : rawLevelLabel(g.rawLevel);
               return (
-                <section key={g.key} className="exam-section">
-                  <button
-                    type="button"
-                    className="exam-section__head"
-                    onClick={() => toggleSection(g.key)}
-                    aria-expanded={open}
-                    disabled={forceOpen}
-                  >
-                    <span className="exam-section__swatch" style={{ background: g.color }} aria-hidden="true" />
-                    <span className="exam-section__name">{g.subject}</span>
-                    <span className="exam-section__count">{g.exams.length}</span>
-                    {groupLevel && <span className="exam-section__coef">{groupLevel}</span>}
-                    {g.coef != null && <span className="exam-section__coef">{t('Coef.', 'Koef.')} {g.coef}</span>}
-                    {g.adaptive && <span className="exam-section__coef">✨ {t('trié pour ton niveau', 'klase pou nivo ou')}</span>}
-                    <svg
-                      className={`exam-section__chevron ${open ? 'is-open' : ''}`}
-                      width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                      strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
-                    >
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
+                <section key={g.key} className="xp-section" style={{ gap: 12 }}>
+                  <button type="button" className="xp-group__head" onClick={() => toggleSection(g.key)} aria-expanded={open} disabled={forceOpen}>
+                    <span className="xp-group__name">{g.subject}</span>
+                    <span className="xp-pill">{g.exams.length}</span>
+                    {groupLevel && <span className="xp-meta">{groupLevel}</span>}
+                    {g.coef != null && <span className="xp-meta">{t('Coef.', 'Koef.')} {g.coef}</span>}
+                    {g.adaptive && <span className="xp-meta">{t('Trié pour ton niveau', 'Klase pou nivo ou')}</span>}
+                    <ChevronDown size={18} className={`xp-group__chev ${open ? 'is-open' : ''}`} aria-hidden="true" />
                   </button>
                   {open && (
-                    <ul className="exam-subject__list exam-section__list">
+                    <ul className="xp-rows">
                       {g.exams.map((exam) => (
                         <ExamRow
                           key={exam.exam_id || exam._idx}
                           exam={exam}
                           attempt={attempts[examKeyOf(exam)]}
-                          // The paper's own level, so the overview's crumb and
-                          // its "Tous les examens …" back link name the level
-                          // the paper actually belongs to (ExamOverview reads
-                          // the :level segment in preference to exam.level).
+                          // The paper's own level, so the overview's crumb names it.
                           onClick={() => navigate(`/exams/${levelToSlug(exam.level) || level}/${examKeyOf(exam)}`)}
                         />
                       ))}
@@ -888,7 +657,6 @@ const ExamBrowser = () => {
           </div>
         ))}
 
-        {/* Track selector modal (onboarding) */}
         {showTrackSelector && (
           <TrackSelector
             mode="modal"
@@ -900,26 +668,18 @@ const ExamBrowser = () => {
             onClose={() => setShowTrackSelector(false)}
           />
         )}
-
       </div>
-    </section>
+    </div>
   );
 };
 
 // ── Exam Row Component ──────────────────────────────────────────────────────
 
 /**
- * One compact row per paper — the same row the subject page uses, so the two
- * steps of the path (niveau → matière → épreuve) read as one list.
- *
- * It replaced a grid of equal-weight cards (§7). The cards also could not tell
- * same-session papers apart: eight Bac 2022 maths sujets all headed "Bac
- * permanent", six July 2025 ones all "Bac régulier · Juillet". The row leads
- * with the session name INCLUDING its year and then states the série, the
- * question count, the real timing and the topics actually in the paper.
- *
- * Nothing here is estimated: a paper with no `duration_minutes` says it has no
- * timer, which is what ExamTake does with it.
+ * One row per paper, led by its year — the same row the subject page uses.
+ * The session name, série, question count, real timing and the topics in the
+ * paper are what tell same-session papers apart. Nothing is estimated: a
+ * paper with no `duration_minutes` says it has no timer.
  */
 function ExamRow({ exam, onClick, attempt }) {
   const language = useStore((s) => s.language);
@@ -932,49 +692,40 @@ function ExamRow({ exam, onClick, attempt }) {
   const duration = exam.duration_minutes || 0;
   const diff = difficultyMeta(exam.difficulty);
   const topicTags = examTopicTags(exam.topics);
+  const year = /^\d{4}$/.test(String(exam.year)) ? String(exam.year) : '';
 
   const meta = [
     name.subtitle,
     seriesLabel(exam, isCreole),
     qCount > 0 ? `${qCount} ${t('question', 'kesyon')}${qCount !== 1 ? t('s', '') : ''}` : '',
     duration > 0 ? `${duration} min` : t('non chronométré', 'san kwonomèt'),
+    diff ? t(diff.label, DIFFICULTY_LABEL_HT[diff.tier]) : '',
   ].filter(Boolean).join(' · ');
 
   const pct = attempt && typeof attempt.percentage === 'number' ? attempt.percentage : null;
-  const tone = pct == null ? '' : pct >= 60 ? 'good' : pct >= 40 ? 'mid' : 'low';
 
   return (
     <li>
       <button
         type="button"
-        className="exam-session exam-session--button"
+        className="xp-row"
         onClick={onClick}
         aria-label={`${subject} — ${name.title}${attempt ? t(', déjà fait', ', deja fèt') : ''}`}
       >
-        <span className="exam-session__body">
-          <span className="exam-session__title">{name.title}</span>
-          <span className="exam-session__meta">{meta}</span>
+        <span className={`xp-row__lead${attempt ? ' xp-row__lead--mint' : ''}`}>{year || '—'}</span>
+        <span className="xp-row__body">
+          <span className="xp-row__title">{name.title}</span>
+          <span className="xp-row__meta">{meta}</span>
           {topicTags.length > 0 && (
-            <span className="exam-session__topics">
-              {topicTags.map((tag) => (
-                <span key={tag} className="exam-session__topic">{tag}</span>
-              ))}
+            <span className="xp-row__tags">
+              {topicTags.map((tag) => <span key={tag} className="xp-row__tag">{tag}</span>)}
             </span>
           )}
+          {attempt && <span className="xp-pill xp-pill--mint xp-row__status">{pct != null ? t(`Score ${pct} %`, `Nòt ${pct} %`) : t('Fait', 'Fèt')}</span>}
         </span>
-        {diff && (
-          <span className={`exam-session__diff exam-session__diff--${diff.tier}`}>
-            {t(diff.label, DIFFICULTY_LABEL_HT[diff.tier])}
-          </span>
-        )}
-        {attempt ? (
-          <span className={`exam-session__score exam-session__score--${tone}`}>
-            {pct != null ? `${pct}%` : '✓'}
-          </span>
-        ) : (
-          <span className="exam-session__todo">{t('À faire', 'Pou fè')}</span>
-        )}
-        <ChevronRight size={17} className="exam-session__chevron" aria-hidden="true" />
+        <span className="xp-row__end">
+          <ChevronRight size={18} className="xp-row__chev" aria-hidden="true" />
+        </span>
       </button>
     </li>
   );
