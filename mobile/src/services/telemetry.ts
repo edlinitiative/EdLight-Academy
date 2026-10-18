@@ -6,13 +6,30 @@
  * Privacy: events carry technical context only (ids, mode, source, outcome).
  * Never put answers, names, emails or free text in `detail`.
  *
- * ── Production sink: deliberately NOT set ──────────────────────────────────
- * There is no events/telemetry endpoint in /api today (checked 2026-10-17), and
- * inventing one is out of scope for an OTA-only change. Until one exists, events
- * go to the in-memory ring buffer below (readable with `getRecentTelemetry()`,
- * e.g. from a debug screen or a support flow) and to the console in dev. When
- * a backend lands, wire it once with `setTelemetrySink(...)` at startup.
+ * Release builds deliver sanitized batches to /api/telemetry. The local ring
+ * remains useful during development; it is never persisted.
  */
+import { createDiagnosticTransport } from '../../../shared/telemetry';
+
+let productionTransport: ReturnType<typeof createDiagnosticTransport> | undefined;
+
+/** Called before global handlers, so startup failures have a destination. */
+export function installProductionTelemetry() {
+  if (__DEV__ || productionTransport) return;
+  const info = getBuildInfo();
+  setTelemetryContext({ ...info, environment: info.channel || 'release' });
+  productionTransport = createDiagnosticTransport({
+    send: (events, signal) => fetch('https://academy.edlight.org/api/telemetry', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ events }), signal, credentials: 'omit',
+    }),
+  });
+  setTelemetrySink(productionTransport.enqueue);
+}
+
+export function flushTelemetry() {
+  return productionTransport?.flush() ?? Promise.resolve();
+}
 
 export type TelemetryEvent = {
   type: 'error' | 'event';
@@ -48,6 +65,8 @@ export function getRecentTelemetry(): TelemetryEvent[] {
 
 /** Test helper. */
 export function __resetTelemetryForTests() {
+  productionTransport?.dispose();
+  productionTransport = undefined;
   sink = null;
   context = {};
   ring.length = 0;
@@ -97,6 +116,12 @@ export function getBuildInfo(): Record<string, unknown> {
     info.appVersion = Constants?.expoConfig?.version ?? null;
     const rv = Constants?.expoConfig?.runtimeVersion;
     info.runtimeVersion = typeof rv === 'string' ? rv : null;
+  } catch { /* unavailable */ }
+  try {
+    // Native build number distinguishes binary releases sharing a runtime.
+    const Application = require('expo-application');
+    info.buildNumber = Application.nativeBuildVersion ?? null;
+    info.appVersion = Application.nativeApplicationVersion ?? info.appVersion;
   } catch { /* unavailable */ }
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires

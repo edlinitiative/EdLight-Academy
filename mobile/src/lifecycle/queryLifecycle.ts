@@ -22,6 +22,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { focusManager, onlineManager } from '@tanstack/react-query';
 import { isForegroundAppState, isOnlineSnapshot } from './connectivity';
 import { retryProfileSyncIfDue } from './session';
+import { flushTelemetry } from '../services/telemetry';
 
 let installed = false;
 
@@ -34,7 +35,10 @@ export function installQueryLifecycle(): () => void {
     const unsub = NetInfo.addEventListener((state) => {
       const online = isOnlineSnapshot(state);
       setOnline(online);
-      if (online && !wasOnline) retryProfileSyncIfDue('reconnect');
+      if (online && !wasOnline) {
+        retryProfileSyncIfDue('reconnect');
+        void flushTelemetry();
+      }
       wasOnline = online;
     });
     return unsub;
@@ -45,6 +49,7 @@ export function installQueryLifecycle(): () => void {
       const focused = isForegroundAppState(status);
       handleFocus(focused);
       if (focused) retryProfileSyncIfDue('foreground');
+      void flushTelemetry();
     });
     return () => sub.remove();
   });

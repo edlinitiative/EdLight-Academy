@@ -12,10 +12,15 @@
  * Bearer-token pattern.
  */
 
+import { createObservedFetch } from '../../../shared/observedFetch';
+import { trackEvent } from './telemetry';
+
 import { Share } from 'react-native';
 import { collection, doc, getDoc, getDocs, limit, orderBy, query, where, Timestamp } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { getReferralCode } from './referralService';
+
+const observedFetch = createObservedFetch(trackEvent, 'challenge');
 
 const CREATE_URL = 'https://academy.edlight.org/api/challenges/create';
 const ACCEPT_URL = 'https://academy.edlight.org/api/challenges/accept';
@@ -62,7 +67,7 @@ async function authedPost(url: string, payload: Record<string, unknown>): Promis
     return null;
   }
   try {
-    const res = await fetch(url, {
+    const res = await observedFetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(payload),

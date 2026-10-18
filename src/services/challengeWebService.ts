@@ -19,7 +19,12 @@
  * Firebase is loaded on first use (same pattern as referralService), so this
  * module costs nothing until a duel is actually touched.
  */
+import { createObservedFetch } from '../../shared/observedFetch';
+import { trackEvent } from '../utils/telemetry';
+
 import type { DuelLike } from '../utils/duels';
+
+const observedFetch = createObservedFetch(trackEvent, 'challenge');
 
 const loadFirebase = () => import('./firebase');
 const loadFirestore = () => import('firebase/firestore');
@@ -90,7 +95,7 @@ async function authedPost(url: string, payload: Record<string, unknown>): Promis
     return { status: 401, data: { error: 'auth' } };
   }
   try {
-    const res = await fetch(url, {
+    const res = await observedFetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(payload),
