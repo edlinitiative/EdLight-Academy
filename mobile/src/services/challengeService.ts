@@ -24,13 +24,15 @@ export interface Challenge {
   code: string;
   challengerUid: string;
   challengerName: string | null;
+  /** The challenger's chosen avatar (wire string), when they made one. */
+  challengerAvatar?: string;
   categoryId: string;
   questionIdxs: number[];
   total: number;
   challengerScore: number;
   createdAt: number; // epoch ms
   expiresAt: number; // epoch ms
-  opponent: { uid: string; name: string | null; score: number; playedAt: number } | null;
+  opponent: { uid: string; name: string | null; score: number; playedAt: number; avatar?: string } | null;
   status: 'open' | 'played';
 }
 
@@ -120,6 +122,7 @@ export async function getChallenge(code: string): Promise<Challenge | null> {
       code: snap.id,
       challengerUid: d.challengerUid,
       challengerName: d.challengerName ?? null,
+      ...(typeof d.challengerAvatar === 'string' ? { challengerAvatar: d.challengerAvatar } : {}),
       categoryId: d.categoryId,
       questionIdxs: Array.isArray(d.questionIdxs) ? d.questionIdxs : [],
       total: Number(d.total) || 0,
@@ -127,7 +130,7 @@ export async function getChallenge(code: string): Promise<Challenge | null> {
       createdAt: ms(d.createdAt),
       expiresAt: ms(d.expiresAt),
       opponent: d.opponent
-        ? { uid: d.opponent.uid, name: d.opponent.name ?? null, score: Number(d.opponent.score) || 0, playedAt: ms(d.opponent.playedAt) }
+        ? { uid: d.opponent.uid, name: d.opponent.name ?? null, score: Number(d.opponent.score) || 0, playedAt: ms(d.opponent.playedAt), ...(typeof d.opponent.avatar === 'string' ? { avatar: d.opponent.avatar } : {}) }
         : null,
       status: d.status === 'played' ? 'played' : 'open',
     };
@@ -144,6 +147,7 @@ function toChallenge(id: string, d: any): Challenge {
     code: id,
     challengerUid: d.challengerUid,
     challengerName: d.challengerName ?? null,
+    ...(typeof d.challengerAvatar === 'string' ? { challengerAvatar: d.challengerAvatar } : {}),
     categoryId: d.categoryId,
     questionIdxs: Array.isArray(d.questionIdxs) ? d.questionIdxs : [],
     total: Number(d.total) || 0,
@@ -151,7 +155,7 @@ function toChallenge(id: string, d: any): Challenge {
     createdAt: ms(d.createdAt),
     expiresAt: ms(d.expiresAt),
     opponent: d.opponent
-      ? { uid: d.opponent.uid, name: d.opponent.name ?? null, score: Number(d.opponent.score) || 0, playedAt: ms(d.opponent.playedAt) }
+      ? { uid: d.opponent.uid, name: d.opponent.name ?? null, score: Number(d.opponent.score) || 0, playedAt: ms(d.opponent.playedAt), ...(typeof d.opponent.avatar === 'string' ? { avatar: d.opponent.avatar } : {}) }
       : null,
     status: d.status === 'played' ? 'played' : 'open',
   };

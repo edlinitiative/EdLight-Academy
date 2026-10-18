@@ -202,7 +202,7 @@ export default function ArenaHubPanel({ onPractice, onDuel }: ArenaHubPanelProps
               <View style={{ flexDirection: 'row' }}>
                 {mates.map((m, i) => (
                   <View key={m.id || i} style={{ marginLeft: i === 0 ? 0 : -10, borderRadius: 20, padding: 2, backgroundColor: C.surfaceRaised }}>
-                    <Avatar seed={m.id || m.uid || m.displayName || String(i)} size={36} />
+                    <Avatar seed={m.id || m.uid || m.displayName || String(i)} config={m.avatar} size={36} />
                   </View>
                 ))}
               </View>

@@ -90,6 +90,7 @@ export default function ChallengeScreen({ code, onClose }: { code: string; onClo
             seed: challenge.challengerUid || challenge.challengerName || 'ami',
             name: challenge.challengerName ?? t('Ton ami', 'Zanmi ou'),
             score: challenge.challengerScore,
+            avatar: challenge.challengerAvatar ?? null,
           }}
           onQuit={() => Alert.alert(
             t('Abandonner le défi ?', 'Abandone defi a ?'),
@@ -130,7 +131,7 @@ export default function ChallengeScreen({ code, onClose }: { code: string; onClo
           onClose={onClose}
           closeLabel={t('Fermer', 'Fèmen')}
           me={{ seed: user?.uid || 'toi', label: t('Toi', 'Ou') }}
-          opponent={{ seed: challenge.challengerUid || rival, label: rival }}
+          opponent={{ seed: challenge.challengerUid || rival, label: rival, avatar: challenge.challengerAvatar ?? null }}
           winner={outcome ? (won ? 'me' : tie ? null : 'opponent') : null}
           score={myScore}
           total={challenge.total}

@@ -24,6 +24,8 @@ import ArenaDoorsScreen from '../screens/arena/ArenaDoorsScreen';
 import ArenaResultScreen from '../screens/arena/ArenaResultScreen';
 import ArenaHubScreen from '../screens/arena/ArenaHubScreen';
 import ArenaWatchScreen from '../screens/arena/ArenaWatchScreen';
+import AvatarEditorScreen, { type AvatarSection } from '../screens/AvatarEditorScreen';
+import * as ExpoLinking from 'expo-linking';
 import { useReduceMotion } from '../utils/motion';
 import { resolveAppPath, stateForTarget, type ArenaHubSection } from './arenaLinks';
 
@@ -36,6 +38,8 @@ export type RootParamList = {
   Leaderboard: undefined;
   Teach: undefined;
   Defi: { code: string };
+  /** Mon avatar (web /profile/avatar). `preview` is dev-only (signed-out screenshots). */
+  AvatarEditor: { section?: AvatarSection; preview?: string | boolean; theme?: string } | undefined;
   /*
    * The Arena sits at the ROOT, not inside the Jeux tab.
    *
@@ -146,16 +150,33 @@ function ChallengeModal({ navigation, route }: any) {
 // https paths listed in app.json's intent filters, iOS only those in the
 // apple-app-site-association file on academy.edlight.org.
 const linking = {
-  prefixes: ['edlight://', 'https://academy.edlight.org'],
+  // In development, Expo Go's own URL (exp://<host>/--/) also opens app paths.
+  prefixes: ['edlight://', 'https://academy.edlight.org', ...(__DEV__ ? [ExpoLinking.createURL('/')] : [])],
   config: {
     screens: {
       Defi: 'defi/:code',
+      AvatarEditor: 'profile/avatar',
       ArenaHub: 'arena',
       ArenaWatch: 'arena/demo',
       ArenaLobby: 'arena/jouer/:tournamentId',
     },
   },
   getStateFromPath(path: string, options: any) {
+    // /profile/avatar opens over Main, so back lands on the app, not nowhere.
+    const avatar = /^\/?profile\/avatar\/?(\?(.*))?$/i.exec(path);
+    if (avatar) {
+      // Parsed by hand: RN's URLSearchParams polyfill is incomplete.
+      const q: Record<string, string> = {};
+      for (const pair of (avatar[2] || '').split('&')) {
+        const [k, v = ''] = pair.split('=');
+        if (k) q[decodeURIComponent(k)] = decodeURIComponent(v);
+      }
+      const params: Record<string, string> = {};
+      if (q.section) params.section = q.section;
+      if (__DEV__ && q.preview) params.preview = q.preview;
+      if (__DEV__ && q.preview && q.theme) params.theme = q.theme;
+      return { routes: [{ name: 'Main' }, { name: 'AvatarEditor', params }] } as any;
+    }
     const target = resolveAppPath(path);
     if (target) return stateForTarget(target) as any;
     return defaultGetStateFromPath(path, options);
@@ -321,6 +342,11 @@ export default function AppNavigator() {
                 name="Teach"
                 component={TeachModal}
                 options={{ presentation: 'modal', ...tx('slide_from_bottom') }}
+              />
+              <Stack.Screen
+                name="AvatarEditor"
+                component={AvatarEditorScreen}
+                options={tx('slide_from_right')}
               />
               <Stack.Screen
                 name="Defi"

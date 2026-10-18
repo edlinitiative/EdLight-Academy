@@ -17,6 +17,7 @@ import { tapLight } from '../utils/haptics';
 import { logInviteSent } from '../services/referralService';
 import ChampionMedallion from './celebration/ChampionMedallion';
 import Avatar from './ui/Avatar';
+import { useMyAvatar } from '../hooks/useMyAvatar';
 import Stagger from './ui/Stagger';
 import LeaderboardJoinModal from './LeaderboardJoinModal';
 
@@ -46,9 +47,15 @@ function useBoard() {
 /** A student's face: the generated arena face on the night, the app avatar by day. */
 function BoardAvatar({ entry, size }: { entry: any; size: number }) {
   const { night } = useBoard();
+  const myUid = useStore((s) => s.user?.uid);
+  const mine = useMyAvatar();
   const seed = entry.id || entry.uid || entry.displayName || '';
-  if (night) return <FaceAvatar seed={seed} size={size} />;
-  return <Avatar name={entry.displayName || ''} uri={entry.photoURL || entry.picture || null} seed={seed} size={size} />;
+  // The chosen avatar travels on the public entry; the student's own row reads
+  // their fresh copy (the entry can lag a save by one propagation).
+  const own = !!myUid && seed === myUid && !mine.loading;
+  const config: string | null = own ? mine.avatar : (typeof entry.avatar === 'string' ? entry.avatar : null);
+  if (night) return <FaceAvatar seed={seed} config={config} size={size} />;
+  return <Avatar name={entry.displayName || ''} uri={entry.photoURL || entry.picture || null} seed={seed} config={config} size={size} />;
 }
 
 /**
@@ -210,7 +217,7 @@ function GroupRow({
                 }}
               >
                 <Text style={[typeScale.caption, { color: colors.muted, width: 20, textAlign: 'center' }]}>{i + 1}</Text>
-                <BoardAvatar entry={{ id: m.uid, displayName: m.displayName }} size={28} />
+                <BoardAvatar entry={{ id: m.uid, displayName: m.displayName, avatar: m.avatar }} size={28} />
                 <Text style={[typeScale.bodyMd, { flex: 1, color: colors.ink }]} numberOfLines={1}>
                   {m.displayName || t('Élève', 'Elèv')}{isMe ? t(' (toi)', ' (ou)') : ''}
                 </Text>

@@ -35,6 +35,8 @@ export interface PlayerCardProps {
   title?: string | null;
   size?: 'sm' | 'md' | 'lg';
   mood?: 'idle' | 'ready' | 'focused' | 'celebrating' | 'recovering';
+  /** The student's chosen avatar (wire string). Absent → the seeded face. */
+  avatar?: string | null;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -56,7 +58,7 @@ function borderFor(tier: string): string {
 }
 
 export default function PlayerCard({
-  uid, name, school, level = 1, xp, rank, title, size = 'md', mood = 'idle', style,
+  uid, name, school, level = 1, xp, rank, title, size = 'md', mood = 'idle', avatar = null, style,
 }: PlayerCardProps) {
   const isCreole = useStore((s: any) => s.language) === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -86,7 +88,7 @@ export default function PlayerCard({
   if (size === 'sm') {
     return (
       <View style={[s.card, s.sm, frame, style]} accessible accessibilityLabel={summary}>
-        <Avatar seed={uid || pseudo} mood={mood} size={36} colors={colors} still />
+        <Avatar seed={uid || pseudo} config={avatar} mood={mood} size={36} colors={colors} still />
         <View style={s.main}>
           <Text style={[s.name, { fontSize: 15 }]} numberOfLines={1}>{pseudo}</Text>
           {schoolName ? (
@@ -119,7 +121,7 @@ export default function PlayerCard({
           <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${gid}w)`} />
         </Svg>
         <View style={s.portrait}>
-          <Avatar seed={uid || pseudo} mood={mood} size={72} colors={colors} />
+          <Avatar seed={uid || pseudo} config={avatar} mood={mood} size={72} colors={colors} />
           {schoolName ? (
             <View style={s.portraitCrest}><SchoolCrest name={schoolName} size={30} /></View>
           ) : null}
@@ -181,7 +183,7 @@ export default function PlayerCard({
           </View>
         ) : null}
         <View style={[s.avatarRing, { borderColor: colors.secondary }]}>
-          <Avatar seed={uid || pseudo} mood={mood} size={104} colors={colors} />
+          <Avatar seed={uid || pseudo} config={avatar} mood={mood} size={104} colors={colors} />
         </View>
       </View>
       <View style={s.body}>

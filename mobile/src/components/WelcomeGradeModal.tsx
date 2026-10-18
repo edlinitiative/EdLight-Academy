@@ -16,6 +16,7 @@ import NotificationPrePromptSheet from './ui/NotificationPrePromptSheet';
 import PressableScale from './ui/PressableScale';
 import Button from './ui/Button';
 import { Avatar as Face } from './arena/art';
+import { useMyAvatar } from '../hooks/useMyAvatar';
 
 /**
  * The first-run welcome (Stitch 12d), driven by the onboarding coordinator
@@ -57,6 +58,7 @@ const FONDAMENTAL = [
 export default function WelcomeGradeModal() {
   const language = useStore((s) => s.language);
   const user = useStore((s) => s.user);
+  const { avatar: myAvatar } = useMyAvatar();
   const grade = useStore((s) => s.grade);
   const quizAttempts = useStore((s) => s.quizAttempts);
   const enrolledCourses = useStore((s) => s.enrolledCourses);
@@ -313,7 +315,7 @@ export default function WelcomeGradeModal() {
         ) : (
         <View style={styles.overlay}>
           <View style={[featureSurface, styles.card]} accessibilityViewIsModal>
-            <Face seed={user?.uid || 'edlight-welcome'} mood="ready" size={84} />
+            <Face seed={user?.uid || 'edlight-welcome'} config={myAvatar} mood="ready" size={84} />
             {isFirstRun ? (
               <Text style={{ fontFamily: fonts.headingBold, fontSize: 14, lineHeight: 18, color: colors.muted, marginTop: 14 }}>2 / 2</Text>
             ) : null}

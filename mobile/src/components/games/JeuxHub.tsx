@@ -40,6 +40,7 @@ import { shareScore } from '../../services/scoreShare';
 import ArenaHubPanel from '../arena/ArenaHubPanel';
 import { ArenaButton } from '../arena/ArenaKit';
 import { Avatar } from '../arena/art';
+import { useMyAvatar } from '../../hooks/useMyAvatar';
 import ArenaWorld from '../arena/art/environment/ArenaWorld';
 import { arenaColors as C, arenaType } from '../../theme/arenaTheme';
 import { fonts } from '../../theme/theme';
@@ -214,6 +215,7 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily, onR
   const { myRank, myEntry } = useLeaderboard(25);
   const navigation = useNavigation<any>();
   const user = useStore((s) => s.user);
+  const { avatar: myAvatar } = useMyAvatar();
   const toggleAuthModal = useStore((s) => s.toggleAuthModal);
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
@@ -323,7 +325,7 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily, onR
               leading={(
                 <View style={{ width: 64, height: 40 }}>
                   <View style={{ position: 'absolute', left: 0 }}>
-                    <Avatar seed={user?.uid || 'toi'} size={40} />
+                    <Avatar seed={user?.uid || 'toi'} config={myAvatar} size={40} />
                   </View>
                   <View style={{ position: 'absolute', left: 24, width: 40, height: 40, borderRadius: 20, backgroundColor: C.coral, alignItems: 'center', justifyContent: 'center' }}>
                     <Swords color={C.onCoral} size={18} />

@@ -45,6 +45,7 @@ import type { BackgroundPolicy } from '../utils/deadlineTimer';
 import SuitesGame from '../components/games/SuitesGame';
 import { ArenaButton } from '../components/arena/ArenaKit';
 import Avatar from '../components/arena/art/avatars/Avatar';
+import { useMyAvatar } from '../hooks/useMyAvatar';
 import useNightStatusBar from '../components/arena/useNightStatusBar';
 import { intentPlan, parseTriviaIntent, pickerCopy, resultPrimary, roundSizeFor, type TriviaIntent } from '../utils/triviaIntent';
 
@@ -456,6 +457,8 @@ function AnswerOption({
 export interface QuizOpponent {
   seed: string;
   name: string;
+  /** Their chosen avatar (wire string), when they made one. */
+  avatar?: string | null;
   /** Their final score for this draw (duel), shown as the bar to beat. */
   score: number;
 }
@@ -490,6 +493,7 @@ export function QuizPlayer({
   const insets = useSafeAreaInsets();
   const reduceMotion = useReduceMotion();
   const me = useStore((s) => s.user);
+  const { avatar: myAvatar } = useMyAvatar();
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const [idx, setIdx] = useState(0);
   const [picked, setPicked] = useState<string | null>(null);
@@ -595,7 +599,7 @@ export function QuizPlayer({
         {/* Score strip: you (and, in a duel, the score you are chasing). */}
         <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12, borderRadius: 20, backgroundColor: C.surface }}>
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <Avatar seed={me?.uid || 'toi'} size={48} mood={confirmed ? (isCorrect ? 'celebrating' : 'recovering') : 'focused'} />
+            <Avatar seed={me?.uid || 'toi'} config={myAvatar} size={48} mood={confirmed ? (isCorrect ? 'celebrating' : 'recovering') : 'focused'} />
             <View>
               <Text style={[arenaType.status, { color: C.muted }]}>{t('Toi', 'Ou')}</Text>
               <ScoreCounter value={score} style={{ ...arenaType.num, fontSize: 20, lineHeight: 24, color: C.ink }} />
@@ -611,7 +615,7 @@ export function QuizPlayer({
                   <Text numberOfLines={1} style={[arenaType.status, { color: C.muted }]}>{opponent.name}</Text>
                   <Text style={[arenaType.num, { fontSize: 20, lineHeight: 24, color: C.ink }]}>{opponent.score}</Text>
                 </View>
-                <Avatar seed={opponent.seed} size={48} />
+                <Avatar seed={opponent.seed} config={opponent.avatar} size={48} />
               </View>
             </>
           ) : (
