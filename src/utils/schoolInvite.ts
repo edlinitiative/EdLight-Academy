@@ -10,15 +10,18 @@ import { trackEvent } from './telemetry';
 
 export type InviteChannel = 'whatsapp' | 'native' | 'copy';
 
+// One short sentence + the link: no emoji, no em-dash (owner feedback on the
+// long invite text, TestFlight build 61).
 export function schoolInviteMessage(school: string | null, code: string | null, link: string, isCreole: boolean): string {
   if (!school) {
-    return isCreole
-      ? `📚 Vin revize Bak la avè m sou EdLight Academy !${code ? ` Sèvi ak kòd mwen ${code} lè w enskri.` : ''} ${link}`
-      : `📚 Viens réviser le Bac avec moi sur EdLight Academy !${code ? ` Utilise mon code ${code} à l'inscription.` : ''} ${link}`;
+    if (isCreole) return `Vin revize Bak la avè m sou EdLight Academy${code ? ` ak kòd mwen ${code}` : ''} : ${link}`;
+    return code
+      ? `Rejoins-moi sur EdLight Academy pour réviser le Bac avec mon code ${code} : ${link}`
+      : `Viens réviser le Bac avec moi sur EdLight Academy : ${link}`;
   }
   return isCreole
-    ? `🏫 M ap revize Bak la sou EdLight Academy pou ${school}. Vin ede lekòl nou monte nan klasman lekòl yo !${code ? ` Sèvi ak kòd mwen ${code} lè w enskri.` : ''} ${link}`
-    : `🏫 Je révise le Bac sur EdLight Academy pour ${school}. Viens faire monter notre école au classement des écoles !${code ? ` Utilise mon code ${code} à l'inscription.` : ''} ${link}`;
+    ? `Ede ${school} monte nan klasman lekòl yo sou EdLight${code ? ` ak kòd mwen ${code}` : ''} : ${link}`
+    : `Aide ${school} à monter au classement des écoles sur EdLight${code ? ` avec mon code ${code}` : ''} : ${link}`;
 }
 
 let refCache: { code: string | null; link: string } | null = null;

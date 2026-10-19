@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, View, Text, ScrollView, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowRight, Check } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { updateUserGrade } from '../services/firebase';
@@ -67,6 +67,10 @@ export default function WelcomeGradeModal() {
   const setLanguage = useStore((s) => s.setLanguage);
   const { colors, fonts, typeScale, cardSurface, featureSurface, radius } = useTheme();
   const reduce = useReduceMotion();
+  // Insets come from the app-root provider (context crosses the Modal portal).
+  // A native <SafeAreaView> INSIDE this statusBarTranslucent Modal measured 0
+  // on device, so the wordmark and "Passer" drew under the status bar (build 63).
+  const insets = useSafeAreaInsets();
   const surface = useOnboardingSurface();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -141,10 +145,14 @@ export default function WelcomeGradeModal() {
     );
 
   const Tile = ({
-    selected, onPress, title, meta, titleSize, minHeight, a11y, role,
+    selected, onPress, title, meta, titleSize, minHeight, a11y, role, compact = false,
   }: {
     selected: boolean; onPress: () => void; title: string; meta?: string;
     titleSize: number; minHeight: number; a11y: string; role: 'radio';
+    /** 3-up tiles: ~80pt wide, so the disc goes UNDER the title (a title
+     *  squeezed beside it broke "7yèm" mid-word) and the title is one line
+     *  that shrinks rather than wraps inside a word at large text sizes. */
+    compact?: boolean;
   }) => (
     <PressableScale
       onPress={onPress}
@@ -155,12 +163,29 @@ export default function WelcomeGradeModal() {
       accessibilityLabel={a11y}
       style={[
         cardSurface,
-        { borderRadius: 20, padding: 18, minHeight, flex: 1, justifyContent: 'space-between' },
+        { borderRadius: 20, padding: compact ? 14 : 18, minHeight, flex: 1, justifyContent: 'space-between' },
         selected ? { backgroundColor: colors.azureSoft, shadowOpacity: 0, elevation: 0 } : null,
       ]}
     >
+      {compact ? (
+        <>
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+            maxFontSizeMultiplier={1.4}
+            style={{ fontFamily: fonts.heading, fontSize: titleSize, lineHeight: Math.round(titleSize * 1.18), letterSpacing: -0.6, color: selected ? colors.azureInk : colors.ink }}
+          >
+            {title}
+          </Text>
+          <View style={{ marginTop: 10 }}><CheckDisc on={selected} /></View>
+        </>
+      ) : (
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
         <Text
+          numberOfLines={2}
+          adjustsFontSizeToFit
+          minimumFontScale={0.7}
           maxFontSizeMultiplier={1.4}
           style={{ fontFamily: fonts.heading, fontSize: titleSize, lineHeight: Math.round(titleSize * 1.18), letterSpacing: -0.6, color: selected ? colors.azureInk : colors.ink, flexShrink: 1 }}
         >
@@ -168,6 +193,7 @@ export default function WelcomeGradeModal() {
         </Text>
         <CheckDisc on={selected} />
       </View>
+      )}
       {meta ? (
         <Text style={[typeScale.caption, { color: selected ? colors.azureInk : colors.muted, marginTop: 8 }]}>{meta}</Text>
       ) : null}
@@ -197,7 +223,7 @@ export default function WelcomeGradeModal() {
         onRequestClose={showMission ? () => setMissionStatus('done') : skip}
       >
         {!showMission ? (
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top', 'bottom']}>
+        <View style={{ flex: 1, backgroundColor: colors.bg, paddingTop: insets.top, paddingBottom: insets.bottom }}>
           <View style={styles.header}>
             <Text style={{ fontFamily: fonts.heading, fontSize: 24, letterSpacing: -0.8, color: colors.azureInk }}>EdLight</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -270,12 +296,17 @@ export default function WelcomeGradeModal() {
                     <Tile key={g.code} role="radio" selected={picked === g.code} onPress={() => pick(g.code)} title={g.label} meta={nsMeta} titleSize={26} minHeight={116} a11y={`${g.label}, ${nsMeta}`} />
                   ))}
                 </View>
+                {/* "Fondamental" once for the row, not under each of three
+                    narrow tiles: at ~74pt of text width the word could not fit
+                    and iOS broke it mid-word ("Fondamenta / l", build 63). */}
+                <Text style={[typeScale.caption, { color: colors.muted, marginTop: 4, marginBottom: -4 }]}>
+                  {t('Fondamental', 'Fondamantal')}
+                </Text>
                 <View style={styles.row}>
                   {FONDAMENTAL.map((g) => {
                     const label = isCreole ? g.ht : g.label;
-                    const meta = t('Fondamental', 'Fondamantal');
                     return (
-                      <Tile key={g.code} role="radio" selected={picked === g.code} onPress={() => pick(g.code)} title={label} meta={meta} titleSize={22} minHeight={96} a11y={`${t(`${g.label} année`, `${g.ht} ane`)}, ${meta}`} />
+                      <Tile key={g.code} role="radio" selected={picked === g.code} onPress={() => pick(g.code)} title={label} titleSize={22} minHeight={84} compact a11y={`${t(`${g.label} année`, `${g.ht} ane`)}, ${t('Fondamental', 'Fondamantal')}`} />
                     );
                   })}
                 </View>
@@ -311,7 +342,7 @@ export default function WelcomeGradeModal() {
               </Text>
             </View>
           </View>
-        </SafeAreaView>
+        </View>
         ) : (
         <View style={styles.overlay}>
           <View style={[featureSurface, styles.card]} accessibilityViewIsModal>

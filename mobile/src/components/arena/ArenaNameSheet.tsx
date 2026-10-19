@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView, Modal, Platform, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { defaultAlias, isAcceptableAliasInput } from '../../../../shared/alias';
 import { arenaColors as C, arenaType } from '../../theme/arenaTheme';
 import { fonts } from '../../theme/theme';
@@ -42,6 +43,7 @@ export default function ArenaNameSheet({
   onSave: (fullName: string) => void;
   onClose: () => void;
 }) {
+  const insets = useSafeAreaInsets();
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const [value, setValue] = useState('');
 
@@ -70,7 +72,7 @@ export default function ArenaNameSheet({
             borderTopLeftRadius: 28,
             borderTopRightRadius: 28,
             padding: 20,
-            paddingBottom: 34,
+            paddingBottom: Math.max(34, insets.bottom + 12),
             gap: 14,
           }}
         >

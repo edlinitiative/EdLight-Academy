@@ -1,5 +1,6 @@
 import React from 'react';
 import { Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Check } from 'lucide-react-native';
 import PressableScale from '../ui/PressableScale';
 import { GRADES } from '../../../../shared/trackConfig';
@@ -35,6 +36,7 @@ export default function ArenaGradeSheet({
   onPick: (code: string) => void;
   onClose: () => void;
 }) {
+  const insets = useSafeAreaInsets();
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   return (
@@ -52,7 +54,7 @@ export default function ArenaGradeSheet({
           borderTopLeftRadius: 28,
           borderTopRightRadius: 28,
           padding: 20,
-          paddingBottom: 34,
+          paddingBottom: Math.max(34, insets.bottom + 12),
           gap: 14,
           maxHeight: '75%',
         }}

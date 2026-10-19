@@ -121,9 +121,14 @@ export function CopyButton({ text, label, done, ghost }: { text: string; label: 
 }
 
 export function InviteButton({ t: tour, label }: { t: Tournament; label: string }) {
+  const { t } = useLang();
   const url = shareUrl(tour);
   const share = async () => {
-    const text = `${tour.title} — PIN ${formatPin(tour.pin)}`;
+    // One sentence (the link travels as `url`), no em-dash.
+    const text = t(
+      `Rejoins mon tournoi « ${tour.title} » avec le PIN ${formatPin(tour.pin)}`,
+      `Vin jwe nan tounwa mwen "${tour.title}" ak PIN ${formatPin(tour.pin)}`,
+    );
     if (navigator.share) {
       try { await navigator.share({ title: tour.title, text, url }); return; } catch { /* dismissed */ }
     }
