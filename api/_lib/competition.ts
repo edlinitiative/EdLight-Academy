@@ -166,6 +166,20 @@ async function schoolMember(
   );
   return membership?.status === 'approved';
 }
+async function canFollow(
+  tx: Transaction,
+  db: Firestore,
+  e: CompetitionEvent,
+  uid: string,
+) {
+  if (e.audience === 'public' || e.ownerUid === uid) return true;
+  if (await data(tx, db, `entryClaims/${e.id}_${uid}`)) return true;
+  return (
+    e.audience === 'school' &&
+    !!e.schoolKey &&
+    (await schoolMember(tx, db, uid, e.schoolKey))
+  );
+}
 function manage(e: CompetitionEvent, uid: string, admin: boolean) {
   ensure(
     admin || e.ownerUid === uid || e.cohosts[uid] === 'manage',
@@ -611,19 +625,13 @@ export async function mutateCompetition(
           `competitionEvents/${id(body.eventId)}`,
         )) as CompetitionEvent | null;
         ensure(e, 'not_found', 404);
-        const claim = await data(tx, db, `entryClaims/${e.id}_${uid}`);
-        const member = e.schoolKey
-          ? await schoolMember(tx, db, uid, e.schoolKey)
-          : false;
-        ensure(
-          e.state !== 'draft' &&
-            (e.audience === 'public' ||
-              e.ownerUid === uid ||
-              claim ||
-              (e.audience === 'school' && member)),
-          'forbidden',
-          403,
-        );
+        // Unfollowing never needs access; only a new follow re-checks visibility.
+        if (body.follow === true)
+          ensure(
+            e.state !== 'draft' && (await canFollow(tx, db, e, uid)),
+            'forbidden',
+            403,
+          );
         const ref = db.doc(`users/${uid}/competitionFollows/${e.id}`);
         // Server-only reverse index so announce/postpone/cancel can reach followers without a collection-group scan.
         const follower = db.doc(`competitionEvents/${e.id}/followers/${uid}`);
@@ -1266,6 +1274,20 @@ export async function mutateCompetition(
               db.collection(`competitionEvents/${e.id}/followers`).limit(100),
             )
           : null;
+        // Access can lapse after following (membership revoked, audience narrowed): re-check before fan-out and prune stale follows.
+        const followerAccess = new Map<string, boolean>();
+        for (const row of followers?.docs ?? [])
+          followerAccess.set(row.id, await canFollow(tx, db, e, row.id));
+        const cohostTarget =
+          action === 'event-cohost' && body.role !== 'remove'
+            ? id(body.recipientUid)
+            : null;
+        const cohostRecipient = cohostTarget
+          ? await data(tx, db, `users/${cohostTarget}`)
+          : null;
+        const cohostBlocked = cohostTarget
+          ? await data(tx, db, `competitionBlocks/${cohostTarget}_${uid}`)
+          : null;
         const invalidate = [
           'event-cancel',
           'event-no-contest',
@@ -1288,6 +1310,7 @@ export async function mutateCompetition(
             Object.keys(e.cohosts).length < 8 || e.cohosts[recipientUid],
             'cohost_limit',
           );
+          const previousRole = e.cohosts[recipientUid];
           if (body.role === 'remove') delete updated.cohosts[recipientUid];
           else {
             ensure(
@@ -1295,16 +1318,25 @@ export async function mutateCompetition(
               'invalid_role',
               400,
             );
+            ensure(
+              recipientUid !== e.ownerUid && cohostRecipient,
+              'recipient_not_found',
+              404,
+            );
+            // Same block parity as team invitations: a blocked organizer cannot grant roles (or push) to the blocker.
+            ensure(!cohostBlocked, 'invitation_unavailable', 403);
             updated.cohosts[recipientUid] = body.role;
           }
-          note(
-            recipientUid,
-            `event_${e.id}`,
-            'event',
-            e.id,
-            e.title,
-            body.role === 'remove' ? 'cohost_removed' : 'cohost_granted',
-          );
+          // Only real changes notify, so grant/remove toggles cannot be used to spam pushes.
+          if (previousRole !== updated.cohosts[recipientUid])
+            note(
+              recipientUid,
+              `event_${e.id}`,
+              'event',
+              e.id,
+              e.title,
+              body.role === 'remove' ? 'cohost_removed' : 'cohost_granted',
+            );
         } else if (action === 'event-announce') {
           const message = text(body.message, 1000);
           ensure(message, 'message_required', 400);
@@ -1442,7 +1474,11 @@ export async function mutateCompetition(
                 change,
               );
         for (const row of followers?.docs ?? [])
-          note(
+          if (!followerAccess.get(row.id)) {
+            tx.delete(row.ref);
+            tx.delete(db.doc(`users/${row.id}/competitionFollows/${e.id}`));
+          } else
+            note(
             row.id,
             `follow_${e.id}`,
             'event',

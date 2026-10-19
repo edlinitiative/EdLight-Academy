@@ -698,6 +698,33 @@ it('co-host changes reach the co-host only, and mark-read touches only the calle
     mutate('d', 'inbox-read', { ids: ['../x'] }),
   ).rejects.toMatchObject({ code: 'invalid_id' });
 });
+it('co-host grants respect blocks and repeated grants do not re-push', async () => {
+  const eventId = await createEvent('individual');
+  mockExpoPush.mockClear();
+  await mutate('host', 'event-cohost', { eventId, recipientUid: 'd', role: 'manage' });
+  await mutate('host', 'event-cohost', { eventId, recipientUid: 'd', role: 'manage' });
+  expect(pushedTo()).toEqual(['d']);
+  mockDb.store.set('competitionBlocks/c_host', { uid: 'c', blockedUid: 'host' });
+  await expect(
+    mutate('host', 'event-cohost', { eventId, recipientUid: 'c', role: 'checkin' }),
+  ).rejects.toMatchObject({ code: 'invitation_unavailable' });
+  await expect(
+    mutate('host', 'event-cohost', { eventId, recipientUid: 'ghost', role: 'checkin' }),
+  ).rejects.toMatchObject({ code: 'recipient_not_found' });
+});
+it('followers who lost access are pruned instead of notified, and can always unfollow', async () => {
+  const eventId = await createEvent('individual');
+  mockDb.store.set(`competitionEvents/${eventId}/followers/z`, { uid: 'z', createdAt: now });
+  mockDb.store.set(`users/z/competitionFollows/${eventId}`, { eventId, createdAt: now });
+  const e = doc(`competitionEvents/${eventId}`);
+  mockDb.store.set(`competitionEvents/${eventId}`, { ...e, audience: 'private' });
+  mockExpoPush.mockClear();
+  await mutate('host', 'event-announce', { eventId, message: 'Salle 4.' });
+  expect(pushedTo()).not.toContain('z');
+  expect(mockDb.store.has(`competitionEvents/${eventId}/followers/z`)).toBe(false);
+  expect(mockDb.store.has(`users/z/competitionFollows/${eventId}`)).toBe(false);
+  await expect(mutate('z', 'event-follow', { eventId, follow: false })).resolves.toMatchObject({ ok: true });
+});
 it('membership review notifies the reviewed student; results release without scores', async () => {
   mockDb.store.set('schoolRoles/school_host', {
     uid: 'host',
