@@ -16,7 +16,16 @@ describe('diagnostic privacy', () => {
     expect(sanitizeDiagnostic(JSON.parse(JSON.stringify(clean)))).toEqual(clean);
   });
 
-  it.each([null, {}, { ...event(), timestamp: Infinity }, { ...event(), name: 'student@example.com' }, { ...event(), type: 'custom' }])('rejects malformed input %#', (input) => {
+  it('keeps the deliberate tournament keys, sanitizes their values and still drops unknown keys', () => {
+    const clean = sanitizeDiagnostic({ ...event('tournament_attempt_failed'),
+      detail: { phase: 'round', round: 2, errorCode: 'answers_closed', recovered: true,
+        code: 'AB2CD3EF', tid: 'abc123', pin: '482913', title: 'Finale', uid: 'u1', format: 'live' } });
+    expect(clean?.detail).toEqual({ phase: 'round', round: 2, errorCode: 'answers_closed', recovered: true });
+    const unsafe = sanitizeDiagnostic({ ...event(), detail: { phase: 'Lycée privé', round: Infinity, errorCode: 'a b', recovered: { nested: true } } });
+    expect(unsafe?.detail).toEqual({});
+  });
+
+  it.each([null, {},{ ...event(), timestamp: Infinity }, { ...event(), name: 'student@example.com' }, { ...event(), type: 'custom' }])('rejects malformed input %#', (input) => {
     expect(sanitizeDiagnostic(input)).toBeNull();
   });
 });
@@ -94,6 +103,19 @@ describe('critical request diagnostics', () => {
     ]);
     expect(JSON.stringify(track.mock.calls)).not.toMatch(/private|secret|\/api/);
     expect(globalThis.fetch).toHaveBeenLastCalledWith('/api/arena/answer', init);
+  });
+
+  it('labels tournament operations from a fixed list, never from the URL', async () => {
+    globalThis.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 } as Response);
+    const track = jest.fn();
+    const request = createObservedFetch(track, 'tournois');
+    await request('https://academy.edlight.org/api/tournois/play');
+    await request('/api/tournois/join');
+    await request('/api/tournois/tick');
+    await request('/api/tournois/secret-tid-482913');
+    expect(track.mock.calls.filter(([n]) => n === 'critical_request_started').map(([, d]) => [d.flow, d.step]))
+      .toEqual([['tournois', 'play'], ['tournois', 'join'], ['tournois', 'tick'], ['tournois', 'request']]);
+    expect(JSON.stringify(track.mock.calls)).not.toMatch(/secret|482913|academy/);
   });
 
   it('records HTTP rejection without changing it, even when the reporter throws', async () => {

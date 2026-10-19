@@ -15,6 +15,7 @@ import {
   schoolIdentifier,
   mutateCompetition,
 } from './_lib/competition';
+import { ensureInviteCode, resolvePeople } from './_lib/competitionPeople';
 import type { CompetitionEvent, League } from '../shared/competition/platform';
 import { seedSchools, schoolFromDoc, isApproved } from '../shared/schools';
 import { leagueTable } from '../shared/leagues/standings';
@@ -76,7 +77,9 @@ export async function readEvent(
     'forbidden',
     403,
   );
-  const entries = manager
+  // Hosts (managers and check-in co-hosts) see every entry so they can
+  // welcome attendees by name; others see only their own.
+  const entries = host
     ? (
         await db.collection(`competitionEvents/${e.id}/entries`).limit(60).get()
       ).docs.map((d) => d.data())
@@ -94,10 +97,18 @@ export async function readEvent(
       .limit(10)
       .get()
   ).docs.map((d) => d.data());
-  const publicResults = await Promise.all(e.resultRows.map(async (row) => {
-    const entry=await get(db, `competitionEvents/${e.id}/entries/${row.entryId}`);
-    return { ...row,label:entry?.label || 'Participation / Patisipasyon' };
-  }));
+  // Result labels come from the entry (team name or the player's public
+  // name); a missing label stays null and the client shows a localized
+  // "Participation" — never the entry id, which is a uid for individuals.
+  const publicResults = await Promise.all(
+    e.resultRows.map(async (row) => {
+      const entry = await get(
+        db,
+        `competitionEvents/${e.id}/entries/${row.entryId}`,
+      );
+      return { ...row, label: entry?.label || null };
+    }),
+  );
   const safe = {
     id: e.id,
     title: e.title,
@@ -152,9 +163,19 @@ export async function readEvent(
           .filter((d) => host || d.id === claim?.entryId)
           .map((d) => d.data())
       : [];
+  const cohosts = manager ? e.cohosts || {} : {};
+  const people = await resolvePeople(db, [
+    ...entries.flatMap((entry) => [
+      entry.captainUid as string,
+      ...((entry.starters as string[]) || []),
+    ]),
+    ...Object.keys(cohosts),
+  ]);
   return {
     event: safe,
     entries,
+    cohosts,
+    people,
     announcements,
     disputes,
     rewards,
@@ -437,14 +458,26 @@ export default async function handler(
                 .get()
             ).docs.map((d) => ({ id: d.id, ...d.data() }))
           : [];
+        const teamDocs = teams.docs.map((d) => d.data());
+        const [people, inviteCode] = await Promise.all([
+          resolvePeople(db, [
+            ...membershipRequests.map((r) => r.uid as string),
+            ...teamDocs
+              .filter((t) => t.captainUid === uid)
+              .flatMap((t) => (t.members as string[]) || []),
+          ]),
+          ensureInviteCode(db, uid),
+        ]);
         out = {
           uid,
+          inviteCode,
+          people,
           admin,
           membershipRequests,
           moderationReports,
           creationEnabled: process.env.COMPETITION_CREATION_ENABLED === 'true',
           inbox: inbox.docs.map((d) => d.data()),
-          teams: teams.docs.map((d) => d.data()),
+          teams: teamDocs,
           memberships: memberships.docs.map((d) => d.data()),
           roles: roles.docs.map((d) => d.data()),
           invitations: invitations.docs.map((d) => d.data()),
@@ -534,7 +567,16 @@ export default async function handler(
               ).docs.map((d) => d.data())
             : [];
         out = team.members.includes(actor!.uid)
-          ? { team, invites, requests }
+          ? {
+              team,
+              invites,
+              requests,
+              people: await resolvePeople(db, [
+                ...team.members,
+                ...invites.map((i) => i.recipientUid as string),
+                ...requests.map((r) => r.uid as string),
+              ]),
+            }
           : {
               team: {
                 id: team.id,
@@ -562,6 +604,10 @@ export default async function handler(
                 ? 'expired'
                 : invite.status,
           },
+          people: await resolvePeople(db, [
+            invite.senderUid,
+            invite.recipientUid,
+          ]),
         };
         break;
       }

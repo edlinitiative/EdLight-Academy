@@ -21,7 +21,10 @@ import {
   query,
   where,
 } from 'firebase/firestore';
-import { authedFetch, db, getIdToken } from './firebase';
+import { db, getIdToken } from './firebase';
+import { createObservedFetch } from '../../shared/observedFetch';
+import { createTournamentDiagnostics } from '../../shared/tournois/diagnostics';
+import { trackEvent } from '../utils/telemetry';
 import type { TournamentConfig } from '../../shared/tournois/config';
 import type { PublicQuestion } from '../../shared/tournois/questions';
 import type { Match } from '../../shared/tournois/bracket';
@@ -44,6 +47,21 @@ import type {
   RosterEntry,
   MyTournament,
 } from '../../shared/tournois/models';
+
+// Technical outcomes only — see shared/tournois/diagnostics.ts.
+const observedFetch = createObservedFetch(trackEvent, 'tournois');
+const observe = createTournamentDiagnostics(trackEvent);
+async function authedFetch(url: string, body: unknown): Promise<Response> {
+  const token = await getIdToken();
+  return observedFetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+}
 
 // ── Listeners ─────────────────────────────────────────────────────────────
 
@@ -233,16 +251,20 @@ export async function createTournament(input: Record<string, unknown>) {
 }
 
 export const cancelTournament = (tid: string) =>
-  post('/api/tournois/create', { action: 'cancel', tid });
+  observe('cancel', () =>
+    post('/api/tournois/create', { action: 'cancel', tid }),
+  );
 
 export const joinTournament = (
   target: { tid?: string; pin?: string },
   who: Identity,
 ) =>
-  post<{ tid: string; already: boolean }>('/api/tournois/join', {
-    ...target,
-    ...who,
-  });
+  observe('join', () =>
+    post<{ tid: string; already: boolean }>('/api/tournois/join', {
+      ...target,
+      ...who,
+    }),
+  );
 
 export const liveAnswer = (
   tid: string,
@@ -250,13 +272,15 @@ export const liveAnswer = (
   choice: number,
   clientShownAt: number,
 ) =>
-  post('/api/tournois/play', {
-    action: 'live-answer',
-    tid,
-    index,
-    choice,
-    clientShownAt,
-  });
+  observe('live_answer', () =>
+    post('/api/tournois/play', {
+      action: 'live-answer',
+      tid,
+      index,
+      choice,
+      clientShownAt,
+    }),
+  );
 
 export interface RoundStep {
   round: number;
@@ -270,7 +294,9 @@ export interface RoundStep {
 }
 
 export const startRound = (tid: string) =>
-  post<RoundStep>('/api/tournois/play', { action: 'start', tid });
+  observe('start', () =>
+    post<RoundStep>('/api/tournois/play', { action: 'start', tid }),
+  );
 
 export const answerRound = (
   tid: string,
@@ -278,13 +304,18 @@ export const answerRound = (
   pos: number,
   choice: number,
 ) =>
-  post<RoundStep>('/api/tournois/play', {
-    action: 'answer',
-    tid,
+  observe(
+    'answer',
+    () =>
+      post<RoundStep>('/api/tournois/play', {
+        action: 'answer',
+        tid,
+        round,
+        pos,
+        choice,
+      }),
     round,
-    pos,
-    choice,
-  });
+  );
 
 export interface ReviewItem extends PublicQuestion {
   answer: number;
@@ -295,11 +326,16 @@ export interface ReviewItem extends PublicQuestion {
 }
 
 export const reviewAnswers = (tid: string, round?: number) =>
-  post<{ items: ReviewItem[] }>('/api/tournois/play', {
-    action: 'review',
-    tid,
+  observe(
+    'review',
+    () =>
+      post<{ items: ReviewItem[] }>('/api/tournois/play', {
+        action: 'review',
+        tid,
+        round,
+      }),
     round,
-  });
+  );
 
 /** Ask the server to catch up. Works signed out (spectators). Returns the server clock. */
 export async function tick(tid: string): Promise<number | null> {
@@ -309,7 +345,7 @@ export async function tick(tid: string): Promise<number | null> {
       'Content-Type': 'application/json',
     };
     if (token) headers.Authorization = `Bearer ${token}`;
-    const r = await fetch('/api/tournois/tick', {
+    const r = await observedFetch('/api/tournois/tick', {
       method: 'POST',
       headers,
       body: JSON.stringify({ tid }),

@@ -1,7 +1,7 @@
 /** Technical outcomes only: no URL, request payload, response body or auth token. */
 export function createObservedFetch(
   track: (name: string, detail?: Record<string, unknown>) => void,
-  flow: 'arena' | 'challenge',
+  flow: 'arena' | 'challenge' | 'tournois',
 ): typeof fetch {
   const failed = new Set<string>();
   const emit = (name: string, detail: Record<string, unknown>) => {
@@ -11,7 +11,7 @@ export function createObservedFetch(
     const url = typeof input === 'string' ? input : '';
     // Known operations only. Never derive telemetry labels from an arbitrary URL.
     const suffix = url.split('/').pop();
-    const step = suffix && ['register', 'answer', 'presence', 'create', 'accept'].includes(suffix) ? suffix : 'request';
+    const step = suffix && ['register', 'answer', 'presence', 'create', 'accept', 'join', 'play', 'tick'].includes(suffix) ? suffix : 'request';
     const started = Date.now();
     const operationId = `${started.toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
     const base = { flow, step, operationId };

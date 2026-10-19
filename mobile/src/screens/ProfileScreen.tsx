@@ -145,6 +145,7 @@ export default function ProfileScreen() {
   // Refused at the OS level: the switch can't fix it, only the system settings can.
   const [notificationsBlocked, setNotificationsBlocked] = useState(false);
   const [emailRemindersEnabled, setEmailRemindersEnabled] = useState(true);
+  const [competitionUpdatesEnabled, setCompetitionUpdatesEnabled] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [hapticsEnabled, setHapticsEnabled] = usePreference('hapticsEnabled');
 
@@ -167,7 +168,10 @@ export default function ProfileScreen() {
   useEffect(() => {
     if (!user?.uid) return;
     getNotificationPrefs(user.uid)
-      .then((p) => setEmailRemindersEnabled(p.emailNotifications !== false))
+      .then((p) => {
+        setEmailRemindersEnabled(p.emailNotifications !== false);
+        setCompetitionUpdatesEnabled(p.competitionUpdates !== false);
+      })
       .catch(() => {});
   }, [user?.uid]);
 
@@ -178,6 +182,16 @@ export default function ProfileScreen() {
       await saveNotificationPrefs(user.uid, { emailNotifications: value });
     } catch {
       setEmailRemindersEnabled(!value); // put the switch back if the write failed
+    }
+  }
+
+  async function handleCompetitionUpdatesToggle(value: boolean) {
+    setCompetitionUpdatesEnabled(value);
+    if (!user?.uid) return;
+    try {
+      await saveNotificationPrefs(user.uid, { competitionUpdates: value });
+    } catch {
+      setCompetitionUpdatesEnabled(!value);
     }
   }
 
@@ -747,6 +761,23 @@ export default function ProfileScreen() {
                 }
               />
             )}
+            {/* Server-side: api/_lib/competitionNotify.ts skips the push when this
+                is false. The "Mon activité" inbox records the item either way. */}
+            <SettingsRow
+              icon={Trophy}
+              label={t('Compétitions et équipes', 'Konpetisyon ak ekip')}
+              sublabel={t(
+                "Invitations, changements d'horaire, annulations et résultats. Tout reste dans Mon activité.",
+                'Envitasyon, chanjman orè, anilasyon ak rezilta. Tout rete nan Aktivite mwen.',
+              )}
+              accessory={
+                <SettingsSwitch
+                  value={competitionUpdatesEnabled}
+                  onValueChange={handleCompetitionUpdatesToggle}
+                  accessibilityLabel={t('Compétitions et équipes', 'Konpetisyon ak ekip')}
+                />
+              }
+            />
             <SettingsRow icon={Languages} label={t('Langue', 'Lang')} accessory={languageControl} />
             <SettingsRow icon={Palette} label={t('Thème', 'Tèm')} accessory={themeControl} />
             <SettingsRow

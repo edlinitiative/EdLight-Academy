@@ -10,6 +10,9 @@ import { showLocalNotification, getPermission } from './pushNotificationService'
 const DEFAULT_PREFERENCES = {
   emailNotifications: true,
   studyReminders: true,
+  // Pushes for teams/competitions (api/_lib/competitionNotify.ts). Absent = on;
+  // the "Mon activité" inbox records items either way.
+  competitionUpdates: true,
   achievementNotifications: true,
   weeklyProgress: true,
   reminderTime: '18:00', // 6 PM default

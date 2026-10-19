@@ -15,6 +15,14 @@ const DETAIL_KEYS = new Set([
   'signedIn', 'timed', 'timedOut', 'elapsedMs', 'scoped', 'has_position',
   'course_id', 'lesson_id', 'course', 'unit', 'category', 'channel', 'where',
   'game', 'grade', 'level', 'target', 'scope', 'ok', 'result', 'duel', 'operationId',
+  // Tournament attempts (shared/tournois/diagnostics.ts), added deliberately:
+  // `phase` (round|live), `round` (small index), `errorCode` (server error token; deliberately
+  // not `code`, which elsewhere means a duel/invite code)
+  // and `recovered` (resumed from the server-held attempt). Still excluded:
+  // tournament/event ids, PINs, invitation tokens, titles, uids, chosen
+  // options and correctness. Competition requests already report through
+  // `competition_action` { action, outcome, durationMs }.
+  'phase', 'round', 'errorCode', 'recovered',
 ]);
 const CONTEXT_KEYS = new Set([
   'platform', 'appVersion', 'buildNumber', 'runtimeVersion', 'updateId',
