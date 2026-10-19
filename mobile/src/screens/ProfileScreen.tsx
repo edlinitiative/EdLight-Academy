@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Flame, Trophy, Zap, LogOut, Moon, Languages, Trash2, Target, Bell, GraduationCap,
   Sprout, Brain, Mail, Vibrate, Palette, UserPlus, Eye, Info, Instagram, ChevronRight, Pencil,
+  School as SchoolIcon,
 } from 'lucide-react-native';
 import * as Notifications from 'expo-notifications';
 import { Avatar as Face, SchoolCrest } from '../components/arena/art';
@@ -32,6 +33,11 @@ import { getFirstName } from '../utils/shared';
 import ReadinessCard from '../components/ReadinessCard';
 import GradeProgress from '../components/GradeProgress';
 import InviteSheet from '../components/InviteSheet';
+import SchoolPicker from '../components/SchoolPicker';
+import EditProfileSheet, { type ProfileField } from '../components/profile/EditProfileSheet';
+import ArenaNameSheet from '../components/arena/ArenaNameSheet';
+import { useChangeSchool } from '../hooks/useChangeSchool';
+import { useSaveFullName } from '../hooks/useSaveFullName';
 import { openInstagram } from '../components/FollowInstagram';
 import { gradeProfile } from '../config/trackConfig';
 import { resetTabToRoot } from '../navigation/navHelpers';
@@ -148,6 +154,12 @@ export default function ProfileScreen() {
   const [competitionUpdatesEnabled, setCompetitionUpdatesEnabled] = useState(true);
   const [arenaAnnouncementsEnabled, setArenaAnnouncementsEnabled] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
+  // Identity editors (TestFlight build 63: "how do we change your school?").
+  const [editOpen, setEditOpen] = useState(false);
+  const [schoolPickerOpen, setSchoolPickerOpen] = useState(false);
+  const [nameSheetOpen, setNameSheetOpen] = useState(false);
+  const { choose: chooseSchool, saving: savingSchool } = useChangeSchool(school);
+  const { save: saveFullName, saving: savingName } = useSaveFullName();
   const [hapticsEnabled, setHapticsEnabled] = usePreference('hapticsEnabled');
 
   // Read on mount and every time the app comes back to the foreground — the
@@ -446,6 +458,15 @@ export default function ProfileScreen() {
 
   const goLeaderboard = () => navigation.navigate('Leaderboard');
   const goAvatar = () => navigation.navigate('AvatarEditor');
+  const openSchoolPicker = () => { if (!savingSchool) setSchoolPickerOpen(true); };
+  const changeSchoolLabel = school ? t('Changer d’école', 'Chanje lekòl') : t('Choisir mon école', 'Chwazi lekòl mwen');
+  const fullName: string | null = user.name || user.displayName || null;
+  const editField = (f: ProfileField) => {
+    if (f === 'name') setNameSheetOpen(true);
+    else if (f === 'grade') setGradeChosen(false);
+    else if (f === 'school') openSchoolPicker();
+    else goAvatar();
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
@@ -502,10 +523,10 @@ export default function ProfileScreen() {
               </Text>
             </View>
             <PressableScale
-              onPress={() => setGradeChosen(false)}
+              onPress={() => setEditOpen(true)}
               haptic={false}
               accessibilityRole="button"
-              accessibilityLabel={t('Modifier ma classe', 'Chanje klas mwen')}
+              accessibilityLabel={t('Modifier mon profil : nom, classe, école', 'Modifye pwofil mwen : non, klas, lekòl')}
               hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
               style={{ minHeight: touch.min, justifyContent: 'center' }}
             >
@@ -517,7 +538,15 @@ export default function ProfileScreen() {
         {/* Ton classement — real ranks only. */}
         <View style={{ paddingHorizontal: GUTTER, marginTop: GAP }}>
           <View style={[cardSurface, { padding: 20 }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <PressableScale
+              onPress={openSchoolPicker}
+              haptic={false}
+              pressedScale={0.985}
+              accessibilityRole="button"
+              accessibilityLabel={`${t('Ton classement', 'Klasman ou')}, ${schoolRank?.label || school || t('Pas encore d’école', 'Poko gen lekòl')}`}
+              accessibilityHint={changeSchoolLabel}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: touch.min }}
+            >
               {school ? <SchoolCrest name={schoolRank?.label || school} size={40} /> : (
                 <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' }}>
                   <Trophy color={colors.muted} size={20} strokeWidth={1.9} />
@@ -534,7 +563,7 @@ export default function ProfileScreen() {
                   <Text style={{ fontFamily: fonts.headingBold, fontSize: 14, lineHeight: 18, color: colors.ink }}>{gradeLabel}</Text>
                 </View>
               ) : null}
-            </View>
+            </PressableScale>
 
             <View style={{ backgroundColor: colors.azureSoft, borderRadius: 16, paddingHorizontal: 18, paddingVertical: 16, marginTop: 16 }}>
               {school ? (
@@ -578,18 +607,37 @@ export default function ProfileScreen() {
                   : t('Pas encore classé cette semaine', 'Poko klase semèn sa a')}
               </Text>
             </View>
-            <PressableScale
-              onPress={goLeaderboard}
-              haptic={false}
-              accessibilityRole="link"
-              accessibilityLabel={school ? t('Voir le classement', 'Wè klasman an') : t('Choisir mon école', 'Chwazi lekòl mwen')}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-start', minHeight: touch.min, marginTop: 4 }}
-            >
-              <Text style={[typeScale.bodyMd, { color: colors.azureInk, fontFamily: fonts.bold }]}>
-                {school ? t('Voir le classement', 'Wè klasman an') : t('Choisir mon école', 'Chwazi lekòl mwen')}
-              </Text>
-              <ChevronRight color={colors.azureInk} size={18} strokeWidth={2.4} />
-            </PressableScale>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', columnGap: 20, marginTop: 4 }}>
+              {school ? (
+                <PressableScale
+                  onPress={goLeaderboard}
+                  haptic={false}
+                  accessibilityRole="link"
+                  accessibilityLabel={t('Voir le classement', 'Wè klasman an')}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 2, minHeight: touch.min }}
+                >
+                  <Text style={[typeScale.bodyMd, { color: colors.azureInk, fontFamily: fonts.bold }]}>
+                    {t('Voir le classement', 'Wè klasman an')}
+                  </Text>
+                  <ChevronRight color={colors.azureInk} size={18} strokeWidth={2.4} />
+                </PressableScale>
+              ) : null}
+              {/* The school is chosen from the same picker as everywhere else
+                  (seed + added schools + "mon école n'est pas dans la liste"). */}
+              <PressableScale
+                onPress={openSchoolPicker}
+                haptic={false}
+                accessibilityRole="button"
+                accessibilityLabel={changeSchoolLabel}
+                accessibilityState={{ busy: savingSchool }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: touch.min }}
+              >
+                <SchoolIcon color={colors.azureInk} size={17} strokeWidth={2.2} />
+                <Text style={[typeScale.bodyMd, { color: colors.azureInk, fontFamily: fonts.bold }]}>
+                  {savingSchool ? t('Enregistrement…', 'Ap anrejistre…') : changeSchoolLabel}
+                </Text>
+              </PressableScale>
+            </View>
           </View>
         </View>
 
@@ -814,6 +862,13 @@ export default function ProfileScreen() {
               value={gradeLabel || t('Non définie', 'Pa defini')}
               onPress={() => setGradeChosen(false)}
             />
+            <SettingsRow
+              icon={SchoolIcon}
+              label={t('École', 'Lekòl')}
+              value={school || t('Non définie', 'Pa defini')}
+              onPress={openSchoolPicker}
+              accessibilityLabel={`${changeSchoolLabel}, ${school || t('Non définie', 'Pa defini')}`}
+            />
           </SettingsCard>
         </View>
 
@@ -888,6 +943,31 @@ export default function ProfileScreen() {
       </ScrollView>
 
       <InviteSheet visible={inviteOpen} onClose={() => setInviteOpen(false)} lang={isCreole ? 'ht' : 'fr'} />
+      <EditProfileSheet
+        visible={editOpen}
+        isCreole={isCreole}
+        name={fullName}
+        grade={gradeLabel || null}
+        school={school}
+        onChoose={editField}
+        onClose={() => setEditOpen(false)}
+      />
+      {/* The student's ville narrows the list, as in the leaderboard sheet. It
+          ranks the search only — a school's location is never inferred from it. */}
+      <SchoolPicker
+        visible={schoolPickerOpen}
+        commune={(profile as any)?.leaderboard?.city || null}
+        onSelect={(s) => chooseSchool(s.name)}
+        onClose={() => setSchoolPickerOpen(false)}
+      />
+      <ArenaNameSheet
+        visible={nameSheetOpen}
+        fullName={fullName}
+        isCreole={isCreole}
+        saving={savingName}
+        onSave={async (next) => { await saveFullName(next); setNameSheetOpen(false); }}
+        onClose={() => setNameSheetOpen(false)}
+      />
     </SafeAreaView>
   );
 }

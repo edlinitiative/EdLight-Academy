@@ -210,6 +210,25 @@ export async function setBoardVisibility(uid: string, visible: boolean) {
   }
 }
 
+/**
+ * Stamp a changed school on the all-time entry now, rather than at the next XP
+ * award (which writes the current school onto both entries anyway). Same
+ * bounded client write as `updateEntryProfile`: `increment(0)` keeps the
+ * stored XP untouched and satisfies the rules' "xp never decreases" check.
+ */
+export async function updateAllTimeEntrySchool(uid: string, school: string | null) {
+  if (!uid) return;
+  try {
+    await setDoc(
+      entryRef(ALL_TIME_ID, uid),
+      { uid, xp: increment(0), school, updatedAt: serverTimestamp() },
+      { merge: true },
+    );
+  } catch (err) {
+    console.error('[Leaderboard] updateAllTimeEntrySchool error:', err);
+  }
+}
+
 // ─── All-time board ─────────────────────────────────────────────────────────
 // Same entries shape under a fixed period id.
 

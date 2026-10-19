@@ -33,6 +33,7 @@ import { useMyAvatar } from '../hooks/useMyAvatar';
 import './profile/avatarEntry.css';
 import MySchoolCard from '../components/MySchoolCard';
 import { schoolKey } from '../../shared/schools';
+import { normalizeName } from '../../shared/leaderboardAgg';
 import type { ProgressMap } from '../../shared/mastery';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import { getFirstName } from '../utils/shared';
@@ -243,6 +244,18 @@ function IdentityFields({ isCreole, uid, board, saveRef, accountName, afterSchoo
             'Lekòl ou sèvi pou chanpyona ant lekòl yo ak klasman pa lekòl — nou p ap mande w li yon lòt kote.',
           )}
         </small>
+        {/* The existing board rule, said before saving: an entry carries ONE
+            school (api/leaderboard/award.ts stamps it on every game), so this
+            week's points move with the student. An Arène registration is its
+            own record and does not move. */}
+        {storedSchool && picked && normalizeName(picked.label) !== normalizeName(storedSchool) && (
+          <small className="pr-why" role="status">
+            {t(
+              `Tes points de cette semaine passent avec toi à ${picked.label}. Une inscription à l’Arène déjà faite ne change pas.`,
+              `Pwen ou fè semèn sa a ale avè w nan ${picked.label}. Yon enskripsyon nan Arèn nan ki deja fèt pa chanje.`,
+            )}
+          </small>
+        )}
       </div>
 
       <fieldset className="pr-residence">
@@ -1100,6 +1113,17 @@ export default function Profile() {
   const openInfo = () => {
     if (isPhone) { setOpenRow('info'); focusAlias(60); } else focusAlias(0);
   };
+  // "Changer d'école" (MySchoolCard): the same Informations form, landing on
+  // the school picker — its own "Changer" button, or the search box.
+  const openSchool = () => {
+    if (isPhone) setOpenRow('info');
+    window.setTimeout(() => {
+      const field = document.querySelector('.pr-school');
+      field?.scrollIntoView({ behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+      const target = (field?.querySelector('.arena-field__picked button') || document.getElementById('arena-school')) as HTMLElement | null;
+      target?.focus({ preventScroll: true });
+    }, isPhone ? 60 : 0);
+  };
 
   /* ── Pieces shared by both layouts ── */
   const classPicker = (
@@ -1243,7 +1267,7 @@ export default function Profile() {
         <div className="container prx-page">
           {devNote}
           {identityRow}
-          <MySchoolCard where="profile" variant="profile" solid preview={schoolPreview} />
+          <MySchoolCard where="profile" variant="profile" solid preview={schoolPreview} onChangeSchool={openSchool} />
           {courses}
           {regularity}
           <ReadinessCard />
@@ -1322,7 +1346,7 @@ export default function Profile() {
           </div>
 
           <aside className="prx-side" aria-label={t('Ton classement et ta régularité', 'Klasman ou ak regilarite ou')}>
-            <MySchoolCard where="profile" variant="profile" preview={schoolPreview} />
+            <MySchoolCard where="profile" variant="profile" preview={schoolPreview} onChangeSchool={openSchool} />
             <Schoolmates entries={boardEntries} uid={uid} school={board.school || ''} t={t} />
             {regularity}
             <ReadinessCard />

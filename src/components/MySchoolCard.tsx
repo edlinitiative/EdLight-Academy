@@ -54,13 +54,15 @@ export type MySchoolPreview = {
   myEntry: any;
 };
 
-export default function MySchoolCard({ where, variant = 'full', solid = false, preview = null }: {
+export default function MySchoolCard({ where, variant = 'full', solid = false, preview = null, onChangeSchool }: {
   where: string;
   /** 'profile': the compact side card (crest, two lines, "Voir le classement"). */
   variant?: 'full' | 'profile';
   /** Profile on a phone: "Voir le classement" is that screen's one solid button. */
   solid?: boolean;
   preview?: MySchoolPreview | null;
+  /** Profile only: opens the school field of the Informations form. */
+  onChangeSchool?: () => void;
 }) {
   const language = useStore((s) => s.language);
   const storeUser = useStore((s) => s.user);
@@ -113,6 +115,7 @@ export default function MySchoolCard({ where, variant = 'full', solid = false, p
         myXp={myXp}
         hasAlias={hasAlias}
         onAddSchool={() => setSchoolChosen(false)}
+        onChangeSchool={onChangeSchool}
         inviteReady={!!ref && !!school}
         onInvite={async () => {
           if (!ref || !school) return;
@@ -253,7 +256,7 @@ export default function MySchoolCard({ where, variant = 'full', solid = false, p
  * two boards as the full card; when one is missing the honest state is shown.
  */
 function ProfileStanding({
-  t, isCreole, solid, school, race, boardLoading, weekLoading, weekEntries, uid, myRank, myXp, hasAlias, onAddSchool, inviteReady, onInvite,
+  t, isCreole, solid, school, race, boardLoading, weekLoading, weekEntries, uid, myRank, myXp, hasAlias, onAddSchool, onChangeSchool, inviteReady, onInvite,
 }: {
   t: (fr: string, ht: string) => string;
   isCreole: boolean;
@@ -268,6 +271,7 @@ function ProfileStanding({
   myXp: number;
   hasAlias: boolean;
   onAddSchool: () => void;
+  onChangeSchool?: () => void;
   inviteReady: boolean;
   onInvite: () => void;
 }) {
@@ -346,6 +350,11 @@ function ProfileStanding({
         {school && (
           <button type="button" className="myschool__textbtn" disabled={!inviteReady} onClick={onInvite}>
             {t('Inviter ta classe sur WhatsApp', 'Envite klas ou sou WhatsApp')}
+          </button>
+        )}
+        {school && onChangeSchool && (
+          <button type="button" className="myschool__textbtn" onClick={onChangeSchool}>
+            {t('Changer d’école', 'Chanje lekòl')}
           </button>
         )}
       </div>

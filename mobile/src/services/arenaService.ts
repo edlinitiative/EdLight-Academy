@@ -524,6 +524,48 @@ export function subscribeRegistration(
   );
 }
 
+/** States in which a registration still ties a student to the school they registered for. */
+const SCHOOL_BOUND_STATES = ['registration', 'doors', 'live', 'grading', 'provisional'] as const;
+
+export interface ArenaSchoolBinding {
+  tid: string;
+  title: string;
+  state: ArenaState;
+  schoolKey: string;
+}
+
+/**
+ * Is this student registered for a championship that is not over yet?
+ *
+ * Asked once, when the student changes school on their profile — not watched:
+ * the profile does not need four live listeners to word one confirmation.
+ * Read-only and fail-open (null on any error): it only decides what the
+ * confirmation SAYS, because a profile school change never alters an Arène
+ * registration (that lives in `tournamentRegistrations`, server-written).
+ */
+export async function fetchMyArenaSchoolBinding(uid: string): Promise<ArenaSchoolBinding | null> {
+  if (!uid) return null;
+  try {
+    const snap = await getDocs(query(collection(db, 'tournaments'), where('state', 'in', [...SCHOOL_BOUND_STATES])));
+    const rows = snap.docs.map((d) => toTournament(d.id, d.data()));
+    // Furthest along first: a championship being played binds harder than one
+    // still open for sign-up.
+    const rank = (s: ArenaState) => -SCHOOL_BOUND_STATES.indexOf(s as (typeof SCHOOL_BOUND_STATES)[number]);
+    rows.sort((a, b) => rank(a.state) - rank(b.state));
+    for (const tour of rows) {
+      const reg = await getDoc(doc(db, 'tournamentRegistrations', `${tour.id}_${uid}`));
+      if (!reg.exists()) continue;
+      const d: any = reg.data();
+      if (d?.eligible === false) continue;
+      return { tid: tour.id, title: tour.title, state: tour.state, schoolKey: str(d?.schoolKey) };
+    }
+    return null;
+  } catch (err) {
+    console.warn('[Arena] fetchMyArenaSchoolBinding failed:', err);
+    return null;
+  }
+}
+
 /**
  * The single standings document every surface reads. Ten thousand spectators
  * subscribe to this one doc — which is the whole spectator read cost, and the
