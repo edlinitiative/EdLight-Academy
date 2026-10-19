@@ -164,10 +164,21 @@ export async function getIdToken(): Promise<string | null> {
  * If the user is not signed in, sends the request without an Authorization
  * header (the endpoint will return 401, which callers must handle gracefully).
  */
-export async function authedFetch(url: string, body: unknown): Promise<Response> {
+export async function authedFetch(url: string, body: unknown, opts: { timeoutMs?: number } = {}): Promise<Response> {
   const token = await getIdToken();
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
+  // Optional ceiling: on a half-dead network a fetch may never settle, and a
+  // caller guarding on "sending" then ignores every later attempt.
+  if (opts.timeoutMs && typeof AbortController !== 'undefined') {
+    const ctrl = new AbortController();
+    const id = setTimeout(() => ctrl.abort(), opts.timeoutMs);
+    try {
+      return await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), signal: ctrl.signal });
+    } finally {
+      clearTimeout(id);
+    }
+  }
   return fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
 }
 
