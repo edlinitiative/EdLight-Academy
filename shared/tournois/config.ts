@@ -33,8 +33,8 @@ export type TournamentFormat = (typeof FORMATS)[number];
  *   solo    — individuals only.
  *   school  — school vs school: each school is scored on its best `teamSize`
  *             players (the Arène rule), so a big school cannot win on turnout.
- *   grade   — level vs level: the same best-N rule, grouped by the self-declared level (NS I…).
- *   class   — "classe vérifiée": grouped by teacher-approved class membership
+ *   grade  : level vs level: the same best-N rule, grouped by the self-declared level (NS I…).
+ *   class  : "classe vérifiée": grouped by teacher-approved class membership
  *             (api/_lib/classSpaces), resolved by the server at join. Never
  *             inferred from a profile's school or level.
  */
@@ -43,8 +43,8 @@ export type TeamRule = (typeof TEAM_RULES)[number];
 
 /**
  * How a team's counted players become its score.
- *   sum      — sum of the best N; a team needs N players to qualify (the Arène rule).
- *   average  — mean of the best N who actually played; a team qualifies with
+ *   sum     : sum of the best N; a team needs N players to qualify (the Arène rule).
+ *   average : mean of the best N who actually played; a team qualifies with
  *              TEAM_AVERAGE_MIN(N) players, so a small class can still face a large one.
  */
 export const TEAM_AGGREGATES = ['sum', 'average'] as const;

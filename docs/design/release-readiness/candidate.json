@@ -3233,7 +3233,7 @@
         {
           "source": "mobile/src/screens/arena/TournoisScreen.tsx",
           "match": "Inscription et équipe de cet événement",
-          "line": 508
+          "line": 513
         },
         {
           "source": "shared/competition/notifications.ts",
