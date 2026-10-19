@@ -221,6 +221,7 @@ export async function upsertUserDocument(user, isNewUser = false) {
       await writeUserDocument(user, { create: true });
       return;
     }
+    // A failed read throws here, so it can never be mistaken for "absent".
     const userDoc = await getDoc(doc(db, 'users', user.uid));
     await writeUserDocument(user, { create: !userDoc.exists() });
   } catch (error) {
@@ -254,6 +255,38 @@ export async function updateUserTrack(uid, trackCode) {
  * Load user profile data from Firestore (including track).
  * Returns { track, onboarding_completed, ... } or null.
  */
+/**
+ * Persist the student's class on the user doc — the same field the mobile
+ * app writes and restores. Best-effort; callers fire-and-forget.
+ */
+export async function updateUserGrade(uid: string, grade: string | null) {
+  if (!uid) return;
+  try {
+    await setDoc(doc(db, 'users', uid), {
+      grade: grade ?? null,
+      grade_chosen: true,
+      updated_at: serverTimestamp(),
+    }, { merge: true });
+  } catch (err) {
+    console.warn('[firebase] updateUserGrade failed:', err);
+  }
+}
+
+/**
+ * Status-returning profile read: distinguishes a CONFIRMED missing document
+ * from a failed read. Sign-in must only create (overwrite) the user document
+ * on 'missing' — `getUserProfile` folds errors into `null` (P0 validation).
+ */
+export async function getUserProfileResult(uid): Promise<{ status: 'found' | 'missing' | 'error'; data?: any }> {
+  try {
+    const snap = await getDoc(doc(db, 'users', uid));
+    return snap.exists() ? { status: 'found', data: snap.data() } : { status: 'missing' };
+  } catch (error) {
+    console.error('Error loading user profile:', error);
+    return { status: 'error' };
+  }
+}
+
 export async function getUserProfile(uid) {
   try {
     const userRef = doc(db, 'users', uid);

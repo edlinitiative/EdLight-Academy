@@ -14,6 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CalendarCheck, Shuffle, Lightbulb, Share2, Delete, CornerDownLeft } from 'lucide-react-native';
 import { MO_KACHE_WORDS, WORD_LENGTH, isPlayableWordShape } from '../../data/moKacheWords';
 import { todayStr } from '../../services/streakService';
+import useStore from '../../contexts/store';
 import { typeScale } from '../../theme/theme';
 import { useArenaColors, arenaColors as C } from '../../theme/arenaTheme';
 import { success, warn } from '../../utils/haptics';
@@ -24,7 +25,9 @@ const MAX_GUESSES = 6;
 const KEY_ROWS = ['AZERTYUIOP', 'QSDFGHJKLM', '↵WXCVBN⌫'];
 // The night has one accent (coral); tile states use success / warn fills.
 const ACCENT = C.coral;
-const storageKey = (date: string) => `edlight_mokache_${date}`;
+// Per ACCOUNT and day: a device-wide key let sibling A's finished grid lock
+// sibling B out of today's word (and its XP) on a shared phone (P0 validation).
+export const storageKey = (date: string, uid?: string | null) => (uid ? `edlight_mokache_${uid}_${date}` : `edlight_mokache_${date}`);
 
 // Cap the board/keyboard width so keys don't balloon on iPad (portrait +
 // requireFullScreen → stable width); phones fall under the cap unchanged.
@@ -86,6 +89,7 @@ export default function MoKacheGame({ isCreole, onExit, onRecord, highScore = nu
   const colors = useArenaColors();
   const tileColors = TILE_COLORS;
   const today = todayStr();
+  const uid = useStore((s) => s.user?.uid ?? null);
   const [mode, setMode] = useState<'daily' | 'practice'>('daily');
   const [practiceNonce, setPracticeNonce] = useState(0);
 
@@ -122,7 +126,7 @@ export default function MoKacheGame({ isCreole, onExit, onRecord, highScore = nu
     }
     setLoaded(false);
     setGuesses([]); setCurrent(''); setState('playing'); setReward(null); setShowHint(false);
-    AsyncStorage.getItem(storageKey(today))
+    AsyncStorage.getItem(storageKey(today, uid))
       .then((raw) => {
         if (!alive) return;
         try {
@@ -136,12 +140,12 @@ export default function MoKacheGame({ isCreole, onExit, onRecord, highScore = nu
       })
       .catch(() => { if (alive) setLoaded(true); });
     return () => { alive = false; };
-  }, [mode, today, practiceNonce]);
+  }, [mode, today, practiceNonce, uid]);
 
   const persistDaily = (nextGuesses: string[], nextState: PlayState) => {
     if (mode !== 'daily') return;
     AsyncStorage.setItem(
-      storageKey(today),
+      storageKey(today, uid),
       JSON.stringify({ guesses: nextGuesses, state: nextState }),
     ).catch(() => {});
   };

@@ -134,7 +134,17 @@ const useStore = create<AppState>()(
       setAuthConfirmed: () => set({ authConfirmed: true }),
       setLanguage: (language) => set({ language }),
       setTrack: (track) => set({ track }),
-      setGrade: (grade) => set({ grade }),
+      setGrade: (grade) => {
+        set({ grade });
+        // Mirror the class to the account (same field the app writes), so it
+        // survives sign-out / another computer. Best-effort, never blocks.
+        const uid = get().user?.uid;
+        if (uid && grade) {
+          import('../services/firebase')
+            .then((m) => m.updateUserGrade(uid, grade))
+            .catch(() => {});
+        }
+      },
       setGradeChosen: (chosen) => set({ gradeChosen: !!chosen }),
       setSchoolChosen: (chosen) => set({ schoolChosen: !!chosen }),
       setDismissedSuggestion: (key) => set({ dismissedSuggestionKey: key }),
@@ -202,11 +212,21 @@ const useStore = create<AppState>()(
       setSearchOpen: (open) => set({ searchOpen: !!open }),
       setSandraAsk: (query) => set({ sandraAsk: query }),
       
-      logout: () => set({
+      logout: () => {
+        // The Sandra conversation belongs to this account: the API refuses
+        // another user's conversation id (403), so leaving it made Sandra
+        // unusable for the next student in this tab (P0 validation).
+        try { sessionStorage.removeItem('edlight:sandra:conv'); } catch { /* unavailable */ }
+        set({
         user: null,
         isAuthenticated: false,
         track: null,
         onboardingCompleted: false,
+        // Class is per student (and now restored from users/{uid}.grade on
+        // sign-in): the next account on a shared computer must not inherit it.
+        grade: null,
+        gradeChosen: false,
+        dismissedSuggestionKey: null,
         // The next account on this device gets its own school step; one that
         // already has a school skips it silently (the modal reads the profile).
         schoolChosen: false,
@@ -220,7 +240,8 @@ const useStore = create<AppState>()(
         showCourseModal: false,
         showMobileMenu: false,
         showNotifications: false
-      })
+        });
+      }
     }),
     {
       name: 'edlight-storage',
