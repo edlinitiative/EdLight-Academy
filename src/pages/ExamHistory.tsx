@@ -10,6 +10,7 @@ import { normalizeExamCatalog } from '../utils/examCatalog';
 import { examDisplayTitle } from '../utils/examUtils';
 import { LEVEL_SLUG_LABELS, levelToSlug } from '../utils/examLevels';
 import { Skeleton } from '../components/Skeleton';
+import { EmptyState, ErrorState, LoadingState } from '../components/StateViews';
 import './examPremium.css';
 
 /**
@@ -327,41 +328,36 @@ export default function ExamHistory() {
           </div>
 
           {isPending ? (
-            <div aria-busy="true" className="xp-skel">
+            <LoadingState className="xp-skel" label={L('Chargement de tes résultats…', 'N ap chaje rezilta ou yo…')}>
               {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} width="100%" height={84} radius={18} />)}
-            </div>
+            </LoadingState>
           ) : isError ? (
             /* Every row joins a stored result to the catalog index. When the
                index cannot be fetched, say so — never "aucun résultat". */
-            <div className="xp-empty">
-              <h3>{L('Liste des examens indisponible', 'Lis egzamen yo pa disponib')}</h3>
-              <p>{L('Tes résultats sont enregistrés, mais la liste des examens n’a pas pu être chargée, souvent une connexion coupée. Réessaie.',
-                'Rezilta ou yo anrejistre, men lis egzamen yo pa t ka chaje, anpil fwa se koneksyon an. Eseye ankò.')}</p>
-              <div className="xp-empty__actions">
-                <button type="button" className="xp-btn" onClick={() => { void refetch(); }}>{L('Réessayer', 'Eseye ankò')}</button>
-                <button type="button" className="xp-btn xp-btn--tonal" onClick={() => navigate('/exams')}>{L('Choisir un examen', 'Chwazi yon egzamen')}</button>
-              </div>
-            </div>
+            <ErrorState
+              title={L('Liste des examens indisponible', 'Lis egzamen yo pa disponib')}
+              message={L('Tes résultats sont enregistrés, mais la liste des examens n’a pas pu être chargée, souvent une connexion coupée. Réessaie.',
+                'Rezilta ou yo anrejistre, men lis egzamen yo pa t ka chaje, anpil fwa se koneksyon an. Eseye ankò.')}
+              offlineMessage={L('Tes résultats sont enregistrés. La liste des examens reviendra dès que tu seras reconnecté.',
+                'Rezilta ou yo anrejistre. Lis egzamen yo ap tounen lè ou rekonekte.')}
+              onRetry={() => { void refetch(); }}
+              retryLabel={L('Réessayer', 'Eseye ankò')}
+              action={{ label: L('Choisir un examen', 'Chwazi yon egzamen'), onClick: () => navigate('/exams') }}
+            />
           ) : rows.length === 0 ? (
-            <div className="xp-empty">
-              <h3>{L('Aucun résultat pour le moment', 'Poko gen rezilta')}</h3>
-              <p>
-                {isAuthenticated
-                  ? L('Passe ton premier examen blanc : sa correction détaillée apparaîtra ici.', 'Fè premye egzamen blan ou : koreksyon detaye a ap parèt isit la.')
-                  : L('Tes résultats restent sur cet appareil tant que tu n’es pas connecté. Connecte-toi pour les retrouver partout.',
-                    'Rezilta ou yo rete sou aparèy sa a toutotan ou pa konekte. Konekte pou jwenn yo tout kote.')}
-              </p>
-              <div className="xp-empty__actions">
-                {isAuthenticated || drafts.length > 0 ? (
-                  <button type="button" className={`xp-btn${drafts.length > 0 ? ' xp-btn--tonal' : ''}`} onClick={() => navigate('/exams')}>{L('Choisir un examen', 'Chwazi yon egzamen')}</button>
-                ) : (
-                  <>
-                    <button type="button" className="xp-btn" onClick={() => toggleAuthModal()}>{L('Se connecter', 'Konekte')}</button>
-                    <button type="button" className="xp-btn xp-btn--tonal" onClick={() => navigate('/exams')}>{L('Choisir un examen', 'Chwazi yon egzamen')}</button>
-                  </>
-                )}
-              </div>
-            </div>
+            <EmptyState
+              title={L('Aucun résultat pour le moment', 'Poko gen rezilta')}
+              message={isAuthenticated
+                ? L('Passe ton premier examen blanc : sa correction détaillée apparaîtra ici.', 'Fè premye egzamen blan ou : koreksyon detaye a ap parèt isit la.')
+                : L('Tes résultats restent sur cet appareil tant que tu n’es pas connecté. Connecte-toi pour les retrouver partout.',
+                  'Rezilta ou yo rete sou aparèy sa a toutotan ou pa konekte. Konekte pou jwenn yo tout kote.')}
+              action={isAuthenticated || drafts.length > 0
+                ? { label: L('Choisir un examen', 'Chwazi yon egzamen'), onClick: () => navigate('/exams'), variant: drafts.length > 0 ? 'secondary' : 'primary' }
+                : { label: L('Se connecter', 'Konekte'), onClick: () => toggleAuthModal() }}
+              secondaryAction={isAuthenticated || drafts.length > 0
+                ? undefined
+                : { label: L('Choisir un examen', 'Chwazi yon egzamen'), onClick: () => navigate('/exams') }}
+            />
           ) : (
             <ul className="xp-rows">
               {sorted.map((r: any) => {

@@ -274,6 +274,7 @@ const MathKeyboard = forwardRef(function MathKeyboard({
           onClick={() => { setShowToolbar(t => !t); inputRef.current?.focus(); }}
           type="button"
           tabIndex={-1}
+          aria-expanded={showToolbar}
           aria-label={showToolbar ? 'Masquer les symboles' : 'Afficher les symboles mathématiques'}
           title="Symboles mathématiques"
         >
@@ -302,6 +303,7 @@ const MathKeyboard = forwardRef(function MathKeyboard({
                   className={`math-kb__tab ${activeGroup === g.id ? 'math-kb__tab--active' : ''}`}
                   onClick={() => setActiveGroup(g.id)}
                   type="button"
+                  aria-pressed={activeGroup === g.id}
                   tabIndex={-1}
                 >
                   {g.label}

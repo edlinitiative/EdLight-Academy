@@ -547,20 +547,19 @@ a.xp-row:hover, button.xp-row:hover { box-shadow: var(--xp-shadow-lift); color: 
 .xp-list-plain li svg { flex: 0 0 auto; margin-top: 3px; color: var(--xp-azure-ink); }
 .xp-list-plain strong { display: block; color: var(--xp-ink); font-size: 16px; }
 
-/* ── Empty / error state ─────────────────────────────────────────────────── */
-.xp-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 28px;
+/* ── Empty / error state ─────────────────────────────────────────────────────
+   The exam pages use the shared StateViews (EmptyState / ErrorState /
+   LoadingState); this only seats them on the exam surface. (The local
+   .xp-empty block it replaced is retired.) */
+.xp .state-view {
+  max-width: none;
+  border: 0;
   border-radius: 20px;
   background: var(--xp-surface);
   box-shadow: var(--xp-shadow);
 }
-.xp-empty h2, .xp-empty h3 { margin: 0; font: 800 20px/1.25 var(--xp-display); }
-.xp-empty p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--xp-muted); max-width: 560px; }
-.xp-empty__actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
+.xp .state-view__title { margin: 0; font: 800 20px/1.25 var(--xp-display); }
+.xp .state-view__message { margin: 0; font-size: 16px; line-height: 1.5; color: var(--xp-muted); max-width: 560px; }
 
 .xp-skel { display: flex; flex-direction: column; gap: 12px; }
 

@@ -7,7 +7,7 @@ import { useCourseProgress } from '../hooks/useProgress';
 import YouTubePlayer, { getYouTubeVideoId } from '../components/YouTubePlayer';
 import CourseSidebar from '../components/CourseSidebar';
 import CourseOverview from '../components/CourseOverview';
-import { ErrorState } from '../components/StateViews';
+import { ErrorState, LoadingState } from '../components/StateViews';
 import { Skeleton, SkeletonText } from '../components/Skeleton';
 import { useFocusMode } from '../hooks/useFocusMode';
 import useStore, { FREE_VIDEO_LIMIT } from '../contexts/store';
@@ -697,7 +697,7 @@ export default function CourseDetail() {
     return (
       <div className="section course-detail">
         <div className="container course-detail__container">
-          <div className="course-overview" aria-busy="true">
+          <LoadingState className="course-overview" label={L('Chargement du cours…', 'N ap chaje kou a…')}>
             <Skeleton width={120} height={16} radius={999} style={{ marginBottom: '1.25rem' }} />
             <header className="course-overview__hero">
               <div className="skeleton-row" style={{ marginBottom: '0.9rem' }}>
@@ -721,7 +721,7 @@ export default function CourseDetail() {
                 ))}
               </div>
             </section>
-          </div>
+          </LoadingState>
         </div>
       </div>
     );
@@ -731,7 +731,12 @@ export default function CourseDetail() {
     return (
       <div className="section">
         <div className="container">
-          <ErrorState onRetry={() => refetch()} retrying={isFetching} />
+          <ErrorState
+            page
+            onRetry={() => refetch()}
+            retrying={isFetching}
+            action={{ label: L('Tous les cours', 'Tout kou yo'), onClick: () => navigate('/courses') }}
+          />
         </div>
       </div>
     );

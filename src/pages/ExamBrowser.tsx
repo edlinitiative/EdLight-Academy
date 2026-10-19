@@ -14,6 +14,7 @@ import { URL_LEVEL_TO_RAW, RAW_LEVEL_TO_URL, LEVEL_SLUG_LABELS, levelToSlug } fr
 import './examPremium.css';
 import { deriveSignals, selectAdaptiveItems, type AttemptEvent } from '../services/adaptiveEngine';
 import { Skeleton } from '../components/Skeleton';
+import { EmptyState, ErrorState, LoadingState } from '../components/StateViews';
 
 const PAGE_SIZE = 24;
 
@@ -396,12 +397,12 @@ const ExamBrowser = () => {
   if (isLoading) {
     return (
       <div className="xp">
-        <div className="xp-page xp-page--narrow" aria-busy="true">
-          <div className="xp-skel">
+        <div className="xp-page xp-page--narrow">
+          <LoadingState className="xp-skel" label={t('Chargement des examens…', 'N ap chaje egzamen yo…')}>
             <Skeleton width={200} height={16} radius={999} />
             <Skeleton width="45%" height={40} radius={12} />
             {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} width="100%" height={84} radius={18} />)}
-          </div>
+          </LoadingState>
         </div>
       </div>
     );
@@ -414,16 +415,21 @@ const ExamBrowser = () => {
           <h1 className="xp-title">{t('Examens', 'Egzamen')}</h1>
           {/* Plain language + a safe recovery action (§8). Offline is its own
               state: the service worker keeps this index in DATA_CACHE. */}
-          <div className="xp-empty">
-            <p>
-              {isOffline
-                ? t('Tu es hors ligne et la liste des examens n’est pas encore enregistrée sur cet appareil. Connecte-toi une fois pour la charger : ensuite elle reste consultable hors ligne.',
-                  'Ou pa sou entènèt e lis egzamen yo poko anrejistre sou aparèy sa a. Konekte yon fwa pou chaje l : apre sa ou ka gade l san entènèt.')
-                : t('Nous n’avons pas pu charger le catalogue d’examens. Vérifie ta connexion, puis réessaie.',
-                  'Nou pa t ka chaje katalòg egzamen an. Tcheke koneksyon ou, epi eseye ankò.')}
-            </p>
-            <button className="xp-btn" type="button" onClick={() => refetch()}>{t('Réessayer', 'Eseye ankò')}</button>
-          </div>
+          <ErrorState
+            headingLevel={2}
+            title={isOffline ? t('Hors ligne', 'Pa sou entènèt') : t('Catalogue indisponible', 'Katalòg la pa disponib')}
+            message={isOffline
+              ? t('Tu es hors ligne et la liste des examens n’est pas encore enregistrée sur cet appareil. Connecte-toi une fois pour la charger : ensuite elle reste consultable hors ligne.',
+                'Ou pa sou entènèt e lis egzamen yo poko anrejistre sou aparèy sa a. Konekte yon fwa pou chaje l : apre sa ou ka gade l san entènèt.')
+              : t('Nous n’avons pas pu charger le catalogue d’examens. Vérifie ta connexion, puis réessaie.',
+                'Nou pa t ka chaje katalòg egzamen an. Tcheke koneksyon ou, epi eseye ankò.')}
+            offlineTitle={t('Hors ligne', 'Pa sou entènèt')}
+            offlineMessage={t('Tu es hors ligne et la liste des examens n’est pas encore enregistrée sur cet appareil. Connecte-toi une fois pour la charger : ensuite elle reste consultable hors ligne.',
+              'Ou pa sou entènèt e lis egzamen yo poko anrejistre sou aparèy sa a. Konekte yon fwa pou chaje l : apre sa ou ka gade l san entènèt.')}
+            onRetry={() => { void refetch(); }}
+            retryLabel={t('Réessayer', 'Eseye ankò')}
+            action={{ label: t('Tous les niveaux', 'Tout nivo yo'), onClick: () => navigate('/exams') }}
+          />
         </div>
       </div>
     );
@@ -596,28 +602,27 @@ const ExamBrowser = () => {
 
         {/* An empty pool says what happened and offers a way out (§8). */}
         {subjectCardView && groups.length === 0 && (
-          <div className="xp-empty">
-            <p>
-              {trackFilter
-                ? t('Aucune épreuve pour cette filière à ce niveau.', 'Pa gen egzamen pou filyè sa a nan nivo sa a.')
-                : t('Aucune épreuve disponible pour ce niveau pour le moment.', 'Pa gen egzamen disponib pou nivo sa a pou kounye a.')}
-            </p>
-            {trackFilter ? (
-              <button className="xp-btn xp-btn--tonal" type="button" onClick={() => setTrackFilter('')}>{t('Voir toutes les filières', 'Wè tout filyè yo')}</button>
-            ) : (
-              <button className="xp-btn xp-btn--tonal" type="button" onClick={() => navigate('/exams')}>{t('Choisir un autre niveau', 'Chwazi yon lòt nivo')}</button>
-            )}
-          </div>
+          <EmptyState
+            headingLevel={2}
+            title={trackFilter
+              ? t('Aucune épreuve pour cette filière à ce niveau.', 'Pa gen egzamen pou filyè sa a nan nivo sa a.')
+              : t('Aucune épreuve disponible pour ce niveau pour le moment.', 'Pa gen egzamen disponib pou nivo sa a pou kounye a.')}
+            action={trackFilter
+              ? { label: t('Voir toutes les filières', 'Wè tout filyè yo'), onClick: () => setTrackFilter(''), variant: 'secondary' }
+              : { label: t('Choisir un autre niveau', 'Chwazi yon lòt nivo'), onClick: () => navigate('/exams'), variant: 'secondary' }}
+          />
         )}
 
         {/* Detailed results — active search / filters */}
         {!subjectCardView && (filtered.length === 0 ? (
-          <div className="xp-empty">
-            <p>{t('Aucun examen trouvé. Essaie de modifier tes filtres.', 'Nou pa jwenn okenn egzamen. Eseye chanje filt ou yo.')}</p>
-            {hasActiveFilters && (
-              <button className="xp-btn xp-btn--tonal" onClick={clearFilters} type="button">{t('Réinitialiser les filtres', 'Reyinisyalize filt yo')}</button>
-            )}
-          </div>
+          <EmptyState
+            headingLevel={2}
+            title={t('Aucun examen trouvé', 'Nou pa jwenn okenn egzamen')}
+            message={t('Essaie de modifier tes filtres.', 'Eseye chanje filt ou yo.')}
+            action={hasActiveFilters
+              ? { label: t('Réinitialiser les filtres', 'Reyinisyalize filt yo'), onClick: clearFilters, variant: 'secondary' }
+              : { label: t('Choisir un autre niveau', 'Chwazi yon lòt nivo'), onClick: () => navigate('/exams'), variant: 'secondary' }}
+          />
         ) : (
           <div className="xp-section">
             {groups.length > 1 && !forceOpen && (

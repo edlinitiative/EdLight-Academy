@@ -240,7 +240,7 @@
 
 .tn-error {
   margin: 0.5rem 0 0;
-  color: var(--danger-500);
+  color: var(--danger-ink);
   font-weight: 600;
   font-size: var(--text-sm);
 }
@@ -1124,3 +1124,6 @@ body.arena-night .tn-toggle[aria-pressed='true'] { background: #3D8BFF; border-c
 .tn-missing { display: grid; gap: 1rem; }
 .tn-missing p { margin: 0; line-height: 1.55; }
 .tn-missing__actions { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+
+/* Loading skeleton for a room (LoadingState child). */
+.tn-room-skel { display: grid; gap: 0.9rem; }

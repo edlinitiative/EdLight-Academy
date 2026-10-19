@@ -364,7 +364,7 @@
   background: color-mix(in srgb, var(--dash-accent) 12%, transparent);
   color: var(--dash-accent);
 }
-.dash-kpi--green .dash-kpi__icon { background: color-mix(in srgb, var(--success-500) 14%, transparent); color: var(--success-500); }
+.dash-kpi--green .dash-kpi__icon { background: color-mix(in srgb, var(--success-500) 14%, transparent); color: var(--success-ink); }
 .dash-kpi--amber .dash-kpi__icon { background: rgba(245, 166, 35, 0.16); color: #C77700; }
 .dash-kpi--violet .dash-kpi__icon { background: rgba(91, 108, 240, 0.14); color: #5B6CF0; }
 .dash-kpi__value {
@@ -483,8 +483,8 @@
   font-feature-settings: "tnum" 1;
 }
 button.dash-activity__tag { cursor: pointer; }
-.dash-activity__tag--success { background: color-mix(in srgb, var(--success-500) 14%, transparent); color: var(--success-500); }
-.dash-activity__tag--error { background: var(--danger-50); color: var(--danger-500); }
+.dash-activity__tag--success { background: color-mix(in srgb, var(--success-500) 14%, transparent); color: var(--success-ink); }
+.dash-activity__tag--error { background: var(--danger-50); color: var(--danger-ink); }
 .dash-activity__tag--neutral { background: color-mix(in srgb, var(--primary-500) 12%, transparent); color: var(--primary-600); }
 
 /* ---------- Empty states (compact) ---------- */

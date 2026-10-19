@@ -13,6 +13,7 @@ import { TRACK_BY_CODE } from '../config/trackConfig';
 import { loadExamAttemptDraft } from '../services/examAttempts';
 import { LEVEL_SLUG_LABELS, levelToSlug } from '../utils/examLevels';
 import { Skeleton, SkeletonText } from '../components/Skeleton';
+import { EmptyState, ErrorState, LoadingState } from '../components/StateViews';
 import InstructionRenderer from '../components/InstructionRenderer';
 import './examPremium.css';
 
@@ -142,14 +143,14 @@ export default function ExamOverview() {
   // ── Loading / not found ────────────────────────────────────────────────────
   if (catalogLoading) {
     return frame(
-      <div className="xp-skel" aria-busy="true">
+      <LoadingState className="xp-skel" label={L('Chargement de l’examen…', 'N ap chaje egzamen an…')}>
         <Skeleton width={180} height={16} radius={999} />
         <Skeleton width="65%" height={40} radius={12} />
         <div className="xp-facts">
           {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} height={96} radius={18} />)}
         </div>
         <SkeletonText lines={4} lastWidth="60%" />
-      </div>,
+      </LoadingState>,
     );
   }
 
@@ -157,21 +158,29 @@ export default function ExamOverview() {
   // offer the matching recovery (§8: plain-language error + safe action).
   if (catalogError) {
     return frame(
-      <section className="xp-empty">
-        <h1 className="xp-h2">{L('Catalogue indisponible', 'Katalòg la pa disponib')}</h1>
-        <p>{L('Nous n’avons pas pu charger cet examen. Vérifie ta connexion, puis réessaie.', 'Nou pa t ka chaje egzamen an. Tcheke koneksyon ou, epi eseye ankò.')}</p>
-        <button type="button" className="xp-btn" onClick={() => refetchCatalog()}>{L('Réessayer', 'Eseye ankò')}</button>
-      </section>,
+      <ErrorState
+        page
+        headingLevel={1}
+        title={L('Catalogue indisponible', 'Katalòg la pa disponib')}
+        message={L('Nous n’avons pas pu charger cet examen. Vérifie ta connexion, puis réessaie.', 'Nou pa t ka chaje egzamen an. Tcheke koneksyon ou, epi eseye ankò.')}
+        offlineTitle={L('Hors ligne', 'Pa sou entènèt')}
+        offlineMessage={L('Cet examen n’est pas encore enregistré sur cet appareil. Reconnecte-toi pour l’ouvrir.', 'Egzamen sa a poko anrejistre sou aparèy sa a. Rekonekte pou louvri l.')}
+        onRetry={() => { void refetchCatalog(); }}
+        retryLabel={L('Réessayer', 'Eseye ankò')}
+        action={{ label: L('Voir les examens', 'Gade egzamen yo'), onClick: () => navigate(`/exams/${slug}`) }}
+      />,
     );
   }
 
   if (!exam) {
     return frame(
-      <section className="xp-empty">
-        <h1 className="xp-h2">{L('Examen introuvable', 'Nou pa jwenn egzamen an')}</h1>
-        <p>{L('Cet examen n’existe pas ou n’est plus disponible.', 'Egzamen sa a pa egziste oswa li pa disponib ankò.')}</p>
-        <button type="button" className="xp-btn" onClick={() => navigate(`/exams/${slug}`)}>{L('Voir les examens', 'Gade egzamen yo')}</button>
-      </section>,
+      <EmptyState
+        page
+        headingLevel={1}
+        title={L('Examen introuvable', 'Nou pa jwenn egzamen an')}
+        message={L('Cet examen n’existe pas ou n’est plus disponible.', 'Egzamen sa a pa egziste oswa li pa disponib ankò.')}
+        action={{ label: L('Voir les examens', 'Gade egzamen yo'), onClick: () => navigate(`/exams/${slug}`) }}
+      />,
     );
   }
 

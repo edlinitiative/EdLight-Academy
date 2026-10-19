@@ -153,7 +153,7 @@
 
 .trivia-quiz__timer-ring[data-urgent] {
   border-color: var(--danger-500);
-  color: var(--danger-500);
+  color: var(--danger-ink);
   animation: timer-pulse 0.6s ease-in-out infinite alternate;
 }
 
@@ -287,11 +287,11 @@
 }
 
 .trivia-option--correct .trivia-option__icon {
-  color: var(--success-500);
+  color: var(--success-ink);
 }
 
 .trivia-option--wrong .trivia-option__icon {
-  color: var(--danger-500);
+  color: var(--danger-ink);
 }
 
 /* Next button */
@@ -577,7 +577,7 @@
 }
 
 .vf-game__timer { color: var(--cat-color, #e0532f); }
-.vf-game__timer.is-urgent { color: var(--danger-500); animation: vf-pulse 1s infinite; }
+.vf-game__timer.is-urgent { color: var(--danger-ink); animation: vf-pulse 1s infinite; }
 
 .vf-game__timebar {
   height: 7px;
@@ -646,7 +646,7 @@
   color: var(--cat-color, #e0532f);
 }
 
-.vf-game__correction { margin: 0; font-size: 0.85rem; color: var(--danger-500); }
+.vf-game__correction { margin: 0; font-size: 0.85rem; color: var(--danger-ink); }
 
 .vf-game__actions {
   display: grid;
@@ -737,7 +737,7 @@
 .mem-card.is-matched {
   background: var(--success-50);
   border-color: var(--success-500);
-  color: var(--success-500);
+  color: var(--success-ink);
   cursor: default;
 }
 
@@ -971,8 +971,8 @@
 .seq-game__option:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--border-color, #e6e8eb); }
 
 .seq-game__option:hover:not(:disabled) { border-color: var(--cat-color, #0e7490); transform: translateY(-1px); }
-.seq-game__option.is-correct { border-color: var(--success-500); background: var(--success-50); color: var(--success-500); }
-.seq-game__option.is-wrong { border-color: var(--danger-500); background: var(--danger-50); color: var(--danger-500); }
+.seq-game__option.is-correct { border-color: var(--success-500); background: var(--success-50); color: var(--success-ink); }
+.seq-game__option.is-wrong { border-color: var(--danger-500); background: var(--danger-50); color: var(--danger-ink); }
 .seq-game__option.is-dimmed { opacity: 0.5; }
 
 /* ─── Game-over extras (shared) ─── */

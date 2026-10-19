@@ -2433,14 +2433,17 @@ function ReadingPassage({ text, reconstructed }) {
 
   return (
     <div className={`exam-take__reading-passage ${expanded ? '' : 'exam-take__reading-passage--collapsed'}`}>
+      {/* The bar toggles on a click anywhere; the button is its keyboard
+          path (it was tabIndex -1, so keyboard users could never collapse
+          or reopen the passage). Its click bubbles to the bar's handler. */}
       <div className="exam-take__reading-passage-bar" onClick={() => setExpanded((e) => !e)}>
         <span className="exam-take__reading-passage-label">{t('Texte de référence', 'Tèks referans')}</span>
         {reconstructed && <ReconstructedBadge />}
         <button
           className="exam-take__reading-passage-toggle"
           type="button"
+          aria-expanded={expanded}
           aria-label={expanded ? t('Réduire le texte', 'Rediksyon tèks la') : t('Afficher le texte', 'Montre tèks la')}
-          tabIndex={-1}
         >
           {expanded ? t('▲ Réduire', '▲ Redui') : t('▼ Afficher le texte', '▼ Montre tèks la')}
         </button>
@@ -3896,6 +3899,7 @@ function ProofInput({ question, index, value, onChange, disabled = false }) {
                   value={step.math}
                   onChange={(e) => setStepField(i, 'math', e.target.value)}
                   placeholder={isDone ? '' : t('Écrivez votre expression ici…', 'Ekri ekspresyon ou an isit la…')}
+                  aria-label={t(`Étape ${i + 1} : expression`, `Etap ${i + 1} : ekspresyon`)}
                   rows={1}
                   spellCheck="false"
                   disabled={disabled}
@@ -3989,6 +3993,7 @@ function JustificationPicker({ value, onChange, disabled = false }) {
     <div className="ka-justify">
       <select
         className="ka-justify__select"
+        aria-label={t('Justification', 'Jistifikasyon')}
         value={JUSTIFICATION_OPTIONS.includes(value) ? value : (value ? 'Autre' : '')}
         onChange={(e) => {
           const val = e.target.value;
@@ -4404,6 +4409,7 @@ function MatchingInput({ question, index, value, onChange, disabled }) {
         value={value}
         onChange={(e) => onChange(index, e.target.value)}
         placeholder="1-B, 2-A, 3-C…"
+        aria-label={t('Vos correspondances', 'Korespondans ou yo')}
         disabled={disabled}
       />
     </div>

@@ -169,6 +169,7 @@ function ReviewSession({ items, color = '#6366f1', subject, onClose }) {
                       key={k}
                       type="button"
                       className={`review-session__tf-btn ${answer === k ? 'review-session__tf-btn--selected' : ''}`}
+                      aria-pressed={answer === k}
                       onClick={() => setAnswer(k)}
                     >
                       {l}
@@ -184,6 +185,7 @@ function ReviewSession({ items, color = '#6366f1', subject, onClose }) {
                   value={answer}
                   onChange={(e) => setAnswer(e.target.value)}
                   placeholder="Votre r\u00e9ponse\u2026"
+                  aria-label="Votre r\u00e9ponse"
                   onKeyDown={(e) => { if (e.key === 'Enter' && answer.trim()) checkLive(); }}
                   autoFocus
                 />

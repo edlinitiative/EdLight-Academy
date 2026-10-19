@@ -74,7 +74,7 @@
 
 .chapter-test.chapter-test--done .chapter-test__icon {
 	background: var(--surface);
-	color: var(--success-500);
+	color: var(--success-ink);
 }
 
 .chapter-test .chapter-test__body {

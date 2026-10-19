@@ -146,12 +146,12 @@
 
 .course-detail .lesson-stage__chip--done {
   background: var(--success-50);
-  color: var(--success-500);
+  color: var(--success-ink);
 }
 
 .course-detail .lesson-stage__chip--locked {
   background: var(--warning-50);
-  color: var(--warning-500);
+  color: var(--warning-ink);
 }
 
 /* Continuity + connectivity notices: one quiet line, never a banner that
@@ -283,7 +283,7 @@
 }
 
 .course-detail .lesson-stage__save--pending { color: var(--text-700); }
-.course-detail .lesson-stage__save--failed { color: var(--danger-500); }
+.course-detail .lesson-stage__save--failed { color: var(--danger-ink); }
 
 /* Empty media region: explain, then offer the next step. */
 .course-detail .lesson-stage__placeholder {

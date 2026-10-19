@@ -241,6 +241,7 @@ export default function DirectBankQuiz({
           <textarea
             className="exam-take__short-answer-input"
             placeholder={t('quizzes.writeAnswerHere', 'Écrivez votre réponse ici…')}
+            aria-label={t('quizzes.writeAnswerHere', 'Écrivez votre réponse ici…')}
             value={textAns}
             onChange={(e) => setTextAns(e.target.value)}
             disabled={submitted}

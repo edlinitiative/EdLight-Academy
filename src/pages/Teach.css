@@ -125,7 +125,7 @@
 
 .teach-error {
   margin: 1rem 0 0;
-  color: var(--danger-500);
+  color: var(--danger-ink);
   font-size: var(--text-sm);
 }
 
@@ -144,7 +144,7 @@
 }
 
 .teach-success svg {
-  color: var(--success-500);
+  color: var(--success-ink);
 }
 
 .teach-success h1 {

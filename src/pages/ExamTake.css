@@ -130,7 +130,7 @@
 }
 
 .exam-take__save--saved {
-	color: var(--success-500);
+	color: var(--success-ink);
 	background: var(--success-50);
 }
 
@@ -138,12 +138,12 @@
    this yet" — warning, never success. */
 .exam-take__save--uncertain,
 .exam-take__save--anonymous {
-	color: var(--warning-500);
+	color: var(--warning-ink);
 	background: var(--warning-50);
 }
 
 .exam-take__save--failed {
-	color: var(--danger-500);
+	color: var(--danger-ink);
 	background: var(--danger-50);
 }
 
@@ -228,7 +228,7 @@
 	margin: 0.6rem 0 0;
 	font-size: 0.72rem;
 	font-weight: 600;
-	color: var(--success-500);
+	color: var(--success-ink);
 }
 
 .exam-take__nav-legend {
@@ -405,7 +405,7 @@ body.exam-take-live .section.exam-take { padding-top: 0 !important; }
 }
 .exam-take .exam-take__timer--warning {
   background: color-mix(in srgb, var(--danger-500) 12%, var(--surface));
-  color: var(--danger-500);
+  color: var(--danger-ink);
 }
 .exam-take .exam-take__topbar-right .button { min-height: 44px; padding: 0.5rem 1.2rem; font-size: 0.975rem; }
 

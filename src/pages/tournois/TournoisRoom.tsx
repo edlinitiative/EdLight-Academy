@@ -60,6 +60,8 @@ import {
   useServerNow,
 } from './parts';
 import ArenaPageHead from '../../components/arena/ArenaPageHead';
+import { Skeleton } from '../../components/Skeleton';
+import { LoadingState } from '../../components/StateViews';
 import './Tournois.css';
 
 // ── Question card (live and rounds share it) ───────────────────────────────
@@ -458,7 +460,7 @@ function RoundsStage({ tour, standings, matches, me, canPlay, now, offset }: {
         {review && (
           <div>
             <div className="tn-section__head"><h2>{t('Correction', 'Koreksyon')} — {roundName(review.round)}</h2>
-              <button type="button" className="button button--ghost" onClick={() => setReview(null)}><X size={15} aria-hidden="true" /></button>
+              <button type="button" className="button button--ghost" onClick={() => setReview(null)} aria-label={t('Fermer la correction', 'Fèmen koreksyon an')}><X size={15} aria-hidden="true" /></button>
             </div>
             <ReviewList items={review.items} />
           </div>
@@ -583,7 +585,20 @@ export default function TournoisRoom() {
   useLazyTicker(tour && tour.state !== 'cancelled' && tour.state !== 'finished' ? id : undefined, deadlines, setOffset);
 
   if (tour === undefined && !readError) {
-    return <section className="tn"><div className="tn__wrap"><p className="tn-muted">{t('Chargement…', 'Ap chaje…')}</p></div></section>;
+    return (
+      <section className="tn">
+        <div className="tn__wrap">
+          <LoadingState label={t('Chargement du tournoi…', 'N ap chaje tounwa a…')}>
+            <div className="tn-room-skel" aria-hidden="true">
+              <Skeleton width={140} height={16} radius={999} />
+              <Skeleton width="55%" height={40} radius={12} />
+              <Skeleton height={160} radius={18} />
+              <Skeleton height={220} radius={18} />
+            </div>
+          </LoadingState>
+        </div>
+      </section>
+    );
   }
   if (!tour) {
     return (
