@@ -1,64 +1,227 @@
+/* Public screen (/arena/ecran/:id): read from the back of a room. The
+   Arène's night, one coral accent for "live", the answer in green. */
 .competition-projector {
   min-height: 100vh;
   box-sizing: border-box;
   padding: clamp(20px, 4vw, 64px);
-  background: #050b1a;
+  background: #040a1c;
   color: #f1f5ff;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-heading, 'Plus Jakarta Sans', sans-serif);
   overflow-wrap: anywhere;
 }
+.competition-projector p { margin: 0; }
+.cp-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.cp-head { display: grid; gap: 10px; justify-items: start; margin-bottom: clamp(20px, 3vw, 40px); }
+.cp-eyebrow {
+  font-size: clamp(0.8rem, 1vw, 1rem);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #a3b5dc;
+}
 .competition-projector h1 {
-  font-size: clamp(2rem, 4vw, 4rem);
-  margin: 0.3em 0;
+  margin: 0;
+  max-width: 28ch;
+  font-size: clamp(1.8rem, 3.6vw, 4rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
 }
-.competition-projector h2 {
-  font-size: clamp(1.3rem, 2.5vw, 2.6rem);
+.cp-phase {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: #1f3456;
+  font-size: clamp(0.95rem, 1.4vw, 1.4rem);
+  font-weight: 700;
 }
-.competition-projector p {
-  font-size: clamp(1rem, 1.7vw, 1.7rem);
+.cp-phase.is-live { background: #ff6a45; color: #12213a; }
+.cp-phase.is-live::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: cp-pulse 1.2s ease-in-out infinite;
 }
+@keyframes cp-pulse { 50% { opacity: 0.3; } }
+
+.cp-alert {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  margin-bottom: 24px;
+  padding: 14px 20px;
+  border-radius: 18px;
+  background: rgba(240, 82, 82, 0.16);
+  color: #ffd2d2;
+  font-size: clamp(1rem, 1.4vw, 1.3rem);
+  font-weight: 600;
+}
+.cp-alert button {
+  min-height: 48px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 12px;
+  background: #1f3456;
+  color: #f5f8ff;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+
 .competition-projector__stage {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr);
-  gap: 32px;
+  grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr);
+  gap: clamp(16px, 2.5vw, 32px);
+  align-items: start;
 }
-.competition-projector ol {
-  padding: 0;
-  list-style-position: inside;
+@media (max-width: 860px) {
+  .competition-projector__stage { grid-template-columns: minmax(0, 1fr); }
+}
+.cp-card {
+  min-width: 0;
+  padding: clamp(18px, 2.5vw, 32px);
+  border-radius: 28px;
+  background: #0e1c42;
+}
+.cp-card h2 {
+  margin: 0 0 clamp(14px, 2vw, 24px);
+  font-size: clamp(1.3rem, 2.4vw, 2.5rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.cp-count {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 14px !important;
+  font-size: clamp(1rem, 1.5vw, 1.5rem);
+  font-weight: 700;
+  color: #a3b5dc;
+}
+.cp-timer {
+  min-width: 3.5ch;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: #1f3456;
+  color: #f1f5ff;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.cp-options {
   display: grid;
-  gap: 16px;
+  gap: clamp(10px, 1.4vw, 16px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
-.competition-projector li {
-  border-radius: 18px;
-  padding: 20px;
-  background: #13243f;
-  font-size: clamp(1.1rem, 2vw, 2rem);
-}
-.competition-projector .is-correct {
-  background: #193e4b;
-  color: #3ddc97;
-}
-.competition-projector a {
-  color: #dce6ff;
-  display: inline-block;
-  padding: 16px;
-}
-.competition-projector :focus-visible {
-  outline: 3px solid #5ea2ff;
-  outline-offset: 4px;
-}
-@media (max-width: 767px) {
-  .competition-projector__stage {
-    grid-template-columns: 1fr;
-  }
-}
-.competition-projector__person {
+.cp-options li {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: clamp(12px, 1.6vw, 20px);
+  padding: clamp(12px, 1.6vw, 20px);
+  border-radius: 18px;
+  background: #1a2d4d;
+  font-size: clamp(1.1rem, 2vw, 2rem);
+  font-weight: 650;
+  line-height: 1.25;
 }
+.cp-letter {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.9em;
+  height: 1.9em;
+  border-radius: 12px;
+  background: #0a1534;
+  font-weight: 800;
+}
+.cp-option { min-width: 0; }
+.cp-options li.is-correct { background: #12493a; color: #c8f7de; }
+.cp-options li.is-correct .cp-letter { background: #3ddc97; color: #0a2a1e; }
+.cp-wait {
+  font-size: clamp(1rem, 1.6vw, 1.5rem);
+  line-height: 1.5;
+  color: #a3b5dc;
+}
+
+/* Standings: rank · face · name · points on one baseline. */
+.cp-rows { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.cp-rows li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 6px 10px;
+  border-radius: 14px;
+  font-size: clamp(1rem, 1.5vw, 1.5rem);
+}
+.cp-rows li.is-top { background: rgba(160, 190, 255, 0.07); }
+.cp-rank {
+  flex: none;
+  width: 2ch;
+  text-align: center;
+  font-weight: 800;
+  color: #a3b5dc;
+  font-variant-numeric: tabular-nums;
+}
+.cp-rows li.is-1 .cp-rank { color: #ffc24a; }
+.cp-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 650;
+  line-height: 1.25;
+  overflow-wrap: normal;
+  word-break: normal;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.cp-points {
+  flex: none;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.cp-points small { font-size: 0.7em; font-weight: 650; color: #a3b5dc; }
 .competition-projector__face {
   display: inline-flex;
   flex: none;
   line-height: 0;
+}
+
+.cp-foot { margin-top: clamp(20px, 3vw, 40px); }
+.cp-foot a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 20px;
+  border-radius: 12px;
+  background: #1f3456;
+  color: #f5f8ff;
+  font-weight: 700;
+  text-decoration: none;
+}
+.cp-foot a:hover { background: #284068; }
+.competition-projector :focus-visible {
+  outline: 3px solid #ffc24a;
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cp-phase.is-live::before { animation: none; }
 }
