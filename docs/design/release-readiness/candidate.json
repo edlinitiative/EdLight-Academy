@@ -2703,7 +2703,7 @@
         {
           "source": "mobile/src/screens/arena/TournoisScreen.tsx",
           "match": "Créer un tournoi ou une salle privée",
-          "line": 379
+          "line": 396
         }
       ],
       "requirementIds": [
@@ -2775,12 +2775,12 @@
         {
           "source": "mobile/src/screens/arena/TournoisScreen.tsx",
           "match": "Tournois publics",
-          "line": 412
+          "line": 429
         },
         {
           "source": "mobile/src/screens/arena/TournoisScreen.tsx",
           "match": "Mes tournois et résultats",
-          "line": 397
+          "line": 414
         },
         {
           "source": "mobile/src/screens/arena/CompetitionWorkspaceScreen.tsx",
@@ -3213,7 +3213,7 @@
         {
           "source": "mobile/src/screens/arena/TournoisScreen.tsx",
           "match": "Inscription et équipe de cet événement",
-          "line": 491
+          "line": 508
         },
         {
           "source": "shared/competition/notifications.ts",
