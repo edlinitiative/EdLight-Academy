@@ -1905,6 +1905,16 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
+      "line": 448,
+      "kind": "native-screen",
+      "destination": "ArenaQuick",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/AppNavigator.tsx",
       "line": 445,
       "kind": "native-screen",
       "destination": "ArenaDoors",
