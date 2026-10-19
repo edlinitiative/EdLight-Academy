@@ -11,7 +11,7 @@ import {
   type WorkspaceTarget,
 } from '../../../shared/competition/workspace';
 import { DELETED_ACCOUNT_NAME } from '../../../shared/competition/deletedAccount';
-import type { LiveState, Standings } from '../../../shared/tournois/models';
+import type { LiveState, RosterEntry, Standings, Tournament } from '../../../shared/tournois/models';
 
 export const FIXTURE_UIDS = {
   me: 'uidMeQ8Lm2Pz9Rt4Ks8Vw1Yb3Zc5',
@@ -437,14 +437,32 @@ export interface ProjectorScenario {
   event: { title?: string; delivery?: string } | null;
   live: LiveState | null;
   board: Standings | null;
+  /** The board just before `board` — the studio replays the reorder from it. */
+  boardBefore?: Standings | null;
   phase: string;
+  teamRule?: string | null;
   error?: string;
 }
 
-const row = (uid: string, displayName: string, rank: number, points: number) => ({
+const SCHOOL_NAMES = [
+  'Lycée Alexandre Pétion',
+  'Collège Saint-Louis de Gonzague',
+  'Institution Mixte Évangélique des Frères Unis de Mirebalais',
+  'Lycée National de Hinche',
+  'Collège Notre-Dame du Perpétuel Secours',
+  'Lycée Philippe Guerrier',
+  'École Nationale de Lascahobas',
+  'Collège Canado-Haïtien',
+  'Lycée Toussaint Louverture',
+  'Institution Saint-Louis de Bourdon',
+  'Collège Pratique du Nord',
+  'Lycée Jean-Jacques Dessalines',
+];
+
+const row = (uid: string, displayName: string, rank: number, points: number, school: string | null = null) => ({
   uid,
   displayName,
-  school: null,
+  school,
   grade: null,
   points,
   correct: 0,
@@ -452,6 +470,43 @@ const row = (uid: string, displayName: string, rank: number, points: number) => 
   rank,
   avatar: null,
 });
+
+const rerank = <T extends { rank: number }>(list: T[], by: (r: T) => number): T[] =>
+  [...list].sort((a, b) => by(b) - by(a)).map((r, i) => ({ ...r, rank: i + 1 }));
+
+/** Twelve players (long names, a deleted account, schools) — before and after question 4. */
+export function projectorRows(): { before: Standings['rows']; after: Standings['rows'] } {
+  const base = [
+    row(U.long, 'Marie-Christine Évangéline Desrosiers-Saint-Fleurant', 1, 4200, SCHOOL_NAMES[2]),
+    row(U.bob, 'Bob Jean-Baptiste', 2, 3900, SCHOOL_NAMES[0]),
+    row(U.gone, DELETED_ACCOUNT_NAME, 3, 3100, null),
+    row(U.me, 'Nadège Pierre-Louis', 4, 2800, SCHOOL_NAMES[3]),
+    ...Array.from({ length: 8 }, (_, i) =>
+      row(`uidFill${i}x9c8v7b6n5m4a3s2d1`, `Joueur ${i + 5}`, i + 5, 2500 - i * 200, SCHOOL_NAMES[(i + 4) % SCHOOL_NAMES.length]),
+    ),
+  ];
+  // Question 4: Nadège and "Joueur 7" answer fast, the leader misses.
+  const gain: Record<string, number> = { [U.me]: 1500, uidFill2x9c8v7b6n5m4a3s2d1: 1300, [U.bob]: 400 };
+  const after = rerank(base.map((r) => ({ ...r, points: r.points + (gain[r.uid] || 0) })), (r) => r.points);
+  return { before: base, after };
+}
+
+/** School-vs-school squads (teamRule 'school'): the label is the school. */
+export function projectorSchools(): { before: Standings['teams']; after: Standings['teams'] } {
+  const before = SCHOOL_NAMES.slice(0, 10).map((name, i) => ({
+    key: `sch${i}`,
+    label: name,
+    rank: i + 1,
+    score: 9000 - i * 650,
+    counted: 5,
+    members: 5 + (i % 3),
+    qualified: true,
+    needed: 0,
+  }));
+  const bump: Record<string, number> = { sch3: 2100, sch6: 1800, sch0: 200 };
+  const after = rerank(before.map((t) => ({ ...t, score: t.score + (bump[t.key] || 0) })), (t) => t.score);
+  return { before, after };
+}
 
 export function projectorScenarios(now: number): ProjectorScenario[] {
   const question: LiveState = {
@@ -472,50 +527,83 @@ export function projectorScenarios(now: number): ProjectorScenario[] {
     },
     reveal: null,
   };
-  const rows = [
-    row(U.long, 'Marie-Christine Évangéline Desrosiers-Saint-Fleurant', 1, 4200),
-    row(U.bob, 'Bob Jean-Baptiste', 2, 3900),
-    row(U.gone, DELETED_ACCOUNT_NAME, 3, 3100),
-    row(U.me, 'Nadège Pierre-Louis', 4, 2800),
-    ...Array.from({ length: 8 }, (_, i) =>
-      row(`uidFill${i}x9c8v7b6n5m4a3s2d1`, `Joueur ${i + 5}`, i + 5, 2500 - i * 200),
-    ),
-  ];
+  const reveal: LiveState = {
+    ...question,
+    phase: 'reveal',
+    reveal: {
+      index: 3,
+      answer: 0,
+      explanation: '',
+      explanationHt: '',
+      counts: [31, 9, 4, 2],
+      answered: 46,
+      correct: 31,
+    },
+  };
+  const { before, after } = projectorRows();
+  const sch = projectorSchools();
+  const players = (rows: Standings['rows'], final = false): Standings => ({ rows, teams: [], total: rows.length, final, updatedAt: now });
+  const squads = (teams: Standings['teams'], final = false): Standings => ({ rows: after, teams, total: teams.length, final, updatedAt: now });
   return [
+    {
+      id: 'lobby',
+      label: 'Avant le coup d’envoi',
+      event: { title: LONG_TITLE, delivery: 'app' },
+      live: { ...question, phase: 'lobby', question: null, index: -1 },
+      board: null,
+      phase: 'scheduled',
+    },
     {
       id: 'live',
       label: 'Question en cours + classement',
       event: { title: LONG_TITLE, delivery: 'app' },
       live: question,
-      board: { rows, teams: [], total: rows.length, final: false, updatedAt: now },
+      board: players(before),
+      phase: 'running',
+    },
+    {
+      id: 'live-low',
+      label: 'Fin du chrono (≤ 5 s)',
+      event: { title: 'Quiz de rentrée' },
+      live: { ...question, closesAt: now + 4000 },
+      board: players(before),
       phase: 'running',
     },
     {
       id: 'reveal',
-      label: 'Révélation',
+      label: 'Révélation + reclassement',
       event: { title: 'Quiz de rentrée' },
-      live: {
-        ...question,
-        phase: 'reveal',
-        reveal: {
-          index: 3,
-          answer: 0,
-          explanation: '',
-          explanationHt: '',
-          counts: [10, 2, 1, 0],
-          answered: 13,
-        } as any,
-      },
-      board: { rows: rows.slice(0, 4), teams: [], total: 4, final: false, updatedAt: now },
+      live: reveal,
+      board: players(after),
+      boardBefore: players(before),
       phase: 'running',
     },
     {
+      id: 'schools',
+      label: 'École contre école (10 écoles)',
+      event: { title: 'Championnat du Plateau Central' },
+      live: reveal,
+      board: squads(sch.after),
+      boardBefore: squads(sch.before),
+      phase: 'running',
+      teamRule: 'school',
+    },
+    {
       id: 'final',
-      label: 'Résultat final',
+      label: 'Résultat final (podium)',
       event: { title: 'Quiz de rentrée' },
       live: null,
-      board: { rows, teams: [], total: rows.length, final: true, updatedAt: now },
+      board: players(after, true),
       phase: 'finished',
+    },
+    {
+      id: 'final-schools',
+      label: 'Podium des écoles',
+      event: { title: 'Championnat du Plateau Central' },
+      live: null,
+      board: squads(sch.after, true),
+      phase: 'finished',
+      teamRule: 'school',
     },
     {
       id: 'empty',
@@ -533,6 +621,77 @@ export function projectorScenarios(now: number): ProjectorScenario[] {
       board: null,
       phase: '',
       error: 'network',
+    },
+  ];
+}
+
+export interface RoomScenario {
+  id: string;
+  label: string;
+  tour: Tournament;
+  roster: RosterEntry[];
+  live: LiveState | null;
+  progress: { index: number; answered: number } | null;
+  standings: Standings | null;
+  standingsBefore?: Standings | null;
+  me: string;
+}
+
+/** The tournament room (/tournois/:id) in its live phases, many players, school vs school. */
+export function roomScenarios(now: number): RoomScenario[] {
+  const pj = projectorScenarios(now);
+  const at = (id: string) => pj.find((p) => p.id === id)!;
+  const { before, after } = projectorRows();
+  const sch = projectorSchools();
+  const tour: Tournament = {
+    title: 'Quiz de rentrée — Plateau Central',
+    description: '',
+    format: 'live',
+    teamRule: 'school',
+    teamSize: 5,
+    visibility: 'public',
+    categories: ['geo'],
+    questionCount: 10,
+    secondsPerQuestion: 20,
+    startsAt: now - 5 * 60_000,
+    windowHours: 0,
+    roundHours: 0,
+    roundCount: 0,
+    maxPlayers: 60,
+    creatorPlays: false,
+    schemaVersion: 1,
+    id: 'tFixtureRoom',
+    creatorUid: U.bob,
+    creatorName: 'M. Jean-Baptiste',
+    pin: '482913',
+    state: 'running',
+    schedule: { format: 'live', startsAt: now - 5 * 60_000, endsAt: now + 10 * 60_000, questionMs: 20000, questionCount: 10, revealMs: 6000, rounds: [], roundMs: 0 },
+    nextDeadlineAt: null,
+    playerCount: after.length,
+    currentRound: 0,
+    closedThrough: 0,
+    bracketRounds: 0,
+    winner: null,
+    createdAt: now - DAY,
+  };
+  const roster: RosterEntry[] = after.map((r, i) => ({ uid: r.uid, displayName: r.displayName, school: r.school, grade: null, seed: i, joinedAt: now - DAY }));
+  const board = (rows: Standings['rows'], teams: Standings['teams'], final = false): Standings => ({ rows, teams, total: rows.length, final, updatedAt: now });
+  return [
+    {
+      id: 'room-lobby', label: 'Salle — avant le départ',
+      tour: { ...tour, state: 'scheduled', startsAt: now + 95_000 }, roster, live: at('lobby').live, progress: null, standings: null, me: U.me,
+    },
+    {
+      id: 'room-live', label: 'Salle — question en cours',
+      tour, roster, live: at('live').live, progress: { index: 3, answered: 17 }, standings: board(before, sch.before), me: U.me,
+    },
+    {
+      id: 'room-reveal', label: 'Salle — révélation + reclassement',
+      tour, roster, live: at('reveal').live, progress: null, standings: board(after, sch.after), standingsBefore: board(before, sch.before), me: U.me,
+    },
+    {
+      id: 'room-final', label: 'Salle — podium final',
+      tour: { ...tour, state: 'finished' }, roster, live: { ...at('reveal').live!, phase: 'done' }, progress: null, standings: board(after, sch.after, true), me: U.me,
     },
   ];
 }

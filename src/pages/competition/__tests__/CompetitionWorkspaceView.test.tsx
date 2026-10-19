@@ -1,8 +1,10 @@
+import fs from 'fs';
+import path from 'path';
 import React from 'react';
 import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { CompetitionWorkspaceView } from '../CompetitionWorkspaceView';
-import { CompetitionProjectorView } from '../CompetitionProjectorView';
+import { CompetitionProjectorView, PROJECTOR_BOARD_ROWS } from '../CompetitionProjectorView';
 import {
   FIXTURE_UIDS,
   WORKSPACE_SCENARIOS,
@@ -104,6 +106,7 @@ describe('CompetitionProjectorView with fixtures', () => {
           live={s.live}
           board={s.board}
           phase={s.phase}
+          teamRule={s.teamRule}
           error={s.error ? 'Erreur' : ''}
           now={NOW}
           ht={ht}
@@ -119,7 +122,48 @@ describe('CompetitionProjectorView with fixtures', () => {
     for (const uid of UIDS) expect(text).not.toContain(uid);
     expect(text).toContain('Kont efase');
     expect(text).not.toContain('Compte supprimé');
-    expect(container.querySelectorAll('.cp-rows li')).toHaveLength(10);
+    expect(container.querySelectorAll('.cp-rows li')).toHaveLength(PROJECTOR_BOARD_ROWS);
+  });
+
+  it('never shows more rows than the rail holds, in any scenario', () => {
+    for (const s of scenarios) {
+      const { container, unmount } = renderPj(s.id);
+      expect(container.querySelectorAll('.cp-rows li').length).toBeLessThanOrEqual(PROJECTOR_BOARD_ROWS);
+      expect(container.querySelectorAll('.cp-options li').length).toBeLessThanOrEqual(4);
+      unmount();
+    }
+  });
+
+  it('a spectator reads phase, question and clock at a glance', () => {
+    const { container } = renderPj('live');
+    expect(screen.getByRole('status').textContent).toBe('Question en cours');
+    expect(container.querySelector('.cp-count')?.textContent).toBe('Question 4/10');
+    expect(container.querySelector('.cp-timer')?.getAttribute('aria-label')).toBe('15 secondes restantes');
+    expect(container.querySelector('[data-phase]')?.getAttribute('data-phase')).toBe('question');
+  });
+
+  it('the reveal names the answer in words and shows the votes', () => {
+    const { container } = renderPj('reveal');
+    const right = container.querySelector('.cp-options li.is-correct')!;
+    expect(right.textContent).toContain('Hinche');
+    expect(right.textContent).toContain('Bonne réponse');
+    expect(right.textContent).toContain('31');
+    expect(container.querySelector('.cp-tally')?.textContent).toBe('31 bonnes réponses sur 46');
+  });
+
+  it('school vs school shows a crest per school', () => {
+    const { container } = renderPj('schools');
+    const rows = container.querySelectorAll('.cp-rows li');
+    expect(rows.length).toBe(PROJECTOR_BOARD_ROWS);
+    rows.forEach((li) => expect(li.querySelector('svg.crest')).not.toBeNull());
+  });
+
+  it('results show a podium, first in the middle', () => {
+    const { container } = renderPj('final');
+    const steps = container.querySelectorAll('.cp-podium .cp-step');
+    expect(steps).toHaveLength(3);
+    expect(steps[1].className).toContain('cp-step--1');
+    expect(screen.getByRole('status').textContent).toBe('Résultat final du tournoi');
   });
 
   it('says where the standings will appear when there are none yet', () => {
@@ -127,5 +171,27 @@ describe('CompetitionProjectorView with fixtures', () => {
     expect(
       screen.getByText('Le classement apparaîtra ici dès les premiers points.'),
     ).toBeTruthy();
+  });
+
+  it('embedded in the studio it is not a second <main>', () => {
+    const s = scenarios[0];
+    const { container } = render(
+      <MemoryRouter>
+        <CompetitionProjectorView eventId="ev1" event={s.event} live={s.live} board={s.board} phase={s.phase} error="" now={NOW} ht={false} onRetry={noop} embedded />
+      </MemoryRouter>,
+    );
+    expect(container.querySelector('main')).toBeNull();
+  });
+});
+
+describe('projector layout: one frame, no scroll, on a projector or laptop', () => {
+  // jsdom cannot lay out; this guards the CSS contract the browser check measures.
+  const css: string = fs.readFileSync(path.join(__dirname, '..', 'CompetitionProjector.css'), 'utf8');
+  const frame = css.slice(css.indexOf('@media (min-width: 1000px) and (min-height: 560px)'));
+
+  it('locks the root to the viewport and clips instead of scrolling', () => {
+    expect(frame).toMatch(/\.competition-projector \{[^}]*height: 100dvh;[^}]*overflow: hidden;/);
+    expect(frame).toMatch(/\.cp-rows \{[^}]*grid-template-rows: repeat\(8, minmax\(0, 1fr\)\)/);
+    expect(frame).toMatch(/\.competition-projector__stage \{[^}]*grid-template-rows: minmax\(0, 1fr\)/);
   });
 });

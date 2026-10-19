@@ -6,6 +6,12 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Copy, Share2 } from '../../components/icons';
 import useStore from '../../contexts/store';
 import { formatPin } from '../../../shared/tournois/config';
+import type { RowMove } from '../../../shared/competition/presentation';
+import SchoolCrest from '../../arena-art/crest/SchoolCrest';
+import { useReducedMotion } from '../../arena-art/motion/tokens';
+import { useFlipList } from '../../arena-art/motion/useFlipList';
+import { useBoardMoves } from '../../arena-art/motion/useBoardMoves';
+import '../../arena-art/motion/competition.css';
 import type { Match } from '../../../shared/tournois/bracket';
 import {
   shareUrl,
@@ -147,20 +153,27 @@ export function Podium({ rows }: { rows: StandingRow[] }) {
   const { t } = useLang();
   const top = [rows[1], rows[0], rows[2]];
   if (!rows.length) return null;
+  // Steps rise third → second → first (competition.css .mo-podium); static
+  // under reduced motion. Place numbers stay in the text for screen readers.
   return (
-    <div className="tn-podium" aria-label={t('Podium', 'Podyòm')}>
+    <div className="tn-podium mo-podium" role="list" aria-label={t('Podium', 'Podyòm')}>
       {top.map((r, i) => {
         const place = i === 1 ? 1 : i === 0 ? 2 : 3;
         return (
-          <div key={place} className={`tn-podium__step tn-podium__step--${place}`}>
+          <div key={place} role="listitem" className={`tn-podium__step tn-podium__step--${place}`}>
             {r ? (
               <>
                 <span className="tn-avatar" aria-hidden="true">{initials(r.displayName)}</span>
                 <span className="tn-podium__name">{r.displayName}</span>
+                {r.school ? (
+                  <span className="tn-podium__school">
+                    <SchoolCrest name={r.school} size={18} /> {r.school}
+                  </span>
+                ) : null}
                 <span className="tn-podium__pts">{nf(r.points)} pts</span>
               </>
             ) : <span className="tn-podium__name">—</span>}
-            <div className="tn-podium__block">{place}</div>
+            <div className="tn-podium__block"><span className="sr-only">{t('Place', 'Plas')} </span>{place}</div>
           </div>
         );
       })}
@@ -168,22 +181,50 @@ export function Podium({ rows }: { rows: StandingRow[] }) {
   );
 }
 
-export function Board({ rows, me, limit = 20 }: { rows: StandingRow[]; me?: string | null; limit?: number }) {
+/** "▲ 2" after a reorder — text, not colour alone, and spoken in words. */
+export function MoveBadge({ move }: { move: RowMove | undefined }) {
   const { t } = useLang();
-  if (!rows.length) return <p className="tn-muted">{t('Pas encore de points.', 'Poko gen pwen.')}</p>;
+  if (!move || move.delta === 0) return null;
+  const up = move.delta > 0;
+  const n = Math.abs(move.delta);
+  return (
+    <span className={`tn-move mo-delta ${up ? 'is-up' : 'is-down'}`}>
+      <span aria-hidden="true">{up ? '▲' : '▼'} {n}</span>
+      <span className="sr-only">
+        {up ? t(`gagne ${n} place${n > 1 ? 's' : ''}`, `monte ${n} plas`) : t(`perd ${n} place${n > 1 ? 's' : ''}`, `desann ${n} plas`)}
+      </span>
+    </span>
+  );
+}
+
+export function Board({ rows, me, limit = 20, revealDelay = 0 }: { rows: StandingRow[]; me?: string | null; limit?: number; revealDelay?: number }) {
+  const { t } = useLang();
+  const reduced = useReducedMotion();
   const shown = rows.slice(0, limit);
+  const keys = shown.map((r) => r.uid);
+  const moves = useBoardMoves(keys);
+  const flip = useFlipList(keys, { reduced, delay: revealDelay });
+  if (!rows.length) return <p className="tn-muted">{t('Pas encore de points.', 'Poko gen pwen.')}</p>;
   const mine = me ? rows.find((r) => r.uid === me) : null;
   return (
     <>
       <ol className="tn-board">
         {shown.map((r) => (
-          <li key={r.uid} className={r.uid === me ? 'is-me' : ''}>
+          <li key={r.uid} ref={flip(r.uid)} className={r.uid === me ? 'is-me' : ''}>
             <span className="tn-board__rank">{r.rank}</span>
             <span className="tn-board__name">
               {r.displayName}
-              {(r.school || r.grade) && <small>{[r.school, r.grade].filter(Boolean).join(' · ')}</small>}
+              {(r.school || r.grade) && (
+                <small>
+                  {r.school ? <SchoolCrest name={r.school} size={14} /> : null}
+                  {[r.school, r.grade].filter(Boolean).join(' · ')}
+                </small>
+              )}
             </span>
-            <span className="tn-board__pts">{nf(r.points)}</span>
+            <span className="tn-board__pts">
+              <MoveBadge move={moves[r.uid]} />
+              {nf(r.points)}
+            </span>
           </li>
         ))}
       </ol>
@@ -201,22 +242,32 @@ export function Board({ rows, me, limit = 20 }: { rows: StandingRow[]; me?: stri
 }
 
 /** School vs school / class vs class: the best-N team scores as bars. */
-export function SquadBars({ teams, teamSize }: { teams: TeamRow[]; teamSize: number }) {
+export function SquadBars({ teams, teamSize, schools = false, revealDelay = 0 }: { teams: TeamRow[]; teamSize: number; schools?: boolean; revealDelay?: number }) {
   const { t } = useLang();
+  const reduced = useReducedMotion();
   const max = useMemo(() => Math.max(1, ...teams.map((x) => x.score)), [teams]);
+  const shown = teams.slice(0, 8);
+  const keys = shown.map((x) => x.key);
+  const moves = useBoardMoves(keys);
+  const flip = useFlipList(keys, { reduced, delay: revealDelay });
   if (!teams.length) return <p className="tn-muted">{t('Les équipes apparaissent avec les premiers points.', 'Ekip yo parèt ak premye pwen yo.')}</p>;
   return (
     <div className="tn-squads">
-      {teams.slice(0, 8).map((team) => (
-        <div key={team.key} className="tn-squad">
-          <span className="tn-squad__name">
-            {team.rank > 0 ? `${team.rank}. ` : ''}{team.label}
-            {!team.qualified && <span className="tn-muted"> · {t(`${team.counted}/${teamSize} joueurs`, `${team.counted}/${teamSize} jwè`)}</span>}
-          </span>
-          <span className="tn-squad__score">{nf(team.score)}</span>
-          <span className="tn-squad__bar"><span style={{ width: `${(team.score / max) * 100}%` }} /></span>
-        </div>
-      ))}
+      <ol className="tn-squads__list">
+        {shown.map((team) => (
+          <li key={team.key} ref={flip(team.key)} className="tn-squad">
+            <span className="tn-squad__name">
+              {schools ? <SchoolCrest name={team.label} size={20} /> : null}
+              <span className="tn-squad__label">
+                {team.rank > 0 ? `${team.rank}. ` : ''}{team.label}
+                {!team.qualified && <span className="tn-muted"> · {t(`${team.counted}/${teamSize} joueurs`, `${team.counted}/${teamSize} jwè`)}</span>}
+              </span>
+            </span>
+            <span className="tn-squad__score"><MoveBadge move={moves[team.key]} />{nf(team.score)}</span>
+            <span className="tn-squad__bar" aria-hidden="true"><span style={{ width: `${(team.score / max) * 100}%` }} /></span>
+          </li>
+        ))}
+      </ol>
       <p className="tn-muted">
         {t(`Chaque équipe compte ses ${teamSize} meilleurs joueurs.`, `Chak ekip konte ${teamSize} pi bon jwè li yo.`)}
       </p>

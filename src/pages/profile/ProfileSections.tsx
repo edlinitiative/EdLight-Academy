@@ -22,6 +22,9 @@ import {
 import type { ReviewMap } from '../../utils/review';
 import type { ProgressMap } from '../../../shared/mastery';
 import { STREAK_MILESTONES } from '../../services/streakService';
+import { getArenaSound } from '../../arena-art/sound/arenaSound';
+import { useArenaSound } from '../../arena-art/sound/useArenaSound';
+import { pressSoundToggle, soundToggleView } from '../../arena-art/sound/toggle';
 
 type T = (fr: string, ht: string) => string;
 
@@ -60,6 +63,28 @@ export function Toggle({ on, onChange, label, hint, disabled }: {
         <span className="pr-switch__knob" />
       </button>
     </div>
+  );
+}
+
+/**
+ * "Sons" — the device's one sound switch (roadmap P2). Off by default and
+ * remembered on this device (arena-art/sound/policy.ts, localStorage). The
+ * press runs inside the click, which is the user action browsers require
+ * before audio may start. Every cue it allows also shows on screen.
+ */
+export function SoundSetting({ t }: { t: T }) {
+  const snd = useArenaSound();
+  const { on } = soundToggleView(snd);
+  return (
+    <Toggle
+      on={on}
+      onChange={() => { try { pressSoundToggle(getArenaSound()); } catch { /* silent is fine */ } }}
+      label={t('Sons', 'Son')}
+      hint={t(
+        'Petits sons dans l’Arène : début de question, réponse validée, bonne ou mauvaise réponse, podium.',
+        'Ti son nan Arèn nan : kòmansman kesyon, repons valide, bon oswa move repons, podyòm.',
+      )}
+    />
   );
 }
 
