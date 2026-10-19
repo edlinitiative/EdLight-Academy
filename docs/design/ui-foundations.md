@@ -41,6 +41,23 @@ Never use left-border accent stripes or hero bands.
 | Colours | `useColors()` / `useTheme()` from `theme/theme.ts` | Status words and meaning-carrying icons use `dangerInk` / `successInk` / `warnInk` / `coralInk`. White-label fills use `azureFill` / `successFill` / `dangerFill`. |
 | Motion | `useReduceMotion()` / `isReduceMotionOn()` (`utils/motion.ts`), `modalAnimation(reduce)` for every `<Modal>`, presets in `theme/motion.ts` | |
 
+### Competition motion and sound (P2)
+
+| Need | Web | Mobile |
+| --- | --- | --- |
+| Phase rules (one phase name, which cue a change earns, row movement, board lines) | `shared/competition/presentation.ts` | same file |
+| Motion tokens | `arena-art/motion/tokens.ts` (`DUR`, `EASE`) = `--mo-*` on `:root` in `arena-art/motion/competition.css` | `theme/motion.ts` |
+| Phase moments | `.mo-enter` (question/room), `.mo-phase` (phase label), `.mo-locked` (answer locked), `.mo-right` / `.mo-wrong` (reveal), `.mo-podium` (3rd → 1st), `.mo-delta` ("▲ 2") | `arenaMotion(reduce)` in `components/arena/arenaMotion.ts`: `enter`, `phase`, `reveal`, `reorder`, `podium(place)` |
+| Standings reorder | `useFlipList` + `useBoardMoves` (rows travel 600 ms after the reveal: answer, then points, then standings) | Reanimated `layout={motion.reorder}` + `useBoardMoves` |
+| Reduced motion | Every animation is declared only under `prefers-reduced-motion: no-preference`; `useFlipList({ reduced })` animates nothing | `arenaMotion(true)` returns `undefined` everywhere |
+| Cues | "Sons" switch in Profile → Réglages, off by default, per device (`arena-art/sound`). Five cues: question opens, answer locked, correct, wrong, podium (`competitionCues.ts`) | Haptics (`arenaHaptics`, honours the Vibrations switch). No audio module in the native build. |
+
+No decorative loops. Every cue and every movement doubles text that is already on screen ("✓ Bonne réponse", "▲ 2 / gagne 2 places").
+
+**Native sound is a store-build follow-up.** `expo-av` / `expo-audio` are not in `mobile/package.json` or the app.json plugins, and adding a native module breaks the OTA runtime contract (`runtimeVersion` 1.2.0). With the next store build: add `expo-audio`, bundle five short cues, add a `soundEnabled` device preference (default off) beside `hapticsEnabled` in `settings/preferences.ts`, a "Sons" row in Profil, and play through `arenaCue` respecting the iOS silent switch (`playsInSilentMode: false`).
+
+Review: `/arena/studio?pj=<scenario>&full=1#competitions` shows the public screen alone at window size (check 1920×1080 and 1280×720: nothing scrolls); `&room=<scenario>` shows the tournament room, with "Rejouer le reclassement" to replay a reorder.
+
 ## 2. State behaviour for every data screen
 
 A data screen shows exactly one of these states, and each state looks like the screen it belongs to.

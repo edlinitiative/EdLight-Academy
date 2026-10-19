@@ -19,6 +19,10 @@ import {
 } from '../../../../shared/teams/client';
 import type { LiveState, RosterEntry, Tournament } from '../../../../shared/tournois/models';
 import * as service from '../../services/tournoisService';
+import Animated from 'react-native-reanimated';
+import { arenaCue, arenaMotion } from './arenaMotion';
+import { useReduceMotion } from '../../utils/motion';
+import { answerCue } from '../../../../shared/competition/presentation';
 
 const RESYNC = new Set(['authority_stale', 'not_authority_holder', 'team_answer_exists', 'not_your_turn', 'turn_not_open', 'holder_present']);
 
@@ -41,6 +45,9 @@ export default function TeamModePanel({
   const [rules, setRules] = useState(false);
   const shownAt = useRef<Record<number, number>>({});
   const lock = useRef(false);
+  const reduceMotion = useReduceMotion();
+  const motion = arenaMotion(reduceMotion);
+  const cuedReveal = useRef(-1);
   const t = (fr: string, creole: string) => (ht ? creole : fr);
   const cp = (c: Copy) => c[ht ? 1 : 0];
   const mode = tournament.gameMode === 'relay' ? 'relay' : 'shared';
@@ -91,6 +98,13 @@ export default function TeamModePanel({
       setBusy(false);
     }
   };
+
+  const sentChoice = team ? teamPanelModel(team, uid, now, (u) => u, tournament.questionCount).teamChoice : null;
+  useEffect(() => {
+    if (!live || live.phase !== 'reveal' || !live.reveal || cuedReveal.current === live.index) return;
+    cuedReveal.current = live.index;
+    arenaCue(answerCue(sentChoice, live.reveal.answer));
+  }, [live, sentChoice]);
 
   if (live?.phase === 'question' && live.index >= 0 && shownAt.current[live.index] == null)
     shownAt.current[live.index] = now;
@@ -175,6 +189,7 @@ export default function TeamModePanel({
       ) : null}
 
       {question ? (
+        <Animated.View key={`q-${index}`} entering={motion.enter}>
         <ArenaPanel>
           {body(`${t('Question', 'Kesyon')} ${index + 1}/${tournament.questionCount}`, true)}
           <Text accessibilityRole="header" style={[arenaType.name, { color: C.ink }]}>
@@ -190,8 +205,18 @@ export default function TeamModePanel({
                 ? service.teamApi.liveAnswer(tournament.id, index, i, team.authorityVersion, shownAt.current[index] ?? now)
                 : service.teamApi.answer(tournament.id, team.window!.pos, i, team.authorityVersion)))} />
           ))}
+          {reveal ? (
+            <Animated.View entering={motion.reveal} accessible accessibilityLiveRegion="polite">
+              {body(model.teamChoice == null
+                ? t('L’équipe n’a pas répondu.', 'Ekip la pa t reponn.')
+                : model.teamChoice === reveal.answer
+                  ? t('✓ Bonne réponse pour l’équipe !', '✓ Bon repons pou ekip la !')
+                  : t('✗ Raté pour l’équipe.', '✗ Ekip la rate.'))}
+            </Animated.View>
+          ) : null}
           {reveal ? body(ht ? reveal.explanationHt || reveal.explanation : reveal.explanation) : null}
         </ArenaPanel>
+        </Animated.View>
       ) : null}
     </View>
   );

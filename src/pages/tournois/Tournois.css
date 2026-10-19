@@ -1127,3 +1127,104 @@ body.arena-night .tn-toggle[aria-pressed='true'] { background: #3D8BFF; border-c
 
 /* Loading skeleton for a room (LoadingState child). */
 .tn-room-skel { display: grid; gap: 0.9rem; }
+
+/* ── Live presentation (roadmap P2): phase line, verdict, movement ─────
+   Motion lives in arena-art/motion/competition.css (.mo-*), declared only
+   under prefers-reduced-motion: no-preference. */
+.tn-phase {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.9rem;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--tn-text-2, var(--text-600));
+}
+.tn-phase__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0.85rem;
+  border-radius: 999px;
+  background: var(--tn-surface-2, var(--surface-muted));
+  color: var(--tn-text, var(--text-900));
+  font-weight: 800;
+}
+.tn-phase__chip.is-live { background: #FF6A45; color: #1A0B05; }
+.tn-phase__chip.is-reveal { background: rgba(47, 209, 140, 0.18); color: var(--tn-text, var(--text-900)); }
+.tn-phase__chip.is-final { background: #FFB92E; color: #1A1205; }
+.tn-phase__num { font-variant-numeric: tabular-nums; }
+.tn-verdict {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--radius-md, 12px);
+  font-weight: 750;
+}
+.tn-verdict.is-right { background: rgba(47, 209, 140, 0.16); color: var(--success-ink, #0F6B47); }
+.tn-verdict.is-wrong { background: rgba(240, 82, 82, 0.14); color: var(--danger-ink, #A12626); }
+.tn-verdict.is-none { background: var(--tn-surface-2, var(--surface-muted)); color: var(--tn-text-2, var(--text-600)); }
+body.arena-night .tn-verdict.is-right { color: #7FE3B7; }
+body.arena-night .tn-verdict.is-wrong { color: #FFB4A8; }
+.tn-move {
+  display: inline-block;
+  margin-right: 0.5rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.tn-move.is-up { background: rgba(47, 209, 140, 0.16); color: var(--success-ink, #0F6B47); }
+.tn-move.is-down { background: var(--tn-surface-2, var(--surface-muted)); color: var(--tn-text-2, var(--text-600)); }
+body.arena-night .tn-move.is-up { color: #7FE3B7; }
+.tn-board li { will-change: transform; }
+.tn-board__name small { display: flex; align-items: center; gap: 0.35rem; overflow: hidden; text-overflow: ellipsis; }
+.tn-board__name small svg { flex: none; }
+.tn-squads__list { display: grid; gap: 0.45rem; margin: 0; padding: 0; list-style: none; }
+.tn-squad__name { display: flex; align-items: center; gap: 0.5rem; }
+.tn-squad__name svg { flex: none; }
+.tn-squad__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tn-podium__school {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--tn-text-2, var(--text-600));
+  font-size: 0.8rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tn-podium__school svg { flex: none; }
+.tn-teams { display: grid; gap: 0.25rem; margin: 0; padding: 0; list-style: none; }
+.tn-teams li {
+  display: grid;
+  grid-template-columns: 2.2rem minmax(0, 1fr) auto;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--radius-sm, 8px);
+}
+.tn-teams li:nth-child(odd) { background: var(--tn-surface-2, var(--surface-muted)); }
+.tn-teams__rank { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--tn-text-2, var(--text-500)); }
+.tn-teams__name { min-width: 0; font-weight: 750; }
+.tn-teams__name small { display: block; font-weight: 500; color: var(--tn-text-2, var(--text-500)); }
+.tn-teams__pts { font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* Night fixes for the live room: --tn-navy turns near-white on the night, so
+   the fills that used it (initials, "Votre position", the winner's step)
+   were white on white. Give them night surfaces; gold marks the winner only. */
+body.arena-night .tn-avatar { background: #1B3152; color: #F5F8FF; }
+body.arena-night .tn-me { background: #1C3254; color: #F5F8FF; box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.7); }
+body.arena-night .tn-podium__block { background: #1B3152; color: #C1CFE4; }
+body.arena-night .tn-podium__step--1 .tn-podium__block { background: #FFB92E; color: #1A1205; }
+body.arena-night .tn-podium__name { color: #F5F8FF; }
+body.arena-night .tn-podium__pts { color: #C1CFE4; }
+body.arena-night .tn-squad__bar { background: #0E1C33; }
+body.arena-night .tn-squad__bar > span { background: #4A6A8F; }
+body.arena-night .tn-squad:first-child .tn-squad__bar > span { background: #8FBFFF; }

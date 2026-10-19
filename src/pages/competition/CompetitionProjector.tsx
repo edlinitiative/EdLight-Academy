@@ -23,6 +23,7 @@ export default function CompetitionProjector() {
     [live, setLive] = useState<LiveState | null>(null),
     [board, setBoard] = useState<Standings | null>(null),
     [phase, setPhase] = useState(''),
+    [teamRule, setTeamRule] = useState<string | null>(null),
     [error, setError] = useState('');
   const [epoch, setEpoch] = useState(0),
     [now, setNow] = useState(Date.now()),
@@ -61,7 +62,10 @@ export default function CompetitionProjector() {
       watchStandings(tid, setBoard),
       watchTournament(tid, (row, err) => {
         if (err) setError(workspaceError('network', ht));
-        else if (row) setPhase(row.state);
+        else if (row) {
+          setPhase(row.state);
+          setTeamRule(row.teamRule ?? null);
+        }
       }),
     ];
     sync();
@@ -89,6 +93,7 @@ export default function CompetitionProjector() {
       live={live}
       board={board}
       phase={phase}
+      teamRule={teamRule}
       error={error}
       now={now}
       ht={ht}

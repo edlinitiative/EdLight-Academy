@@ -13,6 +13,11 @@ import { NightLink } from '../../components/games/night';
 import SchoolCrest from '../../components/arena/art/crest/SchoolCrest';
 import { phaseLine } from '../../components/arena/arenaPhaseCopy';
 import arenaHaptics from '../../components/arena/arenaHaptics';
+import Animated from 'react-native-reanimated';
+import { arenaCue, arenaMotion, useBoardMoves } from '../../components/arena/arenaMotion';
+import { MoveBadge } from '../../components/arena/TournoisBoard';
+import { useReduceMotion } from '../../utils/motion';
+import { answerCue } from '../../../../shared/competition/presentation';
 import { useArenaWatch } from '../../hooks/useArena';
 import {
   boardRows, recordPlayAlong, tallyPlayAlong, type PlayAlongAnswers,
@@ -57,6 +62,8 @@ export default function ArenaWatchScreen() {
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   const calm = useColors();
+  const reduceMotion = useReduceMotion();
+  const motion = arenaMotion(reduceMotion);
   const w = useArenaWatch(tid);
   const { tournament, question, standings, phase, stale, now } = w;
 
@@ -104,6 +111,13 @@ export default function ArenaWatchScreen() {
       setRevealed((r) => (r[question.index] === question.answerIndex ? r : { ...r, [question.index]: question.answerIndex as number }));
     }
   }, [question]);
+  const cuedReveal = useRef(-1);
+  useEffect(() => {
+    if (!question || question.state !== 'closed' || question.answerIndex == null) return;
+    if (cuedReveal.current === question.index) return;
+    cuedReveal.current = question.index;
+    arenaCue(answerCue(answers[question.index], question.answerIndex));
+  }, [question, answers]);
   const tally = tallyPlayAlong(answers, revealed);
   const open = phase === 'question' && !!question && question.state === 'open';
   const pick = (i: number) => {
@@ -123,6 +137,11 @@ export default function ArenaWatchScreen() {
     () => (followKey ? (standings?.schools ?? []).find((sc) => sc.key === followKey) ?? null : null),
     [standings, followKey],
   );
+  // Movement since the last board: rows travel after each close (layout
+  // transition) and say "▲ 2" in words for screen readers.
+  // Keyed on the full ranking, not the visible rows, so expanding the board
+  // or pinning the followed school never reads as movement.
+  const moves = useBoardMoves((standings?.schools ?? []).map((sc) => sc.key));
   const rankedCount = useMemo(() => (standings?.schools ?? []).filter((sc) => sc.qualified && sc.rank > 0).length, [standings]);
 
   const back = () => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('ArenaHub'));
@@ -302,7 +321,7 @@ export default function ArenaWatchScreen() {
             </Text>
           </ArenaPanel>
         ) : question && (phase === 'question' || phase === 'interval') ? (
-          <View style={{ padding: 20, gap: 14, borderRadius: 24, backgroundColor: C.surface }}>
+          <Animated.View key={`q-${question.index}`} entering={motion.enter} style={{ padding: 20, gap: 14, borderRadius: 24, backgroundColor: C.surface }}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Text style={[arenaType.status, { color: C.muted, flex: 1 }]}>{t('Question en cours', 'Kesyon k ap jwe a')}</Text>
               {secondsLeft != null ? (
@@ -362,7 +381,7 @@ export default function ArenaWatchScreen() {
                   )}
               </Text>
             </View>
-          </View>
+          </Animated.View>
         ) : phase === 'waitingStart' || phase === 'questionLoading' ? (
           <ArenaPanel>
             <Text style={[arenaType.status, { color: C.inkSoft }]}>
@@ -389,8 +408,8 @@ export default function ArenaWatchScreen() {
               {t('Aucune école classée pour l’instant.', 'Poko gen lekòl ki klase.')}
             </Text>
           ) : rows.map(({ school, followed: isFollowed, pinned }) => (
+            <Animated.View key={school.key} layout={motion.reorder}>
             <PressableScale
-              key={school.key}
               onPress={() => toggleFollow(school.key)}
               pressedScale={0.98}
               accessibilityRole="button"
@@ -411,8 +430,10 @@ export default function ArenaWatchScreen() {
               <Text style={[arenaType.num, { color: isFollowed ? C.coral : C.muted, width: 22 }]}>{school.rank > 0 ? school.rank : '–'}</Text>
               <SchoolCrest name={school.label || school.shortName} size={24} />
               <Text numberOfLines={1} style={[arenaType.name, { fontSize: 15, color: C.ink, flex: 1 }]}>{school.shortName || school.label}</Text>
+              <MoveBadge move={moves[school.key]} t={t} />
               <Text style={[arenaType.num, { color: C.ink }]}>{Math.round(school.teamAvg)}</Text>
             </PressableScale>
+            </Animated.View>
           ))}
           {!followKey && rows.length > 0 ? (
             <Text style={[arenaType.status, { color: C.muted, paddingHorizontal: 10, paddingVertical: 6 }]}>
