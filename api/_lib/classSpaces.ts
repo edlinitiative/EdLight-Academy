@@ -2,6 +2,7 @@ import { createHash, randomInt } from 'node:crypto';
 import type { Firestore } from 'firebase-admin/firestore';
 import { CLASS_CONSENT_VERSION, CLASS_LIMITS, ClassError, assertMember, assertTeacher, classDetail, classId, classText, classWeek, type ClassDetail, type ClassRecord, type ClassWeek } from '../../shared/classes';
 import { balanceHouses, keepAndFill, parseHouses, smallestHouse } from '../../shared/classHouses';
+import { detachFromClassTournaments } from '../tournois/_shared';
 import { eraseTeacherFixtures, fixtureCategories, fixtureViews, readOpenFixtures } from './classFixtures';
 import { flattenQuestions, gradeExam } from '../../shared/examUtils';
 import { isEssayType } from '../../shared/essayGradeCore';
@@ -125,6 +126,16 @@ export async function joinClass(db: Firestore, uid: string, name: string, code: 
 }
 
 export async function mutateClass(db: Firestore, uid: string, action: string, body: Record<string, unknown>, now: number) {
+  const out = await mutateClassTx(db, uid, action, body, now);
+  if (action === 'remove' || action === 'leave') {
+    // Stop counting for this class in class tournaments. Scores stay; standings re-check membership regardless.
+    const target = action === 'leave' ? uid : classId(body.studentUid);
+    await detachFromClassTournaments(db, target, classId(body.id), now).catch(() => console.error('[classes] tournament detach failed'));
+  }
+  return out;
+}
+
+async function mutateClassTx(db: Firestore, uid: string, action: string, body: Record<string, unknown>, now: number) {
   const id = classId(body.id);
   // Fetch and validate published content before starting a transaction. No arbitrary URL supplied by clients.
   let exam: any;
@@ -301,6 +312,7 @@ export async function eraseClassAccount(db: Firestore, uid: string) {
       const doneRef = ref.collection('state').doc('completions'), done = await tx.get(doneRef);
       const byUid = done.data()?.byUid || {}; delete byUid[uid]; tx.set(doneRef, { byUid });
     });
+    await detachFromClassTournaments(db, uid, classId(id), Date.now());
     const weeks = await ref.collection('weeks').get();
     for (const w of weeks.docs) await db.runTransaction(async (tx) => {
       const snap = await tx.get(w.ref); const week = snap.data() as ClassWeek;

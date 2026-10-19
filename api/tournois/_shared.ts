@@ -127,6 +127,8 @@ export interface PlayerDoc {
   classId?: string | null;
   classKey?: string | null;
   classLabel?: string | null;
+  /** Set when the player left or was removed from that class: they no longer count for it. */
+  classDetached?: boolean;
 }
 
 export const tRef = (db: Firestore, tid: string) => db.doc(`${COLLECTION}/${tid}`);
@@ -241,6 +243,8 @@ export async function recomputeStandings(db: Firestore, tid: string, now: number
   if (!tSnap.exists) return;
   const t = tSnap.data() as TournamentDoc;
   const snap = await tx.get(subCol(db, tid, 'players'));
+  // Verified classes: a player counts for a class only while still an approved member of an active class.
+  const stillInClass = await classMembership(tx, db, t, snap.docs.map((d) => d.data() as PlayerDoc));
   const avatars = new Map<string, string>();
   const rows: PlayerRow[] = snap.docs.map((d) => {
     const p = d.data() as PlayerDoc;
@@ -250,8 +254,8 @@ export async function recomputeStandings(db: Firestore, tid: string, now: number
       displayName: p.displayName,
       school: p.school,
       grade: p.grade,
-      classKey: p.classKey ?? null,
-      classLabel: p.classLabel ?? null,
+      classKey: stillInClass(p) ? p.classKey ?? null : null,
+      classLabel: stillInClass(p) ? p.classLabel ?? null : null,
       points: p.points || 0,
       correct: p.correct || 0,
       answered: p.answered || 0,
@@ -622,6 +626,61 @@ export interface JoinIdentity {
   classId?: string | null;
   classKey?: string | null;
   classLabel?: string | null;
+}
+
+/** Bounded: a class tournament groups at most this many distinct classes for standings. */
+export const CLASS_GROUP_READS = 60;
+
+/**
+ * Which players still belong to the class they joined under. Reads each distinct
+ * class once (inside the caller's transaction, before any write). Never edits a
+ * score: a player who left, was removed, or whose class was archived simply stops
+ * counting for that class.
+ */
+export async function classMembership(
+  tx: { get: (ref: DocumentReference) => Promise<any> }, db: Firestore,
+  t: Pick<TournamentDoc, 'teamRule'>, players: Array<Pick<PlayerDoc, 'uid' | 'classId'>>,
+): Promise<(p: Pick<PlayerDoc, 'uid' | 'classId'>) => boolean> {
+  if (t.teamRule !== 'class') return () => true;
+  const ids = [...new Set(players.map((p) => p.classId).filter((v): v is string => typeof v === 'string'))].slice(0, CLASS_GROUP_READS);
+  const classes = new Map<string, any>();
+  for (const id of ids) classes.set(id, (await tx.get(db.doc(`classes/${id}`))).data());
+  return (p) => {
+    const c = p.classId ? classes.get(p.classId) : undefined;
+    return !!c && !c.archived && !!c.members?.[p.uid];
+  };
+}
+
+/** Play gate for class tournaments: the player's class membership must still stand. */
+export async function classPlayAllowed(db: Firestore, t: Pick<TournamentDoc, 'id' | 'teamRule'>, uid: string): Promise<boolean> {
+  if (t.teamRule !== 'class') return true;
+  const p = (await sub(db, t.id, `players/${uid}`).get()).data() as PlayerDoc | undefined;
+  if (!p) return true; // not joined: the round handlers answer not_joined
+  const ok = await classMembership({ get: (ref) => ref.get() }, db, t, [p]);
+  return ok(p);
+}
+
+/**
+ * After a student leaves or is removed from a class (or deletes their account):
+ * detach them from that class's group in every class tournament they entered and
+ * rebuild the standings. Their own points are untouched. Best-effort and bounded;
+ * recomputeStandings re-checks membership anyway.
+ */
+export async function detachFromClassTournaments(db: Firestore, uid: string, classIdValue: string, now: number): Promise<void> {
+  const mine = await db.collection(`users/${uid}/myTournaments`).limit(100).get();
+  for (const d of mine.docs) {
+    const tid = d.id;
+    const t = (await tRef(db, tid).get()).data() as TournamentDoc | undefined;
+    if (!t || t.teamRule !== 'class') continue;
+    const playerRef = sub(db, tid, `players/${uid}`);
+    const p = (await playerRef.get()).data() as PlayerDoc | undefined;
+    if (!p || p.classId !== classIdValue) continue;
+    const detached = { classKey: null, classLabel: null, classDetached: true };
+    await playerRef.set(detached, { merge: true });
+    const rosterRef = sub(db, tid, `roster/${uid}`);
+    if ((await rosterRef.get()).exists) await rosterRef.set(detached, { merge: true });
+    if (t.state !== 'cancelled') await recomputeStandings(db, tid, now);
+  }
 }
 
 /** The public team key of a verified class: the class id itself never reaches a roster. */

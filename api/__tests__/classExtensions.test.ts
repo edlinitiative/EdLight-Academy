@@ -234,6 +234,59 @@ describe('verified-class tournament grouping', () => {
   });
 });
 
+describe('membership drift in class tournaments', () => {
+  const newTournament = async () => (await call(createHandler, { title: 'Classes', format: 'window', teamRule: 'class', teamSize: 3, visibility: 'unlisted', categories: ['capitals'], questionCount: 5, secondsPerQuestion: 15, startsAt: clock + 5 * MIN, windowHours: 4, creatorPlays: false }, 'organiser')).body.tid;
+  it('a removed student keeps their own points but stops counting for the class and cannot play on', async () => {
+    const a = await classWith('tA', 'NS3 A', { s1: 'Alice', s2: 'Anne' });
+    const b = await classWith('tB', 'NS3 B', { s3: 'Bruno', s4: 'Berto' });
+    const tid = await newTournament();
+    for (const uid of ['s1', 's2', 's3', 's4']) await call(joinHandler, { tid }, uid);
+    clock += 10 * MIN;
+    await play(tid, 's3', 5);
+    // s4 starts, then is removed mid-attempt.
+    expect((await call(playHandler, { action: 'start', tid }, 's4')).status).toBe(200);
+    await mutateClass(db, 'tB', 'remove', { id: b, studentUid: 's4' }, clock);
+    expect((await call(playHandler, { action: 'answer', tid, round: 0, pos: 0, choice: 0 }, 's4')).body.error).toBe('class_required');
+    expect((await call(playHandler, { action: 'start', tid }, 's4')).body.error).toBe('class_required');
+    expect(store(`userTournaments/${tid}/players/s4`)).toMatchObject({ classKey: null, classDetached: true });
+    // s3 leaves after playing: standings rebuild without them in B, their points untouched.
+    await mutateClass(db, 's3', 'leave', { id: b }, clock);
+    const st = store(`userTournaments/${tid}/standings/current`);
+    expect(st.teams.find((x: any) => x.key === classTeamKey(b))).toBeUndefined();
+    expect(st.rows.find((r: any) => r.uid === 's3').points).toBe(5000);
+    expect(store(`userTournaments/${tid}/players/s3`).points).toBe(5000);
+    // A student who left before playing is refused too.
+    await mutateClass(db, 's2', 'leave', { id: a }, clock);
+    expect((await call(playHandler, { action: 'start', tid }, 's2')).body.error).toBe('class_required');
+    await play(tid, 's1', 3);
+  });
+  it('standings re-check membership even without a detach (archived class, edited record)', async () => {
+    const a = await classWith('tA', 'NS3 A', { s1: 'Alice' });
+    const b = await classWith('tB', 'NS3 B', { s3: 'Bruno' });
+    const tid = await newTournament();
+    for (const uid of ['s1', 's3']) await call(joinHandler, { tid }, uid);
+    clock += 10 * MIN;
+    await play(tid, 's1', 2); await play(tid, 's3', 4);
+    await mutateClass(db, 'tB', 'archive', { id: b }, clock);
+    // Membership vanished without the detach path (e.g. an interrupted request).
+    const ca = store(`classes/${a}`); delete ca.members.s1; mockDb.store.set(`classes/${a}`, ca);
+    clock += 5 * HOUR;
+    await call(tickHandler, { tid });
+    const st = store(`userTournaments/${tid}/standings/current`);
+    expect(st.final).toBe(true);
+    expect(st.teams).toEqual([]);
+    expect(st.rows.map((r: any) => [r.uid, r.points])).toEqual([['s3', 4000], ['s1', 2000]]);
+  });
+  it('account deletion of a student detaches them from the class group', async () => {
+    const a = await classWith('tA', 'NS3 A', { s1: 'Alice', s2: 'Anne' });
+    const tid = await newTournament();
+    for (const uid of ['s1', 's2']) await call(joinHandler, { tid }, uid);
+    await eraseClassAccount(db, 's1');
+    expect(store(`userTournaments/${tid}/roster/s1`)).toMatchObject({ classKey: null, classLabel: null });
+    expect(store(`userTournaments/${tid}/roster/s2`).classKey).toBe(classTeamKey(a));
+  });
+});
+
 describe('teacher mastery analytics', () => {
   it('aggregates per chapter and per lesson from the shared mastery doc, with no answers, scores or non-consenting students', async () => {
     const id = await classWith('tA', 'NS4 A', { s1: 'Alice Dupont', s2: 'Bruno Pierre', s3: 'Carl Noel' });
