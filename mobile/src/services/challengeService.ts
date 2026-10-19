@@ -93,6 +93,10 @@ export async function createChallenge(opts: {
   categoryId: string;
   questionIdxs: number[];
   score: number;
+  /** FR option text picked per question (null = timeout): graded server-side. */
+  answers?: Array<string | null>;
+  /** shared/duelGrading bankHash of the category bank this build plays. */
+  bankHash?: string | null;
 }): Promise<CreatedChallenge | null> {
   const data = await authedPost(CREATE_URL, opts);
   if (!data?.ok) return null;
@@ -103,6 +107,8 @@ export async function createChallenge(opts: {
 export async function acceptChallenge(opts: {
   code: string;
   score: number;
+  answers?: Array<string | null>;
+  bankHash?: string | null;
 }): Promise<AcceptOutcome | { error: string } | null> {
   const data = await authedPost(ACCEPT_URL, opts);
   if (!data) return null;

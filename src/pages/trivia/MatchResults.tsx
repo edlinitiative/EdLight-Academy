@@ -7,6 +7,7 @@ import { useReducedMotion, motionVars } from '../../arena-art/motion/tokens';
 import RankEmblem, { emblemForLevel } from '../../arena-art/emblems/RankEmblem';
 import SchoolCrest from '../../arena-art/crest/SchoolCrest';
 import { DuelPanel } from '../../components/games/Duels';
+import { duelPicks } from '../../utils/duels';
 import {
   answerTicks, celebrationSize, fastestCorrect, formatSeconds, longestStreak, newThemeRecord, type RoundAnswer,
 } from './matchStats';
@@ -59,6 +60,7 @@ export default function MatchResults(p: MatchResultsProps) {
   const reduced = useReducedMotion();
   const sound = useMatchSound();
   const played = React.useMemo(() => answers.map((a) => a.question), [answers]);
+  const picks = React.useMemo(() => duelPicks(answers), [answers]);
 
   const pct = total > 0 ? Math.round((score / total) * 100) : 0;
   const ticks = answerTicks(answers);
@@ -140,6 +142,7 @@ export default function MatchResults(p: MatchResultsProps) {
     <DuelPanel
       category={p.category}
       played={played}
+      picks={picks}
       score={score}
       total={total}
       isAuthed={isAuthed}

@@ -1,8 +1,9 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { View, Text, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Star } from 'lucide-react-native';
-import { TRIVIA_CATEGORIES } from '../data/triviaData';
+import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
+import { bankHash } from '../../../shared/duelGrading';
 import { QuizPlayer, prepareChallengeQuestions, type PreparedQuestion } from './TriviaScreen';
 import ChallengeCard from '../components/games/ChallengeCard';
 import { useChallenge } from '../hooks/useChallenges';
@@ -60,21 +61,31 @@ export default function ChallengeScreen({ code, onClose }: { code: string; onClo
     setPhase('playing');
   }, [challenge]);
 
+  // The finished round's picks, kept for a resend after a network failure.
+  const picksRef = useRef<Array<string | null> | null>(null);
   const handleFinish = useCallback(
-    async (score: number) => {
+    async (score: number, picks?: Array<string | null>) => {
       setMyLocalScore(score);
+      if (picks) picksRef.current = picks;
       setPhase('done');
       setBusy(true);
       setAcceptError(null);
       try {
-        let res = await acceptChallenge({ code, score });
+        // Picks + bank fingerprint: the server grades the attempt (D-8) and
+        // refuses it if this build's bank differs from the duel's (D-9).
+        let res = await acceptChallenge({
+          code,
+          score,
+          ...(picksRef.current ? { answers: picksRef.current } : {}),
+          bankHash: challenge ? bankHash((TRIVIA_QUESTIONS as Record<string, any[]>)[challenge.categoryId]) : null,
+        });
         // A retry whose first post landed answers already_played: recover the
         // recorded result instead of reporting a failure (P0 validation).
         if (res && 'error' in res && res.error === 'already_played') {
           const recovered = recoveredAcceptOutcome(await getChallenge(code), user?.uid);
           if (recovered) res = recovered;
         }
-        if (res && 'error' in res) setAcceptError(res.error);
+        if (res && 'error' in res) setAcceptError(res.error === 'bank_mismatch' ? 'version' : res.error);
         else if (res) setOutcome(res);
         else setAcceptError('network');
         // The cached duel still says "open" for up to a minute otherwise.
@@ -83,7 +94,7 @@ export default function ChallengeScreen({ code, onClose }: { code: string; onClo
         setBusy(false);
       }
     },
-    [code, user?.uid, refetchChallenge],
+    [code, user?.uid, refetchChallenge, challenge],
   );
 
   // ── Playing: full-bleed quiz, same player as a normal round ────────────────
@@ -94,7 +105,7 @@ export default function ChallengeScreen({ code, onClose }: { code: string; onClo
           questions={questions}
           category={category ?? { id: challenge.categoryId, name: categoryLabel }}
           isCreole={isCreole}
-          onFinish={(score) => handleFinish(score)}
+          onFinish={(score, _total, _mistakes, picks) => handleFinish(score, picks)}
           title={t(`Défi · ${categoryLabel}`, `Defi · ${categoryLabel}`)}
           opponent={{
             seed: challenge.challengerUid || challenge.challengerName || 'ami',
@@ -136,6 +147,8 @@ export default function ChallengeScreen({ code, onClose }: { code: string; onClo
           ? t('Ce défi a expiré avant l’envoi du score.', 'Defi a ekspire anvan nòt la rive.')
           : acceptError === 'self_challenge'
             ? t('Tu ne peux pas relever ton propre défi.', 'Ou pa ka reponn pwòp defi pa w.')
+            : acceptError === 'version'
+              ? t('Mets à jour l’app pour envoyer ce défi : ses questions ont changé.', 'Mete app la ajou pou voye defi sa a : kesyon yo chanje.')
             : acceptError === 'already_played'
               ? t('Ce défi a déjà été relevé par quelqu’un d’autre.', 'Yon lòt moun deja reponn defi sa a.')
               : t('Le score n’a pas pu être envoyé. Vérifie ta connexion.', 'Nòt la pa t ka voye. Verifye koneksyon ou.');

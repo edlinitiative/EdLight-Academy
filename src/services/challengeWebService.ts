@@ -113,6 +113,10 @@ export async function createChallenge(opts: {
   categoryId: string;
   questionIdxs: number[];
   score: number;
+  /** FR option text picked per question (null = timeout): graded server-side (D-8). */
+  answers?: Array<string | null>;
+  /** shared/duelGrading bankHash of the duel bank category (D-9). */
+  bankHash?: string | null;
 }): Promise<CreateResult> {
   const r = await authedPost(CREATE_URL, opts);
   if (!r) return { ok: false, error: 'network' };
@@ -122,7 +126,12 @@ export async function createChallenge(opts: {
 }
 
 /** Post the opponent's one attempt. */
-export async function acceptChallenge(opts: { code: string; score: number }): Promise<AcceptResult> {
+export async function acceptChallenge(opts: {
+  code: string;
+  score: number;
+  answers?: Array<string | null>;
+  bankHash?: string | null;
+}): Promise<AcceptResult> {
   const r = await authedPost(ACCEPT_URL, opts);
   if (!r) return { ok: false, error: 'network' };
   if (r.status !== 200 || !r.data?.ok) return { ok: false, error: String(r.data?.error || `http_${r.status}`) };

@@ -27,8 +27,12 @@ export type DuelAcceptResult = AcceptResult & {
  * the amount, and it does not guess.
  */
 export function useDuelSubmission(code: string, uid: string | null) {
-  return useCallback(async (score: number): Promise<DuelAcceptResult> => {
-    const r = await acceptChallenge({ code, score });
+  return useCallback(async (
+    score: number,
+    graded?: { answers?: Array<string | null>; bankHash?: string | null },
+  ): Promise<DuelAcceptResult> => {
+    // Picks + bank fingerprint let the server grade the attempt (D-8/D-9).
+    const r = await acceptChallenge({ code, score, ...(graded || {}) });
     if (r.ok || r.error !== 'already_played' || !uid) return r;
     const read = await getChallenge(code);
     const c = read.challenge;

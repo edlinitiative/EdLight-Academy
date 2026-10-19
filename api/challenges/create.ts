@@ -12,7 +12,16 @@
  *     categoryId: string,        // trivia category id, [a-z0-9_-]{1,40}
  *     questionIdxs: number[],    // indexes into the category bank, 1..50 items
  *     score: number,             // challenger's correct count, 0..total
+ *     answers?: (string|null)[], // what was picked per question (FR option text; null = timeout)
+ *     bankHash?: string,         // shared/duelGrading bankHash of the category the round used
  *   }
+ *
+ * Server grading (P0 validation D-8): when the client sends its picks and the
+ * server holds the same bank (same hash), the stored challengerScore is the
+ * server's grade, not the claimed score. Older builds (score only) and builds
+ * whose bank differs are still accepted, recorded with
+ * challengerScoreSource: 'client'. The bank hash is stored so an opponent on a
+ * different bank is refused instead of answering other questions (D-9).
  *
  * Response 200:
  *   { ok: true, code, url, appUrl, expiresAt }
@@ -35,6 +44,8 @@ import { requireAuthDecoded } from '../_lib/requireAuth';
 import { checkRateLimit } from '../_lib/rateLimit';
 import { getDb } from '../_lib/firebaseAdmin';
 import { cleanAvatar } from '../../src/arena-art/avatars/avatarConfig';
+import { decideDuelScore } from '../../shared/duelGrading';
+import { serverDuelBank } from '../_lib/duelBank';
 
 /** Challenge links stay valid this long. */
 const TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -73,6 +84,8 @@ interface CreateBody {
   categoryId?: unknown;
   questionIdxs?: unknown;
   score?: unknown;
+  answers?: unknown;
+  bankHash?: unknown;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
@@ -119,11 +132,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   }
 
   const total = questionIdxs.length;
-  const score = Math.round(Number(body.score));
-  if (!Number.isFinite(score) || score < 0 || score > total) {
+  const claimed = Math.round(Number(body.score));
+  if (!Number.isFinite(claimed) || claimed < 0 || claimed > total) {
     res.status(400).json({ error: 'invalid_score', message: 'score must be within 0..questionIdxs.length.' });
     return;
   }
+  const decision = decideDuelScore({
+    serverBank: serverDuelBank(categoryId),
+    clientHash: body.bankHash,
+    idxs: questionIdxs,
+    picks: body.answers,
+    clientScore: claimed,
+    total,
+  });
+  if (!decision.ok) {
+    res.status(400).json({ error: decision.error });
+    return;
+  }
+  const score = decision.score;
 
   const db = getDb();
 
@@ -164,6 +190,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           questionIdxs,
           total,
           challengerScore: score,
+          challengerScoreSource: decision.source,
+          ...(decision.bankHash ? { bankHash: decision.bankHash } : {}),
           createdAt: Timestamp.fromMillis(now),
           expiresAt: Timestamp.fromMillis(now + TTL_MS),
           opponent: null,
@@ -175,6 +203,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           url: `https://academy.edlight.org/defi/${code}`,
           appUrl: `edlight://defi/${code}`,
           expiresAt: now + TTL_MS,
+          score,
         });
         return;
       } catch (err: any) {

@@ -19,6 +19,7 @@ import { TRIVIA_CATEGORIES } from '../../data/triviaData';
 import { canNativeShare } from '../../utils/schoolInvite';
 import { trackEvent } from '../../utils/telemetry';
 import { loadDuelBank } from '../../utils/duelBank';
+import { bankHash } from '../../../shared/duelGrading';
 import {
   duelShareMessage, duelState, duelUrl, idxsInBank, isDuelCode, normalizeDuelCode, outcomeFor,
   sortDuels, uniqueByCode, whatsappUrl, type DuelQuestion,
@@ -126,9 +127,11 @@ export function DuelShareSheet({ code, categoryId, score, total, isCreole, where
  * usually can't be (utils/duels.ts explains why), and then the honest offer
  * is a fresh duel round, not a duel over questions the friend will never see.
  */
-export function DuelPanel({ category, played, score, total, isAuthed, isCreole, onStartDuelRound, onPickDuel, primary = true }: {
+export function DuelPanel({ category, played, picks, score, total, isAuthed, isCreole, onStartDuelRound, onPickDuel, primary = true }: {
   category: string;
   played: DuelQuestion[];
+  /** French option text picked per played question (null = timeout): the server grades from it. */
+  picks?: Array<string | null>;
   score: number;
   total: number;
   isAuthed: boolean;
@@ -146,6 +149,7 @@ export function DuelPanel({ category, played, score, total, isAuthed, isCreole, 
   // undefined = still checking, null = this round can't become a duel
   const [idxs, setIdxs] = useState<number[] | null | undefined>(singleTheme ? undefined : null);
   const [hasBank, setHasBank] = useState(false);
+  const [duelBankHash, setDuelBankHash] = useState<string | null>(null);
   const [state, setState] = useState<'idle' | 'busy' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<{ code: string } | null>(null);
@@ -157,6 +161,7 @@ export function DuelPanel({ category, played, score, total, isAuthed, isCreole, 
       .then((bank) => {
         if (!live) return;
         setHasBank((bank[category] || []).length > 0);
+        setDuelBankHash(bankHash(bank[category]));
         setIdxs(idxsInBank(bank[category], played));
       })
       .catch(() => { if (live) setIdxs(null); });
@@ -168,7 +173,13 @@ export function DuelPanel({ category, played, score, total, isAuthed, isCreole, 
     if (!idxs) return;
     setState('busy');
     setError(null);
-    const r = await createChallenge({ categoryId: category, questionIdxs: idxs, score });
+    const r = await createChallenge({
+      categoryId: category,
+      questionIdxs: idxs,
+      score,
+      ...(picks && picks.length === idxs.length ? { answers: picks } : {}),
+      bankHash: duelBankHash,
+    });
     if (r.ok && r.challenge) {
       setCreated({ code: r.challenge.code });
       setState('idle');
@@ -181,7 +192,7 @@ export function DuelPanel({ category, played, score, total, isAuthed, isCreole, 
           ? t('Reconnecte-toi pour lancer le défi.', 'Rekonekte pou w voye defi a.')
           : t('Le défi n’est pas parti. Vérifie ta connexion et réessaie.', 'Defi a pa t pati. Verifye koneksyon ou epi eseye ankò.'));
     }
-  }, [idxs, category, score, total, isCreole]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [idxs, category, score, total, isCreole, picks, duelBankHash]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const signIn = () => { setActiveTab?.('signin'); toggleAuthModal(); };
 
