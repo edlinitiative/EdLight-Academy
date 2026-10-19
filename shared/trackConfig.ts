@@ -386,6 +386,20 @@ export function gradeProfile(grade: string | null | undefined): GradeProfile {
   }
 }
 
+/**
+ * The exam level the Exams landing opens on for a grade: the student's own
+ * national paper when there is one, otherwise the NEXT one they will sit
+ * (7ᵉ–8ᵉ → 9ᵉ AF, NS1–NS3 → Bac). `examLevel` stays null for those grades so
+ * Home/readiness keep de-emphasising exams; this only picks what the landing
+ * shows first. No grade chosen → null (the caller keeps its default).
+ */
+export function examLandingLevel(grade: string | null | undefined): 'baccalaureat' | 'universite' | '9eme_af' | null {
+  if (!grade) return null;
+  if (grade === '7e' || grade === '8e') return '9eme_af';
+  if (grade === 'NS1' || grade === 'NS2' || grade === 'NS3') return 'baccalaureat';
+  return gradeProfile(grade).examLevel;
+}
+
 /** Year of the next Bac session on/after `from` — the stable anchor for a season. */
 export function seasonAnchorYear(from: Date = new Date()): number {
   const y = from.getFullYear();

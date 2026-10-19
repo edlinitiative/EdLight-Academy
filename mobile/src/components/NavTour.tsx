@@ -56,17 +56,15 @@ export default function NavTour() {
       title: { fr: 'Cours', ht: 'Kou' },
       body: { fr: 'Tes cours en vidéo, par matière et chapitre.', ht: 'Kou videyo w yo, pa matyè ak chapit.' },
     },
-    quizPrimary
-      ? {
-        tab: 2, icon: 'quiz',
-        title: { fr: 'Quiz', ht: 'Quiz' },
-        body: { fr: 'Des quiz par matière pour t’entraîner.', ht: 'Quiz pa matyè pou w antrene.' },
-      }
-      : {
-        tab: 2, icon: 'exams',
-        title: { fr: 'Examens', ht: 'Egzamen' },
-        body: { fr: 'Entraîne-toi sur les vrais sujets du Bac.', ht: 'Antrene w sou vrè sijè Bak yo.' },
-      },
+    // The 3rd tab is "Examens" for every grade; quiz-primary grades
+    // (7e–8e, NS1–NS3) are told quick practice lives there too.
+    {
+      tab: 2, icon: 'exams',
+      title: { fr: 'Examens', ht: 'Egzamen' },
+      body: quizPrimary
+        ? { fr: 'Les vrais sujets d’examen, et des quiz rapides pour t’entraîner.', ht: 'Vrè sijè egzamen yo, ak ti quiz rapid pou w antrene.' }
+        : { fr: 'Entraîne-toi sur les vrais sujets du Bac.', ht: 'Antrene w sou vrè sijè Bak yo.' },
+    },
     {
       tab: 3, icon: 'games',
       title: { fr: 'Jeux', ht: 'Jwèt' },

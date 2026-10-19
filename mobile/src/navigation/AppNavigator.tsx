@@ -44,7 +44,6 @@ import {
   readLearningState,
   snapshotLearningState,
 } from './learningContinuity';
-import { gradeProfile } from '../config/trackConfig';
 import { queryClient } from '../lifecycle/queryClient';
 
 /** false = the course is known to be gone from the catalog; undefined = unknown. */
@@ -61,7 +60,8 @@ function courseInCatalog(courseId: string): boolean | undefined {
 async function restoreLearningPlace(uid: string | null): Promise<boolean> {
   const raw = await AsyncStorage.getItem(LEARNING_STATE_KEY);
   if (!raw || !navigationRef.isReady()) return false;
-  const examsRoot = gradeProfile(useStore.getState().grade as any).primaryTab === 'Quiz' ? 'Quizzes' : 'ExamLanding';
+  // ExamsNavigator is the Exams tab for every grade, so its root is fixed.
+  const examsRoot = 'ExamLanding' as const;
   const rec = readLearningState(raw, { uid, now: Date.now(), examsRoot, courseExists: courseInCatalog });
   if (!rec) return false;
   const state = learningStateToNavState(rec, { examsRoot });
@@ -145,7 +145,7 @@ function navigateFromSandra(navigation: any, path: string) {
   } else if (p.startsWith('/exam')) {
     // Sandra links a specific paper ("/exams/terminale/<id>"), a level
     // ("/exams/9e") or the results page; open that, not the tab root. Every
-    // grade's Exams stack carries these screens (QuizNavigator included).
+    // grade's Exams tab is ExamsNavigator, which carries these screens.
     // The id keeps its original case, so it is read from `path`, not `p`.
     const [, , level, examId] = (path || '').split(/[?#]/)[0].split('/');
     if (level === 'resultats') {

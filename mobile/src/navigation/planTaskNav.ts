@@ -6,11 +6,10 @@
  * `initial: false` so the tab's own root stays underneath: leaving the task
  * steps back into the tab instead of exiting it.
  *
- * The exam case relies on the Exams tab carrying ExamOverview for EVERY grade
- * — QuizNavigator (quiz-primary grades) registers the exam screens too. Before
- * that, `navigate('Exams', { screen: 'ExamOverview' })` on a 7e–NS3 account
- * fell through to the Quiz tab's only route: the "Chimie, Choisis un niveau"
- * page the owner landed on from an SVT exam task (TestFlight build 61).
+ * The exam case relies on the Exams tab carrying ExamOverview for EVERY grade:
+ * since TestFlight build 63 the tab is ExamsNavigator for all grades. (Build 61
+ * had a Quiz-only stack there for 7e–NS3, so an SVT exam task fell through to
+ * "Chimie, Choisis un niveau".)
  */
 import { planTaskRoute, type PlanTaskRoute } from '../../../shared/studyPlanTasks';
 import { practiceParams } from '../utils/learningJourney';

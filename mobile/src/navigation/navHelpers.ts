@@ -19,6 +19,7 @@
  * That is deterministic and independent of navigate's semantics in any version.
  */
 import { CommonActions } from '@react-navigation/native';
+import { gradeProfile } from '../config/trackConfig';
 
 /**
  * Switch to `tabName` and show `rootName` as the ONLY route in its stack.
@@ -53,12 +54,52 @@ export function resetTabToRoot(
 }
 
 /**
- * The root of whichever stack hosts the exam screens: `ExamLanding` in
- * ExamsNavigator, `Quizzes` in QuizNavigator (quiz-primary grades, which mount
- * the exam screens without a landing page). Exam screens that reset "home"
- * must ask, or the reset names a route the stack doesn't have.
+ * Switch to `tabName` and show exactly `routes` (bottom to top) in its stack.
+ * Same mechanics as resetTabToRoot, for when the root must stay underneath.
  */
-export function examStackRoot(navigation: any): 'ExamLanding' | 'Quizzes' {
-  const names: string[] = navigation?.getState?.()?.routeNames ?? [];
-  return names.includes('ExamLanding') || !names.includes('Quizzes') ? 'ExamLanding' : 'Quizzes';
+export function resetTabToStack(
+  navigation: any,
+  tabName: string,
+  routes: { name: string; params?: object }[],
+) {
+  if (!routes.length) return;
+  const state = navigation.getState?.();
+  const nested = state?.routes?.find((r: any) => r.name === tabName)?.state;
+  const top = routes[routes.length - 1];
+  if (!nested?.key) {
+    // Never built: `initial: false` keeps the stack's initial route (its root)
+    // under the target. With a single route it simply lands on that route.
+    navigation.navigate(tabName, routes.length > 1
+      ? { screen: top.name, params: top.params, initial: false }
+      : { screen: top.name, params: top.params });
+    return;
+  }
+  navigation.dispatch({
+    ...CommonActions.reset({ index: routes.length - 1, routes }),
+    target: nested.key,
+  });
+  navigation.navigate(tabName);
+}
+
+/**
+ * The root of the Exams tab's stack. Since TestFlight build 63 the tab mounts
+ * ExamsNavigator for EVERY grade (7e–8e and NS1–NS3 used to get a Quiz-only
+ * stack whose root was `Quizzes`, so they never saw the exam landing). Kept as
+ * a function so exam screens that reset "home" have one place to ask.
+ */
+export function examStackRoot(_navigation?: any): 'ExamLanding' {
+  return 'ExamLanding';
+}
+
+/**
+ * "Practice" from Home / Profile cards: the Exams tab, with quick practice on
+ * top for quiz-primary grades (7e–8e, NS1–NS3), where quizzes lead. The exam
+ * landing always stays underneath, so Back (and a tab press) lands on it.
+ */
+export function openPractice(navigation: any, grade: string | null | undefined) {
+  if (gradeProfile(grade).primaryTab === 'Quiz') {
+    resetTabToStack(navigation, 'Exams', [{ name: 'ExamLanding' }, { name: 'Quizzes' }]);
+  } else {
+    resetTabToRoot(navigation, 'Exams', 'ExamLanding');
+  }
 }

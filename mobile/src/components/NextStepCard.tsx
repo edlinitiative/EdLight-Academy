@@ -17,8 +17,8 @@ import { loadExamAttemptDraft } from '../services/examAttempts';
 import { subjectDisplayName } from '../utils/examUtils';
 import { evidenceLabel, trackJourney } from '../utils/learningJourney';
 import { LEVEL_LABEL } from './journey/home/homeJourney';
-import { GRADES, gradeProfile } from '../config/trackConfig';
-import { resetTabToRoot } from '../navigation/navHelpers';
+import { GRADES } from '../config/trackConfig';
+import { resetTabToRoot, openPractice } from '../navigation/navHelpers';
 import { readLocalExamDraft, pickResumeDraft } from '../../../shared/examDraft';
 
 type Nav = BottomTabNavigationProp<TabParamList>;
@@ -112,12 +112,8 @@ export default function NextStepCard({
       });
     }
   };
-  // The Exams tab mounts QuizNavigator for quiz-primary grades, whose only
-  // route is `Quizzes` (mobile-ux-audit trap) — resolve the root per grade.
-  const openPractice = () => {
-    const root = gradeProfile(grade).primaryTab === 'Quiz' ? 'Quizzes' : 'ExamLanding';
-    resetTabToRoot(navigation, 'Exams', root);
-  };
+  // Exams tab, with quick practice on top for quiz-primary grades.
+  const openPracticeTab = () => openPractice(navigation, grade);
   const openCatalogue = () => resetTabToRoot(navigation, 'Courses', 'CourseList', { resetAt: Date.now() });
   const chooseClass = () => setGradeChosen(false); // the always-mounted WelcomeGradeModal opens
 
@@ -252,7 +248,7 @@ export default function NextStepCard({
       cta = t("S'entraîner", 'Antrene w');
       onPress = () => {
         trackJourney('learning_next_action_selected', { kind: 'uncovered', grade: step.grade });
-        openPractice();
+        openPracticeTab();
       };
       const s = step.suggestion;
       if (s) {
@@ -297,7 +293,7 @@ export default function NextStepCard({
         trackJourney('learning_next_action_selected', { kind: 'level-empty', level: step.level });
         openCatalogue();
       };
-      secondary = [{ label: t("S'entraîner", 'Antrene w'), onPress: openPractice }];
+      secondary = [{ label: t("S'entraîner", 'Antrene w'), onPress: openPracticeTab }];
       break;
     case 'caught-up':
       eyebrow = step.level ? (LEVEL_LABEL[step.level] ?? step.level) : t('Tes cours', 'Kou ou yo');
@@ -309,7 +305,7 @@ export default function NextStepCard({
       cta = t("S'entraîner", 'Antrene w');
       onPress = () => {
         trackJourney('learning_next_action_selected', { kind: 'caught-up' });
-        openPractice();
+        openPracticeTab();
       };
       secondary = [{ label: t('Voir tous les cours', 'Wè tout kou yo'), onPress: openCatalogue }];
       break;

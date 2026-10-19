@@ -13,7 +13,7 @@
  * `practiceParams`). It is resolved against loaded data in one pass, so the
  * entry never flashes "0 questions"; a stale or unknown scope lands on the
  * browse list with an explanation and an explicit choice, never a silent
- * swap. Mounted in the Courses stack and as the Quiz tab (QuizNavigator).
+ * swap. Mounted in the Courses stack and in the Exams tab stack (ExamsNavigator).
  */
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';

@@ -12,18 +12,17 @@
  * Android bar takes bitmap `ImageSourcePropType` icons and this project has no
  * tab icon assets — SF Symbols have no Android equivalent.
  *
- * Everything the JS bar did is preserved: adaptive 3rd tab, bilingual labels,
+ * Everything the JS bar did is preserved: bilingual labels,
  * focus-mode hiding, pop-to-root on tab press, and double-tap-to-refresh.
  */
 import React, { useRef } from 'react';
 import { createNativeBottomTabNavigator } from '@bottom-tabs/react-navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import useStore from '../contexts/store';
-import { gradeProfile } from '../config/trackConfig';
 import { lightColors, darkColors } from '../theme/theme';
 import { popToRootOnTabPress } from './tabPressBehaviour';
 
-import { DashboardTab, CoursesTab, ExamsTab, QuizTab, TriviaTab, ProfileTab } from './tabScreens';
+import { DashboardTab, CoursesTab, ExamsTab, TriviaTab, ProfileTab } from './tabScreens';
 import { usePreference } from '../settings/preferences';
 
 const Tab = createNativeBottomTabNavigator();
@@ -36,7 +35,6 @@ const SF = {
   dashboard: 'square.grid.2x2.fill',
   courses: 'books.vertical.fill',
   exams: 'list.bullet.clipboard.fill',
-  quiz: 'checklist',
   games: 'gamecontroller.fill',
   profile: 'person.fill',
 } as const;
@@ -49,10 +47,8 @@ export default function NativeTabNavigator() {
   const language = useStore((s) => s.language);
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
   const focusMode = useStore((s) => s.focusMode);
-  const grade = useStore((s) => s.grade);
-  // Adaptive 3rd tab: Quiz-primary grades (7e–8e, NS1–NS3) get a Quiz tab where
-  // Exams would be. Route name stays "Exams" so navigate('Exams') keeps working.
-  const quizPrimary = gradeProfile(grade).primaryTab === 'Quiz';
+  // The 3rd tab is "Examens" for EVERY grade (TestFlight build 63). Quick
+  // practice is the `Quizzes` route inside the same stack.
   const dark = theme === 'dark';
   const queryClient = useQueryClient();
   const lastPress = useRef<{ name: string; time: number }>({ name: '', time: 0 });
@@ -113,15 +109,13 @@ export default function NativeTabNavigator() {
       />
       <Tab.Screen
         name="Exams"
-        component={quizPrimary ? QuizTab : ExamsTab}
+        component={ExamsTab}
         listeners={({ navigation }) => ({
-          // Quiz-primary grades: the stack also hosts exam screens now, so a
-          // tab press pops back to the quiz picker like the other tabs do.
-          tabPress: popToRootOnTabPress(navigation, 'Exams', quizPrimary ? 'Quizzes' : 'ExamLanding'),
+          tabPress: popToRootOnTabPress(navigation, 'Exams', 'ExamLanding'),
         })}
         options={{
-          tabBarLabel: quizPrimary ? t('Quiz', 'Quiz') : t('Examens', 'Egzamen'),
-          tabBarIcon: icon(quizPrimary ? SF.quiz : SF.exams),
+          tabBarLabel: t('Examens', 'Egzamen'),
+          tabBarIcon: icon(SF.exams),
         }}
       />
       <Tab.Screen

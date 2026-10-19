@@ -9,13 +9,11 @@ import { withTabBoundary } from '../components/AppErrorBoundary';
 import DashboardScreen from '../screens/DashboardScreen';
 import CoursesNavigator from './CoursesNavigator';
 import ExamsNavigator from './ExamsNavigator';
-import QuizNavigator from './QuizNavigator';
 import TriviaScreen from '../screens/TriviaScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
 export const DashboardTab = withTabBoundary(DashboardScreen as any, 'Dashboard');
 export const CoursesTab = withTabBoundary(CoursesNavigator as any, 'Courses');
 export const ExamsTab = withTabBoundary(ExamsNavigator as any, 'Exams');
-export const QuizTab = withTabBoundary(QuizNavigator as any, 'Quiz');
 export const TriviaTab = withTabBoundary(TriviaScreen as any, 'Trivia');
 export const ProfileTab = withTabBoundary(ProfileScreen as any, 'Profile');
