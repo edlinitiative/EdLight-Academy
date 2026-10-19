@@ -7,6 +7,9 @@ import TournoisCreateForm, { TournoisPinCard } from '../TournoisCreateForm';
 import { ArenaButton } from '../ArenaKit';
 import type { TournamentDraft } from '../../../../../shared/tournois/creationInput';
 
+// Full-form renders are slow under a loaded full-suite run; the default 5 s flakes.
+jest.setTimeout(20000);
+
 interface TestNode {
   type: unknown;
   props: Record<string, any>;

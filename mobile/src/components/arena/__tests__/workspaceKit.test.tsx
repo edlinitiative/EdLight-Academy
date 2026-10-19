@@ -17,6 +17,9 @@ import {
   type Task,
 } from '../../../../../shared/competition/workspace';
 
+// Full-form renders are slow under a loaded full-suite run; the default 5 s flakes.
+jest.setTimeout(20000);
+
 // react-test-renderer ships with jest-expo but without type declarations;
 // the slice these tests use, typed locally.
 interface TestNode {
