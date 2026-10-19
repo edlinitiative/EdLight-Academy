@@ -12,13 +12,16 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth } from './firebase';
 import type { QuestionContext } from '../../../shared/explainContext';
+import { explanationVoteBody, reviewedExplanationId } from '../../../shared/explanationFeedback';
 
 const CHAT_URL = 'https://academy.edlight.org/api/chat';
+const EXPLANATIONS_URL = 'https://academy.edlight.org/api/explanations';
 const CONV_KEY = 'edlight:sandra:conv';
 export const MAX_CHARS = 2000;
 
 export type SandraResult =
-  | { kind: 'reply'; reply: string; remaining?: number }
+  /** `explanationId`: the reply is an admin-reviewed explanation (offer Utile / Pas utile). */
+  | { kind: 'reply'; reply: string; remaining?: number; explanationId?: string }
   | { kind: 'limit'; message: string }
   | { kind: 'auth' }
   | { kind: 'error' };
@@ -85,7 +88,7 @@ export interface SendOptions {
 const TRANSCRIPT_KEY = 'edlight:sandra:transcript:';
 export const TRANSCRIPT_MAX = 40;
 
-export type TranscriptMessage = { id: string; role: 'user' | 'sandra'; text: string };
+export type TranscriptMessage = { id: string; role: 'user' | 'sandra'; text: string; explanationId?: string };
 export type StoredTranscript = { uid: string; convId: string; messages: TranscriptMessage[] };
 
 /** Messages to show on open: only this account's mirror of the open conversation. */
@@ -205,10 +208,31 @@ export async function sendToSandra(
     }
 
     if (!reply) return { kind: 'error' };
-    return { kind: 'reply', reply, remaining: data?.remaining };
+    const explanationId = reviewedExplanationId(data);
+    return { kind: 'reply', reply, remaining: data?.remaining, ...(explanationId ? { explanationId } : {}) };
   } catch {
     return { kind: 'error' };
   } finally {
     clearTimeout(abortId);
+  }
+}
+
+/**
+ * "Utile / Pas utile" on a reviewed explanation. Fire and forget: the server
+ * dedupes once per day without storing who voted; a failure is not shown.
+ */
+export async function voteExplanation(id: string, helpful: boolean): Promise<boolean> {
+  const user = auth.currentUser;
+  if (!user) return false;
+  try {
+    const token = await user.getIdToken();
+    const res = await fetch(EXPLANATIONS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(explanationVoteBody(id, helpful)),
+    });
+    return res.ok;
+  } catch {
+    return false;
   }
 }

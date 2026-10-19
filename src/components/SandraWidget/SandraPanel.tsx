@@ -8,6 +8,7 @@ import { useTrivia } from '../../hooks/useTrivia';
 import InstructionRenderer from '../InstructionRenderer';
 import { EXPLAIN_DISCLOSURE, type QuestionContext } from '../../../shared/explainContext';
 import { newOperationId } from '../../../shared/outbox';
+import { EXPLANATION_FEEDBACK, explanationVoteBody, reviewedExplanationId } from '../../../shared/explanationFeedback';
 import { readDraft, readTranscript, writeDraft, writeTranscript } from './sandraTranscript';
 
 /** sessionStorage key holding the active conversation id — a new browser
@@ -15,7 +16,32 @@ import { readDraft, readTranscript, writeDraft, writeTranscript } from './sandra
 const CONV_KEY = 'edlight:sandra:conv';
 const MAX_CHARS = 2000;
 
-type ChatMessage = { role: 'user' | 'assistant'; text: string };
+/** `explanationId`: this reply is an admin-reviewed explanation (shared/explanationFeedback). */
+type ChatMessage = { role: 'user' | 'assistant'; text: string; explanationId?: string };
+
+/** "Utile / Pas utile" under a reviewed explanation. One tap, then a thank-you. */
+function ExplanationFeedback({ id, lang }: { id: string; lang: 'fr' | 'ht' }) {
+  const [sent, setSent] = useState(false);
+  const vote = (helpful: boolean) => {
+    setSent(true);
+    void authedFetch('/api/explanations', explanationVoteBody(id, helpful)).catch(() => undefined);
+  };
+  const L = EXPLANATION_FEEDBACK;
+  return (
+    <div className="sandra-explain-feedback">
+      <div className="sandra-explain-feedback__note">{L.reviewed[lang]}</div>
+      {sent ? (
+        <div className="sandra-explain-feedback__note" role="status">{L.thanks[lang]}</div>
+      ) : (
+        <div className="sandra-explain-feedback__row" role="group" aria-label={L.question[lang]}>
+          <span className="sandra-explain-feedback__note">{L.question[lang]}</span>
+          <button type="button" className="sandra-explain-feedback__btn" onClick={() => vote(true)}>{L.helpful[lang]}</button>
+          <button type="button" className="sandra-explain-feedback__btn" onClick={() => vote(false)}>{L.notHelpful[lang]}</button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 type ChatError =
   | { kind: 'generic'; retryText: string; retryCid?: string } // network / 5xx — offer retry
@@ -220,7 +246,8 @@ export default function SandraPanel({ open, onClose }: SandraPanelProps) {
         setError({ kind: 'generic', retryText: message, retryCid: cid });
         return;
       }
-      setMessages((prev) => [...prev, { role: 'assistant', text: reply }]);
+      const explanationId = reviewedExplanationId(data);
+      setMessages((prev) => [...prev, { role: 'assistant', text: reply, ...(explanationId ? { explanationId } : {}) }]);
     } catch {
       setError({ kind: 'generic', retryText: message, retryCid: cid });
     } finally {
@@ -356,6 +383,9 @@ export default function SandraPanel({ open, onClose }: SandraPanelProps) {
               {/* Sandra writes markdown + $math$; students' own text stays plain. */}
               <div className="sandra-msg sandra-msg--assistant">
                 <InstructionRenderer text={m.text} />
+                {m.explanationId ? (
+                  <ExplanationFeedback id={m.explanationId} lang={i18n.language === 'ht' ? 'ht' : 'fr'} />
+                ) : null}
               </div>
             </div>
           ),

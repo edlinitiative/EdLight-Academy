@@ -273,3 +273,54 @@ export function buildSandraSystemPrompt(args: {
 
   return sections.filter(Boolean).join('\n\n');
 }
+
+/**
+ * The CANONICAL worked explanation of a verified question: the candidate that
+ * the reviewed-explanation cache stores (api/_lib/explanationCache.ts) and,
+ * once an admin approves it, serves to every student who asks about the same
+ * question in the same language.
+ *
+ * Built from the server's copy of the question, key and authored explanation
+ * only: no student answer, no profile, no page, no tools. A candidate written
+ * from one student's answer ("tu as écrit 3x…") would carry that student's
+ * work into a text shown to others, and would be wrong for everyone else.
+ */
+export function buildCanonicalExplainPrompt(args: {
+  lang: 'fr' | 'ht';
+  chunks: KbChunk[];
+  question: ExplainQuestionContext;
+}): { system: string; user: string } {
+  const { lang, chunks, question: ctx } = args;
+  const where = [ctx.subject, ctx.level].filter(Boolean).join(', ');
+  const section = [
+    `Explication de référence : rédige l'explication corrigée d'une question d'entraînement déjà corrigée${where ? ` (${where})` : ''}. Elle sera relue par un enseignant puis montrée à tous les élèves qui ont raté cette question, après leur correction.`,
+    `Question : ${ctx.question}`,
+    ctx.expectedAnswer ? `Réponse attendue (corrigé officiel) : ${ctx.expectedAnswer}` : '',
+    ctx.explanation ? `Explication rédigée : ${ctx.explanation}` : '',
+    'Ta réponse :',
+    "1. Explique la démarche étape par étape (quatre étapes au maximum, une ou deux phrases chacune), en partant de ce que demande la question jusqu'à la réponse attendue.",
+    "2. Signale en une phrase l'erreur la plus fréquente sur ce type de question, sans t'adresser à un élève en particulier et sans inventer sa réponse.",
+    "3. Termine par une seule question courte pour vérifier la compréhension.",
+    ctx.expectedAnswer
+      ? "Appuie-toi sur la réponse attendue et l'explication rédigée : ne les contredis pas. Si elles te semblent fausses, dis-le avec prudence plutôt que d'inventer une autre réponse."
+      : "Aucun corrigé fiable n'est enregistré : explique la méthode générale et n'invente pas de réponse finale présentée comme officielle.",
+    'Les formules en LaTeX entre $ (elles seront affichées).',
+    lang === 'ht'
+      ? "Langue : écris toute l'explication en créole haïtien, simple et clair."
+      : "Langue : écris l'explication en français simple.",
+  ].filter(Boolean).join('\n');
+  // The base pedagogy rule is left out on purpose: this question is already
+  // corrected, and its answer is the point of the text. Other graded excerpts
+  // keep their warning.
+  const hasGraded = chunks.some((c) => c.type === 'quiz' || c.type === 'exam');
+  const system = [
+    PERSONA,
+    hasGraded ? `${PEDAGOGY_GRADED_WARNING}\nException : la question de la section « Explication de référence » a déjà été corrigée.` : '',
+    buildChunksSection(chunks),
+    section,
+  ].filter(Boolean).join('\n\n');
+  const user = lang === 'ht'
+    ? 'Ekri eksplikasyon referans pou kesyon sa a.'
+    : 'Rédige l’explication de référence de cette question.';
+  return { system, user };
+}

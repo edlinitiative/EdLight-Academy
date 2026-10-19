@@ -1,16 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { requireAuth } from './_lib/requireAuth';
 import { checkRateLimit } from './_lib/rateLimit';
-import { chatJSON, resolveLLMConfig, LLMError } from './_lib/llm';
-import {
-  analyzeWordCount,
-  buildEssayRubric,
-  selectRubricProfile,
-  buildGradingPrompt,
-  normalizeGraderResponse,
-  computeEssayScore,
-  type AnswerPart,
-} from './_lib/essayGrading';
+import { gradeEssay } from './_lib/essayGrader';
+import type { AnswerPart } from './_lib/essayGrading';
 
 /**
  * POST /api/grade-essay
@@ -73,102 +65,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   res.setHeader('X-RateLimit-Remaining', String(remaining));
 
   const body: GradeEssayBody = req.body || {};
-  // Cap every user-supplied text field before it reaches the prompt builder so
-  // no single input can blow up token cost or drown the grading instructions
-  // (prompt-injection / DoS hardening). Answers/context are long-form, so they
-  // get a generous cap; short metadata fields are tightly bounded.
-  const clamp = (v: unknown, max: number) =>
-    typeof v === 'string' ? v.slice(0, max) : undefined;
-  const question = clamp(body.question, 4000);
-  const answer = clamp(body.answer, 12000);
-  const modelAnswer = clamp(body.modelAnswer, 4000);
-  const context = clamp(body.context, 8000);
-  const subject = clamp(body.subject, 100);
-  const level = clamp(body.level, 100);
-  const answerParts = Array.isArray(body.answerParts) ? body.answerParts.slice(0, 30) : body.answerParts;
-  const type = body.type === 'short_answer' ? 'short_answer' : 'essay';
-  const points = typeof body.points === 'number' && body.points > 0 ? body.points : 10;
-
-  if (!question || !answer) {
+  // The grader itself lives in api/_lib/essayGrader.ts so the admin
+  // calibration harness (/api/essay-calibration) measures exactly this code.
+  const result = await gradeEssay(body);
+  if (!result.ok) {
     res.status(400).json({ error: 'Missing required fields: question, answer' });
     return;
   }
-
-  // French and philosophy essays are marked as dissertations (structure +
-  // language), everything else on its authored content points.
-  const profile = selectRubricProfile({ subject, type, question });
-  const rubric = buildEssayRubric(answerParts, profile);
-  const word = analyzeWordCount(answer, type);
-
-  // Graceful, still-useful response when the LLM can't or shouldn't run.
-  const manualFallback = (message: string) => {
-    res.status(200).json({
-      isCorrect: false,
-      score: 'N/A',
-      feedback: message,
-      ratio: 0,
-      awarded: 0,
-      maxPoints: points,
-      criteria: rubric.criteria.map((c) => ({ label: c.label, level: 0, evidence: '', comment: '' })),
-      strengths: [],
-      improvements: [],
-      wordCount: word.words,
-      wordStatus: word.status,
-      wordMessage: word.message,
-      capped: false,
-      graded: false,
-      rubricProfile: profile,
-    });
-  };
-
-  // Too short to assess meaningfully — tell the student, don't spend a call.
-  if (word.status === 'empty' || word.status === 'too_short') {
-    manualFallback(word.message);
-    return;
-  }
-
-  const config = resolveLLMConfig();
-  if (!config) {
-    manualFallback('Évaluation automatique indisponible (aucun fournisseur IA configuré). Votre réponse n’est pas encore corrigée : relancez la correction depuis vos résultats.');
-    return;
-  }
-
-  try {
-    const { system, user } = buildGradingPrompt({
-      question, answer, modelAnswer, context, subject, level, rubric, word,
-    });
-    const raw = await chatJSON({ system, user, temperature: 0, maxTokens: 1200, config });
-    const grade = normalizeGraderResponse(raw, rubric);
-    const score = computeEssayScore({ grade, rubric, word, points });
-
-    const feedback = grade.feedback
-      || (score.isCorrect ? 'Bon travail dans l\'ensemble.' : 'Réponse à approfondir — voyez les pistes d\'amélioration.');
-
-    res.status(200).json({
-      isCorrect: score.isCorrect,
-      score: score.score,
-      feedback,
-      ratio: score.ratio,
-      awarded: score.awarded,
-      maxPoints: score.maxPoints,
-      contentRatio: score.contentRatio,
-      criteria: grade.criteria.map((c) => ({ label: c.label, level: c.level, evidence: c.evidence, comment: c.comment })),
-      taskResponse: grade.taskResponse,
-      organization: grade.organization,
-      language: grade.language,
-      strengths: grade.strengths,
-      improvements: grade.improvements,
-      wordCount: word.words,
-      wordStatus: word.status,
-      wordMessage: word.message,
-      capped: score.capped,
-      graded: true,
-      rubricProfile: profile,
-      provider: config.label,
-    });
-  } catch (error) {
-    const detail = error instanceof LLMError ? `${error.provider} ${error.status}` : 'unknown';
-    console.error('grade-essay failed:', detail, error instanceof Error ? error.message : error);
-    manualFallback('L\'évaluation automatique a échoué. Votre réponse n’est pas encore corrigée : relancez la correction depuis vos résultats.');
-  }
+  res.status(200).json(result.body);
 }

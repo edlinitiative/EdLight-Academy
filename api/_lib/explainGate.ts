@@ -78,9 +78,25 @@ export type GateReason =
   | 'question_not_found'
   | 'error';
 
+/**
+ * Which canonical question a VERIFIED request is about, for the reviewed
+ * explanation cache (api/_lib/explanationCache.ts). Exam questions are keyed
+ * by their flattened index (the same index on web and app), bank questions by
+ * the quiz doc id. Never present on a downgraded request.
+ */
+export interface CacheRef {
+  source: 'exam' | 'bank';
+  /** Stable per question: `${examId}-${index}` or the bank doc id. */
+  id: string;
+  examId?: string;
+  questionIndex?: number;
+}
+
 export interface GateResult {
   /** Present only when verified: the SERVER-built context that lifts the rule. */
   explain?: QuestionContext;
+  /** Present only when verified: the question's identity for the explanation cache. */
+  cacheRef?: CacheRef;
   /** Present when downgraded: hint-only tutoring about this question. */
   tutor?: TutorQuestion;
   /** What the KB is searched with. Never contains a client-supplied key. */
@@ -147,7 +163,9 @@ function storedAnswer(answers: unknown, index: number): unknown {
   return a && typeof a === 'object' && 'given' in (a as object) ? (a as { given: unknown }).given : a;
 }
 
-async function verifyExam(ctx: QuestionContext, uid: string, deps: GateDeps): Promise<{ explain?: QuestionContext; reason: GateReason }> {
+type Verdict = { explain?: QuestionContext; cacheRef?: CacheRef; reason: GateReason };
+
+async function verifyExam(ctx: QuestionContext, uid: string, deps: GateDeps): Promise<Verdict> {
   const examId = ctx.examId as string;
   const questionId = ctx.questionId as string;
   // A legacy numeric route is keyed by catalog position, which web and app do
@@ -184,7 +202,9 @@ async function verifyExam(ctx: QuestionContext, uid: string, deps: GateDeps): Pr
     examId,
     questionId,
   });
-  return explain ? { explain, reason: 'verified_exam' } : { reason: 'question_not_found' };
+  return explain
+    ? { explain, reason: 'verified_exam', cacheRef: { source: 'exam', id: `${examId}-${found.index}`, examId, questionIndex: found.index } }
+    : { reason: 'question_not_found' };
 }
 
 // ── Quiz bank ────────────────────────────────────────────────────────────────
@@ -226,7 +246,7 @@ export function bankExpectedText(row: Record<string, any>): string | undefined {
   return isPlaceholderKey(raw) ? undefined : raw;
 }
 
-async function verifyBank(ctx: QuestionContext, deps: GateDeps): Promise<{ explain?: QuestionContext; reason: GateReason }> {
+async function verifyBank(ctx: QuestionContext, deps: GateDeps): Promise<Verdict> {
   const snap = await deps.db.doc(`quizzes/${ctx.questionId}`).get();
   if (!snap.exists) return { reason: 'question_not_found' };
   const row = snap.data() || {};
@@ -243,7 +263,9 @@ async function verifyBank(ctx: QuestionContext, deps: GateDeps): Promise<{ expla
     status: ctx.status,
     questionId: ctx.questionId,
   });
-  return explain ? { explain, reason: 'verified_bank' } : { reason: 'question_not_found' };
+  return explain
+    ? { explain, reason: 'verified_bank', cacheRef: { source: 'bank', id: String(ctx.questionId) } }
+    : { reason: 'question_not_found' };
 }
 
 // ── The gate ─────────────────────────────────────────────────────────────────
@@ -260,7 +282,7 @@ function downgrade(ctx: QuestionContext, reason: GateReason): GateResult {
 export async function gateQuestionContext(ctx: QuestionContext, uid: string, deps: GateDeps): Promise<GateResult> {
   const now = deps.now ?? Date.now();
   try {
-    const verification: Promise<{ explain?: QuestionContext; reason: GateReason }> = ctx.examId
+    const verification: Promise<Verdict> = ctx.examId
       ? (ctx.questionId ? verifyExam(ctx, uid, deps) : Promise.resolve({ reason: 'unverifiable' as const }))
       : ctx.questionId && ctx.surface !== 'exam_results'
         ? verifyBank(ctx, deps)
@@ -271,6 +293,7 @@ export async function gateQuestionContext(ctx: QuestionContext, uid: string, dep
     const e = verdict.explain;
     return {
       explain: e,
+      ...(verdict.cacheRef ? { cacheRef: verdict.cacheRef } : {}),
       retrievalQuery: [e.question, e.expectedAnswer].filter(Boolean).join('\n'),
       verified: true,
       reason: verdict.reason,
