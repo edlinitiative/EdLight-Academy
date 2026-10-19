@@ -434,7 +434,7 @@
   line-height: 1.55;
 }
 .pq-saved .icon { flex: none; margin-top: 0.2rem; }
-.pq-saved--confirmed .icon { color: var(--success-500); }
+.pq-saved--confirmed .icon { color: var(--success-ink); }
 .pq-saved--pending .icon { color: var(--text-500); }
 .pq-saved--unconfirmed .icon { color: #B26B00; }
 .pq-saved button {

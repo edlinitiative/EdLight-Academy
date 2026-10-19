@@ -13,6 +13,13 @@ import type {
 } from '../../shared/competition/platform';
 import { leagueTable, roundRobin } from '../../shared/leagues/standings';
 import { rosterProblem, TEAM_POLICY } from '../../shared/teams/policy';
+import {
+  isTeamGameMode,
+  parseGameMode,
+  TEAM_MODE_POLICY,
+  validRoles,
+  validSlots,
+} from '../../shared/teams/modes';
 import { validateTournamentInput } from '../../shared/tournois/config';
 import { buildSchedule } from '../../shared/tournois/schedule';
 import {
@@ -41,6 +48,7 @@ import {
   type CompetitionNotice,
 } from './competitionNotify';
 import { clearReminders, scheduleReminders } from './competitionReminders';
+import { competitionFlags } from './platformConfig';
 
 /** Admins are pushed about a reported target at most once per this interval; the inbox item updates every time. */
 export const REPORT_PUSH_INTERVAL_MS = 60 * 60 * 1000;
@@ -217,6 +225,7 @@ function projection(e: CompetitionEvent) {
     department: e.department,
     audience: e.audience,
     entryMode: e.entryMode,
+    ...(isTeamGameMode(e.gameMode) ? { gameMode: e.gameMode } : {}),
     delivery: e.delivery,
     state: e.state,
     startsAt: e.config.startsAt,
@@ -306,6 +315,9 @@ export async function mutateCompetition(
   // Pushes go out only for the attempt that actually committed here — never for a replayed receipt.
   let notices: CompetitionNotice[] = [];
   let executed = false;
+  // Admin-switchable (platformConfig/competition, env default). Read once, before
+  // the transaction: retries enforce the same switches as the first attempt.
+  const flags = await competitionFlags(db);
   const output = await db.runTransaction(async (tx) => {
     notices = [];
     executed = false;
@@ -337,7 +349,7 @@ export async function mutateCompetition(
       !body.eventId
     )
       ensure(
-        process.env.COMPETITION_CREATION_ENABLED === 'true',
+        flags.creationEnabled,
         'pilot_not_enabled',
         403,
       );
@@ -791,6 +803,35 @@ export async function mutateCompetition(
           'unsupported_mode',
           400,
         );
+        // Shared-answer / relay: named teams, live or window, app-run only. An
+        // unknown mode is refused, never stored as independent.
+        // A form without the choice (older client, flag off) keeps the draft's mode.
+        const gameMode = parseGameMode(
+          body.gameMode === undefined ? old?.gameMode : body.gameMode,
+        );
+        ensure(gameMode, 'unsupported_mode', 400);
+        // Slice E is outside the A–D pilot: its modes need their own switch.
+        ensure(
+          gameMode === 'independent' ||
+            flags.teamModesEnabled,
+          'team_modes_not_enabled',
+          403,
+        );
+        ensure(
+          gameMode === 'independent' || entryMode === 'named_team',
+          'team_mode_requires_teams',
+          400,
+        );
+        ensure(
+          gameMode === 'independent' || delivery !== 'external',
+          'unsupported_mode',
+          400,
+        );
+        if (old && isTeamGameMode(gameMode))
+          ensure(
+            !(await data(tx, db, `fixtureSources/${old.id}`)),
+            'incompatible_scoring_policy',
+          );
         const audience =
           body.audience === 'school' || body.audience === 'private'
             ? body.audience
@@ -846,6 +887,7 @@ export async function mutateCompetition(
               ? body.entryPolicy
               : 'open',
           entryMode,
+          ...(gameMode !== 'independent' ? { gameMode } : {}),
           delivery,
           state: 'draft',
           config: valid.config,
@@ -907,6 +949,12 @@ export async function mutateCompetition(
             ...e.config,
             schemaVersion: 2,
             competitionEventId: e.id,
+            ...(isTeamGameMode(e.gameMode)
+              ? {
+                  gameMode: e.gameMode,
+                  teamPolicy: TEAM_MODE_POLICY[e.gameMode],
+                }
+              : {}),
             visibility: e.audience === 'public' ? 'public' : 'private',
             id: tid,
             creatorUid: e.ownerUid,
@@ -1008,7 +1056,11 @@ export async function mutateCompetition(
           confirmed: starters.includes(uid) ? [uid] : [],
           state: 'draft',
           revision: (old?.revision ?? 0) + 1,
-          policyVersion: team ? TEAM_POLICY : 'individual-v1',
+          policyVersion: !team
+            ? 'individual-v1'
+            : isTeamGameMode(e.gameMode)
+              ? TEAM_MODE_POLICY[e.gameMode]
+              : TEAM_POLICY,
           rosterSchoolKey: e.schoolKey,
           lockedAt: null,
         };
@@ -1026,6 +1078,86 @@ export async function mutateCompetition(
               old?.starters.includes(member) ? 'roster_saved' : 'confirm_requested',
             );
         result = { ok: true, entryId };
+        break;
+      }
+      case 'team-roles':
+      case 'team-roles-confirm': {
+        // Shared-answer submitter/deputy or relay slot order. Planned on the
+        // entry until the start; the engine freezes them at the first play
+        // request after it (teamControl), after which they never change here.
+        const e = (await data(
+          tx,
+          db,
+          `competitionEvents/${id(body.eventId)}`,
+        )) as CompetitionEvent | null;
+        ensure(e, 'not_found', 404);
+        ensure(isTeamGameMode(e.gameMode), 'unsupported_mode', 400);
+        const entry = (await data(
+          tx,
+          db,
+          `competitionEvents/${e.id}/entries/${id(body.entryId)}`,
+        )) as EventEntry | null;
+        ensure(entry, 'entry_not_found', 404);
+        ensure(entry.state !== 'withdrawn', 'not_registered');
+        const frozen = e.tournamentId
+          ? await data(
+              tx,
+              db,
+              `userTournaments/${e.tournamentId}/teamControl/${entry.id}`,
+            )
+          : null;
+        ensure(
+          e.state === 'published' || e.state === 'draft',
+          'event_closed',
+        );
+        ensure(now < e.config.startsAt && !frozen, 'roles_locked');
+        const ref = db.doc(`competitionEvents/${e.id}/entries/${entry.id}`);
+        if (action === 'team-roles-confirm') {
+          ensure(entry.starters.includes(uid), 'forbidden', 403);
+          ensure(
+            Number(body.rolesVersion ?? 0) === (entry.rolesVersion ?? 0),
+            'revision_conflict',
+          );
+          tx.update(ref, {
+            dutiesConfirmed: [
+              ...new Set([...(entry.dutiesConfirmed ?? []), uid]),
+            ],
+          });
+          result = { ok: true, entryId: entry.id };
+          break;
+        }
+        ensure(entry.captainUid === uid, 'captain_required', 403);
+        const patch: Record<string, unknown> = {
+          rolesVersion: (entry.rolesVersion ?? 0) + 1,
+          dutiesConfirmed: entry.starters.includes(uid) ? [uid] : [],
+        };
+        if (e.gameMode === 'shared') {
+          const roles = validRoles(
+            { submitter: body.submitter, deputy: body.deputy },
+            entry.starters,
+          );
+          ensure(roles, 'invalid_roles', 400);
+          patch.roles = roles;
+        } else {
+          const slots = validSlots(body.slots, entry.starters);
+          ensure(slots, 'invalid_roles', 400);
+          patch.relaySlots = slots;
+        }
+        tx.update(ref, patch);
+        for (const member of entry.starters)
+          note(
+            member,
+            `entry_${e.id}_${entry.id}`,
+            'entry',
+            e.id,
+            e.title,
+            'team_roles_set',
+          );
+        result = {
+          ok: true,
+          entryId: entry.id,
+          rolesVersion: patch.rolesVersion,
+        };
         break;
       }
       case 'entry-confirm':
@@ -1860,6 +1992,8 @@ export async function mutateCompetition(
               event.schoolKey === league.schoolKey,
             'incompatible_source',
           );
+          // The league pilot counts independent-answer team totals only.
+          ensure(!isTeamGameMode(event.gameMode), 'incompatible_scoring_policy');
           manage(event, uid, admin);
           ensure(
             league.sourcePolicy === 'external_100_points_v1'

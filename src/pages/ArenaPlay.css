@@ -157,7 +157,7 @@
   margin-bottom: 0.6rem;
   border-radius: 50%;
   background: var(--success-50);
-  color: var(--success-500);
+  color: var(--success-ink);
 }
 
 .arena-play__countdown {
@@ -234,7 +234,7 @@
 }
 
 .arena-play__qual-verdict.is-ok {
-  color: var(--success-500);
+  color: var(--success-ink);
   font-weight: 700;
 }
 
@@ -503,7 +503,7 @@
 }
 
 .arena-play__option.is-correct > svg {
-  color: var(--success-500);
+  color: var(--success-ink);
 }
 
 .arena-play__option.is-wrong {
@@ -516,7 +516,7 @@
 }
 
 .arena-play__option.is-wrong > svg {
-  color: var(--danger-500);
+  color: var(--danger-ink);
 }
 
 .arena-play__below {
@@ -544,8 +544,8 @@
   font-weight: 800;
 }
 
-.arena-play__verdict.is-ok { color: var(--success-500); }
-.arena-play__verdict.is-bad { color: var(--danger-500); }
+.arena-play__verdict.is-ok { color: var(--success-ink); }
+.arena-play__verdict.is-bad { color: var(--danger-ink); }
 
 .arena-play__retry {
   display: flex;
@@ -599,7 +599,7 @@
 
 .arena-play__five.is-in {
   background: var(--success-50);
-  color: var(--success-500);
+  color: var(--success-ink);
 }
 
 /* ── Result ───────────────────────────────────────────────────────────── */

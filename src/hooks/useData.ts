@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { loadAppData, loadCoursesData, getCachedCourses } from '../services/dataService';
+import { shouldRetryQuery } from '../utils/queryDefaults';
 
 export function useAppData() {
   const query = useQuery({
@@ -8,7 +9,7 @@ export function useAppData() {
     queryFn: loadAppData,
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
     gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
-    retry: 2,
+    retry: (n: number) => n < 2 && shouldRetryQuery(n),
   });
 
   // v5 removed the query `onError` callback; log fetch failures via an effect.
@@ -37,7 +38,7 @@ export function useCourses() {
     queryFn: loadCoursesData,
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
-    retry: 2,
+    retry: (n: number) => n < 2 && shouldRetryQuery(n),
     // Paint instantly from the last-known catalog, then ALWAYS revalidate in
     // the background so a stale or partial cache self-heals on the next visit.
     initialData: cached ? cached.data : undefined,

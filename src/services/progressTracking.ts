@@ -152,15 +152,20 @@ export async function confirmLessonComplete(userId: string, courseId: string, le
   if (!userId || !courseId || !lessonId) throw new Error('lesson-completion/missing-context');
   const progressRef = doc(db, 'users', userId, 'progress', courseId);
   const progressDoc = await getDoc(progressRef);
-  if (!progressDoc.exists()) throw new Error('lesson-completion/no-progress-document');
-
-  const completedLessons = progressDoc.data().completedLessons || [];
+  const exists = progressDoc.exists();
+  const completedLessons = exists ? progressDoc.data().completedLessons || [] : [];
   if (completedLessons.includes(lessonId)) return 'already';
 
-  await updateDoc(progressRef, {
+  // Create-or-update with a merge (same as the app). It used to THROW when the
+  // progress doc didn't exist yet — and nothing on the web creates it before a
+  // first completion any more, so "Terminer" could never succeed (P0 validation).
+  const now = new Date();
+  await setDoc(progressRef, {
+    courseId,
     completedLessons: arrayUnion(lessonId),
-    lastAccessedAt: new Date(),
-  });
+    lastAccessedAt: now,
+    ...(exists ? {} : { enrolledAt: now, totalPoints: 0 }),
+  }, { merge: true });
   track('lesson_complete', { course_id: courseId, lesson_id: lessonId });
   try {
     await awardPoints(userId, courseId, 10, 'lesson_complete');

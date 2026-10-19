@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Modal, View, Text, ScrollView } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { X, Check, ArrowRight, Flag } from 'lucide-react-native';
 import { useAppData } from '../hooks/useData';
@@ -11,6 +12,7 @@ import { success as hapticSuccess } from '../utils/haptics';
 import { useReduceMotion, modalAnimation } from '../utils/motion';
 import PressableScale from './ui/PressableScale';
 import Button from './ui/Button';
+import { chapterDraftKey, restoreChapterDraft, serializeChapterDraft } from '../utils/chapterTestDraft';
 
 const QUESTION_COUNT = 12;
 
@@ -67,23 +69,64 @@ export default function ChapterTest({
   const progress = useStore((s) => s.progress);
   const applyChapterTest = useStore((s) => s.applyChapterTest);
   const recordReviewOutcome = useStore((s) => s.recordReviewOutcome);
+  // Whose test this is: an unfinished test is restored only for its owner
+  // (same rule as the exam draft mirror, F1). Guests share one bucket.
+  const owner = useStore((s) => (s.isAuthenticated && s.user?.uid ? s.user.uid : 'guest'));
+  const draftKey = chapterDraftKey(subjectCode, unitNo);
 
   const [attempt, setAttempt] = useState(0);
   const [phase, setPhase] = useState<'intro' | 'running' | 'done'>('intro');
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [outcome, setOutcome] = useState<Outcome | null>(null);
+  // The draw being played, frozen at start (or restored), so a bank refresh
+  // mid-test can't swap the questions under the student.
+  const [fixedCards, setFixedCards] = useState<PracticeCard[] | null>(null);
+  const [resumable, setResumable] = useState<ReturnType<typeof restoreChapterDraft>>(null);
 
   const pool = useMemo(
     () => selectCards(data?.quizBank?.raw ?? [], subjectCode, unitNo),
     [data?.quizBank?.raw, subjectCode, unitNo],
   );
   // Re-drawn on each attempt, so a retake isn't the same twelve questions.
-  const cards = useMemo(
+  const drawn = useMemo(
     () => buildChapterTest(pool, QUESTION_COUNT, shuffle),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [pool, attempt],
   );
+  const cards = fixedCards ?? drawn;
+
+  // L-8: an unfinished test (app killed or backgrounded) can be resumed.
+  useEffect(() => {
+    if (!visible || phase !== 'intro' || pool.length === 0) return undefined;
+    let live = true;
+    AsyncStorage.getItem(draftKey)
+      .then((raw) => { if (live) setResumable(restoreChapterDraft(raw, owner, pool)); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [visible, phase, draftKey, owner, pool]);
+
+  // Saved on every answer and every step, while the test runs.
+  useEffect(() => {
+    if (phase !== 'running' || cards.length === 0) return;
+    AsyncStorage.setItem(draftKey, serializeChapterDraft(owner, cards, answers, idx)).catch(() => {});
+  }, [phase, cards, answers, idx, draftKey, owner]);
+
+  const start = () => {
+    setFixedCards(drawn);
+    setAnswers({});
+    setIdx(0);
+    setResumable(null);
+    setPhase('running');
+  };
+  const resume = () => {
+    if (!resumable) return;
+    setFixedCards(resumable.cards);
+    setAnswers(resumable.answers);
+    setIdx(resumable.idx);
+    setResumable(null);
+    setPhase('running');
+  };
 
   const lessonIdByNo = useMemo(() => {
     const map: Record<number, string> = {};
@@ -94,7 +137,7 @@ export default function ChapterTest({
     return map;
   }, [lessons]);
 
-  const reset = () => { setPhase('intro'); setIdx(0); setAnswers({}); setOutcome(null); };
+  const reset = () => { setPhase('intro'); setIdx(0); setAnswers({}); setOutcome(null); setFixedCards(null); };
   const close = () => { reset(); onClose(); };
 
   function finish(finalAnswers: Record<string, number>) {
@@ -118,6 +161,7 @@ export default function ChapterTest({
     const before: Record<string, MasteryLevel> = {};
     for (const lessonId of Object.keys(verdicts)) before[lessonId] = lessonMastery(progress[lessonId]);
     applyChapterTest(verdicts);
+    AsyncStorage.removeItem(draftKey).catch(() => {});
     setOutcome({ cards, answers: finalAnswers, verdicts, before, score });
     setPhase('done');
   }
@@ -202,7 +246,7 @@ export default function ChapterTest({
               return (
                 <View key={lessonId} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                   <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: colors.successSoft, alignItems: 'center', justifyContent: 'center' }}>
-                    <Check color={colors.success} size={16} strokeWidth={3} />
+                    <Check color={colors.successInk} size={16} strokeWidth={3} />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={[typeScale.bodyMd, { color: colors.ink }]} numberOfLines={2}>{lesson?.title ?? t('Leçon', 'Leson')}</Text>
@@ -294,7 +338,24 @@ export default function ChapterTest({
           </View>
         </View>
       </ScrollView>,
-      <Button label={t('Commencer le test', 'Kòmanse tès la')} size="lg" fullWidth onPress={() => setPhase('running')} />,
+      resumable ? (
+        <View style={{ gap: 8 }}>
+          <Button
+            label={t(`Reprendre (question ${resumable.idx + 1} sur ${resumable.cards.length})`, `Kontinye (kesyon ${resumable.idx + 1} sou ${resumable.cards.length})`)}
+            size="lg"
+            fullWidth
+            onPress={resume}
+          />
+          <Button
+            label={t('Recommencer', 'Rekòmanse')}
+            variant="ghost"
+            fullWidth
+            onPress={() => { AsyncStorage.removeItem(draftKey).catch(() => {}); start(); }}
+          />
+        </View>
+      ) : (
+        <Button label={t('Commencer le test', 'Kòmanse tès la')} size="lg" fullWidth onPress={start} />
+      ),
     );
   }
 

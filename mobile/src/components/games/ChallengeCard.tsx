@@ -8,6 +8,7 @@ import { ArenaButton } from '../arena/ArenaKit';
 import { arenaColors as C, arenaType } from '../../theme/arenaTheme';
 import { tapLight } from '../../utils/haptics';
 import type { Challenge } from '../../services/challengeService';
+import { duelViewerRole } from '../../utils/duels';
 import { nightType } from './night';
 
 /**
@@ -41,7 +42,12 @@ export default function ChallengeCard({
   const expired = challenge.status === 'open' && challenge.expiresAt > 0 && Date.now() > challenge.expiresAt;
   const played = challenge.status === 'played' && !!challenge.opponent;
   const daysLeft = Math.max(0, Math.ceil((challenge.expiresAt - Date.now()) / 86_400_000));
+  // Who is looking (P0 validation): the challenger can't play their own duel,
+  // and a third person must not see the real opponent's score as "Toi".
+  const role = duelViewerRole(challenge, me?.uid);
+  const spectator = role === 'spectator';
   const mine = played ? challenge.opponent!.score : null;
+  const rightLabel = spectator ? (challenge.opponent?.name || t('Adversaire', 'Advèsè')) : t('Toi', 'Ou');
 
   return (
     <View style={{ gap: 16 }}>
@@ -86,14 +92,20 @@ export default function ChallengeCard({
           </View>
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 10 }}>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={[arenaType.status, { color: C.muted }]}>{t('Toi', 'Ou')}</Text>
+              <Text numberOfLines={1} style={[arenaType.status, { color: C.muted }]}>{rightLabel}</Text>
               <Text style={[arenaType.num, { fontSize: 20, lineHeight: 24, color: C.ink }]}>{mine != null ? `${mine}/${challenge.total}` : '?'}</Text>
             </View>
-            <Avatar seed={me?.uid || 'toi'} config={myAvatar} size={48} />
+            {spectator
+              ? <Avatar seed={challenge.opponent?.uid || 'adversaire'} config={(challenge.opponent as any)?.avatar} size={48} />
+              : <Avatar seed={me?.uid || 'toi'} config={myAvatar} size={48} />}
           </View>
         </View>
 
-        {played ? (
+        {spectator ? (
+          <Text style={[arenaType.body, { color: C.muted }]}>
+            {t('Ce défi a déjà été relevé par quelqu’un d’autre.', 'Yon lòt moun deja reponn defi sa a.')}
+          </Text>
+        ) : played ? (
           <Text style={[arenaType.body, { color: C.inkSoft }]}>
             {challenge.opponent!.score > challenge.challengerScore
               ? t('Défi relevé : victoire.', 'Defi fèt : viktwa.')
@@ -103,6 +115,10 @@ export default function ChallengeCard({
           </Text>
         ) : expired ? (
           <Text style={[arenaType.body, { color: C.muted }]}>{t('Ce défi a expiré.', 'Defi sa a ekspire.')}</Text>
+        ) : role === 'challenger' ? (
+          <Text style={[arenaType.body, { color: C.inkSoft }]}>
+            {t('C’est ton défi : envoie le lien à un ami pour qu’il le relève.', 'Se defi pa w : voye lyen an bay yon zanmi pou l reponn li.')}
+          </Text>
         ) : (
           <ArenaButton
             label={t('Relever le défi', 'Reponn defi a')}

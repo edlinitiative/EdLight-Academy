@@ -33,10 +33,18 @@ import {
   orderBy,
   limit,
   serverTimestamp,
+  runTransaction,
 } from 'firebase/firestore';
 import { recordActivity as recordStreakActivity } from './streakService';
+import { queueForReplay, registerOutboxHandler } from './writeOutbox';
 import { examDisplayTitle } from '../utils/examUtils';
-import { planNeedsReschedule, rescheduleStoredPlan } from '../../shared/studyPlanTasks';
+import {
+  applyPlanEvent,
+  applyTaskIdResult,
+  planNeedsReschedule,
+  rescheduleStoredPlan,
+  type PlanEvent,
+} from '../../shared/studyPlanTasks';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -233,38 +241,73 @@ export async function deleteStudyPlan(uid, planId) {
  * @param {Object} result   — { scorePct, answeredAt, ... }
  */
 export async function recordTaskResult(uid, planId, taskId, result) {
-  const plan = await loadStudyPlan(uid, planId);
-  if (!plan) return;
-
-  const tasks = plan.tasks || [];
-  // Support both exam tasks (matched by examId) and practice/video tasks (matched by taskId)
-  let idx = tasks.findIndex((t) => t.examId === taskId);
-  if (idx === -1) idx = tasks.findIndex((t) => t.taskId === taskId);
-  if (idx === -1) return;
-
-  const task = tasks[idx];
-  const quality = scoreToQuality(result.scorePct ?? 0);
-  const srs = computeSRS(task, quality);
-
-  const history = task.history || [];
-  history.push({
-    scorePct: result.scorePct,
-    quality,
-    answeredAt: result.answeredAt || Date.now(),
-  });
-
-  tasks[idx] = {
-    ...task,
-    ...srs,
-    history,
-    lastPracticedMs: Date.now(),
-    status: srs.repetitions >= 3 && quality >= 4 ? 'mastered' : 'active',
-  };
-
-  await updateStudyPlan(uid, planId, { tasks });
-
+  if (!uid || !planId || !taskId) return;
+  const now = Date.now();
+  const changed = await transactPlanTasks(uid, planId, (tasks) =>
+    applyTaskIdResult(tasks, taskId, result?.scorePct ?? 0, now, PLAN_SRS, result?.answeredAt),
+  );
   // Record global cross-course streak
-  recordStreakActivity(uid).catch(() => {});
+  if (changed) recordStreakActivity(uid).catch(() => {});
+}
+
+const PLAN_SRS = { computeSRS, scoreToQuality };
+
+/**
+ * Read-modify-write of a plan's task list in ONE transaction (P0 validation
+ * P-4): the old version read the plan, then rewrote the whole `tasks` array,
+ * so a result recorded on the phone in between was erased (last write wins).
+ * Returns how many tasks changed (0 → nothing written).
+ */
+async function transactPlanTasks(uid: string, planId: string, mutate: (tasks: any[]) => { tasks: any[]; changed: number }): Promise<number> {
+  const ref = planDoc(uid, planId);
+  return runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return 0;
+    const r = mutate(snap.data()?.tasks || []);
+    if (!r.changed) return 0;
+    tx.update(ref, {
+      tasks: r.tasks.map((t) => cleanUndefined(t)),
+      updated_at: serverTimestamp(),
+      updated_at_ms: Date.now(),
+    });
+    return r.changed;
+  });
+}
+
+interface PlanEventPayload { event: PlanEvent; scorePct: number; at: number }
+
+async function applyEventToActivePlan(uid: string, event: PlanEvent, scorePct: number, at: number): Promise<number> {
+  const plan = await loadActiveStudyPlan(uid);
+  if (!plan) return 0;
+  return transactPlanTasks(uid, plan.id, (tasks) => applyPlanEvent(tasks, event, scorePct, at, PLAN_SRS, { answeredAt: at }));
+}
+
+registerOutboxHandler('plan-event', async (op) => {
+  const p = op.payload as PlanEventPayload;
+  if (!p?.event?.kind) return 'drop';
+  await applyEventToActivePlan(op.uid, p.event, Number(p.scorePct) || 0, p.at || op.createdAt);
+  return 'done';
+});
+
+/**
+ * A finished activity advances the plan task it corresponds to (P0 validation
+ * P-2, P-3, E-13): an exam, a chapter practice, a lesson (video task). The
+ * match is the inverse of planTaskRoute (shared/studyPlanTasks). Never throws;
+ * a write that can't reach the server is queued and replayed.
+ */
+export async function recordPlanEvent(uid: string | null | undefined, event: PlanEvent, scorePct: number): Promise<number> {
+  if (!uid || !event) return 0;
+  const at = Date.now();
+  try {
+    const changed = await applyEventToActivePlan(uid, event, scorePct, at);
+    if (changed) recordStreakActivity(uid).catch(() => {});
+    return changed;
+  } catch (err) {
+    console.warn('[studyPlan] plan update queued for retry:', err);
+    const payload: PlanEventPayload = { event, scorePct, at };
+    await queueForReplay(uid, 'plan-event', payload);
+    return 0;
+  }
 }
 
 /**

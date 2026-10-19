@@ -84,7 +84,8 @@ it('plays the challenger’s exact questions once and shows the server’s resul
   fireEvent.click(screen.getByRole('button', { name: /A1/ }));
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Voir les résultats/ })); });
 
-  expect(mockAccept).toHaveBeenCalledWith({ code: 'AB2CD3EF', score: 2 });
+  // The server grades from the picks (French option text) against the duel's bank (D-8).
+  expect(mockAccept).toHaveBeenCalledWith({ code: 'AB2CD3EF', score: 2, answers: ['C1', 'A1'], bankHash: expect.stringMatching(/^b[0-9a-f]{8}$/) });
   expect(await screen.findByRole('heading', { name: 'Tu as gagné !' })).toBeInTheDocument();
   expect(screen.getByText('+20 XP')).toBeInTheDocument();
 });

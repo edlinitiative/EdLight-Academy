@@ -413,7 +413,7 @@
 .qz-message {
   margin: 0.9rem 0 0;
   font-size: var(--text-sm);
-  color: var(--warning-500);
+  color: var(--warning-ink);
   text-align: center;
 }
 

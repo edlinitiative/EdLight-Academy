@@ -18,6 +18,7 @@ import Segmented from '../components/ui/Segmented';
 import XpBar from '../components/ui/XpBar';
 import StreakFlame from '../components/ui/StreakFlame';
 import { SettingsCard, SettingsRow, SettingsSwitch } from '../components/profile/SettingsCard';
+import ReleaseLine from '../components/profile/ReleaseLine';
 import { gradeShortLabel, ordinal } from '../components/profile/gradeLabel';
 import { useQueryClient } from '@tanstack/react-query';
 import useStore from '../contexts/store';
@@ -427,6 +428,7 @@ export default function ProfileScreen() {
                 onPress={() => Linking.openURL(ABOUT_URL).catch(() => {})}
               />
             </SettingsCard>
+            <ReleaseLine lang={isCreole ? 'ht' : 'fr'} />
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -939,6 +941,7 @@ export default function ProfileScreen() {
             <LogOut color={dangerInk} size={20} strokeWidth={2.2} />
             <Text style={{ fontFamily: fonts.bold, fontSize: 17, color: dangerInk }}>{t('Déconnexion', 'Dekoneksyon')}</Text>
           </PressableScale>
+          <ReleaseLine lang={isCreole ? 'ht' : 'fr'} />
         </View>
       </ScrollView>
 

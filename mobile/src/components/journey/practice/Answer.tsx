@@ -22,6 +22,8 @@ import { MathText } from '../../MathText';
 import { needsKatex } from '../../../utils/mathRouting';
 import { answerStatusLabel, type Tx } from './copy';
 import { isGradable, statusOf, type AnswerStatusKind, type LogEntry, type SessionItem } from './session';
+import ExplainButton from '../../sandra/ExplainButton';
+import type { ExplainSurface } from '../../../../../shared/explainContext';
 
 const ICON: Record<AnswerStatusKind, any> = {
   correct: Check,
@@ -207,7 +209,7 @@ function ValueRow({ label, value, tone }: { label: string; value: string; tone: 
  * question already shows it above. Bare: the caller owns the card around it.
  */
 export function Correction({
-  item, entry, t, showQuestion = false, index,
+  item, entry, t, showQuestion = false, index, explainSurface,
 }: {
   item: SessionItem;
   entry?: LogEntry | null;
@@ -215,6 +217,12 @@ export function Correction({
   showQuestion?: boolean;
   /** 1-based position, for the result list. */
   index?: number;
+  /**
+   * Offer "Explique-moi" on a wrong answer, from this surface. Omitted (no
+   * button) during a scored quiz: there the explanation waits for the
+   * result list. The button also needs an ExplainProvider above it.
+   */
+  explainSurface?: ExplainSurface;
 }) {
   const { colors, isDark } = useTheme();
   const kind = statusOf(item, entry);
@@ -267,6 +275,22 @@ export function Correction({
             {t('Pas d’explication rédigée pour cette question.', 'Pa gen eksplikasyon ekri pou kesyon sa a.')}
           </Text>
         )
+      ) : null}
+
+      {kind === 'incorrect' && explainSurface ? (
+        <ExplainButton
+          context={{
+            surface: explainSurface,
+            question: item.question,
+            studentAnswer: yours ?? undefined,
+            expectedAnswer: expected ?? undefined,
+            explanation: item.explanation,
+            subject: item.subjectCode,
+            questionType: 'mcq',
+            status: 'incorrect',
+            questionId: item.id || undefined,
+          }}
+        />
       ) : null}
     </View>
   );

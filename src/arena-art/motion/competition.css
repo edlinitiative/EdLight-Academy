@@ -1,0 +1,75 @@
+/*
+ * Competition motion — the web half of the one motion vocabulary (roadmap P2).
+ *
+ * The numbers are tokens.ts's DUR / EASE (a test keeps them equal). Only real
+ * phase moments animate:
+ *   .mo-enter    entering a room, a question, a results screen
+ *   .mo-phase    the phase label changing (lobby → live → reveal → results)
+ *   .mo-locked   an answer locked / confirmed
+ *   .mo-right    the reveal of a right answer
+ *   .mo-wrong    the reveal of the student's wrong pick
+ *   .mo-podium   the podium steps rising, third → second → first
+ *   .mo-delta    a "▲ 2" movement badge after a reorder
+ * Standings reorder is FLIP in JS (useFlipList), gated on the same preference.
+ *
+ * Every animation is declared ONLY under prefers-reduced-motion:
+ * no-preference, so reduced motion gets the final state immediately — same
+ * text, same colours, same order. No loops live here.
+ */
+:root {
+  --mo-dur-press: 120ms;
+  --mo-dur-component: 240ms;
+  --mo-dur-navigation: 400ms;
+  --mo-dur-fade: 200ms;
+  --mo-ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+  --mo-ease-exit: cubic-bezier(0.7, 0, 0.84, 0);
+  --mo-ease-emphasis: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --mo-ease-settle: cubic-bezier(0.45, 0, 0.25, 1);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mo-enter { animation: mo-enter var(--mo-dur-navigation) var(--mo-ease-enter) both; }
+  .mo-phase { animation: mo-phase var(--mo-dur-component) var(--mo-ease-enter) both; }
+  .mo-locked { animation: mo-locked var(--mo-dur-component) var(--mo-ease-emphasis); }
+  .mo-right { animation: mo-right var(--mo-dur-navigation) var(--mo-ease-emphasis); }
+  .mo-wrong { animation: mo-wrong var(--mo-dur-navigation) var(--mo-ease-settle); }
+  .mo-podium > * { animation: mo-rise var(--mo-dur-navigation) var(--mo-ease-enter) both; }
+  /* DOM order is 2nd · 1st · 3rd; the ceremony goes 3rd → 2nd → 1st. */
+  .mo-podium > :nth-child(3) { animation-delay: 0ms; }
+  .mo-podium > :nth-child(1) { animation-delay: 180ms; }
+  .mo-podium > :nth-child(2) { animation-delay: 360ms; }
+  /* After the rows travel (useFlipList delay + navigation). */
+  .mo-delta { animation: mo-fade var(--mo-dur-component) var(--mo-ease-settle) 900ms both; }
+}
+
+@keyframes mo-enter {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes mo-phase {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes mo-locked {
+  0% { transform: scale(1); }
+  45% { transform: scale(0.97); }
+  100% { transform: scale(1); }
+}
+@keyframes mo-right {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+@keyframes mo-wrong {
+  0%, 100% { transform: none; }
+  30% { transform: translateX(-4px); }
+  60% { transform: translateX(3px); }
+}
+@keyframes mo-rise {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes mo-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

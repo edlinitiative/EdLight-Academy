@@ -349,11 +349,13 @@ export function AuthModal({ onClose }) {
           </>
         ) : (
           <>
-            <div className="auth-modal__tabs">
+            {/* A two-way switch (segmented pattern): aria-pressed says which form is shown. */}
+            <div className="auth-modal__tabs" role="group" aria-label={`${t('auth.signIn')} / ${t('auth.createAccount')}`}>
               <button
                 className={["auth-modal__tab", activeTab === 'signin' ? 'auth-modal__tab--active' : ''].join(' ')}
                 onClick={() => setActiveTab('signin')}
                 type="button"
+                aria-pressed={activeTab === 'signin'}
               >
                 {t('auth.signIn')}
               </button>
@@ -361,6 +363,7 @@ export function AuthModal({ onClose }) {
                 className={["auth-modal__tab", activeTab === 'signup' ? 'auth-modal__tab--active' : ''].join(' ')}
                 onClick={() => setActiveTab('signup')}
                 type="button"
+                aria-pressed={activeTab === 'signup'}
               >
                 {t('auth.createAccount')}
               </button>

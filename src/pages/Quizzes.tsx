@@ -4,7 +4,7 @@ import { ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal } from '../co
 import DirectBankQuiz, { MAX_ATTEMPTS } from '../components/DirectBankQuiz';
 import QuizResult, { entryStatus, type QuizLogEntry } from '../components/QuizResult';
 import LearnSwitch from '../components/LearnSwitch';
-import { ErrorState } from '../components/StateViews';
+import { ErrorState, LoadingState } from '../components/StateViews';
 import { Skeleton, SkeletonText } from '../components/Skeleton';
 import PracticeEntry, { ModeRules, ScopeNotice, type PracticeMode } from '../components/journey/practice/PracticeEntry';
 import {
@@ -15,6 +15,7 @@ import { readPracticeHandoff, trackJourney } from '../utils/learningJourney';
 import { toDirectItemFromRow } from '../services/quizBank';
 import { useAppData } from '../hooks/useData';
 import { useFocusMode } from '../hooks/useFocusMode';
+import { SandraFocusPanel } from '../components/SandraWidget';
 import useStore from '../contexts/store';
 import { gradeProfile } from '../config/trackConfig';
 import { useTranslation } from 'react-i18next';
@@ -521,6 +522,21 @@ const Quizzes = () => {
     signedIn: !!userId,
   });
 
+  // A finished practice session advances its study-plan task (P0 validation
+  // P-2), once per session. '*' (course-wide) only completes course tasks.
+  const planSentFor = useRef<number | null>(null);
+  useEffect(() => {
+    if (!userId || !session || !tally || planSentFor.current === session.start) return;
+    planSentFor.current = session.start;
+    const graded = tally.total - tally.ungraded;
+    if (graded <= 0 || tally.total - tally.unanswered <= 0) return;
+    const pct = Math.round((tally.correct / graded) * 100);
+    const unitId = session.unit && session.unit !== '*' ? session.unit : null;
+    import('../services/studyPlanService')
+      .then((m) => m.recordPlanEvent(userId, { kind: 'practice', course: session.courseCode, unit: unitId }, pct))
+      .catch(() => {});
+  }, [userId, session, tally]);
+
   const subjectLabel = subjectOptions.find((o) => o.value === subjectBase)?.label || subjectBase;
   const levelLabel = level ? level.replace(/^NS(.*)$/i, 'NS $1') : '';
   const unitLabel = unitOptions.find((o) => o.value === unit)?.label || '';
@@ -598,8 +614,8 @@ const Quizzes = () => {
     if (handoff) {
       return (
         <section className="section qz qz--entry">
-          <div className="container qz__container" aria-busy="true">
-            <div className="pe" aria-label={tx('Chargement de ta pratique…', 'N ap chaje pratik ou…')}>
+          <LoadingState className="container qz__container" label={tx('Chargement de ta pratique…', 'N ap chaje pratik ou…')}>
+            <div className="pe">
               <Skeleton width={180} height={14} />
               <Skeleton width="70%" height={34} />
               <Skeleton width="45%" height={16} />
@@ -610,13 +626,13 @@ const Quizzes = () => {
               <SkeletonText lines={3} lastWidth="55%" />
               <Skeleton width={220} height={52} radius={12} />
             </div>
-          </div>
+          </LoadingState>
         </section>
       );
     }
     return (
       <section className="section qz">
-        <div className="container qz__container" aria-busy="true">
+        <LoadingState className="container qz__container" label={tx('Chargement…', 'Ap chaje…')}>
           <Skeleton width={260} height={34} style={{ marginBottom: '0.75rem' }} />
           <SkeletonText lines={2} lastWidth="60%" />
           <div className="qz-setup" style={{ marginTop: '1.75rem' }}>
@@ -631,7 +647,7 @@ const Quizzes = () => {
             </div>
             <Skeleton width="100%" height={46} radius={10} style={{ marginTop: '1.25rem' }} />
           </div>
-        </div>
+        </LoadingState>
       </section>
     );
   }
@@ -642,6 +658,7 @@ const Quizzes = () => {
     const next = fromLesson && scope?.nextLesson ? { title: scope.nextLesson.title, href: lessonHref(scope.nextLesson.id) || '' } : null;
     return (
       <section className="section qz qz--result">
+        <SandraFocusPanel />
         <div className="container qz__container">
           <QuizResult
             deck={completedDeck}
@@ -761,6 +778,9 @@ const Quizzes = () => {
     const seen = practiceDeck.length;
     return (
       <section className="section qz qz--taking">
+        {/* Practice runs in focus mode, where Layout does not mount the
+            global Sandra widget: this host serves "Explique-moi". */}
+        <SandraFocusPanel />
         <div className="container qz__container">
           <h1 className="qz__sr-only">{sessionHeading}</h1>
           <div className="qz-top">
@@ -804,7 +824,7 @@ const Quizzes = () => {
           )}
 
           <div className="qz-question">
-            <DirectBankQuiz item={bankDirectItem} onScore={handlePracticeScore} onNext={undefined} onClose={undefined} />
+            <DirectBankQuiz item={bankDirectItem} onScore={handlePracticeScore} onNext={undefined} onClose={undefined} explainSurface="practice" />
           </div>
 
           {bankMessage && <p className="qz-message" role="status">{bankMessage}</p>}

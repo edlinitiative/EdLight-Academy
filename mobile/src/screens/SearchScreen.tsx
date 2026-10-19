@@ -16,7 +16,6 @@ import {
   TextInput,
   FlatList,
   Keyboard,
-  ActivityIndicator,
   ScrollView,
   Image,
 } from 'react-native';
@@ -35,6 +34,7 @@ import { getCachedCourses } from '../services/dataService';
 import SearchField from '../components/ui/SearchField';
 import PressableScale from '../components/ui/PressableScale';
 import Button from '../components/ui/Button';
+import { ListSkeleton } from '../components/StateViews';
 import VideoCover from '../components/ui/VideoCover';
 import SandraFace from '../components/sandra/SandraFace';
 import { useThumbCandidates } from '../hooks/useCourseThumb';
@@ -458,15 +458,14 @@ export default function SearchScreen({ onClose, navigation }: { onClose?: () => 
           </View>
         </View>
       ) : status === 'loading' && index.length === 0 ? (
-        <View accessibilityLiveRegion="polite" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: GUTTER, paddingTop: 20 }}>
-          <ActivityIndicator color={colors.muted} />
-          <Text style={[typeScale.body, { color: colors.muted }]}>{t('Préparation de la recherche…', 'N ap prepare rechèch la…')}</Text>
-        </View>
+        // Result-row skeleton (tile + two lines), not a lone spinner, so the
+        // list doesn't jump when the index is ready.
+        <ListSkeleton rows={4} showHeader={false} label={t('Préparation de la recherche…', 'N ap prepare rechèch la…')} />
       ) : status === 'failed' ? (
         <View accessibilityRole="alert" style={{ paddingHorizontal: GUTTER, paddingTop: 16 }}>
           <View style={[cardSurface, { padding: 18, gap: 14 }]}>
             <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
-              <AlertCircle size={20} color={colors.warn} style={{ marginTop: 1 }} />
+              <AlertCircle size={20} color={colors.warnInk} style={{ marginTop: 1 }} />
               <Text style={[typeScale.body, { color: colors.ink, flex: 1 }]}>
                 {t('Les cours n’ont pas pu être chargés, la recherche est incomplète. Vérifie ta connexion.',
                   'Kou yo pa t ka chaje, rechèch la pa konplè. Verifye koneksyon ou.')}

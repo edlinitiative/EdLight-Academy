@@ -4,6 +4,16 @@ import { useTranslation } from 'react-i18next';
 import { MessageCircle, X } from '../icons';
 import { lazyWithRetry } from '../../utils/lazyWithRetry';
 import useStore from '../../contexts/store';
+import { trackEvent } from '../../utils/telemetry';
+import {
+  EXPLAIN_DISCLOSURE,
+  EXPLAIN_EVENT,
+  EXPLAIN_LABEL,
+  explainAskMessage,
+  explainTelemetryDetail,
+  sanitizeQuestionContext,
+  type QuestionContext,
+} from '../../../shared/explainContext';
 import './SandraWidget.css';
 
 // The chat panel (message list, composer, network logic) is only needed once
@@ -295,6 +305,54 @@ export function AskSandra({
         </details>
       )}
     </div>
+  );
+}
+
+/**
+ * "Explique-moi" on a missed question (exam results, quiz corrections,
+ * practice feedback). Opens Sandra in a fresh conversation with the question,
+ * the student's answer, the key and the authored explanation as STRUCTURED
+ * context (`questionContext` on /api/chat), so the student's own bubble is one
+ * short sentence and the server bounds every field.
+ *
+ * Renders nothing where Sandra is restricted (a live paper, a competition
+ * round): those screens never show a correction anyway, and the rule lives in
+ * one place. The host screen must have a panel in its tree: the global widget,
+ * or `<SandraFocusPanel />` on a focused screen.
+ */
+export function ExplainWithSandra({
+  context,
+  className,
+}: {
+  context: QuestionContext;
+  className?: string;
+}) {
+  const { available } = useSandraAvailability();
+  const { i18n } = useTranslation();
+  const setSandraAsk = useStore((s) => s.setSandraAsk);
+  const signedIn = useStore((s) => !!s.user);
+  const isCreole = i18n.language === 'ht';
+  if (!available) return null;
+
+  const onClick = () => {
+    const questionContext = sanitizeQuestionContext(context);
+    if (!questionContext) return;
+    trackEvent(EXPLAIN_EVENT, explainTelemetryDetail(questionContext, signedIn));
+    setSandraAsk({ message: explainAskMessage(isCreole ? 'ht' : 'fr'), questionContext });
+  };
+  const disclosure = isCreole ? EXPLAIN_DISCLOSURE.ht : EXPLAIN_DISCLOSURE.fr;
+
+  return (
+    <button
+      type="button"
+      className={`sandra-ask__btn sandra-explain${className ? ` ${className}` : ''}`}
+      onClick={onClick}
+      title={disclosure}
+    >
+      <MessageCircle size={16} strokeWidth={2.4} aria-hidden="true" />
+      <span>{isCreole ? EXPLAIN_LABEL.ht : EXPLAIN_LABEL.fr}</span>
+      <span className="sandra-explain__sr">{`. ${disclosure}`}</span>
+    </button>
   );
 }
 

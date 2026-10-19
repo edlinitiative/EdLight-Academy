@@ -6,6 +6,7 @@ import { loadDueReviewIdsResult } from '../services/reviewService';
 import { trackJourney } from '../utils/learningJourney';
 import AnswerStatus, { type AnswerStatusKind } from './journey/practice/AnswerStatus';
 import { useReviewConfirmation, type FlushReview } from './journey/practice/useReviewConfirmation';
+import { ExplainWithSandra } from './SandraWidget';
 import './journey/practice/practice.css';
 
 /** One session question as the quiz page recorded it. */
@@ -381,6 +382,21 @@ export default function QuizResult({
                   {status !== 'correct' && (explanation
                     ? <p className="qr-item__why" dangerouslySetInnerHTML={renderWithKatex(explanation, katexReady)} />
                     : <p className="qr-item__why qr-item__why--none">{tx('Pas encore d’explication rédigée pour cette question.', 'Poko gen eksplikasyon ekri pou kesyon sa a.')}</p>)}
+                  {status === 'incorrect' && (
+                    <ExplainWithSandra
+                      context={{
+                        surface: mode === 'quiz' ? 'quiz_result' : 'practice',
+                        question: String(item?.stem || ''),
+                        studentAnswer: answers.length ? answers.join(' ; ') : undefined,
+                        expectedAnswer: expected || undefined,
+                        explanation: explanation || undefined,
+                        subject: context || undefined,
+                        questionType: typeof item?.kind === 'string' ? item.kind : undefined,
+                        status: 'incorrect',
+                        questionId: item?.id ? String(item.id) : undefined,
+                      }}
+                    />
+                  )}
                 </li>
               );
             })}

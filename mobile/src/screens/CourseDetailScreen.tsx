@@ -35,7 +35,7 @@ import {
 import {
   chapterMeta, formatMinutes, isGeneratedLessonBlurb, lessonMinutes, positionInChapter,
 } from '../components/courses/courseOutline';
-import { confirmLessonComplete } from '../services/progressTracking';
+import { completeLessonDurably } from '../services/writeOutbox';
 import { evidenceLabel, trackJourney } from '../utils/learningJourney';
 import { success as hapticSuccess } from '../utils/haptics';
 import { SUBJECT_META } from '../utils/subjectMeta';
@@ -349,9 +349,10 @@ export default function CourseDetailScreen() {
   }, [allLessons]);
 
   // ── Completion (LJ-05): acknowledged ONLY after a server-confirmed save ──
+  // Queued in the persisted outbox first, so an app kill offline can't lose it (L-3).
   const uid = isAuthenticated ? user?.uid ?? null : null;
   const saveCompletion = useCallback(
-    async (u: string, c: string, l: string) => (u ? confirmLessonComplete(u, c, l) : 'local' as const),
+    async (u: string, c: string, l: string) => (u ? completeLessonDurably(u, c, l) : 'local' as const),
     [],
   );
   const completion = useLessonCompletion({
@@ -423,7 +424,7 @@ export default function CourseDetailScreen() {
   );
 
   if (!course && isLoading) return withChrome(<ListSkeleton rows={6} />);
-  if (!course && isError) return withChrome(<ErrorState onRetry={() => refetch()} />);
+  if (!course && isError) return withChrome(<ErrorState onRetry={() => refetch()} secondaryLabel={t('Retour', 'Retounen')} onSecondary={goBack} />);
   if (!course) {
     // The catalogue loaded but this course is not in it (stale link / hidden).
     return withChrome(
@@ -562,6 +563,8 @@ export default function CourseDetailScreen() {
               offline={offline}
               durationLabel={dur}
               autoStart={autoStartId === activeLesson.id}
+              positionKey={courseId && activeLesson.id ? `${courseId}:${activeLesson.id}` : undefined}
+              uid={uid}
             />
           ) : (
             <View style={{ width: '100%', aspectRatio: 16 / 9, borderRadius: 20, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 }}>

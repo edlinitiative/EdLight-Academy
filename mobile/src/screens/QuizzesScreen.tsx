@@ -44,10 +44,12 @@ import { displayCourseName } from '../utils/courseName';
 import PracticeEntry, { ScopeNotice } from '../components/journey/practice/PracticeEntry';
 import PracticeRunner, { type FinishReason } from '../components/journey/practice/PracticeRunner';
 import PracticeResult from '../components/journey/practice/PracticeResult';
+import { ExplainProvider } from '../components/sandra/ExplainSheet';
 import { useReviewConfirmation } from '../components/journey/practice/useReviewConfirmation';
 import { useOnline } from '../components/journey/practice/useOnline';
 import { questionsLabel } from '../components/journey/practice/copy';
 import type { ReviewScope } from '../components/journey/practice/reviewScope';
+import { recordPlanEvent } from '../services/planEvents';
 import {
   buildDeck, chooseNextAction, fisherYates, itemFromQuizQuestion, reviewIdsOf, sessionSlice, tally,
   type LogEntry, type SessionItem, type SessionMode,
@@ -370,8 +372,19 @@ export default function QuizzesScreen() {
       mode: session.mode, reason, total: tl.total, correct: tl.correct, incorrect: tl.incorrect,
       unanswered: tl.unanswered, ungraded: tl.ungraded,
     });
+    // A finished practice advances its study-plan task (P0 validation P-2).
+    // '*' (course-wide) only completes course-level tasks.
+    const uid = useStore.getState().user?.uid;
+    if (isAuthenticated && uid && answered > 0 && tl.scored > 0 && entry.scope.courseCode) {
+      const unitVal = entry.scope.unit?.value;
+      void recordPlanEvent(uid, {
+        kind: 'practice',
+        course: entry.scope.courseCode,
+        unit: unitVal && unitVal !== '*' ? unitVal : null,
+      }, Math.round((tl.correct / tl.scored) * 100));
+    }
     setResult({ log, reason });
-  }, [session, entry, recordQuizAttempt]);
+  }, [session, entry, recordQuizAttempt, isAuthenticated]);
 
   // ── Result state (computed every render; hooks stay unconditional) ────────
   const slice = session && result ? sessionSlice(session.deck, result.log, session.mode) : null;
@@ -428,17 +441,20 @@ export default function QuizzesScreen() {
   if (phase === 'taking' && session && entry) {
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top', 'bottom']}>
-        <SessionShell
-          key={session.id}
-          deck={session.deck}
-          mode={session.mode}
-          t={t}
-          title={entry.scope.unit?.label || ''}
-          context={contextOf(entry.scope)}
-          onAnswer={onAnswer}
-          onFinish={onFinish}
-          onExit={() => setSession(null)}
-        />
+        <ExplainProvider>
+          <SessionShell
+            key={session.id}
+            deck={session.deck}
+            mode={session.mode}
+            t={t}
+            title={entry.scope.unit?.label || ''}
+            context={contextOf(entry.scope)}
+            onAnswer={onAnswer}
+            onFinish={onFinish}
+            onExit={() => setSession(null)}
+            explainSurface="practice"
+          />
+        </ExplainProvider>
       </SafeAreaView>
     );
   }
@@ -449,7 +465,9 @@ export default function QuizzesScreen() {
     const next = chooseNextAction({ dueInScope, hasNextLesson: !!entry.scope.nextLesson && entry.origin === 'handoff', poolSize }, tl);
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top', 'bottom']}>
+        <ExplainProvider>
         <PracticeResult
+          explainSurface={session.mode === 'quiz' ? 'quiz_result' : 'practice'}
           items={session.deck}
           log={result.log}
           mode={session.mode}
@@ -481,6 +499,7 @@ export default function QuizzesScreen() {
             </View>
           ) : null}
         </PracticeResult>
+        </ExplainProvider>
         {reviewModal}
       </SafeAreaView>
     );

@@ -19,6 +19,7 @@ import { evidenceLabel, trackJourney } from '../utils/learningJourney';
 import { LEVEL_LABEL } from './journey/home/homeJourney';
 import { GRADES, gradeProfile } from '../config/trackConfig';
 import { resetTabToRoot } from '../navigation/navHelpers';
+import { readLocalExamDraft, pickResumeDraft } from '../../../shared/examDraft';
 
 type Nav = BottomTabNavigationProp<TabParamList>;
 
@@ -66,15 +67,12 @@ export default function NextStepCard({
     (async () => {
       let draft: any = null;
       try { if (user?.uid) draft = await loadExamAttemptDraft(user.uid, String(examPath)); } catch { /* offline */ }
+      // Same rule as ExamOverview/ExamTake: newest wins, own account only.
+      let local: any = null;
       try {
-        const raw = await AsyncStorage.getItem(`edlight-exam-draft-${examPath}`);
-        if (raw) {
-          const local = JSON.parse(raw);
-          // Same freshness rule as ExamOverview/ExamTake: newest wins.
-          if (local?.status === 'in_progress' &&
-              (!draft || (local.updated_at_ms || 0) > (draft.updated_at_ms || 0))) draft = local;
-        }
-      } catch { /* corrupt mirror */ }
+        local = readLocalExamDraft(await AsyncStorage.getItem(`edlight-exam-draft-${examPath}`), user?.uid);
+      } catch { /* storage unavailable */ }
+      draft = pickResumeDraft(draft, local);
       if (!active) return;
       const done = draft?.answers ? Object.keys(draft.answers).length : 0;
       const total = Number(draft?.questionCount) || 0;
@@ -200,7 +198,7 @@ export default function NextStepCard({
             ? `${examProgress.done}/${examProgress.total} ${t('réponses enregistrées', 'repons anrejistre')}`
             : `${examProgress.done} ${t('réponses enregistrées', 'repons anrejistre')}`)
         : (step.resume.subtitle ?? null);
-      cta = t("Continuer l'examen", 'Kontinye egzamen an');
+      cta = t("Reprendre l'examen", 'Kontinye egzamen an');
       onPress = () => {
         trackJourney('learning_next_action_selected', { kind: 'resume-exam' });
         resumeActivity(step.resume);

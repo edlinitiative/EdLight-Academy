@@ -1,5 +1,16 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { QuestionContext } from '../../shared/explainContext';
+
+/**
+ * A contextual ask that carries structured grounding ("Explique-moi" on a
+ * missed question). It always opens a FRESH conversation, and the panel keeps
+ * sending `questionContext` with the follow-ups of that conversation.
+ */
+export interface SandraAskRequest {
+  message: string;
+  questionContext?: QuestionContext;
+}
 
 // Number of course videos an anonymous (signed-out) visitor may watch for free
 // before being asked to create an account.
@@ -54,7 +65,7 @@ export interface AppState {
   /** Global search overlay (navbar icon / Cmd+K) */
   searchOpen: boolean;
   /** Query handed from search to Sandra ("Ask Sandra" row); consumed by SandraWidget */
-  sandraAsk: string | null;
+  sandraAsk: string | SandraAskRequest | null;
 
   // Actions
   setUser: (user: any) => void;
@@ -88,7 +99,7 @@ export interface AppState {
   setShowNotifications: (show: boolean) => void;
   setFocusMode: (focus: boolean) => void;
   setSearchOpen: (open: boolean) => void;
-  setSandraAsk: (query: string | null) => void;
+  setSandraAsk: (query: string | SandraAskRequest | null) => void;
   logout: () => void;
 }
 
@@ -134,7 +145,17 @@ const useStore = create<AppState>()(
       setAuthConfirmed: () => set({ authConfirmed: true }),
       setLanguage: (language) => set({ language }),
       setTrack: (track) => set({ track }),
-      setGrade: (grade) => set({ grade }),
+      setGrade: (grade) => {
+        set({ grade });
+        // Mirror the class to the account (same field the app writes), so it
+        // survives sign-out / another computer. Best-effort, never blocks.
+        const uid = get().user?.uid;
+        if (uid && grade) {
+          import('../services/firebase')
+            .then((m) => m.updateUserGrade(uid, grade))
+            .catch(() => {});
+        }
+      },
       setGradeChosen: (chosen) => set({ gradeChosen: !!chosen }),
       setSchoolChosen: (chosen) => set({ schoolChosen: !!chosen }),
       setDismissedSuggestion: (key) => set({ dismissedSuggestionKey: key }),
@@ -202,11 +223,21 @@ const useStore = create<AppState>()(
       setSearchOpen: (open) => set({ searchOpen: !!open }),
       setSandraAsk: (query) => set({ sandraAsk: query }),
       
-      logout: () => set({
+      logout: () => {
+        // The Sandra conversation belongs to this account: the API refuses
+        // another user's conversation id (403), so leaving it made Sandra
+        // unusable for the next student in this tab (P0 validation).
+        try { sessionStorage.removeItem('edlight:sandra:conv'); } catch { /* unavailable */ }
+        set({
         user: null,
         isAuthenticated: false,
         track: null,
         onboardingCompleted: false,
+        // Class is per student (and now restored from users/{uid}.grade on
+        // sign-in): the next account on a shared computer must not inherit it.
+        grade: null,
+        gradeChosen: false,
+        dismissedSuggestionKey: null,
         // The next account on this device gets its own school step; one that
         // already has a school skips it silently (the modal reads the profile).
         schoolChosen: false,
@@ -220,7 +251,8 @@ const useStore = create<AppState>()(
         showCourseModal: false,
         showMobileMenu: false,
         showNotifications: false
-      })
+        });
+      }
     }),
     {
       name: 'edlight-storage',

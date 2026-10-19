@@ -14,6 +14,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useTheme, typeScale } from '../../theme/theme';
 import { useArenaColors, arenaType } from '../../theme/arenaTheme';
+import { useReduceMotion } from '../../utils/motion';
 
 /**
  * A silent, looping demonstration of one question being played.
@@ -46,8 +47,17 @@ export default function ArenaDemoLoop({ isCreole }: { isCreole: boolean }) {
   // One clock from 0→1 across the whole cycle; every element reads a slice of
   // it. Separate timelines would drift apart after a few minutes of looping.
   const clock = useSharedValue(0);
+  const reduce = useReduceMotion();
 
   useEffect(() => {
+    // Reduce Motion: hold one still frame that already tells the story
+    // (question up, a chip chosen while the bar is still green, points shown)
+    // instead of a loop that never stops moving.
+    if (reduce) {
+      cancelAnimation(clock);
+      clock.value = 0.8;
+      return;
+    }
     clock.value = 0;
     clock.value = withRepeat(
       withSequence(
@@ -58,7 +68,7 @@ export default function ArenaDemoLoop({ isCreole }: { isCreole: boolean }) {
       false,
     );
     return () => cancelAnimation(clock);
-  }, [clock]);
+  }, [clock, reduce]);
 
   const questionStyle = useAnimatedStyle(() => ({
     opacity: interpolate(clock.value, [0, 0.12, 0.9, 1], [0, 1, 1, 0]),

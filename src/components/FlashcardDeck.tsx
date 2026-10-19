@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { resolveCorrectIndex } from '../../shared/quizKey';
 import { Shuffle, Lightbulb, Frown, Check } from './icons';
 import { useAppData } from '../hooks/useData';
 import { useKatex, renderWithKatex, shuffleArray } from '../utils/shared';
@@ -39,7 +40,9 @@ export default function FlashcardDeck({ subjectCode, chapterNumber, subchapterNu
       });
     }
 
-    // Convert to flashcard format
+    // Convert to flashcard format. A card whose key resolves to no option is
+    // dropped: it used to show options[0] (or 'A') as "the answer" — a wrong
+    // answer presented as correct (P0 validation).
     return questions.map((q, idx) => {
       // Parse options if they're JSON string
       let options = [];
@@ -56,9 +59,10 @@ export default function FlashcardDeck({ subjectCode, chapterNumber, subchapterNu
         options = [q.option_a, q.option_b, q.option_c, q.option_d].filter(Boolean);
       }
 
-      const correctAnswer = q.correct_answer || q.correctAnswer || 'A';
-      const correctIndex = correctAnswer.charCodeAt(0) - 65; // 'A' -> 0, 'B' -> 1, etc.
-      const correctText = options[correctIndex] || options[0] || 'No answer available';
+      options = (Array.isArray(options) ? options : []).map((o) => String(o));
+      const correctIndex = resolveCorrectIndex(q.correct_answer ?? q.correctAnswer, options);
+      if (correctIndex < 0) return null;
+      const correctText = options[correctIndex];
 
       return {
         id: q.id || q.quiz_id || idx,
@@ -68,7 +72,7 @@ export default function FlashcardDeck({ subjectCode, chapterNumber, subchapterNu
         explanation: q.good_response || q.wrong_response,
         allOptions: options,
       };
-    });
+    }).filter(Boolean);
   }, [quizBank, subjectCode, chapterNumber, subchapterNumber]);
 
   const [shuffledFlashcards, setShuffledFlashcards] = useState(null);
@@ -170,9 +174,17 @@ export default function FlashcardDeck({ subjectCode, chapterNumber, subchapterNu
       </div>
 
       <div className="flashcard-container">
-        <div 
+        {/* The card is the flip control: keyboard-reachable, Enter/Space flip,
+            and aria-pressed says which face is showing. */}
+        <div
           className={`flashcard ${isFlipped ? 'flashcard--flipped' : ''} ${isMastered ? 'flashcard--mastered' : ''} ${isDifficult ? 'flashcard--difficult' : ''}`}
           onClick={toggleFlip}
+          role="button"
+          tabIndex={0}
+          aria-pressed={isFlipped}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleFlip(); }
+          }}
         >
           <div className="flashcard__inner">
             <div className="flashcard__front">

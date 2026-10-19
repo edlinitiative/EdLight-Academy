@@ -27,6 +27,17 @@ export type Palette = {
    *  `azure` itself is 4.53:1 on the light page ground — a hair over AA — so
    *  anything small or important uses this deeper step (6.4:1 on `bg`). */
   azureInk: string;
+  /**
+   * Status colours for TEXT and meaning-carrying icons. The base `danger` /
+   * `success` / `warn` / `coral` are tuned as bright accents (dots, bars,
+   * tints) and fall under AA as text on the light grounds — success #22c55e is
+   * 2.16:1 on `bg`, warn #f59e0b 2.04:1, danger #ef4444 3.57:1. Use these for
+   * any word or glyph a student must read. (Contrast test:
+   * src/theme/__tests__/contrast.test.ts)
+   */
+  dangerInk: string; successInk: string; warnInk: string; coralInk: string;
+  /** Ground for filled DANGER buttons with white text (`danger` is 3.76:1). */
+  dangerFill: string;
 };
 
 export const lightColors: Palette = {
@@ -65,6 +76,11 @@ export const lightColors: Palette = {
   successSoft: '#ecfdf5',
   successFill: '#15803d', // white label = 5.02:1
   azureInk: '#1558B8', // 6.4:1 on bg, 6.7:1 on white
+  dangerInk: '#B91C1C', // 6.13:1 on bg, 5.91:1 on dangerSoft
+  successInk: '#15803d', // 4.76:1 on bg and on successSoft
+  warnInk: '#B45309', // 4.76:1 on bg, 4.84:1 on warnSoft
+  coralInk: '#C2410C', // 4.91:1 on bg
+  dangerFill: '#DC2626', // white label = 4.83:1
 };
 
 export const darkColors: Palette = {
@@ -97,6 +113,12 @@ export const darkColors: Palette = {
   successSoft: '#18393F', // was rgba(52,211,153,0.16)
   successFill: '#15803d', // white label = 5.02:1
   azureInk: '#7DB4F8',    // 7.9:1 on surface
+  // The dark accents are already light enough to read as text.
+  dangerInk: '#f87171',  // 6.16:1 on surface
+  successInk: '#34d399', // 8.86:1 on surface
+  warnInk: '#fbbf24',    // 10.2:1 on surface
+  coralInk: '#FF7043',   // 6.20:1 on surface
+  dangerFill: '#DC2626', // white label = 4.83:1
 };
 
 /**

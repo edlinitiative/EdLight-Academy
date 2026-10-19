@@ -8,6 +8,7 @@ import { arenaColors as C, arenaType } from '../../theme/arenaTheme';
 import { fonts } from '../../theme/theme';
 import { tapMedium } from '../../utils/haptics';
 import { ArenaButton } from './ArenaKit';
+import { modalAnimation, isReduceMotionOn } from '../../utils/motion';
 
 /**
  * Confirm the student's name before a tournament.
@@ -57,9 +58,9 @@ export default function ArenaNameSheet({
   const ok = !!audienceName && isAcceptableAliasInput(audienceName);
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType={modalAnimation(isReduceMotionOn(), 'slide')} onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           style={{ flex: 1, backgroundColor: 'rgba(2, 6, 18, 0.72)' }}
           activeOpacity={1}
           onPress={onClose}

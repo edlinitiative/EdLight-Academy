@@ -1,8 +1,15 @@
 import {
   acceptErrorMessage, drawIdxs, duelShareMessage, duelState, duelUrl, idxsInBank, isDuelCode,
   normalizeDuelCode, outcomeFor, questionKey, questionsAt, shuffleOptions, sortDuels, uniqueByCode,
-  whatsappUrl, type DuelLike, type DuelQuestion,
+  whatsappUrl, duelPicks, type DuelLike, type DuelQuestion,
 } from '../duels';
+
+describe('duelPicks (server grading input)', () => {
+  it('maps each answer to the picked French option text, null for a timeout', () => {
+    const q = { options: ['Paris', 'Lyon'], optionsHt: ['Pari', 'Lyon'] };
+    expect(duelPicks([{ question: q, selected: 0 }, { question: q, selected: -1 }, { question: q, selected: 7 }])).toEqual(['Paris', null, null]);
+  });
+});
 import { TRIVIA_QUESTIONS as WEB_BANK } from '../../data/triviaData';
 import { TRIVIA_QUESTIONS as APP_BANK } from '../../../mobile/src/data/triviaData';
 import { loadDuelBank } from '../duelBank';

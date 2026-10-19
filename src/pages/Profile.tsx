@@ -18,6 +18,7 @@ import { useTrivia } from '../hooks/useTrivia';
 import { useStreak } from '../hooks/useStreak';
 import { useAllProgress } from '../hooks/useProgress';
 import { logoutUser } from '../services/authService';
+import { getWebRelease } from '../utils/telemetry';
 import { STREAK_MILESTONES } from '../services/streakService';
 import { setLeaderboardOptIn as saveBoardIdentity } from '../services/triviaService';
 import { isValidAlias } from '../services/leaderboardService';
@@ -39,7 +40,7 @@ import { useLeaderboard } from '../hooks/useLeaderboard';
 import { getFirstName } from '../utils/shared';
 import '../styles/pf.css';
 import './Profile.css';
-import { AccountBlock, GoalRhythm, Regularity, SettingsRow, SkillSpots, Schoolmates, Toggle } from './profile/ProfileSections';
+import { AccountBlock, GoalRhythm, Regularity, SettingsRow, SkillSpots, Schoolmates, SoundSetting, Toggle } from './profile/ProfileSections';
 import { courseEvidence, evidenceLine, loadCourseLessonCounts, loadCourseLessonIds } from './profile/profileData';
 import { buildProfilePreview, type ProfilePreview } from './profile/profilePreview';
 import { EVIDENCE, trackJourney } from '../utils/learningJourney';
@@ -1026,6 +1027,7 @@ export default function Profile() {
             <h2 id="pr-guest-settings" className="pr-card__title">{t('Réglages', 'Paramèt')}</h2>
             <div className="pr-list">
               <Toggle on={theme === 'dark'} onChange={() => toggleTheme()} label={t('Mode nuit', 'Mòd lannwit')} />
+              <SoundSetting t={t} />
               <div className="pr-line">
                 <span className="pr-line__label" id="pr-lang-guest">{t('Langue', 'Lang')}</span>
                 <LanguageSwitch isCreole={isCreole} setLanguage={setLanguage} label={t('Langue', 'Lang')} />
@@ -1284,6 +1286,10 @@ export default function Profile() {
                 <span className="pr-srow__icon" aria-hidden="true"><Moon size={20} /></span>
                 <Toggle on={theme === 'dark'} onChange={() => toggleTheme()} label={t('Mode nuit', 'Mòd lannwit')} />
               </div>
+              <div className="pr-srow pr-srow--inline">
+                <span className="pr-srow__icon" aria-hidden="true"><AppIcons.Volume2 size={20} /></span>
+                <SoundSetting t={t} />
+              </div>
               <SettingsRow id="pr-row-lang" icon={<Languages size={20} />} label={t('Langue', 'Lang')} value={isCreole ? 'Kreyòl' : 'Français'} open={openRow === 'lang'} onToggle={() => toggleRow('lang')}>
                 <LanguageSwitch isCreole={isCreole} setLanguage={setLanguage} label={t('Langue', 'Lang')} />
               </SettingsRow>
@@ -1295,6 +1301,10 @@ export default function Profile() {
             </div>
           </section>
           <button type="button" className="pr-textbtn pr-logout" onClick={handleLogout}>{t('Se déconnecter', 'Dekonekte')}</button>
+          {/* À propos / version: the deployed commit, quoted in tester reports. */}
+          <p className="pr-version" style={{ textAlign: 'center', fontSize: '0.8125rem', color: 'var(--text-muted, #5F6B7A)', margin: '0.75rem 0 0', userSelect: 'all' }}>
+            {t('Version', 'Vèsyon')} {getWebRelease().slice(0, 7)}
+          </p>
         </div>
         {showTrackSelector && (
           <TrackSelectorModal currentTrack={track} onClose={() => setShowTrackSelector(false)} />
@@ -1330,6 +1340,7 @@ export default function Profile() {
               <h2 id="pr-prefs-title" className="pr-card__title">{t('Préférences', 'Preferans')}</h2>
               <div className="pr-list">
                 <Toggle on={theme === 'dark'} onChange={() => toggleTheme()} label={t('Mode nuit', 'Mòd lannwit')} />
+                <SoundSetting t={t} />
                 <div className="pr-line">
                   <span className="pr-line__label">{t('Langue', 'Lang')}</span>
                   <LanguageSwitch isCreole={isCreole} setLanguage={setLanguage} label={t('Langue', 'Lang')} />

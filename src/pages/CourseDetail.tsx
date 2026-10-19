@@ -7,13 +7,13 @@ import { useCourseProgress } from '../hooks/useProgress';
 import YouTubePlayer, { getYouTubeVideoId } from '../components/YouTubePlayer';
 import CourseSidebar from '../components/CourseSidebar';
 import CourseOverview from '../components/CourseOverview';
-import { ErrorState } from '../components/StateViews';
+import { ErrorState, LoadingState } from '../components/StateViews';
 import { Skeleton, SkeletonText } from '../components/Skeleton';
 import { useFocusMode } from '../hooks/useFocusMode';
 import useStore, { FREE_VIDEO_LIMIT } from '../contexts/store';
 import { chapterTestLessonMap, lessonMastery, masteryNextStep, summarize } from '../../shared/mastery';
 import { useCourseMastery } from '../hooks/useMastery';
-import { clearVideoPosition, resumeSecondsFor, saveVideoPosition } from '../utils/videoPositions';
+import { CLOUD_WRITE_EVERY_S, clearVideoPosition, cloudResumeSeconds, resumeSecondsFor, saveVideoPosition } from '../utils/videoPositions';
 import MasteryBadge from '../components/MasteryBadge';
 import ChapterTestCard from '../components/ChapterTestCard';
 import { useAskSandra, SandraFocusPanel } from '../components/SandraWidget';
@@ -52,7 +52,16 @@ const trackVideoProgress = (...args: Parameters<typeof import('../services/progr
 // The completion write that REPORTS its outcome (the older markLessonComplete
 // swallows every error, so the screen could not tell saved from failed).
 const confirmLessonComplete = (uid: string, courseId: string, lessonId: string) =>
-  loadProgressTracking().then((m) => m.confirmLessonComplete(uid, courseId, lessonId));
+  loadProgressTracking().then(async (m) => {
+    const outcome = await m.confirmLessonComplete(uid, courseId, lessonId);
+    // A newly finished lesson completes its study-plan video task (P0 P-2).
+    if (outcome === 'saved') {
+      import('../services/studyPlanService')
+        .then((sp) => sp.recordPlanEvent(uid, { kind: 'lesson', courseId, lessonId }, 100))
+        .catch(() => {});
+    }
+    return outcome;
+  });
 
 // ── Video resume position ("reprendre la vidéo") ───────────────────────────
 // The last playback second per lesson, in localStorage — one bucket per
@@ -183,7 +192,10 @@ export default function CourseDetail() {
   // True while we're showing the catalog version and the enriched one
   // (real video URLs) is still on its way.
   const enriching = !enrichedCourse && (isLoading || isFetching);
-  const isEnrolled = enrolledCourses.some((c) => c.id === courseId);
+  // Any signed-in student can complete a lesson. Nothing calls enrollInCourse
+  // any more, so gating on the local enrolled list hid "Terminer la leçon" and
+  // switched off video-progress tracking for every newer account (P0 validation).
+  const isEnrolled = enrolledCourses.some((c) => c.id === courseId) || (!!isAuthenticated && !!user?.uid);
   const modules = course?.modules ?? [];
   const activeModuleData = modules[activeModule] ?? null;
   const lessonBreakdown = Array.isArray(activeModuleData?.lessons) ? activeModuleData.lessons : [];
@@ -616,14 +628,20 @@ export default function CourseDetail() {
   // Per-lesson key for saving/restoring the video position.
   const positionKey = courseId && activeLessonData?.id ? `${courseId}:${activeLessonData.id}` : '';
   const lastSavedRef = useRef({ key: '', t: -100 });
+  const lastCloudRef = useRef({ key: '', t: -100, done: false });
 
   // Where to resume this lesson's video (0 if none / completed). Recomputed when
   // the lesson changes; the player remounts per video via its key.
+  // This device's position wins; otherwise the position saved to the
+  // student's progress doc on another device (cross-device resume, CON-02).
+  const cloudWatch = activeLessonData?.id ? progress?.watchedVideos?.[activeLessonData.id] : null;
   const resumeSeconds = useMemo(() => {
     if (!positionKey || isLessonCompleted) return 0;
-    return resumeSecondsFor(user?.uid, positionKey);
+    const local = resumeSecondsFor(user?.uid, positionKey);
+    if (local) return local;
+    return cloudResumeSeconds(cloudWatch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [positionKey, youtubeVideoId, isLessonCompleted, user?.uid]);
+  }, [positionKey, youtubeVideoId, isLessonCompleted, user?.uid, cloudWatch?.watchDuration]);
 
   // "Recommencer" — a resume the learner didn't want. Forgetting the stored
   // second and remounting the player (the token is part of its key) is the
@@ -651,8 +669,18 @@ export default function CourseDetail() {
 
     if (!user?.uid || !isEnrolled || !activeLessonData) return;
 
-    // Track video progress when user watches 10+ seconds
-    if (currentTime >= 10) {
+    // Track video progress when user watches 10+ seconds. Throttled: the
+    // player reports every second and each write is a read + write of the
+    // progress doc — it used to run every second of playback (and of pause).
+    // Now: at most every CLOUD_WRITE_EVERY_S of playback, plus the first time
+    // the 90% "completed" mark is crossed.
+    const done = currentTime >= duration * 0.9;
+    const cloud = lastCloudRef.current;
+    const due = cloud.key !== positionKey
+      || Math.abs(currentTime - cloud.t) >= CLOUD_WRITE_EVERY_S
+      || (done && !cloud.done);
+    if (currentTime >= 10 && due) {
+      lastCloudRef.current = { key: positionKey, t: currentTime, done: done || cloud.done };
       trackVideoProgress(user.uid, courseId, activeLessonData.id, {
         watchDuration: currentTime,
         totalDuration: duration,
@@ -697,7 +725,7 @@ export default function CourseDetail() {
     return (
       <div className="section course-detail">
         <div className="container course-detail__container">
-          <div className="course-overview" aria-busy="true">
+          <LoadingState className="course-overview" label={L('Chargement du cours…', 'N ap chaje kou a…')}>
             <Skeleton width={120} height={16} radius={999} style={{ marginBottom: '1.25rem' }} />
             <header className="course-overview__hero">
               <div className="skeleton-row" style={{ marginBottom: '0.9rem' }}>
@@ -721,7 +749,7 @@ export default function CourseDetail() {
                 ))}
               </div>
             </section>
-          </div>
+          </LoadingState>
         </div>
       </div>
     );
@@ -731,7 +759,12 @@ export default function CourseDetail() {
     return (
       <div className="section">
         <div className="container">
-          <ErrorState onRetry={() => refetch()} retrying={isFetching} />
+          <ErrorState
+            page
+            onRetry={() => refetch()}
+            retrying={isFetching}
+            action={{ label: L('Tous les cours', 'Tout kou yo'), onClick: () => navigate('/courses') }}
+          />
         </div>
       </div>
     );
@@ -936,6 +969,11 @@ export default function CourseDetail() {
                         promoted, so `mastered` means the student still knew it
                         when it wasn't the only thing in front of them. */}
                     <UnitQuiz
+                      /* Remount per unit+lesson: the frozen question draw and
+                         run state otherwise survived a jump to another unit's
+                         quiz lesson, and the chapter test then promoted unit
+                         2's lessons with unit 1's answers (P0 validation). */
+                      key={`quiz:${activeModuleData?.id ?? ''}:${activeLessonData?.id ?? ''}`}
                       subjectCode={course?.code}
                       unitId={undefined}
                       chapterNumber={activeModuleData?.unit_no}
@@ -1170,6 +1208,7 @@ export default function CourseDetail() {
                     </h2>
                     {showChapterTest && (
                       <UnitQuiz
+                        key={`test:${activeModuleData?.id ?? ''}`}
                         subjectCode={course?.code}
                         unitId={undefined}
                         chapterNumber={activeModuleData?.unit_no}
@@ -1189,6 +1228,7 @@ export default function CourseDetail() {
                          the score to the lesson, so it can climb the mastery
                          ladder. */
                       <UnitQuiz
+                        key={`practice:${activeModuleData?.id ?? ''}:${activeLessonData?.id ?? ''}`}
                         subjectCode={course?.code}
                         unitId={undefined}
                         chapterNumber={activeModuleData?.unit_no}

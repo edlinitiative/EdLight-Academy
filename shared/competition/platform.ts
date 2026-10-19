@@ -1,5 +1,6 @@
 import type { TournamentConfig } from '../tournois/config';
 import type { Fixture } from '../leagues/standings';
+import type { GameMode, TeamRoles } from '../teams/modes';
 export interface Team {
   id: string;
   name: string;
@@ -24,6 +25,8 @@ export interface CompetitionEvent {
   audience: 'public' | 'school' | 'private';
   entryPolicy: 'open' | 'approval' | 'invitation';
   entryMode: 'individual' | 'named_team';
+  /** Missing on legacy events = 'independent'. Team modes need named_team + live/window. */
+  gameMode?: GameMode;
   delivery: 'online' | 'physical' | 'external';
   state: 'draft' | 'published' | 'cancelled' | 'closed';
   config: TournamentConfig;
@@ -60,6 +63,13 @@ export interface EventEntry {
   policyVersion: string;
   rosterSchoolKey: string | null;
   lockedAt: number | null;
+  /** Shared-answer events: planned submitter and deputy (frozen at the start). */
+  roles?: TeamRoles | null;
+  /** Relay events: planned slot order (frozen at the start). */
+  relaySlots?: string[] | null;
+  rolesVersion?: number;
+  /** Starters who confirmed the current roles/slots. */
+  dutiesConfirmed?: string[];
 }
 export interface League {
   id: string;

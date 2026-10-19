@@ -32,9 +32,18 @@
  * Writes are read-modify-write, but safely: the promotion rules are monotonic
  * (a record only ever improves) and the write touches ONLY the lesson that
  * changed via a merge, so a stale read can't roll back another device's work.
+ *
+ * And transactionally (P0 validation L-9, L-10): the read and the write run in
+ * one Firestore transaction, so a phone writing the same lesson between our
+ * read and our write makes the transaction retry against its value instead of
+ * being joined with a stale one. A transaction needs the server; when it fails
+ * (offline, a token error) the score is NOT dropped any more: it is queued in
+ * the write outbox (services/writeOutbox) and replayed through the same
+ * transaction at sign-in / reconnect. A blind merge write is never used: a
+ * field merge could lower `bestPct`.
  */
 
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, runTransaction } from 'firebase/firestore';
 import { db } from './firebase';
 import {
   applyExerciseScore,
@@ -43,6 +52,7 @@ import {
   type ProgressMap,
 } from '../../shared/mastery';
 import { mergeLesson, toWireFormat, MASTERY_PATH } from '../../shared/masteryMerge';
+import { queueForReplay, registerOutboxHandler } from './writeOutbox';
 
 /** The one mastery document, shared with the mobile app. */
 function masteryDoc(userId: string) {
@@ -138,48 +148,82 @@ export async function readCourseMastery(
 }
 
 /**
- * Read the current record for one lesson, including the legacy `completed`
- * flag — the transitions need the level a lesson is actually AT, and a lesson
- * sitting at `seen` because its video was watched promotes differently from
- * one at `none`.
+ * Read the lessons' current records (including the legacy `completed` flag:
+ * a lesson at `seen` promotes differently from one at `none`), let `compute`
+ * decide what changes, and write ONLY those lessons, all inside one
+ * transaction. `merge: true` leaves sibling lessons untouched.
  */
-async function readLessonRecord(
+async function transactLessons(
   userId: string,
   courseId: string,
   lessonIds: string[],
-): Promise<ProgressMap> {
-  const [masterySnap, progressSnap] = await Promise.all([
-    getDoc(masteryDoc(userId)),
-    getDoc(doc(db, 'users', userId, 'progress', courseId)),
-  ]);
-  const completed: string[] = progressSnap.exists()
-    ? (progressSnap.data()?.completedLessons || [])
-    : [];
-  const all = toProgressMap({
-    lessons: masterySnap.exists() ? masterySnap.data()?.lessons : null,
-    completedLessons: completed,
+  compute: (current: ProgressMap) => Record<string, LessonProgress>,
+): Promise<Record<string, LessonProgress>> {
+  const masteryRef = masteryDoc(userId);
+  const progressRef = doc(db, 'users', userId, 'progress', courseId);
+  return runTransaction(db, async (tx) => {
+    const masterySnap = await tx.get(masteryRef);
+    const progressSnap = await tx.get(progressRef);
+    const completed: string[] = progressSnap.exists()
+      ? (progressSnap.data()?.completedLessons || [])
+      : [];
+    const all = toProgressMap({
+      lessons: masterySnap.exists() ? masterySnap.data()?.lessons : null,
+      completedLessons: completed,
+    });
+    const current: ProgressMap = {};
+    for (const id of lessonIds) current[id] = all[id];
+    const changed = compute(current);
+    const wire = toWireFormat(changed);
+    if (Object.keys(wire).length > 0) tx.set(masteryRef, { lessons: wire }, { merge: true });
+    return changed;
   });
-  const out: ProgressMap = {};
-  for (const id of lessonIds) out[id] = all[id];
-  return out;
 }
 
-/**
- * Write back only the lessons that changed. `merge: true` deep-merges the
- * nested map, so sibling lessons — and anything another device wrote between
- * our read and this write — are untouched.
- */
-async function writeLessons(userId: string, changed: Record<string, LessonProgress>): Promise<void> {
-  const wire = toWireFormat(changed);
-  if (Object.keys(wire).length === 0) return;
-  await setDoc(masteryDoc(userId), { lessons: wire }, { merge: true });
+interface ExercisePayload { courseId: string; lessonId: string; pct: number; at: number }
+interface ChapterPayload { courseId: string; perLesson: Record<string, boolean>; at: number }
+
+function exerciseChange(lessonId: string, pct: number, at: number) {
+  return (current: ProgressMap): Record<string, LessonProgress> => {
+    const next = applyExerciseScore(current[lessonId], pct, at);
+    // Join against what the transaction read: only ever an improvement.
+    return next ? { [lessonId]: mergeLesson(current[lessonId], next) } : {};
+  };
 }
 
+function chapterChange(perLesson: Record<string, boolean>, at: number) {
+  return (current: ProgressMap): Record<string, LessonProgress> => {
+    const changed: Record<string, LessonProgress> = {};
+    for (const [lessonId, allCorrect] of Object.entries(perLesson)) {
+      const next = applyChapterTestResult(current[lessonId], allCorrect, at);
+      if (next) changed[lessonId] = mergeLesson(current[lessonId], next);
+    }
+    return changed;
+  };
+}
+
+// Replays of writes a failed transaction queued (same timestamps as the
+// original attempt, so `levelUpAt` / `masteredAt` say when it was earned).
+registerOutboxHandler('mastery-exercise', async (op) => {
+  const p = op.payload as ExercisePayload;
+  if (!p?.courseId || !p?.lessonId || typeof p.pct !== 'number') return 'drop';
+  await transactLessons(op.uid, p.courseId, [p.lessonId], exerciseChange(p.lessonId, p.pct, p.at || op.createdAt));
+  return 'done';
+});
+registerOutboxHandler('mastery-chapter', async (op) => {
+  const p = op.payload as ChapterPayload;
+  const ids = Object.keys(p?.perLesson || {});
+  if (!p?.courseId || ids.length === 0) return 'drop';
+  await transactLessons(op.uid, p.courseId, ids, chapterChange(p.perLesson, p.at || op.createdAt));
+  return 'done';
+});
+
 /**
- * Record an exercise score for ONE lesson. Only ever improves the lesson —
+ * Record an exercise score for ONE lesson. Only ever improves the lesson:
  * the promotion rules live in the shared model, so web and mobile agree on
  * what a score is worth. No-ops when the score doesn't beat the record, so a
- * repeat attempt costs no write.
+ * repeat attempt costs no write. When the transaction can't run (offline), the
+ * score is queued for replay instead of being dropped.
  */
 export async function recordLessonExercise(
   userId: string | null | undefined,
@@ -188,16 +232,14 @@ export async function recordLessonExercise(
   pct: number,
 ): Promise<LessonProgress | null> {
   if (!userId || !courseId || !lessonId) return null;
+  const at = Date.now();
   try {
-    const current = await readLessonRecord(userId, courseId, [lessonId]);
-    const next = applyExerciseScore(current[lessonId], pct, Date.now());
-    if (!next) return null;
-    // Join against what we read, so a concurrent phone write can only ever be
-    // improved on, never undone.
-    await writeLessons(userId, { [lessonId]: mergeLesson(current[lessonId], next) });
-    return next;
+    const changed = await transactLessons(userId, courseId, [lessonId], exerciseChange(lessonId, pct, at));
+    return changed[lessonId] ?? null;
   } catch (err) {
-    console.warn('[mastery] failed to record exercise score:', err);
+    console.warn('[mastery] exercise score queued for retry:', err);
+    const payload: ExercisePayload = { courseId, lessonId, pct, at };
+    await queueForReplay(userId, 'mastery-exercise', payload);
     return null;
   }
 }
@@ -219,20 +261,14 @@ export async function recordChapterTest(
   if (!userId || !courseId) return 0;
   const entries = Object.entries(perLesson || {});
   if (entries.length === 0) return 0;
+  const at = Date.now();
   try {
-    const current = await readLessonRecord(userId, courseId, entries.map(([id]) => id));
-    const now = Date.now();
-    const changed: Record<string, LessonProgress> = {};
-    for (const [lessonId, allCorrect] of entries) {
-      const next = applyChapterTestResult(current[lessonId], allCorrect, now);
-      if (next) changed[lessonId] = mergeLesson(current[lessonId], next);
-    }
-    const count = Object.keys(changed).length;
-    if (count === 0) return 0;
-    await writeLessons(userId, changed);
-    return count;
+    const changed = await transactLessons(userId, courseId, entries.map(([id]) => id), chapterChange(perLesson, at));
+    return Object.keys(changed).length;
   } catch (err) {
-    console.warn('[mastery] failed to record chapter test:', err);
+    console.warn('[mastery] chapter test queued for retry:', err);
+    const payload: ChapterPayload = { courseId, perLesson, at };
+    await queueForReplay(userId, 'mastery-chapter', payload);
     return 0;
   }
 }

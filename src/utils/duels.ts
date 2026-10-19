@@ -213,9 +213,25 @@ export function acceptErrorMessage(error: string | null | undefined, isCreole: b
       return t('Défi introuvable.', 'Nou pa jwenn defi a.');
     case 'self_challenge':
       return t('Tu ne peux pas relever ton propre défi.', 'Ou pa ka jwe pwòp defi pa w.');
+    case 'bank_mismatch':
+      return t('Ce défi a été créé avec d’autres questions. Mets à jour la page ou l’app, puis réessaie.', 'Defi sa a te fèt ak lòt kesyon. Mete paj la oswa app la ajou, epi eseye ankò.');
     case 'rate_limit_exceeded':
       return t('Trop d’essais d’un coup. Réessaie dans quelques minutes.', 'Twòp esè yon sèl kou. Eseye ankò nan kèk minit.');
     default:
       return t('Le score n’a pas pu être envoyé. Vérifie ta connexion.', 'Nòt la pa t ka voye. Verifye koneksyon ou.');
   }
+}
+
+/**
+ * What the server grades a duel from (P0 validation D-8): the French text of
+ * the option picked for each question, null for a timeout. `selected` indexes
+ * the question's own (shuffled) `options`, which stay French.
+ */
+export function duelPicks(answers: Array<{ question?: { options?: unknown }; selected?: number }>): Array<string | null> {
+  return answers.map((a) => {
+    const opts = Array.isArray(a?.question?.options) ? (a.question!.options as unknown[]) : [];
+    const i = typeof a?.selected === 'number' ? a.selected : -1;
+    const v = i >= 0 && i < opts.length ? opts[i] : null;
+    return typeof v === 'string' && v ? v : null;
+  });
 }

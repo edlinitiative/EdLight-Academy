@@ -9,12 +9,13 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AlertCircle, Inbox } from 'lucide-react-native';
+import { AlertCircle, Inbox, WifiOff } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { useColors, useColorScheme, radius, typeScale, cardSurfaceFor } from '../theme/theme';
 import { useReduceMotion } from '../utils/motion';
 import LoadingSpinner from './ui/LoadingSpinner';
 import Button from './ui/Button';
+import { useOnline } from './journey/practice/useOnline';
 
 /**
  * A single placeholder block for skeleton screens. A soft highlight sweeps
@@ -201,11 +202,23 @@ export function LoadingState({ message }: { message?: string }) {
   );
 }
 
+/**
+ * The one error state. Always offers a way forward: `onRetry` (keeps the
+ * student's place and refetches) and/or a secondary "way back"
+ * (`secondaryLabel` + `onSecondary`, e.g. "Retour aux cours"). When the device
+ * is offline it says so plainly (WifiOff + "Tu es hors ligne") instead of a
+ * generic failure, because the fix is different: reconnect, not retry.
+ */
 export function ErrorState({
   message,
   onRetry,
   title,
   description,
+  secondaryLabel,
+  onSecondary,
+  offline: offlineProp,
+  offlineTitle,
+  offlineDescription,
 }: {
   message?: string;
   onRetry?: () => void;
@@ -213,17 +226,33 @@ export function ErrorState({
   title?: string;
   /** Optional supportive line under the title. */
   description?: string;
+  /** A way back / out ("Retour", "Voir les cours"). Ghost button under Retry. */
+  secondaryLabel?: string;
+  onSecondary?: () => void;
+  /** Force the offline variant; by default it follows NetInfo. */
+  offline?: boolean;
+  /** Screen-specific offline copy (e.g. what stays available offline). */
+  offlineTitle?: string;
+  offlineDescription?: string;
 }) {
   const { language } = useStore();
   const colors = useColors();
+  const online = useOnline();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
-  const heading = title ?? message ?? t('Une erreur est survenue.', 'Gen yon erè ki rive.');
-  const sub = description ?? t('Vérifie ta connexion et réessaie.', 'Tcheke koneksyon ou epi eseye ankò.');
+  const offline = offlineProp ?? online === false;
+  const heading = offline
+    ? offlineTitle ?? t('Tu es hors ligne', 'Ou pa sou entènèt')
+    : title ?? message ?? t('Une erreur est survenue.', 'Gen yon erè ki rive.');
+  const sub = offline
+    ? offlineDescription ?? t('Reconnecte-toi, puis réessaie.', 'Rekonekte, epi eseye ankò.')
+    : description ?? t('Vérifie ta connexion et réessaie.', 'Tcheke koneksyon ou epi eseye ankò.');
   return (
     <View className="flex-1 items-center justify-center py-16 px-8" style={{ backgroundColor: colors.bg }}>
       <Medallion tint={colors.danger}>
-        <AlertCircle color={colors.danger} size={34} strokeWidth={1.75} />
+        {offline
+          ? <WifiOff color={colors.muted} size={34} strokeWidth={1.75} />
+          : <AlertCircle color={colors.danger} size={34} strokeWidth={1.75} />}
       </Medallion>
       {/* The message is announced as it appears (an error replaces content the
           student was waiting for), heading + explanation read as one alert. */}
@@ -243,14 +272,75 @@ export function ErrorState({
           </Text>
         ) : null}
       </View>
-      {onRetry && (
+      {onRetry || (secondaryLabel && onSecondary) ? (
+        <View style={{ marginTop: 20, gap: 10, alignItems: 'center' }}>
+          {onRetry ? (
+            <Button
+              label={t('Réessayer', 'Eseye ankò')}
+              onPress={onRetry}
+              accessibilityLabel={t('Réessayer', 'Eseye ankò')}
+            />
+          ) : null}
+          {secondaryLabel && onSecondary ? (
+            <Button
+              label={secondaryLabel}
+              onPress={onSecondary}
+              variant={onRetry ? 'ghost' : 'primary'}
+              accessibilityLabel={secondaryLabel}
+            />
+          ) : null}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+/**
+ * Error for ONE section inside a screen (a card, a board, a rail) — the rest
+ * of the screen stays usable, so this must not take over the page the way
+ * `ErrorState` does. Same contract: says what failed, offers Retry, switches
+ * to an offline line when NetInfo reports no connection.
+ */
+export function InlineError({
+  message,
+  onRetry,
+  offline: offlineProp,
+}: {
+  message?: string;
+  onRetry?: () => void;
+  offline?: boolean;
+}) {
+  const { language } = useStore();
+  const colors = useColors();
+  const online = useOnline();
+  const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
+  const offline = offlineProp ?? online === false;
+  const text = offline
+    ? t('Hors ligne : reconnecte-toi pour charger cette section.', 'Ou pa sou entènèt : rekonekte pou chaje pati sa a.')
+    : message ?? t('Cette section n’a pas pu être chargée.', 'Pati sa a pa t ka chaje.');
+  return (
+    <View style={{ alignItems: 'center', gap: 10, paddingVertical: 16 }}>
+      <View
+        accessible
+        accessibilityRole="alert"
+        accessibilityLiveRegion="polite"
+        accessibilityLabel={text}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 8 }}
+      >
+        {offline
+          ? <WifiOff color={colors.muted} size={18} />
+          : <AlertCircle color={colors.danger} size={18} />}
+        <Text style={[typeScale.status, { color: colors.muted, flexShrink: 1, textAlign: 'center' }]}>{text}</Text>
+      </View>
+      {onRetry ? (
         <Button
           label={t('Réessayer', 'Eseye ankò')}
           onPress={onRetry}
+          variant="secondary"
+          size="sm"
           accessibilityLabel={t('Réessayer', 'Eseye ankò')}
-          style={{ marginTop: 20 }}
         />
-      )}
+      ) : null}
     </View>
   );
 }

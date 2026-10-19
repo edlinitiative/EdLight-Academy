@@ -119,12 +119,13 @@ function bootstrapFirebaseAuth() {
       onAuthStateChange(async (user) => {
         const { setUser, setAuthConfirmed, logout } = useStore.getState();
         if (user) {
-          // Update last_seen in Firestore on session restore
-          try {
-            await upsertUserDocument(user, false);
-          } catch (error) {
+          // Update last_seen in Firestore on session restore. NOT awaited: a
+          // Firestore write only resolves on server ack, so offline (installed
+          // PWA opened without signal) the await never returned, setUser /
+          // setAuthConfirmed never ran and "/" spun forever (P0 validation).
+          upsertUserDocument(user, false).catch((error) => {
             console.error('Failed to update user document:', error);
-          }
+          });
 
           setUser({
             uid: user.uid,
@@ -132,6 +133,16 @@ function bootstrapFirebaseAuth() {
             email: user.email || '',
             picture: user.photoURL || '',
           });
+          // Replay writes a failed request left queued: leaderboard awards
+          // (D-3), mastery and study-plan transactions (L-9, P-4). The two
+          // services register their replay handlers when loaded.
+          Promise.all([
+            import('./services/writeOutbox'),
+            import('./services/masteryService'),
+            import('./services/studyPlanService'),
+          ])
+            .then(([{ drainWriteOutbox }]) => drainWriteOutbox(user.uid))
+            .catch(() => {});
         } else {
           logout();
         }
@@ -145,8 +156,22 @@ function bootstrapFirebaseAuth() {
     })
     .catch((error) => {
       console.error('Failed to initialize Firebase auth:', error);
+      // The Firebase chunk could not load (offline PWA with an uncached chunk,
+      // stale deploy). Without this, a persisted signed-in student sat on "/"
+      // behind HomeRoute's spinner forever. The persisted user drives the UI;
+      // pages that need the network show their own offline/error states.
+      useStore.getState().setAuthConfirmed();
     });
+  // Bounded wait: if Firebase has not answered at all after AUTH_CONFIRM_MAX_MS
+  // (a hung chunk request on "lie-fi"), stop holding the UI. A later answer
+  // still applies (sign-out included) through the listener above.
+  setTimeout(() => {
+    if (!useStore.getState().authConfirmed) useStore.getState().setAuthConfirmed();
+  }, AUTH_CONFIRM_MAX_MS);
 }
+
+/** Longest the signed-in "/" waits on Firebase before rendering from the persisted session. */
+const AUTH_CONFIRM_MAX_MS = 8000;
 
 // Defer to browser idle time (with a safety timeout) so the SDK downloads
 // without competing with the first meaningful paint.

@@ -107,3 +107,23 @@ export function resumeSecondsFor(uid: string | null | undefined, key: string): n
   if (rec.d && rec.t > rec.d * 0.95) return 0;
   return Math.floor(rec.t);
 }
+
+/** Seconds of playback between two writes of the progress doc (CourseDetail). */
+export const CLOUD_WRITE_EVERY_S = 30;
+
+/**
+ * Cross-device fallback: the position stored on the student's progress doc
+ * (`watchedVideos[lessonId]`, written by trackVideoProgress on any device),
+ * under the same rules as the local one — nothing under 15 s, nothing for a
+ * finished video (completed, or past 95% of its length).
+ */
+export function cloudResumeSeconds(
+  rec: { watchDuration?: unknown; totalDuration?: unknown; completed?: unknown } | null | undefined,
+): number {
+  if (!rec || rec.completed === true) return 0;
+  const t = Number(rec.watchDuration);
+  const d = Number(rec.totalDuration);
+  if (!Number.isFinite(t) || t < 15) return 0;
+  if (Number.isFinite(d) && d > 0 && t > d * 0.95) return 0;
+  return Math.floor(t);
+}

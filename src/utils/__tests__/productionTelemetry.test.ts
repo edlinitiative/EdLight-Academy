@@ -52,3 +52,28 @@ describe('web production telemetry bootstrap', () => {
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 });
+
+describe('web error capture', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('dedupes per signature, skips opaque script errors and tags signature/kind/screen', () => {
+    const listeners: Record<string, (event: any) => void> = {};
+    jest.spyOn(window, 'addEventListener').mockImplementation((name, listener) => { listeners[name] = listener as any; });
+    const sink = jest.fn();
+    jest.isolateModules(() => {
+      const telemetry = require('../telemetry');
+      telemetry.initTelemetry();
+      telemetry.setTelemetrySink(sink);
+      const error = new TypeError('x.map is not a function for user 123');
+      for (let i = 0; i < 5; i++) listeners.error({ error, message: error.message });
+      listeners.error({ error: null, message: 'Script error.' });
+      listeners.unhandledrejection({ reason: Object.assign(new Error('Loading chunk 7 failed'), { name: 'ChunkLoadError' }) });
+    });
+    const names = sink.mock.calls.map(([e]) => e.name);
+    expect(names).toEqual(['window_error', 'window_error', 'window_error', 'chunk_load_error']);
+    const first = sink.mock.calls[0][0];
+    expect(first.detail).toEqual(expect.objectContaining({ errorKind: 'not_a_function', screen: 'home', occurrence: 1, fatal: false }));
+    expect(first.detail.signature).toMatch(/^[0-9a-f]{8}$/);
+    expect(first.context).toEqual(expect.objectContaining({ platform: 'web' }));
+  });
+});

@@ -46,7 +46,7 @@ export default function SectionHeader({ title, badge, actionLabel, onAction, sty
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 8 }}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 2, minHeight: 32 }}
         >
-          <Text style={[typeScale.bodyMd, { color: colors.azureInk }]}>{actionLabel}</Text>
+          <Text maxFontSizeMultiplier={1.5} style={[typeScale.bodyMd, { color: colors.azureInk }]}>{actionLabel}</Text>
           <ChevronRight color={colors.azureInk} size={16} strokeWidth={2.4} />
         </PressableScale>
       ) : null}

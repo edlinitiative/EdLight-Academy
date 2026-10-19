@@ -21,7 +21,8 @@
  * a bounded client write because the award endpoint requires an xpDelta > 0.
  */
 
-import { db, authedFetch } from './firebase';
+import { db } from './firebase';
+import { awardXpDurably } from './writeOutbox';
 import {
   doc,
   collection,
@@ -74,20 +75,14 @@ function entryRef(id, uid) {
 // ─── Writes ─────────────────────────────────────────────────────────────────
 
 /**
- * Best-effort POST to the server-authoritative award endpoint. The uid is taken
- * from the verified ID token server-side (never the body). Failures (offline,
- * 401, 429, 5xx) are logged and swallowed — an XP award must never crash
- * gameplay, mirroring the old fire-and-forget Firestore writes.
+ * POST to the server-authoritative award endpoint through the retry outbox
+ * (services/writeOutbox): the award carries a client operation id and is kept
+ * in localStorage until the server confirms it, then replayed at sign-in and
+ * on reconnect. The server dedupes by that id (P0 validation D-3). Never
+ * throws — an XP award must never crash gameplay.
  */
-async function postAward(payload: Record<string, unknown>) {
-  try {
-    const res = await authedFetch('/api/leaderboard/award', payload);
-    if (!res.ok) {
-      console.error('[Leaderboard] award endpoint returned', res.status);
-    }
-  } catch (err) {
-    console.error('[Leaderboard] postAward error:', err);
-  }
+async function postAward(uid: string, payload: Record<string, unknown>) {
+  await awardXpDurably(uid, payload);
 }
 
 /**
@@ -103,7 +98,7 @@ async function postAward(payload: Record<string, unknown>) {
  */
 export async function addWeeklyXp(uid, xp, meta: any = {}) {
   if (!uid || !xp || xp <= 0) return;
-  await postAward({
+  await postAward(uid, {
     xpDelta: xp,
     // Endpoint only writes displayName when it's a valid alias, so an award
     // never erases a pseudo the learner already set.

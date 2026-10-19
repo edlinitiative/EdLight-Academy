@@ -50,7 +50,7 @@ function ValidityNote({ widget, value }: { widget: Widget; value: Response[strin
     ? t('Entre un nombre, par exemple 12 ou 3,5', 'Antre yon nimewo, tankou 12 oswa 3,5')
     : t('Complète toutes les parties', 'Konplete tout pati yo');
   return (
-    <Text style={[typeScale.caption, { color: colors.warn, marginTop: 4 }]}>
+    <Text style={[typeScale.caption, { color: colors.warnInk, marginTop: 4 }]}>
       {message}
     </Text>
   );

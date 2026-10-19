@@ -47,12 +47,28 @@ export function warmAuth() {
  * check — and the write is a side-effect nobody waits on. Auth has already
  * succeeded by this point, so a failed write must never fail the login.
  */
+/**
+ * Create (= full, non-merge overwrite) the user document only for a new
+ * account or a read that CONFIRMED the document is absent. A failed read used
+ * to look like "absent" and wiped track/onboarding/grade/school on a flaky
+ * sign-in (P0 validation); on error we only touch last_seen with a merge.
+ */
+export function shouldCreateUserDoc(
+  isNewUser: boolean,
+  read: { status: 'found' | 'missing' | 'error' },
+): boolean {
+  return isNewUser || read.status === 'missing';
+}
+
 async function hydrateSession(user, isNewUser = false) {
   try {
-    const { getUserProfile, writeUserDocument } = await loadFirebase();
+    const { getUserProfileResult, writeUserDocument, updateUserGrade } = await loadFirebase();
 
     // A brand-new account has nothing to read: skip straight to the create.
-    const profile = isNewUser ? null : await getUserProfile(user.uid);
+    const read: { status: 'found' | 'missing' | 'error'; data?: any } = isNewUser
+      ? { status: 'missing' }
+      : await getUserProfileResult(user.uid);
+    const profile = read.status === 'found' ? read.data : null;
 
     if (profile) {
       const store = useStore.getState();
@@ -62,12 +78,25 @@ async function hydrateSession(user, isNewUser = false) {
       if (profile.onboarding_completed) {
         store.setOnboardingCompleted(true);
       }
+      // Restore the class from the account (logout now clears it locally).
+      if (typeof profile.grade === 'string' && profile.grade && !store.grade) {
+        useStore.setState({ grade: profile.grade, gradeChosen: true });
+      }
     }
 
     // Deliberately not awaited: last_seen is not worth a round-trip of delay.
-    writeUserDocument(user, { create: isNewUser || !profile }).catch((err) => {
+    writeUserDocument(user, { create: shouldCreateUserDoc(isNewUser, read) }).catch((err) => {
       console.warn('Could not write user document on login:', err);
     });
+    // Backfill: a class picked before sign-in (guest → sign-up) or before the
+    // web synced it. Issued AFTER the create so the queued writes apply in
+    // order and the non-merge create can't erase it.
+    {
+      const s = useStore.getState();
+      if (read.status !== 'error' && !(profile && profile.grade) && s.grade && s.gradeChosen) {
+        updateUserGrade(user.uid, s.grade).catch(() => {});
+      }
+    }
   } catch (err) {
     console.warn('Could not sync user profile:', err);
   }

@@ -4,6 +4,14 @@ jest.mock('firebase/firestore', () => ({
   getDoc: jest.fn(),
   setDoc: jest.fn(() => Promise.resolve()),
   serverTimestamp: jest.fn(() => 0),
+  // A transaction over the same spies: reads through getDoc, writes through setDoc.
+  runTransaction: jest.fn(async (_db: unknown, fn: (tx: any) => Promise<unknown>) => {
+    const { getDoc: get, setDoc: set } = jest.requireMock('firebase/firestore');
+    const writes: Array<() => unknown> = [];
+    const out = await fn({ get: (ref: unknown) => get(ref), set: (...a: unknown[]) => { writes.push(() => set(...a)); } });
+    await Promise.all(writes.map((w) => w()));
+    return out;
+  }),
 }));
 
 import { getDoc } from 'firebase/firestore';

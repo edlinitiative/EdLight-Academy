@@ -7,7 +7,7 @@
  * destination is rebuilt from (targetKind, targetId) and the screen resolves
  * the current permissions itself.
  */
-export type InboxTargetKind = 'event' | 'team' | 'invite' | 'league' | 'school';
+export type InboxTargetKind = 'event' | 'team' | 'invite' | 'league' | 'school' | 'diagnostic';
 
 export type InboxAction =
   | 'created'
@@ -61,7 +61,11 @@ export type InboxAction =
   | 'reports_waiting'
   | 'event_starting'
   | 'event_starting_soon'
-  | 'registration_closing';
+  | 'registration_closing'
+  | 'error_spike'
+  | 'team_roles_set'
+  | 'authority_received'
+  | 'relay_turn';
 
 type Pair = [string, string];
 
@@ -286,11 +290,43 @@ export const INBOX_ACTIONS: Record<InboxAction, { label: Pair; push?: Pair }> = 
       'Evènman ou an ap kòmanse nan 10 minit. Pare w !',
     ],
   },
+  // Admin-only (api/_lib/diagnosticsAggregate.ts): a new fatal crash
+  // signature, or a spike of a known one. At most once per signature per day.
+  // The title names the error class and build; never a student or a message.
+  error_spike: {
+    label: ['Plantage à examiner', 'Aksidan pou egzamine'],
+    push: [
+      'Un nouveau plantage de l’app a été signalé. Ouvre Diagnostics.',
+      'Yon nouvo aksidan aplikasyon an siyale. Louvri Dyagnostik.',
+    ],
+  },
   registration_closing: {
     label: ['Inscriptions bientôt closes', 'Enskripsyon ap fèmen talè'],
     push: [
       'Les inscriptions ferment bientôt : confirme ta place ou termine l’inscription.',
       'Enskripsyon yo ap fèmen talè : konfime plas ou oswa fini enskripsyon an.',
+    ],
+  },
+  // Shared-answer and relay team play (api/tournois/_team.ts, `team-roles`).
+  team_roles_set: {
+    label: ['Rôles de l’équipe à confirmer', 'Wòl ekip la pou konfime'],
+    push: [
+      'Ton capitaine a fixé les rôles de l’équipe : vérifie et confirme le tien.',
+      'Kapitèn ou fikse wòl ekip la : gade epi konfime pa w la.',
+    ],
+  },
+  authority_received: {
+    label: ['Tu tiens la réponse de l’équipe', 'Se ou ki kenbe repons ekip la'],
+    push: [
+      'Tu envoies maintenant la réponse de ton équipe.',
+      'Se ou ki voye repons ekip ou a kounye a.',
+    ],
+  },
+  relay_turn: {
+    label: ['Ton tour de relais', 'Tou relè ou'],
+    push: [
+      'C’est ton tour de relais : commence avant la limite.',
+      'Se tou relè ou : kòmanse anvan limit la.',
     ],
   },
 };
@@ -301,7 +337,7 @@ export function isInboxAction(value: unknown): value is InboxAction {
 
 export const shouldPush = (action: InboxAction) => !!INBOX_ACTIONS[action].push;
 
-const SEGMENTS: Record<InboxTargetKind, string> = {
+const SEGMENTS: Record<Exclude<InboxTargetKind, 'diagnostic'>, string> = {
   event: 'evenements',
   team: 'equipes',
   invite: 'invitations',
@@ -309,13 +345,23 @@ const SEGMENTS: Record<InboxTargetKind, string> = {
   school: 'ecoles',
 };
 
+/**
+ * Admin-only crash alerts (api/_lib/diagnosticsAggregate.ts) open the web
+ * admin console's Diagnostics page — an absolute URL, which the web and app
+ * workspaces already open externally, and which the app's tap router ignores
+ * (it only routes /arena/… destinations).
+ */
+export const DIAGNOSTICS_ADMIN_URL = 'https://academy.edlight.org/admin/data/diagnostics';
+
 /** The one internal path a target opens — the same routes the web and app already resolve. */
 export function inboxPath(kind: InboxTargetKind, targetId: string): string {
+  if (kind === 'diagnostic') return `${DIAGNOSTICS_ADMIN_URL}?sig=${encodeURIComponent(targetId)}`;
   return `/arena/${SEGMENTS[kind]}/${encodeURIComponent(targetId)}`;
 }
 
 export function isInboxTargetKind(value: unknown): value is InboxTargetKind {
-  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(SEGMENTS, value);
+  return typeof value === 'string' &&
+    (value === 'diagnostic' || Object.prototype.hasOwnProperty.call(SEGMENTS, value));
 }
 
 /** Push title/body: the record's own title plus one fixed sentence. Nothing private is ever interpolated. */

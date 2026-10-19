@@ -138,3 +138,26 @@ a.admin-card:hover, button.admin-card:hover { transform: translateY(-3px); box-s
 .admin-role-pill { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--asb-line); color: var(--asb-muted); }
 .admin-role-pill--admin { color: var(--asb-accent); border-color: color-mix(in srgb, var(--asb-accent) 40%, transparent); background: color-mix(in srgb, var(--asb-accent) 8%, transparent); }
 .admin-empty { padding: 40px 20px; text-align: center; color: var(--asb-muted); }
+
+/* Settings rows with a switch (AdminCompetitionSettings). */
+.admin-flag { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 18px 20px; border-bottom: 1px solid var(--asb-line); }
+.admin-flag:last-child { border-bottom: none; }
+.admin-flag__text { min-width: 0; }
+.admin-flag__title { font-family: var(--asb-editorial); font-weight: 700; font-size: 15px; }
+.admin-flag__body { margin: 4px 0 8px; font-size: 13px; color: var(--asb-muted); max-width: 60ch; }
+.admin-flag__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; color: var(--asb-muted); }
+.admin-flag__reset { background: none; border: none; padding: 0; font: inherit; color: var(--asb-accent); text-decoration: underline; cursor: pointer; }
+.admin-flag__reset:disabled { opacity: 0.5; cursor: default; }
+.admin-switch {
+  flex: none; position: relative; width: 46px; height: 26px; border-radius: 999px; border: none; cursor: pointer;
+  background: var(--border-strong, #C6D4E8); transition: background-color 0.15s ease;
+}
+.admin-switch[aria-checked="true"] { background: var(--asb-accent); }
+.admin-switch:disabled { opacity: 0.55; cursor: progress; }
+.admin-switch:focus-visible { outline: 2px solid var(--asb-accent); outline-offset: 2px; }
+.admin-switch__knob {
+  position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); transition: transform 0.15s ease;
+}
+.admin-switch[aria-checked="true"] .admin-switch__knob { transform: translateX(20px); }
+@media (prefers-reduced-motion: reduce) { .admin-switch, .admin-switch__knob { transition: none; } }

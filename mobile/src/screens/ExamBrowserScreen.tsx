@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { useReduceMotion } from '../utils/motion';
+import { useReduceMotion, modalAnimation } from '../utils/motion';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
@@ -427,7 +427,7 @@ export default function ExamBrowserScreen() {
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
         {headerRow(false)}
-        <ErrorState onRetry={() => setRetryCount((n) => n + 1)} />
+        <ErrorState onRetry={() => setRetryCount((n) => n + 1)} secondaryLabel={t('Retour', 'Retounen')} onSecondary={goBackToExams} />
       </SafeAreaView>
     );
 
@@ -595,7 +595,7 @@ export default function ExamBrowserScreen() {
       />
 
       {/* Filter modal */}
-      <Modal visible={showFilters} transparent animationType="slide" onRequestClose={() => setShowFilters(false)}>
+      <Modal visible={showFilters} transparent animationType={modalAnimation(reduceMotion, 'slide')} onRequestClose={() => setShowFilters(false)}>
         <TouchableOpacity
           style={{ flex: 1, backgroundColor: 'rgba(15,30,56,0.45)' }}
           activeOpacity={1}

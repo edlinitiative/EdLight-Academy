@@ -81,7 +81,7 @@ export default function LessonCompletionPanel({
       };
     } else if (entry.status === 'queued') {
       status = {
-        icon: <CloudOff color={colors.warn} size={20} />,
+        icon: <CloudOff color={colors.warnInk} size={20} />,
         text: t(
           "Pas de connexion. L'enregistrement partira dès le retour du réseau — garde l'app ouverte.",
           'Pa gen koneksyon. Anrejistreman an ap pati depi rezo a tounen — kite aplikasyon an louvri.',

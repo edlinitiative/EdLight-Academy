@@ -15,6 +15,7 @@ import { useTrivia } from '../hooks/useTrivia';
 import { isValidAlias } from '../services/leaderboardService';
 import { HAITI_DEPARTMENTS, OTHER_CITY, citiesOf, findCity } from '../data/haitiGeo';
 import { useColors, typeScale, radius } from '../theme/theme';
+import { modalAnimation, isReduceMotionOn } from '../utils/motion';
 
 function defaultAlias(name?: string | null) {
   const first = String(name || '').trim().split(/\s+/)[0] || '';
@@ -34,21 +35,21 @@ function OptionSheet({ visible, title, options, onPick, onClose }: {
   const { language } = useStore();
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.55)' }} activeOpacity={1} onPress={onClose} accessibilityLabel={title} />
+    <Modal visible={visible} transparent animationType={modalAnimation(isReduceMotionOn(), 'slide')} onRequestClose={onClose}>
+      <TouchableOpacity accessibilityRole="button" style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.55)' }} activeOpacity={1} onPress={onClose} accessibilityLabel={title} />
       <View accessibilityViewIsModal style={{ maxHeight: '70%', backgroundColor: colors.surface, borderTopLeftRadius: radius.hero, borderTopRightRadius: radius.hero, paddingBottom: Math.max(24, insets.bottom + 12) }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderColor: colors.border }}>
           <Text style={[typeScale.title, { color: colors.ink }]}>{title}</Text>
-          <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel={t('Fermer', 'Fèmen')}>
+          <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel={t('Fermer', 'Fèmen')}>
             <X size={20} color={colors.muted} />
           </TouchableOpacity>
         </View>
         <ScrollView>
           {options.map((o) => (
-            <TouchableOpacity
+            <TouchableOpacity accessibilityRole="button"
               key={o.value}
               onPress={() => { onPick(o.value); onClose(); }}
-              style={{ paddingVertical: 13, paddingHorizontal: 18, borderBottomWidth: 1, borderColor: colors.hairline }}
+              style={{ paddingVertical: 13, paddingHorizontal: 18, minHeight: 48, justifyContent: 'center', borderBottomWidth: 1, borderColor: colors.hairline }}
             >
               <Text style={{ fontSize: 15, color: colors.ink }}>{o.label}</Text>
             </TouchableOpacity>
@@ -65,7 +66,7 @@ function SelectField({ label, value, placeholder, onPress }: { label: string; va
   return (
     <View style={{ gap: 5 }}>
       <Text style={[typeScale.label, { color: colors.muted }]}>{label}</Text>
-      <TouchableOpacity
+      <TouchableOpacity accessibilityRole="button"
         onPress={onPress}
         activeOpacity={0.7}
         style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: colors.border, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 11, backgroundColor: colors.surfaceAlt }}
@@ -143,9 +144,9 @@ export default function LeaderboardJoinModal({ visible, onClose }: { visible: bo
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType={modalAnimation(isReduceMotionOn(), 'slide')} onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.55)' }} activeOpacity={1} onPress={onClose} accessibilityLabel={t('Fermer', 'Fèmen')} />
+        <TouchableOpacity accessibilityRole="button" style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.55)' }} activeOpacity={1} onPress={onClose} accessibilityLabel={t('Fermer', 'Fèmen')} />
         <View accessibilityViewIsModal style={{ backgroundColor: colors.bg, borderTopLeftRadius: radius.hero, borderTopRightRadius: radius.hero, padding: 18, paddingBottom: Math.max(30, insets.bottom + 12), gap: 14 }}>
           {/* grabber — decorative, hidden from screen readers */}
           <View
@@ -154,11 +155,11 @@ export default function LeaderboardJoinModal({ visible, onClose }: { visible: bo
             style={{ alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, marginTop: -4, marginBottom: 2 }}
           />
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <ShieldCheck size={18} color={colors.success} />
+            <ShieldCheck size={18} color={colors.successInk} />
             <Text style={[typeScale.title, { flex: 1, color: colors.ink }]}>
               {t('Mon profil de classement', 'Pwofil klasman mwen')}
             </Text>
-            <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel={t('Fermer', 'Fèmen')}>
+            <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel={t('Fermer', 'Fèmen')}>
               <X size={20} color={colors.muted} />
             </TouchableOpacity>
           </View>
@@ -180,7 +181,7 @@ export default function LeaderboardJoinModal({ visible, onClose }: { visible: bo
               style={{ borderWidth: 1, borderColor: aliasOk || !alias ? colors.border : colors.warn, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 11, fontSize: 15, backgroundColor: colors.surfaceAlt, color: colors.ink }}
             />
             {!aliasOk && (
-              <Text style={[typeScale.micro, { color: colors.warn }]}>
+              <Text style={[typeScale.micro, { color: colors.warnInk }]}>
                 {t(
                   'Choisissez un pseudo (au moins une lettre) pour apparaître dans le classement.',
                   'Chwazi yon ti non (omwen yon lèt) pou parèt nan klasman an.',

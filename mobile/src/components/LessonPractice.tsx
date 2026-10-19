@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Modal, View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import type { ExplainSurface } from '../../../shared/explainContext';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { X, RotateCcw, ChevronLeft, ChevronRight, Info } from 'lucide-react-native';
 import { useAppData } from '../hooks/useData';
@@ -17,6 +18,7 @@ import {
 } from '../utils/mastery';
 import { success } from '../utils/haptics';
 import { MasteryMeter } from './MasteryMeter';
+import { modalAnimation, isReduceMotionOn } from '../utils/motion';
 
 // Cards come from the shared quiz bank (Firestore `quizzes`), keyed by
 // subject_code + unit_no + lesson_no — the same source the web flashcards /
@@ -96,7 +98,7 @@ function Flashcards({ cards, isCreole }: { cards: Card[]; isCreole: boolean }) {
 // never marked wrong, never sent to Révision, never counted in the score.
 
 export function Exercices({
-  cards, isCreole, onFinish, onAnswer, resultLevel, renderDone, onStart,
+  cards, isCreole, onFinish, onAnswer, resultLevel, renderDone, onStart, explainSurface,
 }: {
   cards: Card[];
   isCreole: boolean;
@@ -109,6 +111,11 @@ export function Exercices({
   /** Replace the default end screen (Révision draws its own). */
   renderDone?: (args: { tally: Tally; restart: () => void }) => React.ReactNode;
   onStart?: () => void;
+  /**
+   * Révision passes 'revision': "Explique-moi" on each wrong answer, live
+   * (needs an ExplainProvider above). A lesson's scored exercises omit it.
+   */
+  explainSurface?: ExplainSurface;
 }) {
   const colors = useColors();
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -176,6 +183,8 @@ export function Exercices({
       chrome="minimal"
       title=""
       t={t}
+      explainSurface={explainSurface}
+      liveExplain={!!explainSurface}
       onAnswer={(item, _entry, outcome) => {
         const card = byId.get(item.id);
         if (card && outcome != null) onAnswer?.(card, outcome);
@@ -233,7 +242,7 @@ export default function LessonPractice({
   React.useEffect(() => { if (visible) setMode(initialMode); }, [visible, initialMode]);
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} animationType={modalAnimation(isReduceMotionOn(), 'slide')} onRequestClose={onClose}>
       {/* Own provider so safe-area insets resolve inside the RN Modal window. */}
       <SafeAreaProvider>
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top', 'bottom']}>

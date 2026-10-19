@@ -563,7 +563,7 @@ export default function AvatarEditorScreen({ navigation, route }: any) {
           subtitle={t('Ton visage dans l’Arène, les classements et les défis.', 'Figi ou nan Arèn nan, klasman yo ak defi yo.')}
         />
         {preview ? (
-          <Text style={[typeScale.status, { color: colors.coral, paddingHorizontal: GUTTER, marginTop: 8 }]}>
+          <Text style={[typeScale.status, { color: colors.coralInk, paddingHorizontal: GUTTER, marginTop: 8 }]}>
             {t('Aperçu de développement — rien n’est enregistré', 'Apèsi devlopman — anyen pa anrejistre')}
           </Text>
         ) : null}

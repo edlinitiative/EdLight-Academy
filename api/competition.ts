@@ -16,6 +16,13 @@ import {
   mutateCompetition,
 } from './_lib/competition';
 import { ensureInviteCode, resolvePeople } from './_lib/competitionPeople';
+import {
+  competitionFlags,
+  competitionFlagsState,
+  parseFlagChanges,
+  recentFlagAudits,
+  updateCompetitionFlags,
+} from './_lib/platformConfig';
 import type { CompetitionEvent, League } from '../shared/competition/platform';
 import { seedSchools, schoolFromDoc, isApproved } from '../shared/schools';
 import { leagueTable } from '../shared/leagues/standings';
@@ -120,6 +127,7 @@ export async function readEvent(
     audience: e.audience,
     entryPolicy: e.entryPolicy,
     entryMode: e.entryMode,
+    gameMode: e.gameMode ?? 'independent',
     delivery: e.delivery,
     state: e.state,
     config: e.config,
@@ -190,6 +198,7 @@ export async function readEvent(
           ? 'participant'
           : 'viewer',
     eligible: !e.schoolKey || member?.status === 'approved',
+    teamModesEnabled: (await competitionFlags(db)).teamModesEnabled,
     serverNow: Date.now(),
   };
 }
@@ -325,6 +334,7 @@ async function directory(db: Firestore, body: Record<string, unknown>) {
     ).values(),
   ];
   const last = events[events.length - 1];
+  const { discoveryEnabled } = await competitionFlags(db);
   const leagues =
     sources[3].status === 'fulfilled'
       ? sources[3].value.docs
@@ -341,10 +351,9 @@ async function directory(db: Firestore, body: Record<string, unknown>) {
       : [];
   return {
     schools,
-    events: process.env.COMPETITION_DISCOVERY_ENABLED === 'false' ? [] : events,
+    events: discoveryEnabled ? events : [],
     summaries,
-    leagues:
-      process.env.COMPETITION_DISCOVERY_ENABLED === 'false' ? [] : leagues,
+    leagues: discoveryEnabled ? leagues : [],
     errors: sources.flatMap((r, i) =>
       r.status === 'rejected'
         ? [['events', 'individual', 'official', 'leagues'][i]]
@@ -387,7 +396,10 @@ export default async function handler(
           ),
         publicRead
           ? 'competition-read'
-          : action === 'mine' || action === 'team' || action === 'invite'
+          : action === 'mine' ||
+              action === 'team' ||
+              action === 'invite' ||
+              action === 'platform-config'
             ? 'competition-read'
             : 'competition-write',
       ))
@@ -459,7 +471,7 @@ export default async function handler(
             ).docs.map((d) => ({ id: d.id, ...d.data() }))
           : [];
         const teamDocs = teams.docs.map((d) => d.data());
-        const [people, inviteCode] = await Promise.all([
+        const [people, inviteCode, flags] = await Promise.all([
           resolvePeople(db, [
             ...membershipRequests.map((r) => r.uid as string),
             ...teamDocs
@@ -467,6 +479,7 @@ export default async function handler(
               .flatMap((t) => (t.members as string[]) || []),
           ]),
           ensureInviteCode(db, uid),
+          competitionFlags(db),
         ]);
         out = {
           uid,
@@ -475,7 +488,8 @@ export default async function handler(
           admin,
           membershipRequests,
           moderationReports,
-          creationEnabled: process.env.COMPETITION_CREATION_ENABLED === 'true',
+          creationEnabled: flags.creationEnabled,
+          teamModesEnabled: flags.teamModesEnabled,
           inbox: inbox.docs.map((d) => d.data()),
           teams: teamDocs,
           memberships: memberships.docs.map((d) => d.data()),
@@ -653,6 +667,31 @@ export default async function handler(
           invitedTeams,
           manager: ownerUid === actor?.uid,
           table: leagueTable(league.entrants, league.fixtures),
+        };
+        break;
+      }
+      // Admin console "Compétitions" (src/pages/admin/AdminCompetitionSettings.tsx).
+      case 'platform-config':
+      case 'platform-config-set': {
+        const uid = actor!.uid;
+        if (!(await isAdminUid(db, uid))) {
+          res.status(403).json({ error: 'not_admin' });
+          return;
+        }
+        let state;
+        if (action === 'platform-config-set') {
+          const changes = parseFlagChanges(body.changes);
+          ensure(changes, 'invalid_changes', 400);
+          state = await updateCompetitionFlags(db, uid, changes);
+        } else state = await competitionFlagsState(db);
+        const audit = await recentFlagAudits(db);
+        out = {
+          flags: state,
+          audit,
+          people: await resolvePeople(db, [
+            state.updatedBy,
+            ...audit.map((a) => a.by),
+          ]),
         };
         break;
       }

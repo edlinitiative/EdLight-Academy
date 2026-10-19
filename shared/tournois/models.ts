@@ -1,6 +1,7 @@
 import type { Schedule } from './schedule';
 import type { TournamentConfig } from './config';
 import type { PublicQuestion } from './questions';
+import type { GameMode, TeamGameMode } from '../teams/modes';
 
 export type TournamentState =
   | 'scheduled'
@@ -11,6 +12,9 @@ export type TournamentState =
 export interface Tournament extends TournamentConfig {
   schemaVersion?: 1 | 2;
   competitionEventId?: string;
+  /** Absent: independent answers. Team modes are played through the team actions only. */
+  gameMode?: GameMode;
+  teamPolicy?: string;
   id: string;
   creatorUid: string;
   creatorName: string;
@@ -72,8 +76,34 @@ export interface TeamRow {
   needed: number;
 }
 
+/** One locked named team on a board (independent, shared-answer or relay scoring). */
+export interface NamedTeamRow {
+  id: string;
+  label: string;
+  starters: string[];
+  points: number;
+  correct: number;
+  totalMs: number;
+  /** Independent: starters with no answer. */
+  missing: number;
+  rank: number;
+  /** Present for shared-answer and relay teams. */
+  gameMode?: TeamGameMode;
+  /** Team modes: questions the team did not answer. */
+  missed?: number;
+  /** Independent: per starter. Relay: per slot. Shared: empty. */
+  contributions: Array<{
+    uid: string;
+    points: number;
+    correct: number;
+    answered: number;
+    totalMs: number;
+    missed?: number;
+  }>;
+}
+
 export interface Standings {
-  namedTeams?: ReturnType<typeof import('../teams/policy').rankNamedTeams>;
+  namedTeams?: NamedTeamRow[];
   rows: StandingRow[];
   teams: TeamRow[];
   total: number;

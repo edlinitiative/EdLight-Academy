@@ -10,9 +10,12 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { ChevronLeft, ChevronRight, Send, Lightbulb, Check } from 'lucide-react-native';
 import { fetchSingleExam } from '../utils/examCatalog';
-import { flattenQuestions, gradeExam, normalizeSubject, normalizeExamTitle, normalizeYear, stripExamHallBoilerplate, subjectFromText } from '../utils/examUtils';
-import { loadExamAttemptDraft, saveExamAttemptDraft, markExamAttemptSubmitted } from '../services/examAttempts';
-import { saveExamResult } from '../services/examResults';
+import { flattenQuestions, normalizeLevel, normalizeSubject, normalizeExamTitle, normalizeYear, stripExamHallBoilerplate, subjectFromText } from '../utils/examUtils';
+import { gradeExamPendingEssays } from '../../../shared/essayRegrade';
+import { startEssayGrading } from '../services/essayGrading';
+import { loadExamAttemptDraft, saveExamAttemptDraft, commitExamSubmission } from '../services/examAttempts';
+import { recordPlanEvent } from '../services/planEvents';
+import { examDraftKey, readLocalExamDraft, pickResumeDraft, draftPosition, settleWithin } from '../../../shared/examDraft';
 import { recordReview } from '../services/reviewService';
 import useStore from '../contexts/store';
 import { useColors, useTheme, typeScale, fonts } from '../theme/theme';
@@ -333,15 +336,14 @@ function ExamHint({ hints, isCreole }: { hints?: any; isCreole: boolean }) {
 
   if (shown === 0) {
     return (
-      <TouchableOpacity
+      <Button
+        variant="secondary"
+        size="sm"
         onPress={() => setShown(1)}
-        accessibilityRole="button"
-        accessibilityLabel={t("Besoin d'un indice ?", 'Ou bezwen yon endis?')}
-        style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 18, alignSelf: 'flex-start', paddingHorizontal: 16, minHeight: 44, borderRadius: 12, backgroundColor: colors.azureSoft }}
-      >
-        <Lightbulb color={colors.azureInk} size={17} />
-        <Text style={{ fontFamily: fonts.bold, fontSize: 15, lineHeight: 20, color: colors.azureInk }}>{t("Besoin d'un indice ?", 'Ou bezwen yon endis?')}</Text>
-      </TouchableOpacity>
+        label={t("Besoin d'un indice ?", 'Ou bezwen yon endis?')}
+        icon={<Lightbulb color={colors.azureInk} size={17} />}
+        style={{ marginTop: 18, alignSelf: 'flex-start', minHeight: 44 }}
+      />
     );
   }
 
@@ -357,7 +359,7 @@ function ExamHint({ hints, isCreole }: { hints?: any; isCreole: boolean }) {
         <MathText key={i} text={clean.length > 1 ? `${i + 1}. ${h}` : h} style={{ fontSize: 16, lineHeight: 23, color: colors.ink }} />
       ))}
       {shown < clean.length ? (
-        <TouchableOpacity onPress={() => setShown((s) => s + 1)} style={{ alignSelf: 'flex-start', minHeight: 40, justifyContent: 'center' }} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+        <TouchableOpacity accessibilityRole="button" onPress={() => setShown((s) => s + 1)} style={{ alignSelf: 'flex-start', minHeight: 40, justifyContent: 'center' }} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
           <Text style={{ fontFamily: fonts.bold, fontSize: 15, lineHeight: 20, color: colors.azureInk }}>{t('Indice suivant', 'Endis swivan')} →</Text>
         </TouchableOpacity>
       ) : null}
@@ -425,7 +427,7 @@ export default function ExamTakeScreen() {
     }, [setFocusMode, examReady]),
   );
 
-  const localDraftKey = `edlight-exam-draft-${examId}`;
+  const localDraftKey = examDraftKey(examId);
 
   // Save the current draft immediately (used by the 10s timer, the final flush
   // on unmount/blur, and the AppState background handler). No-op after submit or
@@ -436,6 +438,9 @@ export default function ExamTakeScreen() {
   const flushDraft = useCallback(() => {
     if (!user?.uid || submittedRef.current || phaseRef.current !== 'questions') return;
     const payload = {
+      // Owner of this mirror: on a shared phone it is only ever restored into
+      // this account, never into the next student's (P0 validation).
+      uid: user.uid,
       answers: answersRef.current,
       currentIdx: currentIdxRef.current,
       // Stored so a resume surface can say "4/10" without refetching the paper
@@ -448,7 +453,12 @@ export default function ExamTakeScreen() {
     saveExamAttemptDraft(user.uid, examId, {
       answers: answersRef.current,
       currentIdx: currentIdxRef.current,
+      // Same index under the web's field name (cross-device resume position).
+      currentQ: currentIdxRef.current,
       questionCount: questionCountRef.current,
+      // The web's immediate-mode grades belong to the answers it graded; the
+      // answers just changed here, so they must not be reused at submit.
+      questionResults: {},
     }).catch(() => {});
   }, [user?.uid, examId, localDraftKey]);
 
@@ -496,16 +506,12 @@ export default function ExamTakeScreen() {
             // Prefer the local mirror when it's newer — a background/app-kill can
             // lose the debounced Firestore write, but the AsyncStorage mirror is
             // written on every flush and holds the true latest state.
+            // Only THIS account's mirror is considered (shared phones).
+            let local: any = null;
             try {
-              const raw = await AsyncStorage.getItem(localDraftKey);
-              if (raw) {
-                const local = JSON.parse(raw);
-                if (local && local.status === 'in_progress' &&
-                    (!draft || (local.updated_at_ms || 0) > (draft.updated_at_ms || 0))) {
-                  draft = local;
-                }
-              }
-            } catch { /* ignore corrupt mirror */ }
+              local = readLocalExamDraft(await AsyncStorage.getItem(localDraftKey), user.uid);
+            } catch { /* storage unavailable */ }
+            draft = pickResumeDraft(draft, local);
             if (!active) return;
             // Restore only into a pristine session: the overview phase, or an
             // autostarted question phase where nothing has been touched yet.
@@ -513,18 +519,20 @@ export default function ExamTakeScreen() {
             const pristine = phaseRef.current === 'overview'
               || (Object.keys(answersRef.current).length === 0 && currentIdxRef.current === 0);
             if (!pristine) return;
-            if (draft && draft.status !== 'submitted') {
+            if (draft) {
               const answerCount = draft.answers ? Object.keys(draft.answers).length : 0;
-              if (answerCount > 0) { setAnswers(draft.answers); setHasDraft(true); }
+              if (answerCount > 0) { setAnswers(draft.answers as any); setHasDraft(true); }
               // Restore the saved position even with no answers yet (e.g. read
               // ahead on essay questions), so Reprendre lands on the right one.
-              if (Number.isFinite(draft.currentIdx) && draft.currentIdx > 0) {
-                draftIdxRef.current = draft.currentIdx;
+              // draftPosition also reads the web's `currentQ`.
+              const pos = draftPosition(draft);
+              if (pos != null && pos > 0) {
+                draftIdxRef.current = pos;
                 setHasDraft(true);
                 // With autostart we're already past handleStart (which normally
                 // applies the saved position) — jump there directly.
-                if (phaseRef.current === 'questions' && draft.currentIdx < qs.length) {
-                  setCurrentIdx(draft.currentIdx);
+                if (phaseRef.current === 'questions' && pos < qs.length) {
+                  setCurrentIdx(pos);
                 }
               }
             }
@@ -624,19 +632,35 @@ export default function ExamTakeScreen() {
   }
 
   async function doSubmit() {
+    // One submission at a time (double tap / Alert + button).
+    if (submittedRef.current) return;
     setSubmitting(true);
     // Block any pending / final autosave from reverting the doc to in_progress.
     submittedRef.current = true;
     if (draftTimer.current) clearTimeout(draftTimer.current);
-    // Drop the local mirror + clear the dashboard "Reprendre" banner so a
-    // finished exam isn't offered as resumable.
-    AsyncStorage.removeItem(localDraftKey).catch(() => {});
-    clearActivity();
+    // Make sure the local mirror holds the final answers. It is NOT removed
+    // until the account acknowledges the result: this app's Firestore cache is
+    // memory-only, so a submission queued offline dies with the process, and
+    // deleting the mirror first lost the whole finished paper (P0 validation).
+    if (user?.uid) {
+      AsyncStorage.setItem(localDraftKey, JSON.stringify({
+        uid: user.uid,
+        answers: answersRef.current,
+        currentIdx: currentIdxRef.current,
+        questionCount: questionCountRef.current,
+        status: 'in_progress',
+        updated_at_ms: Date.now(),
+      })).catch(() => {});
+    }
     try {
       // Pass the raw answers map (index-keyed) straight to the grader — it reads
       // `answers[i]` directly, so wrapping in `{ given }` broke every match.
       // Options drive language fuzzy-matching (subject) + coefficient weighting.
-      const graded = gradeExam(questions, answers, {}, { subject, track: track ?? undefined });
+      // Written answers the AI grader can mark are held as `ungraded` (left out
+      // of the score) instead of `manual` with 0 points: they are graded right
+      // after the paper is saved (startEssayGrading below), never before, so a
+      // slow or absent grader can never block the submission.
+      const graded = gradeExamPendingEssays(questions, answers, { subject, track: track ?? undefined });
 
       // Persist a lean per-question result (indexed by question order) so the
       // results screen can render correctness from the grader instead of
@@ -648,30 +672,73 @@ export default function ExamTakeScreen() {
       }));
 
       if (user?.uid) {
-        await markExamAttemptSubmitted(user.uid, examId, { answers });
-        await saveExamResult(user.uid, examId, {
+        // Result + attempt `submitted` mark in ONE atomic batch (they were two
+        // awaits, attempt first: a failure between them left a "submitted"
+        // attempt with no result). Bounded wait: offline the commit never
+        // settles, which used to spin forever.
+        const commit = commitExamSubmission(user.uid, examId, {
           exam_id: examId,
           level,
           // Save the cleaned short title, not the raw ministry boilerplate.
           title: normalizeExamTitle(exam),
           subject,
+          track: track ?? undefined,
           summary: graded.summary,
           results: gradedResults,
           answers,
-        });
+        }, { answers });
+        const outcome = await settleWithin(commit, 12000);
+        if (outcome.status !== 'confirmed' || !outcome.value) {
+          // Not on the account yet. Keep everything on this device and let the
+          // student retry; the same doc ids make a retry idempotent.
+          submittedRef.current = false;
+          Alert.alert(
+            t('Pas encore envoyé', 'Poko voye'),
+            outcome.status === 'pending'
+              ? t(
+                'La connexion est lente ou absente. Vos réponses sont gardées sur ce téléphone. Réessayez quand vous serez connecté.',
+                'Koneksyon an lan oswa li pa la. Repons ou yo rete sou telefòn sa a. Eseye ankò lè ou konekte.',
+              )
+              : t(
+                'Le résultat n’a pas pu être enregistré. Vos réponses sont gardées sur ce téléphone. Réessayez.',
+                'Nou pa t ka anrejistre rezilta a. Repons ou yo rete sou telefòn sa a. Eseye ankò.',
+              ),
+          );
+          return;
+        }
+        // Acknowledged: now the mirror and the Home "Reprendre" card can go.
+        AsyncStorage.removeItem(localDraftKey).catch(() => {});
+        clearActivity();
+        // AI-grade the written answers now that the paper is on the account.
+        // Not awaited: the results screen follows the run and offers
+        // "Corriger maintenant" if it fails (offline, timeout, rate limit).
+        if (graded.pending.length > 0) {
+          startEssayGrading(user.uid, examId, questions, {
+            subject,
+            level: normalizeLevel(String(exam?.level ?? '')),
+          }).catch(() => {});
+        }
         // Fold this graded round into the spaced-repetition schedule for its
         // subject (Adaptive Engine, Slice 2). Fire-and-forget: a failed schedule
-        // write must never block submission or lose the result.
-        if (subject) {
+        // write must never block submission or lose the result. Recorded once,
+        // here, from the auto-graded part only (a paper of essays still being
+        // graded has no score yet): the essay regrade never records it again.
+        if (subject && (graded.summary?.totalPoints ?? 0) > 0) {
           recordReview(user.uid, subject, {
             subject,
             percentage: graded.summary?.percentage ?? 0,
           }).catch(() => {});
         }
+        // The study plan advances from the app too (P0 validation E-13, P-3).
+        // Never throws; queued for replay when it can't reach the server.
+        void recordPlanEvent(user.uid, { kind: 'exam', examId }, graded.summary?.percentage ?? 0);
+      } else {
+        clearActivity();
       }
 
       navigation.replace('ExamResults', { level, examId });
     } catch (e) {
+      submittedRef.current = false; // let the student retry
       Alert.alert(t('Erreur', 'Erè'), t('Impossible de soumettre. Réessayez.', 'Nou pa ka soumèt. Eseye ankò.'));
     } finally {
       setSubmitting(false);
@@ -730,8 +797,8 @@ export default function ExamTakeScreen() {
   );
 
   if (loading) return withChrome(<LoadingState message={t("Chargement de l'examen…", 'Egzamen an ap chaje…')} />);
-  if (error || !exam) return withChrome(<ErrorState onRetry={retryLoad} />);
-  if (questions.length === 0) return withChrome(<ErrorState message={t("Cet examen n'a pas de questions.", 'Egzamen sa a pa gen kesyon.')} onRetry={retryLoad} />);
+  if (error || !exam) return withChrome(<ErrorState onRetry={retryLoad} secondaryLabel={t('Retour', 'Retounen')} onSecondary={() => navigation.goBack()} />);
+  if (questions.length === 0) return withChrome(<ErrorState message={t("Cet examen n'a pas de questions.", 'Egzamen sa a pa gen kesyon.')} onRetry={retryLoad} secondaryLabel={t('Retour', 'Retounen')} onSecondary={() => navigation.goBack()} />);
 
   const answeredCount = Object.keys(answers).length;
 

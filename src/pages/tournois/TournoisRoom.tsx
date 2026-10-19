@@ -60,6 +60,16 @@ import {
   useServerNow,
 } from './parts';
 import ArenaPageHead from '../../components/arena/ArenaPageHead';
+import TeamPlay from './TeamPlay';
+import {
+  answerCue,
+  phaseCue,
+  presentationPhase,
+  type PresentationPhase,
+} from '../../../shared/competition/presentation';
+import { useCompetitionCue } from '../../arena-art/sound/competitionCues';
+import { Skeleton } from '../../components/Skeleton';
+import { LoadingState } from '../../components/StateViews';
 import './Tournois.css';
 
 // ── Question card (live and rounds share it) ───────────────────────────────
@@ -85,6 +95,11 @@ function QuestionCard({
   const text = isCreole && q.qHt ? q.qHt : q.q;
   const options = isCreole && q.optionsHt ? q.optionsHt : q.options;
   const total = reveal?.counts ? Math.max(1, reveal.counts.reduce((s, n) => s + n, 0)) : 1;
+  // The player's own verdict, in words (never colour alone). Spectators and
+  // timed rounds (no reveal) get none.
+  const verdict = reveal && onPick
+    ? picked == null ? 'none' : picked === reveal.answer ? 'right' : 'wrong'
+    : null;
 
   // 1–4 on the keyboard, like the mockup's keycaps.
   useEffect(() => {
@@ -99,7 +114,7 @@ function QuestionCard({
   }, [onPick, disabled, options.length]);
 
   return (
-    <div className="tn-card tn-q">
+    <div className="tn-card tn-q mo-enter">
       <div className="tn-q__head">
         <span>{t('Question', 'Kesyon')} {index + 1}/{count}</span>
         <span aria-live="off">{reveal ? t('Réponse', 'Repons') : `${Math.ceil(left / 1000)} s`}</span>
@@ -115,7 +130,13 @@ function QuestionCard({
         {options.map((opt, i) => {
           const isRight = reveal && reveal.answer === i;
           const isWrong = reveal && picked === i && reveal.answer !== i;
-          const cls = ['tn-opt', picked === i ? 'is-picked' : '', isRight ? 'is-right' : '', isWrong ? 'is-wrong' : ''].filter(Boolean).join(' ');
+          const cls = [
+            'tn-opt',
+            picked === i ? 'is-picked' : '',
+            picked === i && !reveal ? 'mo-locked' : '',
+            isRight ? 'is-right mo-right' : '',
+            isWrong ? 'is-wrong mo-wrong' : '',
+          ].filter(Boolean).join(' ');
           const c = reveal?.counts?.[i];
           return (
             <button key={i} type="button" className={cls} disabled={disabled} onClick={() => onPick?.(i)} aria-pressed={picked === i}>
@@ -127,6 +148,15 @@ function QuestionCard({
           );
         })}
       </div>
+      {verdict && (
+        <p className={`tn-verdict is-${verdict}`} role="status">
+          {verdict === 'right'
+            ? <><span aria-hidden="true">✓</span> {t('Bonne réponse !', 'Bon repons !')}</>
+            : verdict === 'wrong'
+              ? <><span aria-hidden="true">✗</span> {t(`Raté — la bonne réponse : ${options[reveal!.answer]}`, `Rate — bon repons lan : ${options[reveal!.answer]}`)}</>
+              : t(`Pas de réponse — la bonne réponse : ${options[reveal!.answer]}`, `Pa gen repons — bon repons lan : ${options[reveal!.answer]}`)}
+        </p>
+      )}
       {reveal?.explanation && <div className="tn-explain">{reveal.explanation}</div>}
       {footer && <div className="tn-q__foot">{footer}</div>}
     </div>
@@ -167,6 +197,7 @@ function LiveStage({ tour, live, progress, standings, roster, me, canPlay, now }
   const [error, setError] = useState<string | null>(null);
   const [review, setReview] = useState<ReviewItem[] | null>(null);
   const shownAt = useRef<Record<number, number>>({});
+  const cue = useCompetitionCue();
   const rows = standings?.rows || [];
 
   const phase = live?.phase || 'lobby';
@@ -179,11 +210,27 @@ function LiveStage({ tour, live, progress, standings, roster, me, canPlay, now }
     setPicks((p) => ({ ...p, [i]: choice }));
     setError(null);
     const r = await liveAnswer(tour.id, i, choice, shownAt.current[i] ?? now);
+    if (r.ok) cue('locked');
     if (!r.ok) {
       setError(errorMessage(r.error, isCreole));
       if (r.error !== 'answers_closed') setPicks((p) => { const n = { ...p }; delete n[i]; return n; });
     }
-  }, [live, picks, tour.id, now, isCreole]);
+  }, [live, picks, tour.id, now, isCreole, cue]);
+
+  // Cues (silent unless "Sons" is on): a question opening, the podium, and
+  // the player's own verdict once per question. Every one doubles the screen.
+  const stage = presentationPhase(tour.state, live);
+  const lastStage = useRef<PresentationPhase | null>(null);
+  useEffect(() => {
+    cue(phaseCue(lastStage.current, stage));
+    lastStage.current = stage;
+  }, [stage, cue]);
+  const cuedReveal = useRef(-1);
+  useEffect(() => {
+    if (!live || live.phase !== 'reveal' || !live.reveal || !canPlay || cuedReveal.current === live.index) return;
+    cuedReveal.current = live.index;
+    cue(answerCue(picks[live.index], live.reveal.answer));
+  }, [live, canPlay, picks, cue]);
 
   if (phase === 'lobby' || tour.state === 'scheduled') {
     return (
@@ -242,6 +289,7 @@ function LiveStage({ tour, live, progress, standings, roster, me, canPlay, now }
       <div style={{ display: 'grid', gap: '1rem' }}>
         {q && (
           <QuestionCard
+            key={`live-${index}`}
             q={q}
             index={index}
             count={live.questionCount}
@@ -278,12 +326,46 @@ function LiveStage({ tour, live, progress, standings, roster, me, canPlay, now }
           </div>
         )}
       </div>
-      <StandingsCard tour={tour} standings={standings} me={me} />
+      <StandingsCard tour={tour} standings={standings} me={me} revealDelay={isReveal ? 600 : 0} />
     </div>
   );
 }
 
-function StandingsCard({ tour, standings, me }: { tour: Tournament; standings: Standings | null; me: string | null }) {
+/**
+ * One line that always says where the room is: the phase (keyed, so it
+ * cross-fades on change), the question number, and the clock. role=status
+ * announces the phase change once; the seconds stay out of the live region.
+ */
+function PhaseLine({ tour, live, now }: { tour: Tournament; live: LiveState | null; now: number }) {
+  const { t } = useLang();
+  const stage = presentationPhase(tour.state, live);
+  if (stage === 'cancelled') return null;
+  const label = stage === 'question' ? t('En direct', 'An dirèk')
+    : stage === 'reveal' ? t('Réponse', 'Repons')
+      : stage === 'results' ? t('Podium final', 'Podyòm final')
+        : stage === 'lobby' ? t('Avant le départ', 'Anvan depa a')
+          : t('Entre deux questions', 'Ant de kesyon');
+  const qNum = live && live.index >= 0 && (stage === 'question' || stage === 'reveal') ? live.index + 1 : null;
+  const left = live && stage === 'question' ? Math.max(0, Math.ceil((live.closesAt - now) / 1000))
+    : live && stage === 'reveal' ? Math.max(0, Math.ceil((live.revealUntil - now) / 1000)) : null;
+  return (
+    <div className="tn-phase">
+      <span role="status" key={stage} className={`tn-phase__chip mo-phase is-${stage === 'question' ? 'live' : stage === 'results' ? 'final' : stage}`}>
+        {label}
+      </span>
+      {qNum != null && (
+        <span className="tn-phase__num">{t('Question', 'Kesyon')} {qNum}/{live!.questionCount}</span>
+      )}
+      {left != null && (
+        <span className="tn-phase__num" aria-hidden="true">
+          {stage === 'reveal' ? t(`suite dans ${left} s`, `swit nan ${left} s`) : `${left} s`}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function StandingsCard({ tour, standings, me, revealDelay = 0 }: { tour: Tournament; standings: Standings | null; me: string | null; revealDelay?: number }) {
   const { t } = useLang();
   const rows = standings?.rows || [];
   return (
@@ -293,7 +375,7 @@ function StandingsCard({ tour, standings, me }: { tour: Tournament; standings: S
           <div className="tn-section__head">
             <h2>{tour.teamRule === 'school' ? t('École contre école', 'Lekòl kont lekòl') : t('Classe contre classe', 'Klas kont klas')}</h2>
           </div>
-          <SquadBars teams={standings?.teams || []} teamSize={tour.teamSize} />
+          <SquadBars teams={standings?.teams || []} teamSize={tour.teamSize} schools={tour.teamRule === 'school'} revealDelay={revealDelay} />
         </div>
       )}
       <div className="tn-card">
@@ -301,7 +383,7 @@ function StandingsCard({ tour, standings, me }: { tour: Tournament; standings: S
           <h2>{standings?.final ? t('Classement final', 'Klasman final') : t('Classement en direct', 'Klasman an dirèk')}</h2>
           <span>{standings?.total || 0} {t('joueurs', 'jwè')}</span>
         </div>
-        <Board rows={rows} me={me} limit={10} />
+        <Board rows={rows} me={me} limit={10} revealDelay={revealDelay} />
       </div>
       <MeStrip rows={rows} me={me} />
     </aside>
@@ -382,7 +464,8 @@ function RoundsStage({ tour, standings, matches, me, canPlay, now, offset }: {
   const [review, setReview] = useState<{ round: number; items: ReviewItem[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const rounds = tour.schedule.rounds;
-  if (tour.competitionEventId) return <div className="tn-card"><Link className="button button--primary" to={`/arena/evenements/${tour.competitionEventId}`}>{t('Inscription et composition de l’événement', 'Enskripsyon ak konpozisyon evènman an')}</Link></div>;
+  // Managed events register on the event page; registered entrants play here.
+  if (tour.competitionEventId && !canPlay) return <div className="tn-card"><Link className="button button--primary" to={`/arena/evenements/${tour.competitionEventId}`}>{t('Inscription et composition de l’événement', 'Enskripsyon ak konpozisyon evènman an')}</Link></div>;
   const open = tour.state === 'running' ? roundAt(rounds, now) : null;
   const inBracketRound = tour.format !== 'bracket' || (open && matches.some((m) => m.round === open.index && m.status === 'pending' && (m.a?.uid === me || m.b?.uid === me)));
   const roundName = (i: number) => (tour.format === 'window' ? t('Fenêtre', 'Fenèt') : tour.format === 'bracket' ? t(`Tour ${i + 1}`, `Tou ${i + 1}`) : t(`Manche ${i + 1}`, `Manch ${i + 1}`));
@@ -458,7 +541,7 @@ function RoundsStage({ tour, standings, matches, me, canPlay, now, offset }: {
         {review && (
           <div>
             <div className="tn-section__head"><h2>{t('Correction', 'Koreksyon')} — {roundName(review.round)}</h2>
-              <button type="button" className="button button--ghost" onClick={() => setReview(null)}><X size={15} aria-hidden="true" /></button>
+              <button type="button" className="button button--ghost" onClick={() => setReview(null)} aria-label={t('Fermer la correction', 'Fèmen koreksyon an')}><X size={15} aria-hidden="true" /></button>
             </div>
             <ReviewList items={review.items} />
           </div>
@@ -583,7 +666,20 @@ export default function TournoisRoom() {
   useLazyTicker(tour && tour.state !== 'cancelled' && tour.state !== 'finished' ? id : undefined, deadlines, setOffset);
 
   if (tour === undefined && !readError) {
-    return <section className="tn"><div className="tn__wrap"><p className="tn-muted">{t('Chargement…', 'Ap chaje…')}</p></div></section>;
+    return (
+      <section className="tn">
+        <div className="tn__wrap">
+          <LoadingState label={t('Chargement du tournoi…', 'N ap chaje tounwa a…')}>
+            <div className="tn-room-skel" aria-hidden="true">
+              <Skeleton width={140} height={16} radius={999} />
+              <Skeleton width="55%" height={40} radius={12} />
+              <Skeleton height={160} radius={18} />
+              <Skeleton height={220} radius={18} />
+            </div>
+          </LoadingState>
+        </div>
+      </section>
+    );
   }
   if (!tour) {
     return (
@@ -635,6 +731,7 @@ export function RoomView({ tour, roster, live, progress, standings, matches, me,
   const canPlay = onRoster && !spectate;
   const isCreator = me === tour.creatorUid;
   const liveNow = tour.state === 'running';
+  const teamMode = tour.gameMode === 'shared' || tour.gameMode === 'relay';
 
   return (
     <section className="tn">
@@ -650,6 +747,8 @@ export function RoomView({ tour, roster, live, progress, standings, matches, me,
             {tour.state === 'cancelled' && <span className="tn-chip">{t('Annulé', 'Anile')}</span>}
             {!(liveNow && tour.format === 'live') && <span className="tn-chip">{formatLabel(tour.format, isCreole)}</span>}
             {tour.teamRule === 'school' && <span className="tn-chip">{t('École vs école', 'Lekòl vs lekòl')}</span>}
+            {tour.gameMode === 'shared' && <span className="tn-chip">{t('Réponse commune', 'Repons komen')}</span>}
+            {tour.gameMode === 'relay' && <span className="tn-chip">{t('Relais', 'Relè')}</span>}
             {tour.teamRule === 'grade' && <span className="tn-chip">{t('Classe vs classe', 'Klas vs klas')}</span>}
             <span className="tn-chip">{tour.visibility === 'public' ? t('Public', 'Piblik') : tour.visibility === 'unlisted' ? t('Non listé', 'Pa nan lis') : t('Privé', 'Prive')}</span>
           </div>
@@ -667,7 +766,7 @@ export function RoomView({ tour, roster, live, progress, standings, matches, me,
             <div className="tn-hero__actions">
               <InviteButton t={tour} label={t('Inviter la classe', 'Envite klas la')} />
               <CopyButton text={shareUrl(tour)} label={t('Lien', 'Lyen')} done={t('Lien copié', 'Lyen kopye')} ghost />
-              {onRoster && tour.format === 'live' && (
+              {onRoster && tour.format === 'live' && !teamMode && (
                 <button type="button" role="switch" aria-checked={spectate} className="tn-switch" onClick={() => setSpectate((s) => !s)}>
                   <span className="tn-switch__track" aria-hidden="true" /> {t('Mode spectateur', 'Mòd espektatè')}
                 </button>
@@ -685,9 +784,30 @@ export function RoomView({ tour, roster, live, progress, standings, matches, me,
 
         {!onRoster && tour.state !== 'cancelled' && <JoinPanel tour={tour} pin={pinFromLink} />}
 
-        {standings?.namedTeams?.length ? <div className="tn-card"><h2>{standings.final ? t('Résultat des équipes', 'Rezilta ekip yo') : t('Classement des équipes en cours', 'Klasman ekip yo an kou')}</h2>{standings.namedTeams.map((team) => <p key={team.id}>{team.rank}. {team.label} · {team.points} pts · {team.missing} {t('absents, comptés à zéro', 'absan, konte zewo')}</p>)}</div> : null}
+        {standings?.namedTeams?.length ? (
+          <div className="tn-card">
+            <div className="tn-section__head">
+              <h2>{standings.final ? t('Résultat des équipes', 'Rezilta ekip yo') : t('Classement des équipes en cours', 'Klasman ekip yo an kou')}</h2>
+            </div>
+            <ol className="tn-teams">
+              {standings.namedTeams.map((team) => (
+                <li key={team.id}>
+                  <span className="tn-teams__rank">{team.rank}</span>
+                  <span className="tn-teams__name">
+                    {team.label}
+                    <small>{team.gameMode ? `${team.missed ?? 0} ${t('question(s) sans réponse', 'kesyon san repons')}` : `${team.missing} ${t('absents, comptés à zéro', 'absan, konte zewo')}`}</small>
+                  </span>
+                  <span className="tn-teams__pts">{nf(team.points)} pts</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        ) : null}
+        {tour.format === 'live' && tour.state !== 'cancelled' && <PhaseLine tour={tour} live={live} now={now} />}
         {tour.state === 'cancelled' ? (
           <div className="tn-empty">{t('Ce tournoi a été annulé par son organisateur.', 'Òganizatè a anile tounwa sa a.')}</div>
+        ) : teamMode && onRoster && me ? (
+          <TeamPlay tour={tour} live={live} roster={roster} me={me} now={now} />
         ) : tour.format === 'live' ? (
           <LiveStage tour={tour} live={live} progress={progress} standings={standings} roster={roster} me={me} canPlay={canPlay} now={now} />
         ) : (

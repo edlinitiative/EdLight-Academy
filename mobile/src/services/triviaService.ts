@@ -106,22 +106,33 @@ function profileRef(uid: string) {
   return doc(db, 'users', uid, 'gamification', 'profile');
 }
 
-/** Load the gamification profile (defaults when none exists / offline). */
+/**
+ * Read the profile for a read-modify-write. THROWS when the read fails —
+ * the record functions used to get defaults back on an offline/permission
+ * error and then wrote `xp: 0 + earned, totalGames: 1, leaderboard: {…''}`
+ * over the student's real profile (P0 validation). Skipping the write is
+ * the only safe answer to an unknown current value.
+ */
+async function readProfileForWrite(uid: string) {
+  const snap = await getDoc(profileRef(uid));
+  if (!snap.exists()) return defaultTriviaProfile();
+  const base = defaultTriviaProfile();
+  const data = snap.data() || {};
+  return {
+    ...base,
+    ...data,
+    byCategory: { ...base.byCategory, ...(data.byCategory || {}) },
+    dailyChallenge: { ...base.dailyChallenge, ...(data.dailyChallenge || {}) },
+    games: { ...base.games, ...((data as any).games || {}) },
+    leaderboard: { ...base.leaderboard, ...(data.leaderboard || {}) },
+  };
+}
+
+/** Load the gamification profile (defaults when none exists / offline). For DISPLAY only. */
 export async function loadTriviaProfile(uid: string) {
   if (!uid) return defaultTriviaProfile();
   try {
-    const snap = await getDoc(profileRef(uid));
-    if (!snap.exists()) return defaultTriviaProfile();
-    const base = defaultTriviaProfile();
-    const data = snap.data() || {};
-    return {
-      ...base,
-      ...data,
-      byCategory: { ...base.byCategory, ...(data.byCategory || {}) },
-      dailyChallenge: { ...base.dailyChallenge, ...(data.dailyChallenge || {}) },
-      games: { ...base.games, ...((data as any).games || {}) },
-      leaderboard: { ...base.leaderboard, ...(data.leaderboard || {}) },
-    };
+    return await readProfileForWrite(uid);
   } catch (err) {
     console.error('[Trivia] loadTriviaProfile error:', err);
     return defaultTriviaProfile();
@@ -156,7 +167,7 @@ export async function recordTriviaResult(uid: string, { category, score = 0, tot
 
   const today = todayStr();
   try {
-    const current = await loadTriviaProfile(uid);
+    const current = await readProfileForWrite(uid);
     const prevLevel = levelInfo(current.xp).level;
 
     const dailyAlreadyDone =
@@ -264,7 +275,7 @@ export async function setLeaderboardOptIn(
 ) {
   if (!uid) return null;
   try {
-    const current = await loadTriviaProfile(uid);
+    const current = await readProfileForWrite(uid);
     const alias = displayName ?? current.leaderboard?.displayName;
     const leaderboard = {
       optedIn: !!optedIn,
@@ -317,7 +328,9 @@ export async function setLeaderboardOptIn(
  */
 export async function setMySchool(uid: string, school: string | null) {
   if (!uid) return null;
-  const current = await loadTriviaProfile(uid);
+  // Unknown current profile (read failed) → don't write; callers treat null as "not saved".
+  let current;
+  try { current = await readProfileForWrite(uid); } catch (err) { console.error('[Trivia] setMySchool read error:', err); return null; }
   const optedIn = current.leaderboard?.optedIn !== false;
   const updated = await setLeaderboardOptIn(uid, { optedIn, school });
   if (updated && optedIn) {
@@ -353,7 +366,7 @@ export async function recordGameResult(uid: string, { gameId, score = 0, maxScor
     return { profile: defaultTriviaProfile(), xpEarned, weeklyFeatured, leveledUp: false, prevLevel: 1, newLevel: 1, guest: true };
   }
   try {
-    const current = await loadTriviaProfile(uid);
+    const current = await readProfileForWrite(uid);
     const prevLevel = levelInfo(current.xp).level;
     const games = (current as any).games || { gamesPlayed: 0, highScores: {} };
     const updated = {

@@ -7,6 +7,7 @@ import AdminRoute from './components/AdminRoute';
 import ScrollToTop from './components/ScrollToTop';
 import HomeRoute from './components/HomeRoute';
 import { lazyWithRetry } from './utils/lazyWithRetry';
+import { webQueryDefaults } from './utils/queryDefaults';
 import useStore from './contexts/store';
 import { captureRefFromUrl } from './services/referralService';
 
@@ -53,6 +54,8 @@ const AdminModeration = lazyWithRetry(() => import('./pages/admin/AdminModeratio
 const AdminSandra = lazyWithRetry(() => import('./pages/admin/AdminSandra'));
 const AdminInstructors = lazyWithRetry(() => import('./pages/admin/AdminInstructors'));
 const AdminSiteStats = lazyWithRetry(() => import('./pages/admin/AdminSiteStats'));
+const AdminDiagnostics = lazyWithRetry(() => import('./pages/admin/AdminDiagnostics'));
+const AdminCompetitionSettings = lazyWithRetry(() => import('./pages/admin/AdminCompetitionSettings'));
 const AdminVideos = lazyWithRetry(() => import('./pages/admin/AdminVideos'));
 const AdminQuizzes = lazyWithRetry(() => import('./pages/admin/AdminQuizzes'));
 const AdminExams = lazyWithRetry(() => import('./pages/admin/AdminExams'));
@@ -82,14 +85,8 @@ const TournoisJoin = lazyWithRetry(() => import('./pages/tournois/TournoisJoin')
 const TournoisRoom = lazyWithRetry(() => import('./pages/tournois/TournoisRoom'));
 
 // Create a client
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 30 * 60 * 1000, // 30 minutes
-    },
-  },
-});
+// Offline-first + no retries while offline: see utils/queryDefaults.ts.
+const queryClient = new QueryClient({ defaultOptions: webQueryDefaults });
 
 export default function App() {
   const accountUid = useStore((s) => s.user?.uid);
@@ -240,6 +237,10 @@ export default function App() {
                 {/* Data */}
                 <Route path="data/collections" element={<Admin />} />
                 <Route path="data/stats" element={<AdminSiteStats />} />
+                {/* Production error signatures (api/telemetry ?view=errors) */}
+                <Route path="data/diagnostics" element={<AdminDiagnostics />} />
+                {/* Competition switches (platformConfig/competition via api/competition) */}
+                <Route path="data/competitions" element={<AdminCompetitionSettings />} />
                 {/* Back-compat redirects from the old flat paths */}
                 <Route path="courses" element={<Navigate to="/admin/content/courses" replace />} />
                 <Route path="verify" element={<Navigate to="/admin/content/verify" replace />} />

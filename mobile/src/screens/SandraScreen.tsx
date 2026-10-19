@@ -34,7 +34,11 @@ import Button from '../components/ui/Button';
 import SandraFace from '../components/sandra/SandraFace';
 import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
-import { sendToSandra, writeConvId, MAX_CHARS } from '../services/sandraService';
+import {
+  sendToSandra, MAX_CHARS, memoryConversation, persistedConversation, newClientMessageId,
+  readTranscript, writeTranscript, type ConversationStore,
+} from '../services/sandraService';
+import { EXPLAIN_DISCLOSURE, type QuestionContext } from '../../../shared/explainContext';
 import { tapLight, tapMedium } from '../utils/haptics';
 import { useReduceMotion } from '../utils/motion';
 import { useTheme, fonts, typeScale, touch, type Palette } from '../theme/theme';
@@ -50,7 +54,7 @@ interface ChatMessage {
 type Notice =
   | { kind: 'limit'; message: string }
   | { kind: 'auth' }
-  | { kind: 'error'; failedText: string };
+  | { kind: 'error'; failedText: string; failedCid: string };
 
 let msgSeq = 0;
 const nextId = () => `msg-${Date.now()}-${msgSeq++}`;
@@ -237,7 +241,7 @@ function Chip({ label, Icon, onPress, disabled }: { label: string; Icon: any; on
       ]}
     >
       <Icon size={18} color={colors.azureInk} strokeWidth={2} />
-      <Text numberOfLines={1} style={{ fontFamily: fonts.medium, fontSize: 15, lineHeight: 20, color: colors.ink }}>{label}</Text>
+      <Text numberOfLines={1} maxFontSizeMultiplier={1.5} style={{ fontFamily: fonts.medium, fontSize: 15, lineHeight: 20, color: colors.ink }}>{label}</Text>
     </PressableScale>
   );
 }
@@ -248,6 +252,7 @@ export default function SandraScreen({
   onClose,
   onNavigate,
   initialAsk,
+  questionContext,
 }: {
   onClose?: () => void;
   /** Called with an in-app path (e.g. "/study-plan") when a chat link is tapped. */
@@ -255,6 +260,12 @@ export default function SandraScreen({
   /** Query handed over from SearchScreen's "Mande Sandra" row — auto-sent
    *  when signed in, parked in the composer otherwise. */
   initialAsk?: string;
+  /**
+   * "Explique-moi" from a correction: the missed question, sent as structured
+   * context with every message of this conversation. The conversation id is
+   * then kept in memory only, so the student's main chat is left untouched.
+   */
+  questionContext?: QuestionContext;
 }) {
   const { user, language, toggleAuthModal, grade, track, enrolledCourses, lastActivity } = useStore();
   const { level } = useTrivia();
@@ -283,6 +294,11 @@ export default function SandraScreen({
     () => ({ grade: grade ?? null, track: track ?? null, level: level?.level ?? null }),
     [grade, track, level?.level],
   );
+
+  // An explain sheet gets its own in-memory conversation (see questionContext).
+  const conversationRef = useRef<ConversationStore | null>(null);
+  if (!conversationRef.current) conversationRef.current = questionContext ? memoryConversation() : persistedConversation;
+  const conversation = conversationRef.current;
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -388,11 +404,16 @@ export default function SandraScreen({
     [onNavigate],
   );
 
-  /** Core send. `appendUser` is false when retrying a turn whose bubble is already shown. */
+  /**
+   * Core send. `appendUser` is false when retrying a turn whose bubble is
+   * already shown; a retry passes the failed turn's `cid` so the server can
+   * answer it from what it already stored (S-2).
+   */
   const deliver = useCallback(
-    async (raw: string, appendUser: boolean) => {
+    async (raw: string, appendUser: boolean, retryCid?: string) => {
       const text = raw.trim();
       if (!text || sending) return;
+      const cid = retryCid || newClientMessageId();
 
       setNotice(null);
       if (appendUser) {
@@ -401,7 +422,10 @@ export default function SandraScreen({
       setSending(true);
       scrollToEnd();
 
-      const result = await sendToSandra(text, lang, { path: '/mobile' }, studentContext);
+      const result = await sendToSandra(
+        text, lang, { path: questionContext ? '/mobile/explain' : '/mobile' }, studentContext, false,
+        { questionContext, conversation, clientMessageId: cid },
+      );
       setSending(false);
 
       if (result.kind === 'reply') {
@@ -417,12 +441,12 @@ export default function SandraScreen({
         setNotice({ kind: 'auth' });
       } else {
         // Keep the user's bubble on screen and offer a retry of the same text.
-        setNotice({ kind: 'error', failedText: text });
+        setNotice({ kind: 'error', failedText: text, failedCid: cid });
       }
       scrollToEnd();
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sending, lang, isCreole, studentContext],
+    [sending, lang, isCreole, studentContext, questionContext, conversation],
   );
 
   const handleSend = () => {
@@ -433,12 +457,33 @@ export default function SandraScreen({
     deliver(text, true);
   };
 
+  const uid = user?.uid ?? null;
   const handleReset = () => {
     setMessages([]);
     setInput('');
     setNotice(null);
-    writeConvId(null);
+    conversation.write(null);
+    if (conversation === persistedConversation) void writeTranscript(uid, []);
   };
+
+  // S-5: reopening the screen shows the open conversation again. Restored
+  // only for this account and only while its conversation id is the one kept.
+  const restoredFor = useRef<string | null>(null);
+  useEffect(() => {
+    // Explique-moi sheets keep their own in-memory conversation: never restore the main chat into them.
+    if (!uid || restoredFor.current === uid || conversation !== persistedConversation) return;
+    restoredFor.current = uid;
+    let live = true;
+    readTranscript(uid).then((saved) => {
+      if (live && saved.length) setMessages((prev) => (prev.length ? prev : saved));
+    }).catch(() => {});
+    return () => { live = false; };
+  }, [uid]);
+  // Mirror the transcript after each change (bounded in writeTranscript).
+  useEffect(() => {
+    if (!uid || restoredFor.current !== uid || !messages.length || conversation !== persistedConversation) return;
+    void writeTranscript(uid, messages);
+  }, [uid, messages]);
 
   // Search handoff: consume the query once on mount. Guests see it parked in
   // the composer behind the sign-in gate instead of losing it.
@@ -551,6 +596,13 @@ export default function SandraScreen({
             <Text style={[typeScale.caption, { color: colors.muted }]}>{t('Aujourd’hui', 'Jodi a')}</Text>
           </View>
 
+          {/* Explique-moi: say in one line what left the correction screen. */}
+          {questionContext ? (
+            <Text style={[typeScale.caption, { color: colors.muted, textAlign: 'center', marginBottom: 14 }]}>
+              {isCreole ? EXPLAIN_DISCLOSURE.ht : EXPLAIN_DISCLOSURE.fr}
+            </Text>
+          ) : null}
+
           {messages.length === 0 ? (
             <SandraBubble onLinkPress={handleLinkPress} text={greeting} accessibilityLabel={`Sandra : ${greeting}`} />
           ) : (
@@ -576,7 +628,7 @@ export default function SandraScreen({
           {/* Notices — opaque tonal washes, no outlines. */}
           {notice?.kind === 'limit' ? (
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderRadius: 16, padding: 14, marginTop: 2, backgroundColor: colors.warnSoft }}>
-              <AlertTriangle size={18} color={colors.warn} style={{ marginTop: 1 }} />
+              <AlertTriangle size={18} color={colors.warnInk} style={{ marginTop: 1 }} />
               <Text accessibilityRole="alert" style={[typeScale.status, { flex: 1, color: colors.ink }]}>
                 {notice.message}
               </Text>
@@ -605,7 +657,7 @@ export default function SandraScreen({
                 variant="outline"
                 label={t('Réessayer', 'Eseye ankò')}
                 disabled={sending}
-                onPress={() => deliver(notice.failedText, false)}
+                onPress={() => deliver(notice.failedText, false, notice.failedCid)}
                 style={{ alignSelf: 'flex-start' }}
               />
             </View>

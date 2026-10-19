@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { isOtherAccountDraft } from '../../shared/examDraft';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { History, ChevronRight, Search, ArrowRight } from '../components/icons';
 import useStore from '../contexts/store';
 import { GRADES, gradeProfile, getCoefficient, DEFAULT_SUBJECT_ORDER } from '../config/trackConfig';
 import { Skeleton } from '../components/Skeleton';
+import { ErrorState, LoadingState } from '../components/StateViews';
 import { useExamAttempts } from '../hooks/useExamAttempts';
 import { levelToSlug } from '../utils/examLevels';
 import { normalizeExamCatalog } from '../utils/examCatalog';
@@ -39,7 +41,7 @@ interface DraftRow {
 /** Every local in-progress exam draft (ExamTake's synchronous mirror keys),
  *  newest first. Works signed-out; Firestore drafts are merged in by the
  *  caller for signed-in, cross-device coverage. */
-function localDrafts(): DraftRow[] {
+function localDrafts(uid?: string | null): DraftRow[] {
   const rows: DraftRow[] = [];
   try {
     for (let i = 0; i < localStorage.length; i++) {
@@ -50,7 +52,7 @@ function localDrafts(): DraftRow[] {
       const draft = JSON.parse(raw);
       const answered = draft?.answers ? Object.keys(draft.answers).length : 0;
       const hasProgress = answered > 0 || (draft?.currentQ ?? 0) > 0;
-      if (!hasProgress || draft?.status === 'submitted') continue;
+      if (!hasProgress || draft?.status === 'submitted' || isOtherAccountDraft(draft, uid)) continue;
       rows.push({
         examId: k.slice('edlight-exam-draft-'.length),
         level: draft?.level || '',
@@ -112,7 +114,7 @@ const ExamLanding = () => {
   useEffect(() => {
     let alive = true;
     const merged = new Map<string, DraftRow>();
-    for (const d of localDrafts()) merged.set(d.examId, d);
+    for (const d of localDrafts(userId)) merged.set(d.examId, d);
     const publish = () => { if (alive) setDrafts([...merged.values()].sort((a, b) => b.updatedAtMs - a.updatedAtMs).slice(0, 3)); };
     if (!userId) { publish(); return () => { alive = false; }; }
     listRecentExamAttempts(userId, 10).then((remote: any[]) => {
@@ -355,7 +357,7 @@ const ExamLanding = () => {
             )}
             <div className="xp-resume__foot">
               <button type="button" className="xp-btn" onClick={() => resumeGo(lead.href)}>
-                {L('Continuer', 'Kontinye')} <ArrowRight size={18} aria-hidden="true" />
+                {L('Reprendre', 'Kontinye')} <ArrowRight size={18} aria-hidden="true" />
               </button>
             </div>
             {moreDrafts.length > 0 && (
@@ -384,23 +386,20 @@ const ExamLanding = () => {
         )}
 
         {catalogError && (
-          <section className="xp-empty">
-            <h2>{L('Liste des examens indisponible', 'Lis egzamen yo pa disponib')}</h2>
-            <p>
-              {typeof navigator !== 'undefined' && navigator.onLine === false
-                ? L('Tu es hors ligne et la liste des examens n’est pas encore enregistrée sur cet appareil.', 'Ou pa sou entènèt e lis egzamen yo poko anrejistre sou aparèy sa a.')
-                : L('Impossible de charger la liste des examens.', 'Nou pa t ka chaje lis egzamen yo.')}
-            </p>
-            <button className="xp-btn" type="button" onClick={() => { void refetchCatalog(); }}>
-              {L('Réessayer', 'Eseye ankò')}
-            </button>
-          </section>
+          <ErrorState
+            headingLevel={2}
+            title={L('Liste des examens indisponible', 'Lis egzamen yo pa disponib')}
+            message={L('Impossible de charger la liste des examens.', 'Nou pa t ka chaje lis egzamen yo.')}
+            offlineMessage={L('Tu es hors ligne et la liste des examens n’est pas encore enregistrée sur cet appareil.', 'Ou pa sou entènèt e lis egzamen yo poko anrejistre sou aparèy sa a.')}
+            onRetry={() => { void refetchCatalog(); }}
+            retryLabel={L('Réessayer', 'Eseye ankò')}
+          />
         )}
 
         {catalogPending && (
-          <div className="xp-tiles" aria-busy="true">
+          <LoadingState className="xp-tiles" label={L('Chargement des examens…', 'N ap chaje egzamen yo…')}>
             {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} height={176} radius={20} />)}
-          </div>
+          </LoadingState>
         )}
 
         {results && (

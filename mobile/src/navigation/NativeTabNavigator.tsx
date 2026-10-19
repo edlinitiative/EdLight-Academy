@@ -23,12 +23,7 @@ import { gradeProfile } from '../config/trackConfig';
 import { lightColors, darkColors } from '../theme/theme';
 import { popToRootOnTabPress } from './tabPressBehaviour';
 
-import DashboardScreen from '../screens/DashboardScreen';
-import CoursesNavigator from './CoursesNavigator';
-import ExamsNavigator from './ExamsNavigator';
-import QuizNavigator from './QuizNavigator';
-import TriviaScreen from '../screens/TriviaScreen';
-import ProfileScreen from '../screens/ProfileScreen';
+import { DashboardTab, CoursesTab, ExamsTab, QuizTab, TriviaTab, ProfileTab } from './tabScreens';
 import { usePreference } from '../settings/preferences';
 
 const Tab = createNativeBottomTabNavigator();
@@ -103,12 +98,12 @@ export default function NativeTabNavigator() {
     >
       <Tab.Screen
         name="Dashboard"
-        component={DashboardScreen}
+        component={DashboardTab}
         options={{ tabBarLabel: t('Accueil', 'Akèy'), tabBarIcon: icon(SF.dashboard) }}
       />
       <Tab.Screen
         name="Courses"
-        component={CoursesNavigator}
+        component={CoursesTab}
         listeners={({ navigation }) => ({
           tabPress: popToRootOnTabPress(navigation, 'Courses', 'CourseList', () => ({
             resetAt: Date.now(),
@@ -118,7 +113,7 @@ export default function NativeTabNavigator() {
       />
       <Tab.Screen
         name="Exams"
-        component={quizPrimary ? QuizNavigator : ExamsNavigator}
+        component={quizPrimary ? QuizTab : ExamsTab}
         listeners={({ navigation }) => ({
           // Quiz-primary grades: the stack also hosts exam screens now, so a
           // tab press pops back to the quiz picker like the other tabs do.
@@ -131,12 +126,12 @@ export default function NativeTabNavigator() {
       />
       <Tab.Screen
         name="Trivia"
-        component={TriviaScreen}
+        component={TriviaTab}
         options={{ tabBarLabel: t('Jeux', 'Jwèt'), tabBarIcon: icon(SF.games) }}
       />
       <Tab.Screen
         name="Profile"
-        component={ProfileScreen}
+        component={ProfileTab}
         options={{ tabBarLabel: t('Profil', 'Pwofil'), tabBarIcon: icon(SF.profile) }}
       />
     </Tab.Navigator>

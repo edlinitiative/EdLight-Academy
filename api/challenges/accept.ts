@@ -8,14 +8,21 @@
  * /api/leaderboard/award. Ties pay both sides half.
  *
  * Request body (Authorization: Bearer <Firebase ID token>):
- *   { code: string, score: number }
+ *   { code: string, score: number, answers?: (string|null)[], bankHash?: string }
+ *
+ * Server grading (P0 validation D-8): with `answers`, the opponent's score is
+ * graded here against the bank the duel was minted on (shared/duelGrading);
+ * the posted `score` is used only for older builds, clamped and recorded as
+ * opponent.scoreSource 'client'. An opponent whose bank hash differs from the
+ * duel's is refused with 409 bank_mismatch (D-9) — they would be answering
+ * different questions.
  *
  * Response 200:
  *   { ok: true, result: 'won' | 'lost' | 'tie',
  *     challengerScore, opponentScore, total, xpAwarded }
  *   xpAwarded is what the CALLER earned (0 on a loss).
  *
- * Errors: 404 not_found · 409 already_played · 410 expired ·
+ * Errors: 404 not_found · 409 already_played · 409 bank_mismatch · 410 expired ·
  *         400 self_challenge / invalid input · 429 rate limited.
  *
  * NOTE: rate limiting uses the 'challenge-accept' bucket — add it to LIMITS in
@@ -29,6 +36,8 @@ import { checkRateLimit } from '../_lib/rateLimit';
 import { getDb } from '../_lib/firebaseAdmin';
 import { cleanAvatar } from '../../src/arena-art/avatars/avatarConfig';
 import { sendExpoPushToUser } from '../_lib/expoPush';
+import { decideDuelScore } from '../../shared/duelGrading';
+import { serverDuelBank } from '../_lib/duelBank';
 
 /** Duel stakes — winner takes WIN_XP, a tie pays TIE_XP to each side. */
 const WIN_XP = 20;
@@ -62,6 +71,8 @@ function weekId(date = new Date()): string {
 interface AcceptBody {
   code?: unknown;
   score?: unknown;
+  answers?: unknown;
+  bankHash?: unknown;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
@@ -131,9 +142,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       if (expMs && Date.now() > expMs) return { error: 410 as const };
 
       const total = Number(c.total) || 0;
-      const oppScore = Math.min(score, total); // score can't exceed the round
+      const decision = decideDuelScore({
+        serverBank: serverDuelBank(String(c.categoryId || '')),
+        duelHash: typeof c.bankHash === 'string' ? c.bankHash : null,
+        clientHash: body.bankHash,
+        idxs: Array.isArray(c.questionIdxs) ? c.questionIdxs : [],
+        picks: body.answers,
+        clientScore: score,
+        total,
+      });
+      if (!decision.ok) {
+        return decision.error === 'bank_mismatch'
+          ? { error: 409 as const, code: 'bank_mismatch' }
+          : { error: 400 as const, code: decision.error };
+      }
+      const oppScore = decision.score;
       tx.update(ref, {
-        opponent: { uid, name: opponentName, ...(opponentAvatar ? { avatar: opponentAvatar } : {}), score: oppScore, playedAt: Timestamp.now() },
+        opponent: {
+          uid, name: opponentName, ...(opponentAvatar ? { avatar: opponentAvatar } : {}),
+          score: oppScore, scoreSource: decision.source, playedAt: Timestamp.now(),
+        },
         status: 'played',
       });
       return {
@@ -148,7 +176,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       const messages: Record<number, string> = {
         404: 'not_found',
         400: outcome.code || 'bad_request',
-        409: 'already_played',
+        409: outcome.code || 'already_played',
         410: 'expired',
       };
       // `error` is optional on the transaction's failure shape, so it can be

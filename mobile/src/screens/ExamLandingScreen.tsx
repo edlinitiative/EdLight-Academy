@@ -13,13 +13,14 @@ import PageTitle from '../components/ui/PageTitle';
 import Segmented from '../components/ui/Segmented';
 import StatNumeral from '../components/ui/StatNumeral';
 import Button from '../components/ui/Button';
-import { Skeleton } from '../components/StateViews';
+import { Skeleton, InlineError } from '../components/StateViews';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import { tapLight } from '../utils/haptics';
 import { fetchCatalogIndex } from '../utils/examCatalog';
 import { normalizeSubject, normalizeLevel, normalizeYear, normalizeExamTitle, subjectDisplayName } from '../utils/examUtils';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
 import type { LastActivity } from '../contexts/store';
+import { isOtherAccountDraft } from '../../../shared/examDraft';
 
 type Nav = NativeStackNavigationProp<ExamsParamList, 'ExamLanding'>;
 
@@ -111,6 +112,7 @@ function relativeWhen(ms: number, isCreole: boolean): string {
 async function findResumableExam(
   fallbackLevel: string,
   lastActivity: LastActivity | null,
+  uid?: string | null,
 ): Promise<ResumableExam | null> {
   let keys: readonly string[] = [];
   try {
@@ -129,6 +131,8 @@ async function findResumableExam(
       try { draft = JSON.parse(raw); } catch { continue; }
       // Only `in_progress` counts; a submitted exam belongs on the results screen.
       if (!draft || draft.status !== 'in_progress') continue;
+      // Another account's paper on this shared phone is not this student's.
+      if (isOtherAccountDraft(draft, uid)) continue;
       const examId = key.slice(EXAM_DRAFT_PREFIX.length);
       if (!examId) continue;
       const updatedAt = Number(draft.updated_at_ms) || 0;
@@ -212,6 +216,7 @@ export default function ExamLandingScreen() {
   const scrollRef = React.useRef<any>(null);
   useScrollToTop(scrollRef);
   const { language, track, grade, lastActivity, setTrack, setOnboardingCompleted } = useStore();
+  const uid = useStore((s) => s.user?.uid ?? null);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -227,13 +232,18 @@ export default function ExamLandingScreen() {
 
   // ── The catalog: counts and newest papers come from the real index ────────
   const [catalog, setCatalog] = React.useState<any[] | null>(null);
+  // A failed fetch is NOT "no subjects": keep it distinct so the tile grid
+  // offers a retry instead of telling the student the level is empty.
+  const [catalogFailed, setCatalogFailed] = React.useState(false);
+  const [catalogAttempt, setCatalogAttempt] = React.useState(0);
   React.useEffect(() => {
     let active = true;
+    setCatalogFailed(false);
     fetchCatalogIndex()
       .then((c) => { if (active) setCatalog(Array.isArray(c) ? c : []); })
-      .catch(() => { if (active) setCatalog([]); });
+      .catch(() => { if (active) { setCatalog([]); setCatalogFailed(true); } });
     return () => { active = false; };
-  }, []);
+  }, [catalogAttempt]);
 
   const { subjects, total, recent } = React.useMemo(() => {
     const bySubject = new Map<string, SubjectStat>();
@@ -284,11 +294,11 @@ export default function ExamLandingScreen() {
   useFocusEffect(
     React.useCallback(() => {
       let active = true;
-      findResumableExam(myLevelId ?? 'terminale', lastActivity)
+      findResumableExam(myLevelId ?? 'terminale', lastActivity, uid)
         .then((r) => { if (active) setResume(r); })
         .catch(() => { /* keep whatever is on screen */ });
       return () => { active = false; };
-    }, [myLevelId, lastActivity]),
+    }, [myLevelId, lastActivity, uid]),
   );
 
   function continueExam(target: ResumableExam) {
@@ -390,8 +400,8 @@ export default function ExamLandingScreen() {
                 </View>
               ) : null}
               <Button
-                label={t('Continuer', 'Kontinye')}
-                accessibilityLabel={t(`Continuer l'examen en cours : ${resume.title}`, `Kontinye egzamen an kou a: ${resume.title}`)}
+                label={t('Reprendre', 'Kontinye')}
+                accessibilityLabel={t(`Reprendre l'examen en cours : ${resume.title}`, `Kontinye egzamen an kou a: ${resume.title}`)}
                 onPress={() => continueExam(resume)}
                 size="lg"
                 fullWidth
@@ -467,6 +477,11 @@ export default function ExamLandingScreen() {
                 </View>
               ))}
             </View>
+          ) : catalogFailed && subjects.length === 0 ? (
+            <InlineError
+              message={t('La liste des sujets n’a pas pu être chargée.', 'Lis sijè yo pa t ka chaje.')}
+              onRetry={() => { setCatalog(null); setCatalogAttempt((n) => n + 1); }}
+            />
           ) : subjects.length === 0 ? (
             <Text style={[typeScale.body, { color: colors.muted }]}>
               {t('Aucun sujet disponible pour ce niveau pour le moment.', 'Pa gen sijè pou nivo sa a pou kounye a.')}

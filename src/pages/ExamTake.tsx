@@ -8,9 +8,11 @@ import FigureRenderer from '../components/FigureRenderer';
 import InstructionRenderer from '../components/InstructionRenderer';
 import MathKeyboard from '../components/MathKeyboard';
 import { useKatex, renderWithKatex } from '../utils/shared';
-import { loadExamAttemptDraft, saveExamAttemptDraft, markExamAttemptSubmitted } from '../services/examAttempts';
+import { loadExamAttemptDraft, saveExamAttemptDraft, commitExamSubmission } from '../services/examAttempts';
+import { examDraftKey, readLocalExamDraft, pickResumeDraft, draftPosition, settleWithin } from '../../shared/examDraft';
+import { buildEssayGradeBody, isAiGradable } from '../../shared/essayRegrade';
+import { classifyEssayResponse, ESSAY_GRADE_TIMEOUT_MS } from '../../shared/essayGradeCore';
 import { authedFetch, auth } from '../services/firebase';
-import { saveExamResult } from '../services/examResults';
 import { track } from '../utils/analytics';
 import { recordTaskResult, loadActiveStudyPlan } from '../services/studyPlanService';
 import {
@@ -486,13 +488,16 @@ const ExamTake = () => {
 
   // A synchronous localStorage mirror of the draft — survives PWA backgrounding
   // / app kill, when the debounced Firestore write can't complete.
-  const localDraftKey = examKey ? `edlight-exam-draft-${examKey}` : null;
+  const localDraftKey = examKey ? examDraftKey(examKey) : null;
+  // The mirror carries the owner's uid: on a shared device it is only ever
+  // restored into that account (readLocalExamDraft), never into the next
+  // student who opens the same paper.
   const persistLocal = useCallback((payload) => {
-    if (!localDraftKey || typeof localStorage === 'undefined') return;
+    if (!localDraftKey || !userId || typeof localStorage === 'undefined') return;
     try {
-      localStorage.setItem(localDraftKey, JSON.stringify({ ...payload, status: 'in_progress', updated_at_ms: Date.now() }));
+      localStorage.setItem(localDraftKey, JSON.stringify({ ...payload, uid: userId, status: 'in_progress', updated_at_ms: Date.now() }));
     } catch { /* quota / unavailable */ }
-  }, [localDraftKey]);
+  }, [localDraftKey, userId]);
   const clearLocalDraft = useCallback(() => {
     if (!localDraftKey || typeof localStorage === 'undefined') return;
     try { localStorage.removeItem(localDraftKey); } catch { /* ignore */ }
@@ -550,26 +555,24 @@ const ExamTake = () => {
       // Prefer the local mirror when it's newer than Firestore — a background /
       // app-kill can lose the debounced Firestore write, but localStorage is
       // written synchronously, so it holds the true latest position/answers.
+      // Only this account's mirror is considered (shared devices).
+      let local = null;
       try {
         if (localDraftKey && typeof localStorage !== 'undefined') {
-          const raw = localStorage.getItem(localDraftKey);
-          if (raw) {
-            const local = JSON.parse(raw);
-            if (local && local.status === 'in_progress' &&
-                (!draft || (local.updated_at_ms || 0) > (draft.updated_at_ms || 0))) {
-              draft = local;
-            }
-          }
+          local = readLocalExamDraft(localStorage.getItem(localDraftKey), userId);
         }
-      } catch { /* ignore corrupt mirror */ }
+      } catch { /* storage unavailable */ }
+      draft = pickResumeDraft(draft, local);
 
       resumeCheckedRef.current = true;
       setDraftChecked(true); // unblock the save effect (even when there's no draft)
-      if (!draft || draft.status !== 'in_progress') return;
+      if (!draft) return;
       const hasAnswers = draft.answers && Object.keys(draft.answers).length > 0;
       // Also resume when they'd navigated past Q1 without answering yet — position
       // alone is worth restoring (essay/proof questions are often read first).
-      const hasPosition = Number.isFinite(draft.currentQ) && draft.currentQ > 0;
+      // draftPosition also reads the mobile app's `currentIdx`.
+      const pos = draftPosition(draft);
+      const hasPosition = pos != null && pos > 0;
       if (!hasAnswers && !hasPosition) return;
       startedAtMsRef.current = draft.started_at_ms || Date.now();
       setResumeDraft(draft);
@@ -588,13 +591,14 @@ const ExamTake = () => {
     setAnswers(resumeDraft.answers || {});
     setQuestionResults(resumeDraft.questionResults || {});
     if (resumeDraft.feedbackMode) setFeedbackMode(resumeDraft.feedbackMode);
-    if (Number.isFinite(resumeDraft.currentQ)) setCurrentQ(resumeDraft.currentQ);
+    const pos = draftPosition(resumeDraft);
+    if (pos != null && pos < questions.length) setCurrentQ(pos);
     if (typeof resumeDraft.secondsLeft === 'number' && resumeDraft.secondsLeft >= 0) {
       setSecondsLeft(resumeDraft.secondsLeft);
     }
     setShowResumePrompt(false);
     setViewState('active');
-  }, [resumeDraft]);
+  }, [resumeDraft, questions.length]);
 
   useEffect(() => {
     if (resumeIntent && showResumePrompt && resumeDraft) handleResume();
@@ -743,6 +747,9 @@ const ExamTake = () => {
       duration_minutes: durationMin || 0,
       feedbackMode,
       currentQ,
+      // Same index under the mobile app's field name, so a paper started here
+      // resumes at the right question on the phone.
+      currentIdx: currentQ,
       secondsLeft,
       answers,
       // Only persist compacted pre-graded results (optional, mainly for immediate mode)
@@ -894,39 +901,26 @@ const ExamTake = () => {
       const wordCount = (userAnswer || '').trim().split(/\s+/).filter(Boolean).length;
       if (wordCount < minWords) return; // caller should show a warning
 
-      // Build rich context for the LLM: include answer_parts labels+answers as reference
-      let modelRef = q.model_answer || q.correct || '';
-      if (q.answer_parts && q.answer_parts.length > 0) {
-        const partsText = q.answer_parts.map(p =>
-          `${p.label}: ${p.answer}${p.alternatives && p.alternatives.length ? ' (also acceptable: ' + p.alternatives.join(', ') + ')' : ''}`
-        ).join('\n');
-        modelRef = modelRef ? modelRef + '\n\nKey expected points:\n' + partsText : partsText;
-      }
-
       setGradingInProgress((prev) => ({ ...prev, [qIndex]: true }));
       try {
-        const response = await authedFetch('/api/grade-essay', {
-            question: q._displayText || q.question,
-            context: q.sectionInstructions || '',
-            answer: userAnswer,
-            modelAnswer: modelRef,
-            answerParts: q.answer_parts || [],
-            points: q.points || 10,
-            type: q.type,
-            subject,
-          });
+        const response = await authedFetch(
+          '/api/grade-essay',
+          buildEssayGradeBody(q, userAnswer, { subject, level: normalizeLevel(exam?.level) }),
+          { timeoutMs: ESSAY_GRADE_TIMEOUT_MS },
+        );
         let essayResult;
         if (response.ok) {
           essayResult = await response.json();
         } else {
-          essayResult = { isCorrect: false, feedback: t('Évaluation automatique indisponible.', 'Koreksyon otomatik pa disponib.'), score: 'N/A' };
+          essayResult = { isCorrect: false, graded: false, feedback: t('Évaluation automatique indisponible.', 'Koreksyon otomatik pa disponib.'), score: 'N/A' };
         }
         const result = gradeSingleQuestion(q, userAnswer, essayResult, { subject });
         setQuestionResults((prev) => ({ ...prev, [qIndex]: result }));
       } catch {
         const result = gradeSingleQuestion(q, userAnswer, {
           isCorrect: false,
-          feedback: t('Erreur de connexion, votre réponse sera évaluée manuellement.', 'Erè koneksyon, y ap korije repons ou an alamen.'),
+          graded: false,
+          feedback: t('Erreur de connexion : la correction pourra être relancée après la remise.', 'Erè koneksyon : w ap ka relanse koreksyon an apre ou fin remèt.'),
           score: 'N/A',
         }, { subject });
         setQuestionResults((prev) => ({ ...prev, [qIndex]: result }));
@@ -992,7 +986,7 @@ const ExamTake = () => {
       const result = gradeSingleQuestion(q, userAnswer, null, { subject });
       setQuestionResults((prev) => ({ ...prev, [qIndex]: result }));
     }
-  }, [questions, answers, questionResults, subject]);
+  }, [questions, answers, questionResults, subject, exam?.level]);
 
   const answeredCount = Object.keys(answers).filter((k) => isAnswerFilled(answers[k])).length;
   const unansweredIndices = [];
@@ -1083,13 +1077,18 @@ const ExamTake = () => {
   const trackInfo = userTrack ? TRACK_BY_CODE[userTrack] : null;
 
   // ── Submit ─────────────────────────────────────────────────────────────────
+  // One submission at a time: the timer's auto-submit at 0:00 and a tap on
+  // "Remettre" (or a double tap) used to run two full gradings — two rounds
+  // of AI essay calls and two result writes.
+  const submitInFlightRef = useRef(false);
   const handleSubmit = useCallback(async () => {
+    if (submitInFlightRef.current || submittedRef.current) return;
+    submitInFlightRef.current = true;
     clearInterval(timerRef.current);
-    // Stop the draft machinery: cancel any pending debounced write, drop the
-    // local mirror, and clear the Home "Reprendre" banner so a finished exam
-    // isn't offered as resumable (which would dead-end at a submitted attempt).
+    // Stop the debounced draft write and clear the Home "Reprendre" banner.
+    // The local mirror is NOT dropped here any more: it is the only copy of
+    // the answers until the account acknowledges the submission (below).
     if (saveDraftTimerRef.current) clearTimeout(saveDraftTimerRef.current);
-    clearLocalDraft();
     clearActivity();
     setSubmitting(true);
 
@@ -1100,48 +1099,44 @@ const ExamTake = () => {
     // Collect pre-graded results from immediate mode
     const preGraded = feedbackMode === 'immediate' ? { ...questionResults } : {};
 
-    // AI-grade essay / short_answer questions that weren't already pre-graded
+    // AI-grade essay / short_answer questions that weren't already pre-graded.
+    // Same selection rule and request body as the mobile app
+    // (shared/essayRegrade.ts): essays always go to the grader (it marks
+    // structure and language, and French/philosophy as a dissertation, even
+    // without an authored key); a short answer needs a reference.
     const aiJobs = [];
     questions.forEach((q, i) => {
       if (preGraded[i]) return; // already graded
       const userAnswer = answers[i];
-      if (userAnswer == null || userAnswer === '') return; // unanswered
       if (q.type !== 'essay' && q.type !== 'short_answer') return; // not AI-gradable
-
-      // Build model reference the same way as gradeQuestionImmediate
-      let modelRef = q.model_answer || q.correct || '';
-      if (q.answer_parts && q.answer_parts.length > 0) {
-        const partsText = q.answer_parts.map(p =>
-          `${p.label}: ${p.answer}${p.alternatives && p.alternatives.length ? ' (also acceptable: ' + p.alternatives.join(', ') + ')' : ''}`
-        ).join('\n');
-        modelRef = modelRef ? modelRef + '\n\nKey expected points:\n' + partsText : partsText;
-      }
-      if (!modelRef) return; // nothing to grade against
-
-      aiJobs.push({ index: i, question: q, userAnswer, modelRef });
+      if (!isAiGradable(q, userAnswer)) return;
+      aiJobs.push({ index: i, question: q, userAnswer });
     });
 
     // Run AI grading with a bounded concurrency cap (never fire more than a
-    // handful of /api/grade-essay calls at once). Track failures so we can
-    // surface an aggregate "some answers couldn't be auto-graded" notice.
+    // handful of /api/grade-essay calls at once). A call that fails is NOT a
+    // zero: gradeSingleQuestion marks it `ungraded` (left out of the score)
+    // and the results page offers "Corriger maintenant".
     let aiGradeFailures = 0;
     if (aiJobs.length > 0) {
+      const examLevel = normalizeLevel(exam.level);
       const graded = await mapWithConcurrency(aiJobs, 5, async (job) => {
         try {
-          const response = await authedFetch('/api/grade-essay', {
-            question: job.question._displayText || job.question.question,
-            context: job.question.sectionInstructions || '',
-            answer: job.userAnswer,
-            modelAnswer: job.modelRef,
-          });
+          const response = await authedFetch(
+            '/api/grade-essay',
+            buildEssayGradeBody(job.question, job.userAnswer, { subject: examSubject, level: examLevel }),
+            { timeoutMs: ESSAY_GRADE_TIMEOUT_MS },
+          );
           if (response.ok) {
-            return { index: job.index, essayResult: await response.json() };
+            const essayResult = await response.json();
+            if (classifyEssayResponse(essayResult) === 'failed') aiGradeFailures += 1;
+            return { index: job.index, essayResult };
           }
-        } catch { /* network error — fall through */ }
+        } catch { /* network error or timeout — fall through */ }
         aiGradeFailures += 1;
         return {
           index: job.index,
-          essayResult: { isCorrect: false, feedback: t('Évaluation automatique indisponible.', 'Koreksyon otomatik pa disponib.'), score: 'N/A' },
+          essayResult: { isCorrect: false, graded: false, feedback: t('Évaluation automatique indisponible.', 'Koreksyon otomatik pa disponib.'), score: 'N/A' },
         };
       });
 
@@ -1155,6 +1150,7 @@ const ExamTake = () => {
     }
 
     setSubmitted(true);
+    submittedRef.current = true; // block the unmount/pagehide draft flush now, not after a render
     setSubmitting(false);
 
     // Grading and the hand-off to the results page are the two steps that can
@@ -1191,13 +1187,21 @@ const ExamTake = () => {
       console.error('[ExamTake] Submission failed while grading/storing:', e);
       setShowConfirm(false);
       setSubmitError(e instanceof Error ? e.message : String(e));
+      // Let "Réessayer" run again; the answers are still in state + mirror.
+      submitInFlightRef.current = false;
+      submittedRef.current = false;
+      setSubmitted(false);
       return;
     }
 
-    // Persist to Firestore for cross-device results/resume (best-effort)
+    // Persist to Firestore for cross-device results/history. Result + the
+    // attempt's `submitted` mark are one atomic batch. setDoc/commit only
+    // resolve on SERVER acknowledgement, so offline the old `await` never
+    // returned and the paper sat on "Envoi…" with no results. Wait a bounded
+    // time: the write stays queued in Firestore's persistent cache and commits
+    // on reconnect; the results page says the account copy is still pending.
     if (userId && examKey) {
-      try {
-        await saveExamResult(userId, examKey, {
+      const commit = commitExamSubmission(userId, examKey, {
           exam_id: examKey,
           level: normalizeLevel(exam.level),
           subject: examSubject,
@@ -1214,26 +1218,40 @@ const ExamTake = () => {
             }])
           ),
           submitted_at_ms: Date.now(),
-        });
-        await markExamAttemptSubmitted(userId, examKey, {
+        }, {
           last_result_at_ms: Date.now(),
         });
-      } catch (e) {
-        console.warn('[ExamResult] Failed to persist result:', e);
-      }
-
-      // Update study plan SRS if exam is in the active plan (best-effort)
+      // Drop the local mirror only once the account holds the result; until
+      // then it is what lets the student resume and resubmit if the queued
+      // write is lost (e.g. storage without IndexedDB persistence).
+      commit.then((written) => { if (written) clearLocalDraft(); }, (e) => console.warn('[ExamResult] Failed to persist result:', e));
+      const outcome = await settleWithin(commit, 8000);
+      // `false` = Firebase Auth held no user, so nothing was written.
+      const syncState = outcome.status === 'confirmed'
+        ? (outcome.value ? 'saved' : 'failed')
+        : outcome.status;
       try {
-        const activePlan = await loadActiveStudyPlan(userId);
-        if (activePlan?.tasks?.some((t) => t.examId === examKey)) {
-          await recordTaskResult(userId, activePlan.id, examKey, {
-            scorePct: result.summary.percentage ?? 0,
-            answeredAt: Date.now(),
-          });
+        const key = `exam-result-${examKey}`;
+        const raw = sessionStorage.getItem(key);
+        if (raw) sessionStorage.setItem(key, JSON.stringify({ ...JSON.parse(raw), syncState }));
+      } catch { /* the results page simply shows no sync note */ }
+
+      // Update study plan SRS if exam is in the active plan (best-effort).
+      // Not awaited: its write also only resolves on server ack, and offline
+      // it held the student on the exam instead of showing the results.
+      (async () => {
+        try {
+          const activePlan = await loadActiveStudyPlan(userId);
+          if (activePlan?.tasks?.some((t) => t.examId === examKey)) {
+            await recordTaskResult(userId, activePlan.id, examKey, {
+              scorePct: result.summary.percentage ?? 0,
+              answeredAt: Date.now(),
+            });
+          }
+        } catch (e) {
+          console.warn('[StudyPlan] Failed to record task result:', e);
         }
-      } catch (e) {
-        console.warn('[StudyPlan] Failed to record task result:', e);
-      }
+      })();
     }
 
     // Grading succeeded (a failure returns above) and, for signed-in students,
@@ -2433,14 +2451,17 @@ function ReadingPassage({ text, reconstructed }) {
 
   return (
     <div className={`exam-take__reading-passage ${expanded ? '' : 'exam-take__reading-passage--collapsed'}`}>
+      {/* The bar toggles on a click anywhere; the button is its keyboard
+          path (it was tabIndex -1, so keyboard users could never collapse
+          or reopen the passage). Its click bubbles to the bar's handler. */}
       <div className="exam-take__reading-passage-bar" onClick={() => setExpanded((e) => !e)}>
         <span className="exam-take__reading-passage-label">{t('Texte de référence', 'Tèks referans')}</span>
         {reconstructed && <ReconstructedBadge />}
         <button
           className="exam-take__reading-passage-toggle"
           type="button"
+          aria-expanded={expanded}
           aria-label={expanded ? t('Réduire le texte', 'Rediksyon tèks la') : t('Afficher le texte', 'Montre tèks la')}
-          tabIndex={-1}
         >
           {expanded ? t('▲ Réduire', '▲ Redui') : t('▼ Afficher le texte', '▼ Montre tèks la')}
         </button>
@@ -3409,6 +3430,7 @@ function ImmediateFeedback({ result, question, color }) {
     incorrect: { icon: '✗', label: t('Incorrect', 'Pa kòrèk'), cls: 'exam-take__feedback--incorrect' },
     'scaffold-complete': { icon: '✓', label: t('Complété', 'Konplè'), cls: 'exam-take__feedback--correct' },
     manual: { icon: '•', label: t('Évaluation manuelle', 'Koreksyon alamen'), cls: 'exam-take__feedback--manual' },
+    ungraded: { icon: '•', label: t('Pas encore corrigée', 'Poko korije'), cls: 'exam-take__feedback--manual' },
     unanswered: { icon: '—', label: t('Sans réponse', 'San repons'), cls: 'exam-take__feedback--unanswered' },
   };
   const cfg = statusConfig[status] || statusConfig.manual;
@@ -3425,11 +3447,21 @@ function ImmediateFeedback({ result, question, color }) {
       <div className="exam-take__feedback-banner">
         <span className="exam-take__feedback-icon">{cfg.icon}</span>
         <span className="exam-take__feedback-label">{cfg.label}</span>
-        <span className="exam-take__feedback-score">{awarded}/{maxPts} pt{maxPts > 1 ? 's' : ''}</span>
+        {status !== 'ungraded' && (
+          <span className="exam-take__feedback-score">{awarded}/{maxPts} pt{maxPts > 1 ? 's' : ''}</span>
+        )}
       </div>
 
-      {/* Essay AI feedback */}
-      {essayFeedback && (
+      {/* Essay AI feedback (a failed call has no grade to show: say so, never "N/A") */}
+      {essayFeedback && classifyEssayResponse(essayFeedback) === 'failed' && (
+        <p className="exam-take__feedback-essay-text">
+          {t(
+            'La correction automatique n’a pas abouti. Vous pourrez la relancer depuis vos résultats.',
+            'Koreksyon otomatik la pa t mache. W ap ka relanse l nan rezilta ou yo.',
+          )}
+        </p>
+      )}
+      {essayFeedback && classifyEssayResponse(essayFeedback) !== 'failed' && (
         <div className="exam-take__feedback-essay">
           <div className="exam-take__feedback-essay-score">
             <span>{t('Note IA :', 'Nòt IA :')}</span> <strong>{essayFeedback.score}</strong>
@@ -3896,6 +3928,7 @@ function ProofInput({ question, index, value, onChange, disabled = false }) {
                   value={step.math}
                   onChange={(e) => setStepField(i, 'math', e.target.value)}
                   placeholder={isDone ? '' : t('Écrivez votre expression ici…', 'Ekri ekspresyon ou an isit la…')}
+                  aria-label={t(`Étape ${i + 1} : expression`, `Etap ${i + 1} : ekspresyon`)}
                   rows={1}
                   spellCheck="false"
                   disabled={disabled}
@@ -3989,6 +4022,7 @@ function JustificationPicker({ value, onChange, disabled = false }) {
     <div className="ka-justify">
       <select
         className="ka-justify__select"
+        aria-label={t('Justification', 'Jistifikasyon')}
         value={JUSTIFICATION_OPTIONS.includes(value) ? value : (value ? 'Autre' : '')}
         onChange={(e) => {
           const val = e.target.value;
@@ -4404,6 +4438,7 @@ function MatchingInput({ question, index, value, onChange, disabled }) {
         value={value}
         onChange={(e) => onChange(index, e.target.value)}
         placeholder="1-B, 2-A, 3-C…"
+        aria-label={t('Vos correspondances', 'Korespondans ou yo')}
         disabled={disabled}
       />
     </div>

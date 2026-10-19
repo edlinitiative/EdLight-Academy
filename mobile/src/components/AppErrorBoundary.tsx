@@ -1,43 +1,52 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import useStore from '../contexts/store';
-import { reportError, getBuildInfo } from '../services/telemetry';
+import { reportRenderError } from '../services/telemetry';
 
 /**
- * Top-level containment for render errors.
+ * Containment for render errors — at the root (around the whole navigator)
+ * and around each tab, so one broken screen never takes the app down to a
+ * white screen.
  *
- * A crash anywhere under the navigator used to leave a white screen (release)
- * or a red box (dev) with no way back. This shows a calm bilingual screen, and
- * "Réessayer" / "Eseye ankò" re-mounts the whole tree under a new key — the
- * auth listener re-subscribes and the cached data is still there, so the
- * student lands back where they were in most cases. No stack trace is ever
- * shown to a student; the details go to telemetry with the build that
- * produced them.
+ * Shows a calm bilingual screen with "Réessayer" / "Eseye ankò" (re-mounts
+ * the subtree under a new key; cached data is still there, so the student
+ * usually lands back where they were) and, when `onGoHome` is given,
+ * "Retour à l'accueil" / "Retounen nan Akèy". No stack trace is ever shown to
+ * a student; telemetry gets a sanitized signature with the build that
+ * produced it (services/telemetry `reportRenderError`).
  *
  * The fallback deliberately depends on nothing that might itself be broken:
  * no theme hook, no custom fonts, no navigation, no icons — only the store's
  * language and theme values, read defensively.
  */
 
-type Props = { children: React.ReactNode };
+type Props = {
+  children: React.ReactNode;
+  /** Which boundary caught it ('root', 'Dashboard', 'Courses', …): a static name for diagnostics. */
+  boundary?: string;
+  /** Leave the broken screen for home. The boundary also resets itself. */
+  onGoHome?: () => void;
+};
 type State = { error: unknown | null; resetKey: number };
 
-const COPY = {
+export const BOUNDARY_COPY = {
   fr: {
     title: 'Un petit souci',
     body: "Quelque chose s'est mal passé sur cet écran. Tu peux réessayer.",
     retry: 'Réessayer',
+    home: "Retour à l'accueil",
   },
   ht: {
     title: 'Yon ti pwoblèm',
     body: 'Gen yon bagay ki pa mache sou ekran sa a. Ou ka eseye ankò.',
     retry: 'Eseye ankò',
+    home: 'Retounen nan Akèy',
   },
 };
 
 const PALETTE = {
-  light: { bg: '#FFFFFF', text: '#1F2937', muted: '#4B5563', button: '#1B6FE0', buttonText: '#FFFFFF' },
-  dark: { bg: '#0F172A', text: '#F1F5F9', muted: '#CBD5E1', button: '#1B6FE0', buttonText: '#FFFFFF' },
+  light: { bg: '#FFFFFF', text: '#1F2937', muted: '#4B5563', button: '#1B6FE0', buttonText: '#FFFFFF', ghost: '#1558B8' },
+  dark: { bg: '#0F172A', text: '#F1F5F9', muted: '#CBD5E1', button: '#1B6FE0', buttonText: '#FFFFFF', ghost: '#7DB4F8' },
 };
 
 function readPrefs(): { lang: 'fr' | 'ht'; dark: boolean } {
@@ -56,16 +65,17 @@ export default class AppErrorBoundary extends React.Component<Props, State> {
     return { error };
   }
 
-  componentDidCatch(error: unknown, info: React.ErrorInfo) {
-    reportError(error, {
-      flow: 'error_boundary',
-      componentStack: String(info?.componentStack ?? '').slice(0, 2000),
-      ...getBuildInfo(),
-    });
+  componentDidCatch(error: unknown) {
+    reportRenderError(error, this.props.boundary ?? 'root');
   }
 
   private retry = () => {
     this.setState((s) => ({ error: null, resetKey: s.resetKey + 1 }));
+  };
+
+  private goHome = () => {
+    try { this.props.onGoHome?.(); } catch { /* still reset below */ }
+    this.retry();
   };
 
   render() {
@@ -74,7 +84,7 @@ export default class AppErrorBoundary extends React.Component<Props, State> {
     }
     const { lang, dark } = readPrefs();
     const c = dark ? PALETTE.dark : PALETTE.light;
-    const t = COPY[lang];
+    const t = BOUNDARY_COPY[lang];
     return (
       <View style={[styles.root, { backgroundColor: c.bg }]} accessibilityRole="alert">
         <Text style={[styles.title, { color: c.text }]} accessibilityRole="header">{t.title}</Text>
@@ -87,9 +97,41 @@ export default class AppErrorBoundary extends React.Component<Props, State> {
         >
           <Text style={[styles.buttonText, { color: c.buttonText }]}>{t.retry}</Text>
         </Pressable>
+        {this.props.onGoHome ? (
+          <Pressable
+            onPress={this.goHome}
+            accessibilityRole="button"
+            accessibilityLabel={t.home}
+            style={({ pressed }) => [styles.ghost, { opacity: pressed ? 0.7 : 1 }]}
+          >
+            <Text style={[styles.buttonText, { color: c.ghost }]}>{t.home}</Text>
+          </Pressable>
+        ) : null}
       </View>
     );
   }
+}
+
+/**
+ * Wraps a tab's root component in its own boundary. Created once per tab at
+ * module level so the component identity is stable across renders.
+ */
+export function withTabBoundary<P extends { navigation?: any }>(
+  Component: React.ComponentType<P>,
+  boundary: string,
+): React.ComponentType<P> {
+  function TabBoundary(props: P) {
+    return (
+      <AppErrorBoundary
+        boundary={boundary}
+        onGoHome={boundary === 'Dashboard' ? undefined : () => props.navigation?.navigate?.('Dashboard')}
+      >
+        <Component {...props} />
+      </AppErrorBoundary>
+    );
+  }
+  TabBoundary.displayName = `TabBoundary(${boundary})`;
+  return TabBoundary;
 }
 
 const styles = StyleSheet.create({
@@ -117,6 +159,14 @@ const styles = StyleSheet.create({
     minWidth: 180,
     paddingHorizontal: 28,
     borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ghost: {
+    minHeight: 48,
+    minWidth: 180,
+    paddingHorizontal: 28,
+    marginTop: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },

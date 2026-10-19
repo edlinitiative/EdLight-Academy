@@ -25,7 +25,6 @@ import TournoisCreateForm, {
 import type { TournamentDraft } from '../../../../shared/tournois/creationInput';
 import { useTrivia } from '../../hooks/useTrivia';
 import {
-  POINTS,
   TOURNAMENT_STATE,
   enumLabel,
   haitiDate,
@@ -35,6 +34,12 @@ import {
   arenaInputStyle,
 } from '../../components/arena/WorkspaceKit';
 import { identityText } from '../../../../shared/competition/deletedAccount';
+import TeamModePanel from '../../components/arena/TeamModePanel';
+import Animated from 'react-native-reanimated';
+import TournoisBoard, { TournoisPhaseBar } from '../../components/arena/TournoisBoard';
+import { arenaCue, arenaMotion } from '../../components/arena/arenaMotion';
+import { useReduceMotion } from '../../utils/motion';
+import { answerCue } from '../../../../shared/competition/presentation';
 
 export default function TournoisScreen() {
   const navigation = useNavigation<any>(),
@@ -43,7 +48,6 @@ export default function TournoisScreen() {
   const user = useStore((s) => s.user);
   const ht = useStore((s) => s.language) === 'ht';
   const t = (fr: string, creole: string) => (ht ? creole : fr);
-  const pts = POINTS[ht ? 1 : 0];
   const [tid, setTid] = useState<string | null>(
     route.params?.tournamentId ?? null,
   );
@@ -78,6 +82,8 @@ export default function TournoisScreen() {
   const { profile } = useTrivia();
   const lock = useRef(false),
     generation = useRef(0);
+  const reduceMotion = useReduceMotion();
+  const motion = arenaMotion(reduceMotion);
   const shownAt = useRef(Date.now());
   const activeTarget = useRef({ uid, tid });
   activeTarget.current = { uid, tid };
@@ -186,6 +192,18 @@ export default function TournoisScreen() {
     return () => clearTimeout(timer);
   }, [tournament?.nextDeadlineAt, offset, synchronize]);
 
+  const cuedReveal = useRef(-1);
+  useEffect(() => {
+    if (!live || live.phase !== 'reveal' || !live.reveal || !accepted || cuedReveal.current === live.index) return;
+    cuedReveal.current = live.index;
+    arenaCue(answerCue(choice, live.reveal.answer));
+  }, [live, accepted, choice]);
+  useEffect(() => {
+    if (!board?.final || !uid || !tid) return;
+    const mine = board.rows.find((r) => r.uid === uid);
+    if (mine && mine.rank > 0 && mine.rank <= 3) arenaCue('podium', { podiumKey: `tournois:${tid}` });
+  }, [board, uid, tid]);
+
   const run = async (task: () => Promise<void>) => {
     if (lock.current) return;
     lock.current = true;
@@ -219,6 +237,10 @@ export default function TournoisScreen() {
   };
   const signIn = () => useStore.getState().toggleAuthModal();
   const joined = !!uid && roster.some((r) => r.uid === uid);
+  // Shared-answer / relay: the team panel owns play; the individual controls never show.
+  const teamPlay =
+    joined &&
+    (tournament?.gameMode === 'shared' || tournament?.gameMode === 'relay');
   const question =
     tournament?.format === 'live' ? live?.question : step?.question;
   const active =
@@ -523,6 +545,7 @@ export default function TournoisScreen() {
                   }}
                 />
                 {joined &&
+                !teamPlay &&
                 tournament.format !== 'live' &&
                 tournament.state === 'running' ? (
                   <ArenaButton
@@ -542,7 +565,24 @@ export default function TournoisScreen() {
                 ) : null}
               </ArenaPanel>
             ) : null}
-            {question ? (
+            {teamPlay && tournament && uid ? (
+              <TeamModePanel
+                tournament={tournament}
+                live={live}
+                roster={roster}
+                uid={uid}
+                ht={ht}
+                nameOf={(v) => nameText(v)}
+              />
+            ) : null}
+            {tournament?.format === 'live' && tournament.state !== 'cancelled' && !teamPlay ? (
+              <TournoisPhaseBar state={tournament.state} live={live} now={now} t={t} />
+            ) : null}
+            {question && !teamPlay ? (
+              <Animated.View
+                key={`q-${tournament?.format === 'live' ? live?.index : `${step?.round}-${step?.pos}`}`}
+                entering={motion.enter}
+              >
               <ArenaPanel>
                 <Text
                   accessibilityRole="header"
@@ -588,6 +628,7 @@ export default function TournoisScreen() {
                             ),
                           );
                           setAccepted(true);
+                          arenaCue('locked');
                         } else if (step) {
                           const next = check(
                             await service.answerRound(
@@ -611,15 +652,41 @@ export default function TournoisScreen() {
                     )
                   : null}
                 {live?.phase === 'reveal' && live.reveal ? (
-                  <Text style={[arenaType.body, { color: C.ink }]}>
-                    {question.options[live.reveal.answer]}
-                    {'\n'}
-                    {ht
-                      ? live.reveal.explanationHt || live.reveal.explanation
-                      : live.reveal.explanation}
-                  </Text>
+                  <>
+                    {joined ? (
+                      <Animated.View
+                        entering={motion.reveal}
+                        accessible
+                        accessibilityLiveRegion="polite"
+                        style={{
+                          paddingHorizontal: 14, paddingVertical: 10, borderRadius: 14,
+                          backgroundColor: accepted && choice === live.reveal.answer ? C.successSoft
+                            : accepted ? C.dangerSoft : C.surfaceRaised,
+                        }}
+                      >
+                        <Text style={[arenaType.name, {
+                          color: accepted && choice === live.reveal.answer ? C.success : accepted ? C.danger : C.inkSoft,
+                        }]}>
+                          {accepted && choice === live.reveal.answer
+                            ? t('✓ Bonne réponse !', '✓ Bon repons !')
+                            : accepted
+                              ? t('✗ Raté', '✗ Rate')
+                              : t('Pas de réponse', 'Pa gen repons')}
+                        </Text>
+                      </Animated.View>
+                    ) : null}
+                    <Text style={[arenaType.body, { color: C.ink }]}>
+                      {t('Bonne réponse : ', 'Bon repons : ')}
+                      {(ht && question.optionsHt?.length ? question.optionsHt : question.options)[live.reveal.answer]}
+                      {'\n'}
+                      {ht
+                        ? live.reveal.explanationHt || live.reveal.explanation
+                        : live.reveal.explanation}
+                    </Text>
+                  </>
                 ) : null}
               </ArenaPanel>
+              </Animated.View>
             ) : null}
             {step?.done
               ? label(
@@ -628,65 +695,13 @@ export default function TournoisScreen() {
                 )
               : null}
             {board ? (
-              <ArenaPanel>
-                <Text
-                  accessibilityRole="header"
-                  style={[arenaType.name, { color: C.ink }]}
-                >
-                  {board.final
-                    ? t('Résultats du tournoi', 'Rezilta tounwa a')
-                    : t('Classement en cours', 'Klasman an kou')}
-                </Text>
-                {board.rows.slice(0, 30).map((row) => (
-                  <View
-                    key={row.uid}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 10,
-                    }}
-                  >
-                    <PersonFace
-                      person={{
-                        uid: row.uid,
-                        name: row.displayName,
-                        avatar: row.avatar ?? null,
-                      }}
-                      size={32}
-                    />
-                    <Text
-                      style={[
-                        arenaType.body,
-                        { color: C.ink, flexShrink: 1, fontVariant: ['tabular-nums'] },
-                      ]}
-                    >
-                      {row.rank}. {nameText(row.displayName)} · {row.points}{' '}
-                      {pts}
-                    </Text>
-                  </View>
-                ))}
-                {board.namedTeams?.map((row) => (
-                  <Text key={row.id} style={[arenaType.body, { color: C.ink }]}>
-                    {row.rank}. {row.label} · {row.points} {pts} ·{' '}
-                    {row.missing} {t('absent(s)', 'absan')}
-                  </Text>
-                ))}
-                {board.teams.map((row) => (
-                  <Text
-                    key={row.key}
-                    style={[arenaType.body, { color: C.muted }]}
-                  >
-                    {row.rank}. {row.label} · {row.score} {pts} ·{' '}
-                    {row.counted} {t('comptés', 'konte')}
-                  </Text>
-                ))}
-                {!board.rows.length
-                  ? label(
-                      'Les scores apparaîtront après les réponses.',
-                      'Nòt yo ap parèt apre repons yo.',
-                    )
-                  : null}
-              </ArenaPanel>
+              <TournoisBoard
+                board={board}
+                uid={uid}
+                ht={ht}
+                teamRule={tournament?.teamRule ?? null}
+                nameOf={nameText}
+              />
             ) : null}
             {matches.length ? (
               <ArenaPanel>

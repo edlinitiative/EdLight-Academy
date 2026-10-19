@@ -28,10 +28,20 @@
  *     department?: string | null, // <= 120 chars
  *     gameId?: string,          // optional record claim — [A-Za-z0-9_-], <= 64
  *     score?: number,           // optional record claim — 0 < x <= MAX_SCORE
+ *     opId?: string,            // client operation id — retries never double-award
  *   }
  *
+ * Idempotency (D-3): clients now queue awards in a persisted outbox and retry
+ * them after a failed POST or an app kill. With an `opId`, the increments and
+ * the dedupe record are written in ONE transaction, so a retry of an applied
+ * operation is answered `duplicate: true` without awarding again. The record is
+ * a per-uid server-only doc (`users/{uid}/serverOps/leaderboardAward`, no client
+ * rule → denied to clients; removed with the user tree on account deletion),
+ * pruned to the most recent OP_KEEP ids within OP_TTL_MS on every write.
+ * Requests without `opId` (older app builds) keep the previous behaviour.
+ *
  * Response:
- *   200 → { ok: true, weekId, weeklyXp, allTimeXp }
+ *   200 → { ok: true, weekId, weeklyXp, allTimeXp, duplicate? }
  *   400 / 401 / 429 / 500 on the corresponding failures.
  *
  * Mirrors the doc shape written by src/services/leaderboardService.ts and
@@ -54,6 +64,19 @@ const MAX_XP_DELTA = 5000;
 const MAX_SCORE = 10_000_000;
 const ALL_TIME_ID = 'all-time';
 const FIELD_MAX = 120;
+/** Dedupe window: the outbox drops operations after 30 days, keep a bit more. */
+const OP_TTL_MS = 35 * 86_400_000;
+const OP_KEEP = 200;
+const OP_ID_RE = /^[A-Za-z0-9_:.-]{8,128}$/;
+
+/** Keep the newest OP_KEEP ids younger than OP_TTL_MS. */
+export function pruneOps(ops: Record<string, number>, now: number): Record<string, number> {
+  const fresh = Object.entries(ops || {})
+    .filter(([, at]) => typeof at === 'number' && now - at <= OP_TTL_MS)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, OP_KEEP);
+  return Object.fromEntries(fresh);
+}
 
 /**
  * A public alias must contain at least one letter (matches leaderboardService).
@@ -110,6 +133,7 @@ interface AwardBody {
   department?: unknown;
   gameId?: unknown;
   score?: unknown;
+  opId?: unknown;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
@@ -142,6 +166,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
+  let opId: string | null = null;
+  if (body.opId !== undefined && body.opId !== null) {
+    if (typeof body.opId !== 'string' || !OP_ID_RE.test(body.opId)) {
+      res.status(400).json({ error: 'invalid_op_id' });
+      return;
+    }
+    opId = body.opId;
+  }
+
   const levelRaw = Math.round(Number(body.level));
   const level = Number.isFinite(levelRaw) ? Math.min(1000, Math.max(1, levelRaw)) : 1;
   const school = optStr(body.school);
@@ -162,37 +195,68 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     // entry is the durable record for both facts: `hidden` must survive the
     // weekly reset (fresh weekly docs would otherwise resurface an opted-out
     // learner), and an already-stored alias means no derivation is needed.
-    const existing = (await allTimeRef.get()).data() as Record<string, unknown> | undefined;
-    const hidden = existing?.hidden === true;
-    const avatar = cleanAvatar(existing?.avatar);
-    if (!hasAlias && !hidden && !isValidAlias(existing?.displayName)) {
-      const derived = defaultAlias(tokenName);
-      if (derived) {
-        hasAlias = true;
-        displayName = derived;
+    // The profile half of the write, from the all-time entry as read.
+    const buildProfile = (existing: Record<string, unknown> | undefined) => {
+      const hidden = existing?.hidden === true;
+      const avatar = cleanAvatar(existing?.avatar);
+      if (!hasAlias && !hidden && !isValidAlias(existing?.displayName)) {
+        const derived = defaultAlias(tokenName);
+        if (derived) {
+          hasAlias = true;
+          displayName = derived;
+        }
       }
-    }
-
-    // Shared profile fields for both entries. Only write displayName when it's a
-    // valid alias, so an XP award never erases a pseudo the learner already set.
-    const profile: Record<string, unknown> = {
-      uid,
-      level,
-      school,
-      city,
-      department,
-      ...(hasAlias && !hidden ? { displayName } : {}),
-      ...(hidden ? { hidden: true } : {}),
-      // The chosen avatar (set by /api/users/avatar on the all-time entry)
-      // rides onto each new weekly entry, re-sanitized.
-      ...(avatar ? { avatar } : {}),
-      updatedAt: FieldValue.serverTimestamp(),
+      // Shared profile fields for both entries. Only write displayName when it's a
+      // valid alias, so an XP award never erases a pseudo the learner already set.
+      const profile: Record<string, unknown> = {
+        uid,
+        level,
+        school,
+        city,
+        department,
+        ...(hasAlias && !hidden ? { displayName } : {}),
+        ...(hidden ? { hidden: true } : {}),
+        // The chosen avatar (set by /api/users/avatar on the all-time entry)
+        // rides onto each new weekly entry, re-sanitized.
+        ...(avatar ? { avatar } : {}),
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+      return { profile, hidden };
     };
 
-    await Promise.all([
-      weeklyRef.set({ ...profile, weekId: id, xp: FieldValue.increment(xpDelta) }, { merge: true }),
-      allTimeRef.set({ ...profile, xp: FieldValue.increment(xpDelta) }, { merge: true }),
-    ]);
+    let hidden = false;
+    let duplicate = false;
+    if (opId) {
+      // Increments + dedupe record in one transaction: applied exactly once.
+      const opsRef = db.doc(`users/${uid}/serverOps/leaderboardAward`);
+      const appliedOpId = opId;
+      await db.runTransaction(async (tx) => {
+        const [opsSnap, allTimeSnap] = [await tx.get(opsRef), await tx.get(allTimeRef)];
+        const ops = ((opsSnap.exists ? opsSnap.data()?.ops : null) || {}) as Record<string, number>;
+        if (ops[appliedOpId]) {
+          duplicate = true;
+          return;
+        }
+        const built = buildProfile(allTimeSnap.data() as Record<string, unknown> | undefined);
+        hidden = built.hidden;
+        const now = Date.now();
+        tx.set(weeklyRef, { ...built.profile, weekId: id, xp: FieldValue.increment(xpDelta) }, { merge: true });
+        tx.set(allTimeRef, { ...built.profile, xp: FieldValue.increment(xpDelta) }, { merge: true });
+        tx.set(opsRef, { ops: pruneOps({ ...ops, [appliedOpId]: now }, now), updatedAt: now });
+      });
+    } else {
+      // Everyone appears on the board by default under a privacy-safe alias
+      // ("Ted J."), unless they've hidden themselves in Profile. The all-time
+      // entry is the durable record for both facts: `hidden` must survive the
+      // weekly reset (fresh weekly docs would otherwise resurface an opted-out
+      // learner), and an already-stored alias means no derivation is needed.
+      const built = buildProfile((await allTimeRef.get()).data() as Record<string, unknown> | undefined);
+      hidden = built.hidden;
+      await Promise.all([
+        weeklyRef.set({ ...built.profile, weekId: id, xp: FieldValue.increment(xpDelta) }, { merge: true }),
+        allTimeRef.set({ ...built.profile, xp: FieldValue.increment(xpDelta) }, { merge: true }),
+      ]);
+    }
 
     // ── Optional per-game record claim (leaderboards/records) ──────────────
     // Same transactional "only increase, deep-merge one game" model as
@@ -200,7 +264,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     // can hold a record.
     const gameId = typeof body.gameId === 'string' ? body.gameId : '';
     const score = Math.round(Number(body.score));
-    if (gameId && /^[A-Za-z0-9_-]{1,64}$/.test(gameId) && Number.isFinite(score) && score > 0 && score <= MAX_SCORE && hasAlias && !hidden) {
+    if (!duplicate && gameId && /^[A-Za-z0-9_-]{1,64}$/.test(gameId) && Number.isFinite(score) && score > 0 && score <= MAX_SCORE && hasAlias && !hidden) {
       const recordsRef = db.doc('leaderboards/records');
       await db.runTransaction(async (tx) => {
         const snap = await tx.get(recordsRef);
@@ -222,6 +286,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       weekId: id,
       weeklyXp: (weeklySnap.data()?.xp as number | undefined) ?? xpDelta,
       allTimeXp: (allTimeSnap.data()?.xp as number | undefined) ?? xpDelta,
+      ...(duplicate ? { duplicate: true } : {}),
     });
   } catch (err) {
     console.error('[leaderboard/award] write error:', err);

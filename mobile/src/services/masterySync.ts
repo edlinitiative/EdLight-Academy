@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, runTransaction, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
 import useStore from '../contexts/store';
 import type { ProgressMap } from '../utils/mastery';
@@ -53,17 +53,57 @@ export async function fetchRemoteMastery(uid: string): Promise<ProgressMap> {
   }
 }
 
-/** Overwrite the server's copy with `progress` (already merged by the caller). */
-export async function pushMastery(uid: string, progress: ProgressMap): Promise<void> {
+/**
+ * Join this device's map with the server's and write the join, in ONE
+ * transaction (P0 validation L-10, F12 follow-up). `{merge:true}` merges field
+ * by field, so any write of a record computed from a stale read can lower a
+ * score another device just raised; inside a transaction a concurrent write
+ * makes Firestore re-run the join against the new value instead. Resolves to
+ * the join; throws when the server can't be reached (no blind write then: the
+ * device keeps its map and `retryMasteryPushIfPending` tries again).
+ */
+async function pushJoined(uid: string, local: ProgressMap): Promise<ProgressMap> {
+  const ref = masteryDoc(uid);
+  return runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    const lessons = snap.exists() ? snap.data()?.lessons : null;
+    const remote = (lessons && typeof lessons === 'object' ? lessons : {}) as ProgressMap;
+    const merged = mergeProgress(local, remote);
+    if (!sameProgress(remote, merged)) {
+      tx.set(ref, { lessons: toWireFormat(merged), updatedAt: serverTimestamp() }, { merge: true });
+    }
+    return merged;
+  });
+}
+
+/** A push that could not reach the server, waiting for reconnect / foreground. */
+let pushPending = false;
+
+/**
+ * The background push: the transactional join above, then fold the server's
+ * progress back into the store.
+ */
+async function pushMergedMastery(uid: string, local: ProgressMap): Promise<void> {
+  let merged: ProgressMap;
   try {
-    await setDoc(
-      masteryDoc(uid),
-      { lessons: toWireFormat(progress), updatedAt: serverTimestamp() },
-      { merge: true },
-    );
+    merged = await pushJoined(uid, local);
+    pushPending = false;
   } catch (error) {
-    console.warn('[Mastery] push failed:', error);
+    pushPending = true;
+    console.warn('[Mastery] push deferred (offline?):', error);
+    return;
   }
+  if (!isSameAccount(uid, useStore.getState())) return;
+  // Mark the join as pushed first, so folding it into the store doesn't
+  // schedule a redundant push of the same map.
+  lastPushed = merged;
+  if (!sameProgress(local, merged)) useStore.getState().mergeRemoteProgress(merged);
+}
+
+/** Reconnect / foreground: retry a push that could not reach the server. */
+export function retryMasteryPushIfPending(): Promise<void> {
+  if (!pushPending || pushTimer) return Promise.resolve();
+  return runMasteryPush();
 }
 
 /** Read the server's review copy. Returns `{}` when absent or unreachable. */
@@ -120,9 +160,12 @@ export async function syncMasteryOnLogin(uid: string): Promise<void> {
   const merged = mergeProgress(local, remote);
 
   if (!sameProgress(local, merged)) useStore.getState().mergeRemoteProgress(merged);
+  // Device and server now agree on `merged`: the baseline an offline push
+  // diffs against (pushMergedMastery writes only what changed after it).
+  lastPushed = merged;
   // Only write when the device is genuinely ahead — a fresh install with
   // nothing local must not clear the server.
-  if (!sameProgress(remote, merged)) await pushMastery(uid, merged);
+  if (!sameProgress(remote, merged)) await pushMergedMastery(uid, merged);
 
   // Same dance for the review map — independent doc, independent verdicts.
   if (!still()) return;
@@ -163,11 +206,7 @@ export function startMasterySync(): () => void {
       if (pushTimer) clearTimeout(pushTimer);
       pushTimer = setTimeout(() => {
         pushTimer = null;
-        const s = useStore.getState();
-        const currentUid = s.user?.uid;
-        if (!currentUid || !s.isAuthenticated) return;
-        lastPushed = s.progress as ProgressMap;
-        pushMastery(currentUid, lastPushed);
+        runMasteryPush();
       }, PUSH_DEBOUNCE_MS);
     }
 
@@ -190,6 +229,38 @@ export function startMasterySync(): () => void {
   return unsubscribe;
 }
 
+function runMasteryPush(): Promise<void> {
+  const s = useStore.getState();
+  const currentUid = s.user?.uid;
+  if (!currentUid || !s.isAuthenticated) return Promise.resolve();
+  lastPushed = s.progress as ProgressMap;
+  return pushMergedMastery(currentUid, lastPushed).catch((e) => {
+    console.warn('[Mastery] push failed:', e);
+  });
+}
+
+/**
+ * Sign-out (explicit logout, NOT an account switch): push what the debounce
+ * is still holding BEFORE logout() clears the local map. Stopping the timers
+ * used to drop the last ~4 s of work — the result of the very exercise set the
+ * student just finished (P0 validation). Callers bound the wait.
+ */
+export async function flushMasterySync(uid: string): Promise<void> {
+  if (!uid || !isSameAccount(uid, useStore.getState())) return;
+  const tasks: Promise<void>[] = [];
+  if (pushTimer) {
+    clearTimeout(pushTimer); pushTimer = null;
+    tasks.push(runMasteryPush());
+  }
+  if (reviewPushTimer) {
+    clearTimeout(reviewPushTimer); reviewPushTimer = null;
+    const review = useStore.getState().review as ReviewMap;
+    lastPushedReview = review;
+    tasks.push(pushReview(uid, review));
+  }
+  await Promise.all(tasks);
+}
+
 /**
  * Sign-out: drop the pending write and forget the snapshot.
  *
@@ -206,6 +277,7 @@ export function stopMasterySync(): void {
   if (reviewPushTimer) { clearTimeout(reviewPushTimer); reviewPushTimer = null; }
   lastPushed = null;
   lastPushedReview = null;
+  pushPending = false;
 }
 
 /** Full teardown — for tests and hot-reload, not for sign-out. */

@@ -1,12 +1,14 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { View, Text, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Star } from 'lucide-react-native';
-import { TRIVIA_CATEGORIES } from '../data/triviaData';
+import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
+import { bankHash } from '../../../shared/duelGrading';
 import { QuizPlayer, prepareChallengeQuestions, type PreparedQuestion } from './TriviaScreen';
 import ChallengeCard from '../components/games/ChallengeCard';
 import { useChallenge } from '../hooks/useChallenges';
-import { acceptChallenge, type AcceptOutcome } from '../services/challengeService';
+import { acceptChallenge, getChallenge, type AcceptOutcome } from '../services/challengeService';
+import { recoveredAcceptOutcome } from '../utils/duels';
 import useStore from '../contexts/store';
 import { arenaColors as C, arenaType } from '../theme/arenaTheme';
 import NightResult, { RewardChip } from '../components/games/NightResult';
@@ -30,7 +32,7 @@ export default function ChallengeScreen({ code, onClose }: { code: string; onClo
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
-  const { challenge, isLoading } = useChallenge(user ? code : null);
+  const { challenge, isLoading, refetch: refetchChallenge } = useChallenge(user ? code : null);
   const [phase, setPhase] = useState<Phase>('card');
   const [questions, setQuestions] = useState<PreparedQuestion[]>([]);
   const [outcome, setOutcome] = useState<AcceptOutcome | null>(null);
@@ -59,21 +61,40 @@ export default function ChallengeScreen({ code, onClose }: { code: string; onClo
     setPhase('playing');
   }, [challenge]);
 
+  // The finished round's picks, kept for a resend after a network failure.
+  const picksRef = useRef<(string | null)[] | null>(null);
   const handleFinish = useCallback(
-    async (score: number) => {
+    async (score: number, picks?: (string | null)[]) => {
       setMyLocalScore(score);
+      if (picks) picksRef.current = picks;
       setPhase('done');
       setBusy(true);
+      setAcceptError(null);
       try {
-        const res = await acceptChallenge({ code, score });
-        if (res && 'error' in res) setAcceptError(res.error);
+        // Picks + bank fingerprint: the server grades the attempt (D-8) and
+        // refuses it if this build's bank differs from the duel's (D-9).
+        let res = await acceptChallenge({
+          code,
+          score,
+          ...(picksRef.current ? { answers: picksRef.current } : {}),
+          bankHash: challenge ? bankHash((TRIVIA_QUESTIONS as Record<string, any[]>)[challenge.categoryId]) : null,
+        });
+        // A retry whose first post landed answers already_played: recover the
+        // recorded result instead of reporting a failure (P0 validation).
+        if (res && 'error' in res && res.error === 'already_played') {
+          const recovered = recoveredAcceptOutcome(await getChallenge(code), user?.uid);
+          if (recovered) res = recovered;
+        }
+        if (res && 'error' in res) setAcceptError(res.error === 'bank_mismatch' ? 'version' : res.error);
         else if (res) setOutcome(res);
         else setAcceptError('network');
+        // The cached duel still says "open" for up to a minute otherwise.
+        if (res && !('error' in res)) refetchChallenge().catch(() => {});
       } finally {
         setBusy(false);
       }
     },
-    [code],
+    [code, user?.uid, refetchChallenge, challenge],
   );
 
   // ── Playing: full-bleed quiz, same player as a normal round ────────────────
@@ -84,7 +105,7 @@ export default function ChallengeScreen({ code, onClose }: { code: string; onClo
           questions={questions}
           category={category ?? { id: challenge.categoryId, name: categoryLabel }}
           isCreole={isCreole}
-          onFinish={(score) => handleFinish(score)}
+          onFinish={(score, _total, _mistakes, picks) => handleFinish(score, picks)}
           title={t(`Défi · ${categoryLabel}`, `Defi · ${categoryLabel}`)}
           opponent={{
             seed: challenge.challengerUid || challenge.challengerName || 'ami',
@@ -122,7 +143,15 @@ export default function ChallengeScreen({ code, onClose }: { code: string; onClo
           : tie
             ? t(`Égalité · ${myScore} partout avec ${rival}`, `Egalite · ${myScore} chak ak ${rival}`)
             : t(`Perdu de peu · ${myScore} à ${challenge.challengerScore} contre ${rival}`, `Pèdi tou piti · ${myScore} kont ${challenge.challengerScore} sou ${rival}`)
-        : t('Le score n’a pas pu être envoyé. Vérifie ta connexion.', 'Nòt la pa t ka voye. Verifye koneksyon ou.');
+        : acceptError === 'expired'
+          ? t('Ce défi a expiré avant l’envoi du score.', 'Defi a ekspire anvan nòt la rive.')
+          : acceptError === 'self_challenge'
+            ? t('Tu ne peux pas relever ton propre défi.', 'Ou pa ka reponn pwòp defi pa w.')
+            : acceptError === 'version'
+              ? t('Mets à jour l’app pour envoyer ce défi : ses questions ont changé.', 'Mete app la ajou pou voye defi sa a : kesyon yo chanje.')
+            : acceptError === 'already_played'
+              ? t('Ce défi a déjà été relevé par quelqu’un d’autre.', 'Yon lòt moun deja reponn defi sa a.')
+              : t('Le score n’a pas pu être envoyé. Vérifie ta connexion.', 'Nòt la pa t ka voye. Verifye koneksyon ou.');
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top']}>
         <NightResult
@@ -140,7 +169,11 @@ export default function ChallengeScreen({ code, onClose }: { code: string; onClo
           chips={outcome && outcome.xpAwarded > 0 ? (
             <RewardChip earned icon={<Star color={C.gold} size={16} />} label={`+${outcome.xpAwarded} XP`} />
           ) : null}
-          primary={{ label: t('Retour aux jeux', 'Tounen nan jwèt yo'), onPress: onClose }}
+          // A score that did not reach the server can be sent again (same
+          // score — the round is over); the one-shot server makes it safe.
+          primary={!outcome && !busy && acceptError === 'network'
+            ? { label: t('Réessayer l’envoi', 'Eseye voye ankò'), onPress: () => handleFinish(myLocalScore) }
+            : { label: t('Retour aux jeux', 'Tounen nan jwèt yo'), onPress: onClose }}
         />
       </SafeAreaView>
     );

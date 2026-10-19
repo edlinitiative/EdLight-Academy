@@ -24,6 +24,7 @@ import { fetchCatalogIndex, fetchSingleExam } from '../utils/examCatalog';
 import { QUESTION_TYPE_META, normalizeExamTitle, normalizeSubject, normalizeLevel, normalizeYear, subjectDisplayName, autoGradableCount, isEssayExam } from '../utils/examUtils';
 import { loadExamResult } from '../services/examResults';
 import { loadExamAttemptDraft } from '../services/examAttempts';
+import { readLocalExamDraft, pickResumeDraft, draftPosition } from '../../../shared/examDraft';
 import type { ExamsParamList } from '../navigation/ExamsNavigator';
 import { tapLight, tapMedium } from '../utils/haptics';
 import { tabBarSpace } from '../navigation/tabBarSpace';
@@ -102,20 +103,16 @@ export default function ExamOverviewScreen() {
         try {
           let draft: any = null;
           try { draft = await loadExamAttemptDraft(user.uid, String(examId)); } catch { /* ignore */ }
+          let local: any = null;
           try {
-            const raw = await AsyncStorage.getItem(`edlight-exam-draft-${examId}`);
-            if (raw) {
-              const local = JSON.parse(raw);
-              if (local && local.status === 'in_progress' &&
-                  (!draft || (local.updated_at_ms || 0) > (draft.updated_at_ms || 0))) {
-                draft = local;
-              }
-            }
-          } catch { /* corrupt mirror */ }
+            // Only this account's mirror (shared phones).
+            local = readLocalExamDraft(await AsyncStorage.getItem(`edlight-exam-draft-${examId}`), user.uid);
+          } catch { /* storage unavailable */ }
+          draft = pickResumeDraft(draft, local);
           if (!active) return;
-          if (draft && draft.status !== 'submitted') {
+          if (draft) {
             const n = draft.answers ? Object.keys(draft.answers).length : 0;
-            setDraftAnswered(n > 0 || (Number.isFinite(draft.currentIdx) && draft.currentIdx > 0) ? n : null);
+            setDraftAnswered(n > 0 || (draftPosition(draft) ?? 0) > 0 ? n : null);
           } else {
             setDraftAnswered(null);
           }
@@ -236,6 +233,8 @@ export default function ExamOverviewScreen() {
         <ErrorState
           title={t("Impossible de charger l'examen.", 'Nou pa ka chaje egzamen an.')}
           onRetry={() => setRetryCount((n) => n + 1)}
+          secondaryLabel={t('Retour', 'Retounen')}
+          onSecondary={() => navigation.goBack()}
         />
       </SafeAreaView>
     );

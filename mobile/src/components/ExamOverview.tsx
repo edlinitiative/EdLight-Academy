@@ -151,7 +151,7 @@ export default function ExamOverview({
           size="lg"
           fullWidth
           icon={<Play color="#ffffff" size={17} fill="#ffffff" />}
-          label={hasProgress ? t("Continuer l'examen", 'Kontinye egzamen an') : t("Commencer l'examen", 'Kòmanse egzamen an')}
+          label={hasProgress ? t("Reprendre l'examen", 'Kontinye egzamen an') : t("Commencer l'examen", 'Kòmanse egzamen an')}
         />
         <Text style={[typeScale.caption, { textAlign: 'center', color: colors.muted, marginTop: 8 }]}>
           {hasProgress

@@ -8,6 +8,7 @@ import { registerRootComponent } from 'expo';
 import * as Linking from 'expo-linking';
 import * as Notifications from 'expo-notifications';
 import { useFonts } from 'expo-font';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SplashScreen from 'expo-splash-screen';
 import { onAuthStateChange } from './src/services/firebase';
 import useStore, { waitForStoreHydration } from './src/contexts/store';
@@ -19,6 +20,9 @@ import {
 } from './src/services/notificationService';
 import { registerForPushNotifications } from './src/services/pushService';
 import { syncMasteryOnLogin, startMasterySync, disposeMasterySync } from './src/services/masterySync';
+import { drainWriteOutbox } from './src/services/writeOutbox';
+// Registers the study-plan replay handler before the launch drain runs.
+import './src/services/planEvents';
 import { hydrateQueryCache, persistQueryCacheOnChange } from './src/services/queryPersistence';
 import { installGlobalErrorHandlers, installProductionTelemetry, reportError } from './src/services/telemetry';
 import AppErrorBoundary from './src/components/AppErrorBoundary';
@@ -55,8 +59,16 @@ SplashScreen.preventAutoHideAsync().catch(() => {
   // Already hidden, or the module is unavailable — launch must not depend on it.
 });
 
+function forgetLastDestination() {
+  AsyncStorage.removeItem('competition:last-destination').catch(() => {});
+}
+
 /** Never leave a user staring at a splash because auth never resolved. */
 const SPLASH_MAX_MS = 4000;
+/** Longest the JS loading screen waits on a silent Firebase Auth before rendering from the persisted store. */
+const AUTH_CONFIRM_MAX_MS = 8000;
+/** Longest the first frame waits for the persisted query cache. */
+const CACHE_HYDRATE_MAX_MS = 2500;
 
 /**
  * Resolves who is signed in and shows the app — never waiting on Firestore.
@@ -135,6 +147,11 @@ function AuthGate() {
         // every auth event. Runs after any account-switch wipe above, so the
         // previous student's map is never merged into this account.
         syncMasteryOnLogin(uid).catch(() => {});
+
+        // Replay this account's persisted outbox (lesson completions and XP
+        // awards that an app kill or a dead network left unconfirmed — L-3/D-3).
+        // Only this uid's operations, only while it is the signed-in account.
+        drainWriteOutbox(uid).catch(() => {});
       } catch (error) {
         reportError(error, { flow: 'auth_gate' });
       } finally {
@@ -150,8 +167,16 @@ function AuthGate() {
         useStore.getState().setAuthConfirmed();
       });
     });
+    // Bounded splash: if Firebase Auth never answers at all (it normally does
+    // offline too, from its persisted session), leave the loading screen after
+    // AUTH_CONFIRM_MAX_MS. The persisted store drives the UI; a later answer
+    // still runs `handle` (sign-out included). Startup budget: release §8.
+    const authFallback = setTimeout(() => {
+      if (!useStore.getState().authConfirmed) useStore.getState().setAuthConfirmed();
+    }, AUTH_CONFIRM_MAX_MS);
     return () => {
       active = false;
+      clearTimeout(authFallback);
       unsubscribe();
     };
   }, []);
@@ -192,7 +217,13 @@ function App() {
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
     let cancelled = false;
-    hydrateQueryCache(queryClient).finally(() => {
+    const hydration = hydrateQueryCache(queryClient);
+    // The first frame waits for the cache at most CACHE_HYDRATE_MAX_MS (a slow
+    // or huge AsyncStorage read must not hold the launch screen — startup
+    // budget, release §8). Screens that mount first simply fetch.
+    const ceiling = setTimeout(() => { if (!cancelled) setCacheHydrated(true); }, CACHE_HYDRATE_MAX_MS);
+    hydration.finally(() => {
+      clearTimeout(ceiling);
       if (cancelled) return;
       setCacheHydrated(true);
       // Only start persisting after hydration so a partial startup snapshot
@@ -201,6 +232,7 @@ function App() {
     });
     return () => {
       cancelled = true;
+      clearTimeout(ceiling);
       unsubscribe?.();
     };
   }, []);
@@ -230,9 +262,11 @@ function App() {
       } else if (type === 'study-reminder') {
         navigateToTab('Courses');
       } else if (type === 'duel-result') {
-        // Your opponent played the duel you sent — the Jeux tab is where the
-        // result and the rematch button are.
-        navigateToTab('Trivia');
+        // Your opponent played the duel you sent: open THAT duel (result +
+        // rematch), not the generic Jeux tab (P0 validation). Fallback: Jeux.
+        const code = typeof data?.code === 'string' ? data.code : '';
+        if (code && navigationRef.isReady()) (navigationRef.navigate as any)('Defi', { code });
+        else navigateToTab('Trivia');
       } else if (type === 'achievement') {
         // Badge unlocked → Profile, where achievements live.
         navigateToTab('Profile');
@@ -327,7 +361,11 @@ function App() {
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
-        <AppErrorBoundary>
+        {/* Root containment around the whole navigator (each tab also has its
+            own, navigation/tabScreens). "Accueil" remounts the navigator at
+            Main and forgets the restored competition destination, so a
+            screen that crashes on open is not reopened. */}
+        <AppErrorBoundary boundary="root" onGoHome={forgetLastDestination}>
           <AuthGate />
         </AppErrorBoundary>
       </QueryClientProvider>

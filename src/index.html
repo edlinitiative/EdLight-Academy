@@ -52,6 +52,10 @@
   <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
   <link rel="preconnect" href="https://securetoken.googleapis.com" crossorigin>
   <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <!-- Course covers and lesson stills are YouTube frames (i.ytimg.com) on the
+       catalogue, Home and every course page. A DNS lookup only — no socket is
+       held open on pages that never show one (a preconnect would be). -->
+  <link rel="dns-prefetch" href="https://i.ytimg.com">
   <title>EdLight Academy</title>
   <!-- Firebase config at runtime (replace with your real project values) -->
   <script>

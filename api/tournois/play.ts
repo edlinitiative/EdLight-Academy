@@ -12,6 +12,9 @@
  *   review       { tid, round? }                — after the round (or live) closed
  *     → { ok, items: [{ q, qHt, options, optionsHt, answer, explanation, explanationHt, choice, points }] }
  *
+ * Shared-answer and relay team events (engine `gameMode`) use the `team-*`
+ * actions in ./_team instead; the three answer actions above refuse them.
+ *
  * THE RESPONSE REVEALS NOTHING mid-question — no `correct`, no `points` — for
  * the Arène's reason: a player who learns their result the instant they tap
  * can relay the key to the room before it closes. Live, the reveal lands on
@@ -31,6 +34,8 @@ import { clampLiveStart, scoreAnswer } from '../../shared/tournois/scoring';
 import { attemptOrder, toPublicQuestion, type StoredQuestion } from '../../shared/tournois/questions';
 import { answerAttempt, attemptTotals, catchUp, newAttempt, PENDING, type Attempt } from '../../shared/tournois/attempt';
 import { playersInRound, type Match } from '../../shared/tournois/bracket';
+import { isTeamGameMode, parseGameMode } from '../../shared/teams/modes';
+import { isTeamAction, teamPlay, teamReview, TeamError } from './_team';
 import {
   advanceTournament,
   canSee,
@@ -71,6 +76,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   if (!tournament) return fail(res, 404, 'not_found');
   if (tournament.schemaVersion !== undefined && tournament.schemaVersion !== 1 && tournament.schemaVersion !== 2) return fail(res, 400, 'unsupported_schema');
   if (!(await canSee(db, tournament, uid))) return fail(res, 403, 'forbidden');
+  // A mode this build does not know is never played as if it were independent.
+  if (parseGameMode(tournament.gameMode) === null) return fail(res, 400, 'unsupported_mode');
+  const teamMode = isTeamGameMode(tournament.gameMode);
+  if (isTeamAction(body.action)) {
+    if (!teamMode) return fail(res, 400, 'not_team_mode');
+    return teamPlay(db, res, tournament, uid, body, receivedAt);
+  }
+  // Shared-answer and relay teams answer through the team actions only: an
+  // individual handler (or an old client) can never create a parallel answer.
+  if (teamMode && ['live-answer', 'start', 'answer'].includes(String(body.action))) {
+    return fail(res, 409, 'team_client_required');
+  }
+  if (teamMode && body.action === 'review') {
+    try {
+      const items = await teamReview(db, tournament, uid, receivedAt);
+      res.status(200).json({ ok: true, items });
+    } catch (err) {
+      if (err instanceof TeamError) return fail(res, err.status, err.code);
+      throw err;
+    }
+    return;
+  }
 
   switch (body.action) {
     case 'live-answer':

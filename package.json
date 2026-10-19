@@ -89,6 +89,7 @@
     "check:bundles": "node scripts/check_exam_bundles.mjs",
     "debundle:exams": "node scripts/debundle_exams.mjs",
     "test:competition:emulator": "bash scripts/test_competition_emulator.sh",
+    "perf:budget": "node scripts/bundle_budget.mjs",
     "release:check": "node scripts/release_readiness.mjs",
     "release:inventory": "node scripts/release_readiness.mjs --inventory",
     "release:gate": "node scripts/release_readiness.mjs --gate"

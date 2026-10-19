@@ -1,4 +1,69 @@
 import handler from '../telemetry';
+import { FakeDb } from './helpers/fakeFirestore';
+
+const mockDb = new FakeDb();
+const fakeDb = mockDb;
+const mockAdminState = { configured: false };
+const adminState = mockAdminState;
+jest.mock('../_lib/firebaseAdmin', () => ({
+  isAdminConfigured: () => mockAdminState.configured,
+  getDb: () => mockDb,
+}));
+jest.mock('../_lib/requireAuth', () => ({
+  requireAuth: async (req: any, res: any) => {
+    const uid = String(req.headers.authorization || '').replace('Bearer ', '');
+    if (!uid) { res.status(401).json({ error: 'unauthorized' }); return null; }
+    return uid;
+  },
+}));
+jest.mock('../_lib/competitionNotify', () => ({ deliverCompetitionNotices: jest.fn().mockResolvedValue(undefined) }));
+
+describe('error aggregates and admin read', () => {
+  beforeEach(() => { fakeDb.store.clear(); adminState.configured = true; });
+  afterEach(() => { adminState.configured = false; });
+
+  const crash = { events: [{ type: 'error', name: 'js_fatal_crash', timestamp: 1,
+    error: { name: 'TypeError', frames: ['main.jsbundle:1:42'] },
+    detail: { signature: 'deadbeef', errorKind: 'undefined_access', fatal: true, previousSession: true, message: 'private' },
+    context: { platform: 'ios', appVersion: '1.2.0', buildNumber: '61' } }] };
+
+  it('aggregates sanitized error events, alerts admins, and serves them to admins only', async () => {
+    process.env.DIAGNOSTICS_REPORTER_SECRET = 'test-secret';
+    const log = jest.spyOn(console, 'info').mockImplementation(() => {});
+    fakeDb.store.set('users/admin1', { role: 'admin' });
+    fakeDb.store.set('users/student1', { role: 'student' });
+    const post = request(crash, { 'x-forwarded-for': 'aggregate-test' });
+    await handler(post.req, post.res);
+    expect(post.res.status).toHaveBeenCalledWith(202);
+    const docs = [...fakeDb.store.entries()].filter(([p]) => p.startsWith('diagnosticErrors/'));
+    expect(docs).toHaveLength(1);
+    expect(JSON.stringify(docs)).not.toContain('private');
+    // One reporter is not enough to alert; a second, distinct address is.
+    const hasAlert = () => [...fakeDb.store.keys()].some((p) => p.startsWith('users/admin1/competitionInbox/diag_'));
+    expect(hasAlert()).toBe(false);
+    const second = request(crash, { 'x-forwarded-for': 'aggregate-test-2' });
+    await handler(second.req, second.res);
+    expect(hasAlert()).toBe(true);
+
+    const anon = request(null, {}, 'GET');
+    anon.req.query = { view: 'errors' };
+    await handler(anon.req, anon.res);
+    expect(anon.res.status).toHaveBeenCalledWith(401);
+
+    const student = request(null, { authorization: 'Bearer student1' }, 'GET');
+    student.req.query = { view: 'errors' };
+    await handler(student.req, student.res);
+    expect(student.res.status).toHaveBeenCalledWith(403);
+
+    const admin = request(null, { authorization: 'Bearer admin1' }, 'GET');
+    admin.req.query = { view: 'errors', days: '7' };
+    await handler(admin.req, admin.res);
+    expect(admin.res.status).toHaveBeenCalledWith(200);
+    const { errors } = admin.res.json.mock.calls[0][0];
+    expect(errors).toEqual([expect.objectContaining({ signature: 'deadbeef', count: 2, fatalCount: 2, alerted: true })]);
+    log.mockRestore();
+  });
+});
 
 function request(body: unknown, headers = {}, method = 'POST') {
   const req = { method, headers: { 'content-type': 'application/json', ...headers }, body, socket: { remoteAddress: 'test' } };
