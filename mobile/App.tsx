@@ -236,6 +236,11 @@ function App() {
       } else if (type === 'achievement') {
         // Badge unlocked → Profile, where achievements live.
         navigateToTab('Profile');
+      } else if (type === 'arena') {
+        // Championship announced / doors open (api/arena/_announce.ts) → the
+        // Arena hub, whose primary action is whatever applies right now
+        // (register, rejoin, watch).
+        if (navigationRef.isReady()) (navigationRef.navigate as any)('ArenaHub');
       } else if (type === 'competition') {
         // Invitation, cancellation, result… → the workspace page for that typed
         // target, which re-checks access itself. An unusable reference opens

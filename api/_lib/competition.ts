@@ -42,6 +42,9 @@ import {
 } from './competitionNotify';
 import { clearReminders, scheduleReminders } from './competitionReminders';
 
+/** Admins are pushed about a reported target at most once per this interval; the inbox item updates every time. */
+export const REPORT_PUSH_INTERVAL_MS = 60 * 60 * 1000;
+const REPORT_FALLBACK_TITLE = 'Modération · Moderasyon';
 export class CompetitionError extends Error {
   constructor(
     public code: string,
@@ -2142,6 +2145,30 @@ export async function mutateCompetition(
           'invalid_kind',
           400,
         );
+        const kind = String(body.kind) as 'team' | 'event' | 'league';
+        // A report must reach an owner (docs/design/release-readiness/
+        // report-triage-runbook.md): every platform admin gets one inbox item
+        // per reported target, re-flagged unread on each new report, and at
+        // most one push per target per hour so a flood cannot spam them.
+        // Reads first — a transaction may not read after it writes.
+        const admins = (
+          await tx.get(
+            db.collection('users').where('role', '==', 'admin').limit(10),
+          )
+        ).docs.map((d: { id: string }) => d.id);
+        const alertRef = db.doc(`competitionReportAlerts/${kind}_${targetId}`);
+        const alert = await data(tx, db, alertRef.path);
+        const record = await data(
+          tx,
+          db,
+          `${kind === 'team' ? 'teams' : kind === 'event' ? 'competitionEvents' : 'leagues'}/${targetId}`,
+        );
+        const targetTitle =
+          text(record?.title ?? record?.name ?? '', 80) ||
+          REPORT_FALLBACK_TITLE;
+        const push =
+          typeof alert?.lastPushedAt !== 'number' ||
+          now - alert.lastPushedAt >= REPORT_PUSH_INTERVAL_MS;
         tx.create(db.doc(`competitionReports/${generatedId}`), {
           uid,
           kind: body.kind,
@@ -2150,6 +2177,40 @@ export async function mutateCompetition(
           state: 'open',
           createdAt: now,
         });
+        tx.set(
+          alertRef,
+          {
+            kind,
+            targetId,
+            reports: (typeof alert?.reports === 'number' ? alert.reports : 0) + 1,
+            lastReportAt: now,
+            lastPushedAt: push ? now : (alert?.lastPushedAt ?? null),
+          },
+          { merge: true },
+        );
+        for (const adminUid of admins) {
+          inbox(
+            tx,
+            db,
+            adminUid,
+            `report_${kind}_${targetId}`,
+            kind,
+            targetId,
+            targetTitle,
+            now,
+            'report_received',
+            adminUid === uid,
+          );
+          // Never the reason or the reporter: only that a report is waiting.
+          if (push && adminUid !== uid)
+            notices.push({
+              uid: adminUid,
+              action: 'report_received',
+              targetKind: kind,
+              targetId,
+              title: targetTitle,
+            });
+        }
         break;
       }
       case 'moderation-review': {
