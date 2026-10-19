@@ -382,7 +382,13 @@
 
   .bottom-nav__inner {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    /* One equal column PER TAB, however many tabs BottomNav renders. This was
+       a hard-coded repeat(7, 1fr) left over from the seven-tab bar; when the
+       bar went to five tabs (202ed5b) the five sat in the left 5/7 of the bar
+       and two empty columns filled the right (owner: "it fills half the
+       space"). Auto columns can never drift from the TABS array again. */
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
     align-items: stretch;
     height: var(--bottom-nav-height);
     max-width: 560px;
@@ -418,7 +424,7 @@
   }
 
   .bottom-nav__label {
-    /* Seven tabs on a 360px phone: ~51px each. */
+    /* Five tabs on a 360px phone: 72px each. */
     font-size: 0.6rem;
     font-weight: 600;
     letter-spacing: 0.01em;
