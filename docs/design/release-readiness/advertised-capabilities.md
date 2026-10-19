@@ -49,7 +49,7 @@ This is a source audit. Nobody exercised the rendered website or installed build
 | ADV-29 | Ownerless-event sweep (#115, supporting) | `notifications.ts:155` | W I A | CON-12, TRU-10/11 · J07 | competitionAccountDeletion | Impl/unverified |
 | ADV-30 | FR/HT labels and error copy (#115, supporting) | `errors.ts:12` | W I A | PUR-08, PRE-04/05 | competitionWorkspace (missing-message check) | Impl/unverified |
 | ADV-31 | Tournament diagnostics (#115, supporting) | — | W I A | TRU-09 · J02 J03 | tournoisDiagnostics (web+native), diagnosticTransport | Impl/unverified |
-| ADV-32 | Scheduled competition reminders (in progress) | — | W I A | CON-15, CON-11, E2E-05 · J02 J03 J04 | — | Not implemented |
+| ADV-32 | Scheduled competition reminders (1 h / 10 min before start, registration closing) | `shared/competition/notifications.ts` push copy | W I A | CON-15, CON-11, E2E-05 · J02 J03 J04 | `api/__tests__/competitionReminders.test.ts` | Implemented/unverified |
 | ADV-33 | Alerts when a championship is announced | `ArenaHubPanel.tsx:266`, `notificationPermission.ts:78` | I A | CON-15, PUR-08 · J06 | notificationPermission | **Failed** |
 
 Full file paths, implementation files, flag behavior and the pending evidence for each row are in `candidate.json`.
@@ -61,7 +61,7 @@ Full file paths, implementation files, flag behavior and the pending evidence fo
 | ADV-05 | Major | `ARENA_WEB_PLAY=true` and `/arena/jouer` works, but `/download?from=arena` (linked as “Jouer dans l’application”) and the `/arena` meta description say the championship is played in the app. | **Fix the copy:** make both conditional on `ARENA_WEB_PLAY`, or turn web play off if it is outside the frozen scope. |
 | ADV-17 | Major | With `COMPETITION_CREATION_ENABLED=false` (the default), the event-save task is removed, but the “Organiser” panel and its new-events paragraph still render for every signed-in user. | **Hide the copy:** drop the paragraph and the empty panel while creation is disabled, or say “not open yet”. |
 | ADV-27 | Major | Android intent filters and the in-app parser handle `/tournois` and `/arena/{competitions,evenements,equipes,invitations,ligues,ecoles}`. The iOS AASA (`public_original/.well-known`) lists only `/defi/*`, `/arena`, `/arena/championnat*`, `/arena/demo*` and `/arena/jouer*`. No `assetlinks.json` is in the repo. | **Implement:** add the paths to the AASA, confirm `assetlinks.json` hosting, and verify with the exact binaries. |
-| ADV-28 | Major | Deletion copy (app dialog and `/supprimer-compte`) promises that all data, including results, is deleted. Competition results, rosters, audit, disputes and rewards are kept under a pseudonym (`Compte supprimé`), which CON-14 requires. | **Fix the copy, keep the code:** disclose pseudonymized retention in the dialog, the deletion page and the privacy policy, with a privacy/legal sign-off. Set `ACCOUNT_DELETION_SALT`. |
+| ADV-28 | Major | Deletion copy (app dialog and `/supprimer-compte`) promises that all data, including results, is deleted. Competition results, rosters, audit, disputes and rewards are kept under a pseudonym (`Compte supprimé`), which CON-14 requires. | **Fix the copy, keep the code:** disclose pseudonymized retention in the dialog, the deletion page and the privacy policy, with a privacy/legal sign-off. (`ACCOUNT_DELETION_SALT` was set in Vercel production on October 19, 2026.) |
 | ADV-33 | Major | “On te prévient dès qu’un championnat est annoncé” has no automatic announcement or doors-open push behind it; only the manual admin `send-broadcast` exists. The `arena-event` permission reason has no caller. | **Implement** through the reminder work (ADV-32), or **hide the copy** and make the manual broadcast a named runbook step. |
 | ADV-10 | Major (parity) | Native creation is a fixed preset: public, solo, starts in 10 minutes, 30 places. Private PIN rooms, team rules, categories and scheduling are web-only, while the arcade advertises private class rooms. | **Implement** private/PIN and start time natively (PAR-04), or declare the limitation under PAR-09 and link to the web form. |
 | ADV-23 | Major (operations) | “Signaler un problème” is offered everywhere, but reports reach an admin-only panel with no named owner or triage path. | **Implement the operational side:** assign an owner and runbook before enabling the pilot (TRU-10). |
@@ -88,7 +88,7 @@ The following are recorded as rows with automated evidence only:
 - **FR/HT error and label copy (ADV-30).**
 - **Tournament diagnostics (ADV-31).**
 
-Scheduled competition reminders (ADV-32) are being built in parallel and are `Not implemented` here. When they land, add their user-facing copy as `advertisedAt` entries and their tests, then run E2E-05 (“register → reminder”).
+Scheduled competition reminders (ADV-32) are implemented (`api/_lib/competitionReminders.ts`) with automated evidence only; E2E-05 (“register → reminder”) on installed builds is still required.
 
 ## Gate counts
 

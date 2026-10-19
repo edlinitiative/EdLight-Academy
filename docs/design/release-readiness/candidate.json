@@ -3699,7 +3699,7 @@
       "flags": [],
       "status": "Failed",
       "pendingEvidence": [
-        "ACCOUNT_DELETION_SALT set in the deployment environment",
+        "ACCOUNT_DELETION_SALT set in Vercel production (done 2026-10-19; confirm on the deployed build)",
         "Actual deletion outcome on installed builds and the website (E2E-01)",
         "Privacy/legal review of the disclosure"
       ],
@@ -3840,13 +3840,19 @@
     {
       "id": "ADV-32",
       "kind": "supporting",
-      "capability": "Scheduled competition reminders (start/deadline) — in progress on a parallel branch",
+      "capability": "Scheduled competition reminders: 1 h before start (registered starters; public-event followers inbox-only), 10 min before live events, registration closing for unfinished draft entries",
       "platforms": [
         "web",
         "ios",
         "android"
       ],
-      "advertisedAt": [],
+      "advertisedAt": [
+        {
+          "source": "shared/competition/notifications.ts",
+          "match": "Ton événement commence dans 1 heure.",
+          "line": 260
+        }
+      ],
       "requirementIds": [
         "CON-15",
         "CON-11",
@@ -3857,15 +3863,23 @@
         "J03",
         "J04"
       ],
-      "implementation": [],
-      "automatedEvidence": [],
+      "implementation": [
+        "api/_lib/competitionReminders.ts",
+        "api/tournois/tick.ts",
+        "api/_lib/competition.ts",
+        "shared/competition/notifications.ts"
+      ],
+      "automatedEvidence": [
+        "api/__tests__/competitionReminders.test.ts"
+      ],
       "flags": [],
-      "status": "Not implemented",
+      "status": "Implemented/unverified",
       "pendingEvidence": [
-        "Merge the reminder work, then map its copy here and run E2E-05 \"register → reminder\""
+        "Run E2E-05 \"register → reminder\" on installed iOS/Android and a declared browser",
+        "Verify the tick cron sweeps reminders in production (exact deployment identifier)"
       ],
       "mismatch": null,
-      "notes": "No current competition copy promises start/deadline reminders. When the reminder work lands, add its user-facing copy as advertisedAt entries and its tests.",
+      "notes": "Server-only competitionReminders queue (no uids); rescheduled on postpone, cleared on cancel/no-contest/close; stale/overdue rows dropped; at most once per reminder.",
       "owner": null,
       "scenarioIds": [],
       "evidence": []
