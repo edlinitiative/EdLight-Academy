@@ -641,6 +641,12 @@ service cloud.firestore {
       allow list, write: if false;
     }
 
+    // Private classroom pilot. All access and approval is mediated by /api/classes.
+    match /classes/{document=**} { allow read, write: if false; }
+    match /classAccounts/{document=**} { allow read, write: if false; }
+    match /classTeachers/{document=**} { allow read, write: if false; }
+    match /classCodes/{document=**} { allow read, write: if false; }
+
     // Default: deny all other access
     match /{document=**} {
       allow read, write: if false;

@@ -2,6 +2,7 @@
 import { initializeApp, deleteApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { mutateCompetition } from '../_lib/competition';
+import { createClass, joinClass, mutateClass } from '../_lib/classSpaces';
 const emulator = process.env.FIRESTORE_EMULATOR_HOST ? describe : describe.skip;
 emulator('competition emulator transactions', () => {
   const projectId = 'demo-edlight-competition';
@@ -27,6 +28,23 @@ emulator('competition emulator transactions', () => {
       ),
     );
   });
+  it('class creation retries create one code and concurrent approvals respect the last seat', async () => {
+    await db.doc('classTeachers/host').set({ active: true });
+    const created = await Promise.all(Array.from({ length: 4 }, () => createClass(db, 'host', {
+      title: 'NS4 A', school: 'School pilot', grade: 'NS4', requestId: 'class-concurrent-create',
+    }, now)));
+    expect(new Set(created.map((r) => r.id)).size).toBe(1);
+    expect((await db.collection('classCodes').get()).size).toBe(1);
+    const id = created[0].id, ref = db.doc(`classes/${id}`), c = (await ref.get()).data()!;
+    const members = Object.fromEntries(Array.from({ length: 59 }, (_, i) => [`fixture_${i}`, { name: `Student ${i}`, joinedAt: now }]));
+    await ref.update({ members, memberUids: Object.keys(members) });
+    await Promise.all(['a', 'b'].map((uid) => joinClass(db, uid, uid, c.code, now)));
+    const approvals = await Promise.allSettled(['a', 'b'].map((studentUid) => mutateClass(db, 'host', 'approve', { id, studentUid }, now)));
+    expect(approvals.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+    const final = (await ref.get()).data()!;
+    expect(final.memberUids).toHaveLength(60);
+    expect(final.pendingUids).toHaveLength(1);
+  }, 30000);
   afterAll(async () => {
     await db.terminate();
     await deleteApp(app);

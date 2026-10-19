@@ -905,6 +905,7 @@ export default function ProfileScreen() {
               label={t('Devenir enseignant bénévole', 'Vin yon pwofesè volontè')}
               onPress={() => navigation.navigate('Teach')}
             />
+            <SettingsRow icon={GraduationCap} label={t('Mes classes', 'Klas mwen yo')} onPress={() => navigation.navigate('Classes')} />
             <SettingsRow
               icon={Instagram}
               label={t('Suivre EdLight sur Instagram', 'Swiv EdLight sou Instagram')}
