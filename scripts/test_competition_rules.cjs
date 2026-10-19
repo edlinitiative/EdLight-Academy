@@ -68,6 +68,13 @@ const { doc, setDoc, getDoc } = requireTools('firebase/firestore');
         },
         'userTournaments/school/questions/live': { items: [{ answer: 1 }] },
         'userTournaments/school/players/entrant': { points: 100 },
+        'userTournaments/school/teamControl/team': {
+          holderUid: 'entrant',
+          authorityVersion: 1,
+          slots: ['entrant'],
+        },
+        'userTournaments/school/teamAnswers/0_team': { uid: 'entrant', choice: 1 },
+        'userTournaments/school/teamAttempts/0_team': { answeredBy: ['entrant'] },
         'userTournaments/legacy': { visibility: 'private', creatorUid: 'host' },
         'users/member/competitionInbox/invite': {
           kind: 'invite',
@@ -110,9 +117,21 @@ const { doc, setDoc, getDoc } = requireTools('firebase/firestore');
       'competitionEvents/school/attendance/entrant',
       'userTournaments/school/questions/live',
       'userTournaments/school/players/entrant',
+      'userTournaments/school/teamControl/team',
+      'userTournaments/school/teamAnswers/0_team',
+      'userTournaments/school/teamAttempts/0_team',
     ]) {
       await assertFails(getDoc(doc(member, key)));
       await assertFails(getDoc(doc(hostDb, key)));
+    }
+    // Team-mode authority and answers are server-only even for the team's own starter.
+    for (const key of [
+      'userTournaments/school/teamControl/team',
+      'userTournaments/school/teamAnswers/0_team',
+      'userTournaments/school/teamAttempts/0_team',
+    ]) {
+      await assertFails(getDoc(doc(entrant, key)));
+      await assertFails(setDoc(doc(entrant, key), { holderUid: 'entrant', authorityVersion: 99 }));
     }
     await assertFails(
       setDoc(doc(member, 'schoolMemberships/lycee test_member'), {
@@ -136,7 +155,7 @@ const { doc, setDoc, getDoc } = requireTools('firebase/firestore');
     );
     await assertFails(getDoc(doc(member, 'userTournaments/school')));
     console.log(
-      'Competition rules: public/private/school/legacy, account isolation, protected answers/attendance, privilege writes and revocation passed.',
+      'Competition rules: public/private/school/legacy, account isolation, protected answers/attendance/team authority, privilege writes and revocation passed.',
     );
   } finally {
     await env.cleanup();

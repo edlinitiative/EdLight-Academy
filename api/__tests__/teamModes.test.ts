@@ -371,3 +371,30 @@ describe('relay (J13)', () => {
     expect(row.contributions.map((c: any) => [c.uid, c.answered, c.missed])).toEqual([['a', 2, 0], ['b', 0, 2], ['c', 1, 1]]);
   });
 });
+
+describe('account deletion', () => {
+  it('pseudonymizes roles, frozen control and team answers without touching points', async () => {
+    process.env.ACCOUNT_DELETION_SALT = 'test-secret';
+    const { eraseCompetitionAccount } = await import('../_lib/competitionAccountDeletion');
+    const { eventId, teamId, startsAt } = await setup('shared', 'live');
+    await mutate('a', 'team-roles', { eventId, entryId: teamId, submitter: 'b', deputy: 'c' });
+    await mutate('b', 'team-roles-confirm', { eventId, entryId: teamId, rolesVersion: 1 });
+    clock = startsAt + 500;
+    await call(tickHandler, { tid: eventId });
+    await play('b', { action: 'team-live-answer', index: 0, choice: key(eventId, 0), version: 1 }, eventId);
+    await play('b', { action: 'team-transfer', to: 'c', version: 1 }, eventId);
+    const points = doc(`userTournaments/${eventId}/teamAnswers/0_${teamId}`).points;
+    const out = await eraseCompetitionAccount(db, 'b', clock);
+    expect(out.warnings).toEqual([]);
+    for (const p of [
+      `competitionEvents/${eventId}/entries/${teamId}`,
+      `userTournaments/${eventId}/teamControl/${teamId}`,
+      `userTournaments/${eventId}/teamAnswers/0_${teamId}`,
+    ])
+      expect(JSON.stringify(doc(p))).not.toMatch(/"b"/);
+    expect(doc(`userTournaments/${eventId}/teamAnswers/0_${teamId}`).points).toBe(points);
+    expect(doc(`userTournaments/${eventId}/teamControl/${teamId}`).holderUid).toBe('c');
+    expect(doc(`competitionEvents/${eventId}/entries/${teamId}`).roles.submitter).toMatch(/^deleted_/);
+    delete process.env.ACCOUNT_DELETION_SALT;
+  });
+});

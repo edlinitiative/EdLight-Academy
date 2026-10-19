@@ -26,7 +26,10 @@
  *    hostName, competitionReports uid/reviewerUid, membership/role reviewedBy,
  *    leagueInvites/leagueConsents captainUid, league ownerUid, and the
  *    tournament engine: roster/players/standings/winner names, plus their uid
- *    fields. Scores, points, ranks and result rows are copied untouched.
+ *    fields; team-mode records (entry roles/relaySlots/dutiesConfirmed,
+ *    teamControl holder/deputy/slots/presence/transfers, teamAnswers uid,
+ *    teamAttempts answeredBy/leg owners). Scores, points, ranks and result
+ *    rows are copied untouched.
  *
  *  ENGINE KEYS that stay raw: Firestore document ids keyed by uid (individual
  *    entries/{uid}, roster/{uid}, players/{uid}, attempts/{r}_{uid},
@@ -602,6 +605,19 @@ async function entries(
         starters: swap(x.starters, uid, tomb),
         confirmed: swap(x.confirmed, uid, tomb),
         ...(x.teamId ? {} : { label: DELETED_ACCOUNT_NAME }),
+        // Shared-answer / relay planning (EventEntry.roles, relaySlots, dutiesConfirmed).
+        ...(x.roles
+          ? {
+              roles: {
+                submitter: x.roles.submitter === uid ? tomb : x.roles.submitter,
+                deputy: x.roles.deputy === uid ? tomb : x.roles.deputy,
+              },
+            }
+          : {}),
+        ...(x.relaySlots ? { relaySlots: swap(x.relaySlots, uid, tomb) } : {}),
+        ...(x.dutiesConfirmed
+          ? { dutiesConfirmed: swap(x.dutiesConfirmed, uid, tomb) }
+          : {}),
       });
     }
     await w.flush();
@@ -676,6 +692,41 @@ async function tournaments(ctx: Ctx, tids: Set<string>) {
       const ref = db.doc(`${base}/${col}/${uid}`);
       if ((await ref.get()).exists)
         w.update(ref, { uid: key, displayName: DELETED_ACCOUNT_NAME, avatar: null });
+    }
+    // Team modes: one answer per team (submitter uid), the frozen control
+    // record (holder, deputy, slots, presence, transfer log) and team attempts
+    // (who answered each position, relay leg owners). Points stay untouched.
+    for (const d of (
+      await db.collection(`${base}/teamAnswers`).where('uid', '==', uid).limit(PAGE).get()
+    ).docs)
+      w.update(d.ref, { uid: tomb });
+    const sw = (v: unknown) => (v === uid ? tomb : v);
+    for (const d of (await db.collection(`${base}/teamControl`).limit(PAGE).get()).docs) {
+      const c = d.data();
+      if (!(c.starters || []).includes(uid) && c.captainUid !== uid) continue;
+      const lastSeen = { ...(c.lastSeen || {}) };
+      if (uid in lastSeen) {
+        lastSeen[tomb] = lastSeen[uid];
+        delete lastSeen[uid];
+      }
+      w.update(d.ref, {
+        captainUid: sw(c.captainUid),
+        starters: swap(c.starters || [], uid, tomb),
+        slots: swap(c.slots || [], uid, tomb),
+        holderUid: sw(c.holderUid),
+        deputyUid: sw(c.deputyUid),
+        lastSeen,
+        transfers: (c.transfers || []).map((x: DocumentData) => ({ ...x, from: sw(x.from), to: sw(x.to) })),
+      });
+    }
+    for (const d of (await db.collection(`${base}/teamAttempts`).limit(PAGE).get()).docs) {
+      const a = d.data();
+      const touched = (a.answeredBy || []).includes(uid) || (a.legs || []).some((l: DocumentData) => l.owner === uid);
+      if (!touched) continue;
+      w.update(d.ref, {
+        answeredBy: (a.answeredBy || []).map(sw),
+        ...(a.legs ? { legs: a.legs.map((l: DocumentData) => ({ ...l, owner: sw(l.owner) })) } : {}),
+      });
     }
     if (!bracket)
       for (const col of ['attempts', 'answers'])
