@@ -15,6 +15,8 @@ import { readMastery } from '../../services/masteryService';
 import { getCurrentUser, getUserProfile, updateUser } from '../../services/firebase';
 import { sendPasswordReset } from '../../services/authService';
 import { normalizeName } from '../../../shared/leaderboardAgg';
+import useStore from '../../contexts/store';
+import { useIsAmbassador } from '../../hooks/useAmbassadors';
 import {
   GOALS, RHYTHMS, courseLabel, loadUnitTitles, practiceHref, readStudyPrefs, strongSpotLabel, strongSpots, weakSpots, weekDots,
   type SkillSpot, type StudyPrefs,
@@ -312,6 +314,7 @@ export function AccountBlock({ email, t, onLogout, showLogout = true }: {
   showLogout?: boolean;
 }) {
   const canReset = !!email && hasPasswordSignIn();
+  const isAmbassador = useIsAmbassador(useStore((s) => (s.isAuthenticated ? s.user?.uid : null)));
   const [reset, setReset] = React.useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
 
   const sendReset = async () => {
@@ -356,6 +359,8 @@ export function AccountBlock({ email, t, onLogout, showLogout = true }: {
 
       <nav className="pr-account__rows" aria-label={t('Compte', 'Kont')}>
         <Link to="/classes" className="pr-arow"><span className="pr-arow__text">{t('Mes classes', 'Klas mwen yo')}</span><FileText size={20} aria-hidden="true" /></Link>
+        <Link to="/partager-suivi" className="pr-arow"><span className="pr-arow__text">{t('Partager mon suivi', 'Pataje swivi mwen')}</span><FileText size={20} aria-hidden="true" /></Link>
+        {isAmbassador && <Link to="/ambassadeur" className="pr-arow"><span className="pr-arow__text">{t('Tableau ambassadeur', 'Tablo anbasadè')}</span><FileText size={20} aria-hidden="true" /></Link>}
         <Link to="/releve" className="pr-arow"><span className="pr-arow__text">{t('Relevé de progression', 'Relve pwogrè')}</span><FileText size={20} aria-hidden="true" /></Link>
         <Link to="/privacy" className="pr-arow"><span className="pr-arow__text">{t('Confidentialité', 'Konfidansyalite')}</span><ShieldCheck size={20} aria-hidden="true" /></Link>
         {showLogout && (

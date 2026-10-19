@@ -656,6 +656,14 @@ service cloud.firestore {
     match /classTeachers/{document=**} { allow read, write: if false; }
     match /classCodes/{document=**} { allow read, write: if false; }
 
+    // Parent progress links: hashed tokens, read and written only by /api/progress-share.
+    match /progressShares/{document=**} { allow read, write: if false; }
+    // School ambassador programme: designation, recruit retention and the manual
+    // reward record are server-only (/api/ambassadors, /api/referrals/redeem).
+    match /ambassadors/{document=**} { allow read, write: if false; }
+    match /ambassadorRecruits/{document=**} { allow read, write: if false; }
+    match /ambassadorRewards/{document=**} { allow read, write: if false; }
+
     // Default: deny all other access
     match /{document=**} {
       allow read, write: if false;

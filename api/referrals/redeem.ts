@@ -39,6 +39,8 @@ import {
   REFERRER_XP,
   REFERRED_XP,
 } from '../_lib/referrals';
+import { recordRecruitSignal } from '../_lib/ambassadors';
+import { clientAddress, hashAddress } from '../_lib/addressHash';
 
 /** Referrals are signup-only: reject accounts older than this (0 = disabled). */
 const SIGNUP_WINDOW_DAYS = 7;
@@ -145,6 +147,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     if (!claim.ok) {
       res.status(200).json({ ok: false, reason: claim.reason });
       return;
+    }
+
+    // 3b. Ambassador programme signal (server signup time + hashed address for
+    //     fraud review). Best effort: never blocks or fails the redemption.
+    try {
+      await recordRecruitSignal(db, referrerUid, uid, hashAddress(clientAddress(req as any), 'referral'), Date.now());
+    } catch (err) {
+      console.warn('[referrals/redeem] recruit signal skipped');
     }
 
     // 4. Two-sided rewards. The referral is already claimed, so these apply once.
