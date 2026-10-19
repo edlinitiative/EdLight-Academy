@@ -513,7 +513,13 @@ export default function TournoisScreen() {
                   variant="secondary"
                   label={t('Partager l’invitation', 'Pataje envitasyon an')}
                   onPress={() => {
-                    void Share.share({ message: service.shareUrl(tournament) });
+                    // A bare URL arrived with no context; one sentence + link.
+                    void Share.share({
+                      message: t(
+                        `Rejoins le tournoi « ${tournament.title} » sur EdLight : ${service.shareUrl(tournament)}`,
+                        `Vin jwe nan tounwa "${tournament.title}" sou EdLight : ${service.shareUrl(tournament)}`,
+                      ),
+                    });
                   }}
                 />
                 {joined &&

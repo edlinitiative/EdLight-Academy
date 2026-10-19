@@ -9,7 +9,7 @@ import { sessionRowName } from '../utils/examNaming';
 import { useCourses } from '../hooks/useData';
 import { useAllProgress, calculateCompletionPercentage } from '../hooks/useProgress';
 import useStore from '../contexts/store';
-import ArenaBanner from '../components/ArenaBanner';
+import HomeSpotlightCard from '../components/HomeSpotlightCard';
 import ExamCountdown from '../components/ExamCountdown';
 import Leaderboard from '../components/Leaderboard';
 import MySchoolCard from '../components/MySchoolCard';
@@ -490,6 +490,12 @@ export default function Dashboard() {
 
         </DashHero>
 
+        {/* Something time-sensitive the student can act on now — the Arène
+            championship (sign-up, doors, live) or a tournament they are in —
+            is the FIRST content card, not a row below the league (owner
+            feedback, app build 61). Self-hides when nothing is on. */}
+        <HomeSpotlightCard />
+
         {/* The student's school, as a team — where it ranks, who is missing,
             and the invite beside it. It replaces "Trois étapes claires", three
             rows that repeated the tab bar and the panels below. The one of the
@@ -518,8 +524,6 @@ export default function Dashboard() {
             exam level with a future session, so 7ᵉ–NS3 and post-Bac see
             nothing rather than somebody else's countdown. */}
         <div className="dash__event"><ExamCountdown /></div>
-
-        <div className="dash__event"><ArenaBanner /></div>
 
         <div className="dash__body">
           {/* ───────────── MAIN COLUMN ───────────── */}

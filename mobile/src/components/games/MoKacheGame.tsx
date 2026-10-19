@@ -210,7 +210,7 @@ export default function MoKacheGame({ isCreole, onExit, onRecord, highScore = nu
     const rows = evaluations.map((ev) =>
       ev.map((s) => (s === 'correct' ? '🟩' : s === 'present' ? '🟨' : '⬛')).join(''),
     );
-    const text = `Mo Kaché ${today} — ${state === 'won' ? guesses.length : 'X'}/${MAX_GUESSES}\n${rows.join('\n')}\nacademy.edlight.org/jeux`;
+    const text = `Mo Kaché ${today} · ${state === 'won' ? guesses.length : 'X'}/${MAX_GUESSES}\n${rows.join('\n')}\nacademy.edlight.org/jeux`;
     try { await Share.share({ message: text }); } catch {}
   };
 

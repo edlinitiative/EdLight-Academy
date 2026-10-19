@@ -65,7 +65,7 @@ export default function ArenaDoorsScreen() {
     // referral counters, not two that have to be added up later.
     logInviteSent('champion');
     await shareArenaInvite({
-      schoolName: doors.schoolName || (language === 'ht' ? 'lekòl ou' : 'ton école'),
+      schoolName: doors.schoolName || '',
       qualification: doors.qualification,
       lang: language === 'ht' ? 'ht' : 'fr',
       url: 'https://academy.edlight.org/arena',

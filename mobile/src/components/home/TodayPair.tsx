@@ -26,11 +26,19 @@ const NIGHT_MUTED = '#9FB3D1'; // 7.0:1 on NIGHT
  * today's run is recorded; the Arène line names a real tournament date or
  * says "Aucun championnat prévu" — never an invented one.
  */
-export default function TodayPair({ onStartDaily, school }: { onStartDaily: () => void; school?: string | null }) {
+export default function TodayPair({ onStartDaily, school, hideArena = false }: {
+  onStartDaily: () => void;
+  school?: string | null;
+  /**
+   * The Arène event is already the first card on Home (SpotlightCard): the
+   * small tile would repeat it, so the daily challenge takes the full row.
+   */
+  hideArena?: boolean;
+}) {
   return (
     <View style={{ flexDirection: 'row', gap: 12, alignItems: 'stretch' }}>
       <DailyTile onStart={onStartDaily} />
-      <ArenaTile school={school ?? null} />
+      {hideArena ? null : <ArenaTile school={school ?? null} />}
     </View>
   );
 }

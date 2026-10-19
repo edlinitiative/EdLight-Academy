@@ -18,6 +18,7 @@ import { loadAllExamResultSummaries } from '../services/examResults';
 import { fetchCatalogIndex } from '../utils/examCatalog';
 import { normalizeSubject, normalizeLevel, normalizeExamTitle, subjectDisplayName } from '../utils/examUtils';
 import type { ExamsParamList } from '../navigation/ExamsNavigator';
+import { examStackRoot } from '../navigation/navHelpers';
 import { tapLight } from '../utils/haptics';
 
 type Nav = NativeStackNavigationProp<ExamsParamList, 'ExamHistory'>;
@@ -134,7 +135,7 @@ export default function ExamHistoryScreen() {
           title={t('Aucun examen terminé pour l’instant', 'Ou poko fini okenn egzamen')}
           description={t('Passez un examen blanc. Votre score apparaîtra ici.', 'Fè yon egzamen blan. Nòt ou ap parèt la.')}
           ctaLabel={t('Voir les examens', 'Gade egzamen yo')}
-          onCta={() => navigation.navigate('ExamLanding')}
+          onCta={() => navigation.navigate(examStackRoot(navigation) as 'ExamLanding')}
         />
       );
     }

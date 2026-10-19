@@ -297,7 +297,9 @@ export default function ExamHistory() {
                       <span className="xp-row__end">
                         <Link
                           className={`xp-btn xp-btn--sm${i === 0 ? '' : ' xp-btn--tonal'}`}
-                          to={`/exams/${d.slug}/${d.examKey}`}
+                          // Straight back into the draft, like every other Reprendre.
+                          to={`/exams/${d.slug}/${d.examKey}/take`}
+                          state={{ autostart: true, resume: true }}
                           aria-label={L(`Reprendre : ${d.title}`, `Kontinye : ${d.title}`)}
                           style={{ display: 'inline-flex' }}
                         >

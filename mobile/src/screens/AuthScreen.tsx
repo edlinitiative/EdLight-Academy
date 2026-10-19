@@ -3,7 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   KeyboardAvoidingView, Platform, Image, 
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -31,6 +31,9 @@ WebBrowser.maybeCompleteAuthSession();
 export default function AuthScreen() {
   const { setUser, setActiveTab, activeTab, language } = useStore();
   const { colors, fonts, radius, featureSurface, elevation } = useTheme();
+  // Rendered only inside AuthModal (an RN Modal): pad by the root provider's
+  // insets instead of a native SafeAreaView, which can measure 0 in a Modal.
+  const insets = useSafeAreaInsets();
   const centerColumn = useContentContainerStyle('form');
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -251,7 +254,7 @@ export default function AuthScreen() {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
+    <View style={{ flex: 1, backgroundColor: colors.bg, paddingTop: insets.top, paddingBottom: insets.bottom }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -516,6 +519,6 @@ export default function AuthScreen() {
           </PopIn>
         </TouchableOpacity>
       )}
-    </SafeAreaView>
+    </View>
   );
 }

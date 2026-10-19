@@ -1695,7 +1695,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 321,
+      "line": 334,
       "kind": "native-screen",
       "destination": "Loading",
       "owner": null,
@@ -1705,7 +1705,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 324,
+      "line": 337,
       "kind": "native-screen",
       "destination": "Main",
       "owner": null,
@@ -1715,7 +1715,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 325,
+      "line": 338,
       "kind": "native-screen",
       "destination": "Tournois",
       "owner": null,
@@ -1725,7 +1725,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 326,
+      "line": 339,
       "kind": "native-screen",
       "destination": "CompetitionWorkspace",
       "owner": null,
@@ -1735,7 +1735,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 327,
+      "line": 340,
       "kind": "native-screen",
       "destination": "Search",
       "owner": null,
@@ -1745,7 +1745,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 332,
+      "line": 345,
       "kind": "native-screen",
       "destination": "Sandra",
       "owner": null,
@@ -1755,7 +1755,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 341,
+      "line": 354,
       "kind": "native-screen",
       "destination": "StudyPlan",
       "owner": null,
@@ -1765,7 +1765,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 346,
+      "line": 359,
       "kind": "native-screen",
       "destination": "Leaderboard",
       "owner": null,
@@ -1775,7 +1775,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 351,
+      "line": 364,
       "kind": "native-screen",
       "destination": "ArenaLobby",
       "owner": null,
@@ -1785,7 +1785,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 356,
+      "line": 369,
       "kind": "native-screen",
       "destination": "ArenaHub",
       "owner": null,
@@ -1795,7 +1795,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 361,
+      "line": 374,
       "kind": "native-screen",
       "destination": "ArenaWatch",
       "owner": null,
@@ -1805,7 +1805,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 366,
+      "line": 379,
       "kind": "native-screen",
       "destination": "ArenaDoors",
       "owner": null,
@@ -1815,7 +1815,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 371,
+      "line": 384,
       "kind": "native-screen",
       "destination": "ArenaResult",
       "owner": null,
@@ -1825,7 +1825,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 376,
+      "line": 389,
       "kind": "native-screen",
       "destination": "ArenaLive",
       "owner": null,
@@ -1835,7 +1835,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 387,
+      "line": 400,
       "kind": "native-screen",
       "destination": "Teach",
       "owner": null,
@@ -1845,7 +1845,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 392,
+      "line": 405,
       "kind": "native-screen",
       "destination": "AvatarEditor",
       "owner": null,
@@ -1855,7 +1855,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 397,
+      "line": 410,
       "kind": "native-screen",
       "destination": "Defi",
       "owner": null,
@@ -1985,7 +1985,7 @@
     },
     {
       "source": "mobile/src/navigation/NativeTabNavigator.tsx",
-      "line": 130,
+      "line": 132,
       "kind": "native-screen",
       "destination": "Trivia",
       "owner": null,
@@ -1995,7 +1995,7 @@
     },
     {
       "source": "mobile/src/navigation/NativeTabNavigator.tsx",
-      "line": 135,
+      "line": 137,
       "kind": "native-screen",
       "destination": "Profile",
       "owner": null,
@@ -2005,9 +2005,59 @@
     },
     {
       "source": "mobile/src/navigation/QuizNavigator.tsx",
-      "line": 31,
+      "line": 44,
       "kind": "native-screen",
       "destination": "Quizzes",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/QuizNavigator.tsx",
+      "line": 45,
+      "kind": "native-screen",
+      "destination": "ExamBrowser",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/QuizNavigator.tsx",
+      "line": 46,
+      "kind": "native-screen",
+      "destination": "ExamOverview",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/QuizNavigator.tsx",
+      "line": 47,
+      "kind": "native-screen",
+      "destination": "ExamTake",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/QuizNavigator.tsx",
+      "line": 48,
+      "kind": "native-screen",
+      "destination": "ExamResults",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/QuizNavigator.tsx",
+      "line": 49,
+      "kind": "native-screen",
+      "destination": "ExamHistory",
       "owner": null,
       "scenarioIds": [],
       "statesReviewed": [],
@@ -2045,7 +2095,7 @@
     },
     {
       "source": "mobile/src/navigation/TabNavigator.tsx",
-      "line": 277,
+      "line": 279,
       "kind": "native-screen",
       "destination": "Trivia",
       "owner": null,
@@ -2055,7 +2105,7 @@
     },
     {
       "source": "mobile/src/navigation/TabNavigator.tsx",
-      "line": 287,
+      "line": 289,
       "kind": "native-screen",
       "destination": "Profile",
       "owner": null,
@@ -2093,7 +2143,7 @@
         {
           "source": "mobile/src/components/home/TodayPair.tsx",
           "match": "{t('Arène', 'Arèn')}</Text>",
-          "line": 127
+          "line": 135
         }
       ],
       "requirementIds": [
@@ -2202,14 +2252,14 @@
       ],
       "advertisedAt": [
         {
-          "source": "src/components/ArenaBanner.tsx",
-          "match": "Inscris ton école dès maintenant",
-          "line": 59
+          "source": "src/components/HomeSpotlightCard.tsx",
+          "match": "Inscris ton école",
+          "line": 90
         },
         {
           "source": "src/pages/Dashboard.tsx",
           "match": "Championnat interscolaire",
-          "line": 731
+          "line": 735
         },
         {
           "source": "src/components/arena/lobby/LobbyLanes.tsx",
@@ -2236,7 +2286,8 @@
         "src/pages/Arena.tsx",
         "src/components/arena/ArenaRegisterForm.tsx",
         "api/arena/register.ts",
-        "mobile/src/screens/arena/ArenaLobbyScreen.tsx"
+        "mobile/src/screens/arena/ArenaLobbyScreen.tsx",
+        "shared/homeSpotlight.ts"
       ],
       "automatedEvidence": [
         "api/__tests__/arenaSchoolIdentity.test.ts",
@@ -3544,7 +3595,7 @@
         {
           "source": "mobile/src/screens/ProfileScreen.tsx",
           "match": "label={t('Compétitions et équipes'",
-          "line": 780
+          "line": 828
         }
       ],
       "requirementIds": [
@@ -3691,7 +3742,7 @@
         {
           "source": "mobile/src/screens/ProfileScreen.tsx",
           "match": "tes résultats restent dans les classements sous le nom « Compte supprimé »",
-          "line": 277
+          "line": 289
         },
         {
           "source": "src/pages/DeleteAccount.tsx",

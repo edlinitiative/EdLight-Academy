@@ -8,7 +8,7 @@ import PressableScale from '../../components/ui/PressableScale';
 import StageEnter from '../../components/trivia/StageEnter';
 import QualificationBar from '../../components/arena/QualificationBar';
 import { useArenaLobby, useArenaRegister } from '../../hooks/useArena';
-import { updateUserFullName } from '../../services/firebase';
+import { useSaveFullName } from '../../hooks/useSaveFullName';
 import { useTrivia } from '../../hooks/useTrivia';
 import { formatCountdown, shareArenaInvite } from '../../services/arenaService';
 import { logInviteSent } from '../../services/referralService';
@@ -39,10 +39,9 @@ import ArenaDemoLoop from '../../components/arena/ArenaDemoLoop';
  * typographic flourish: it is the one element on this screen that is looked at
  * continuously, and proportional digits make it shuffle sideways every second.
  *
- * The invite is framed around the SCHOOL, never the sender — see
- * `buildArenaInviteMessage`. "Il manque 2 joueurs à CODOSA pour se qualifier"
- * is a fact about something the reader already belongs to; "viens jouer avec
- * moi" is a favour, and gets the response a favour gets.
+ * The invite is one short sentence plus the link (see
+ * `buildArenaInviteMessage`): the referral-code line when there is a code,
+ * otherwise the school's shortfall.
  */
 export default function ArenaLobbyScreen() {
   const route = useRoute<any>();
@@ -63,7 +62,6 @@ export default function ArenaLobbyScreen() {
   const [attested, setAttested] = useState(false);
   const [nameSheet, setNameSheet] = useState(false);
   const [gradeSheet, setGradeSheet] = useState(false);
-  const [savingName, setSavingName] = useState(false);
   const [warming, setWarming] = useState(false);
   const register = useArenaRegister(tid);
 
@@ -80,43 +78,16 @@ export default function ArenaLobbyScreen() {
    * the audience will see — just first name."
    */
   const user = useStore((st) => st.user);
-  const setUser = useStore((st) => st.setUser);
-  const { profile, setLeaderboardOptIn } = useTrivia();
+  const { profile } = useTrivia();
   const fullName: string | null = user?.name || user?.displayName || null;
   const savedAlias: string | null = (profile?.leaderboard as any)?.displayName || null;
   const boardName = savedAlias || defaultAlias(fullName);
 
+  // The one full-name writer, shared with the Profil (hooks/useSaveFullName).
+  const { save: persistFullName, saving: savingName } = useSaveFullName();
   const saveFullName = async (next: string) => {
-    setSavingName(true);
-    try {
-      const uid = user?.uid || user?.id;
-      if (uid) await updateUserFullName(uid, next);
-      setUser({ ...(user || {}), name: next, displayName: next });
-
-      /*
-       * Also publish the derived first name as the board alias, so the preview
-       * the student just approved is literally what the board shows. Without
-       * this an older saved alias would keep winning inside
-       * `publicDisplayName` and the confirmation would be a lie.
-       *
-       * The rest of the leaderboard entry is preserved: blanking someone's
-       * school or city as a side effect of writing their name is its own bug.
-       */
-      const audience = defaultAlias(next);
-      if (audience) {
-        const lb: any = profile?.leaderboard || {};
-        await setLeaderboardOptIn({
-          optedIn: true,
-          displayName: audience,
-          school: lb.school ?? null,
-          city: lb.city ?? null,
-          department: lb.department ?? null,
-        });
-      }
-      setNameSheet(false);
-    } finally {
-      setSavingName(false);
-    }
+    await persistFullName(next);
+    setNameSheet(false);
   };
 
   // Attested, not proven — and prefilled, because the student already told us
@@ -170,7 +141,7 @@ export default function ArenaLobbyScreen() {
     arenaHaptics.commit();
     logInviteSent('champion');
     await shareArenaInvite({
-      schoolName: schoolName || t('ton école', 'lekòl ou'),
+      schoolName: schoolName || '',
       qualification,
       lang: isCreole ? 'ht' : 'fr',
       url: 'https://academy.edlight.org/arena',

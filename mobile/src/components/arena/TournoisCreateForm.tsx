@@ -609,7 +609,10 @@ export function TournoisPinCard({
         label={t('Partager le lien d’invitation', 'Pataje lyen envitasyon an')}
         onPress={() => {
           void Share.share({
-            message: `${title} — PIN ${formatPin(pin)}\n${link}`,
+            message: t(
+              `Rejoins mon tournoi « ${title} » avec le PIN ${formatPin(pin)} : ${link}`,
+              `Vin jwe nan tounwa mwen "${title}" ak PIN ${formatPin(pin)} : ${link}`,
+            ),
           });
         }}
       />

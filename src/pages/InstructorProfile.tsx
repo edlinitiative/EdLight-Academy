@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import PixelAvatar from '../components/PixelAvatar';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, GraduationCap, School, BookOpen, ChevronRight } from '../components/icons';
+import { ArrowLeft, GraduationCap, School, BookOpen, ChevronRight, Sigma, Atom, FlaskConical, LineChart } from '../components/icons';
+
+// Same glyph per subject as the Courses catalog rows (pages/Courses.tsx), so a
+// teacher's course list is not four identical open books.
+const SUBJECT_ICONS: Record<string, typeof BookOpen> = { MATH: Sigma, PHYS: Atom, CHEM: FlaskConical, ECON: LineChart };
 import useStore from '../contexts/store';
 import { getInstructor, type Instructor } from '../services/instructorService';
 import { getCachedCourses } from '../services/dataService';
@@ -149,7 +153,10 @@ export default function InstructorProfile() {
               {courses.map((c) => (
                 <Link key={c.id} to={`/courses/${encodeURIComponent(c.id)}`} className="course-instructor">
                   <span className="course-instructor__initials" aria-hidden>
-                    <BookOpen size={20} />
+                    {(() => {
+                      const SubjectIcon = SUBJECT_ICONS[String(c.subject || '').toUpperCase()] || BookOpen;
+                      return <SubjectIcon size={20} />;
+                    })()}
                   </span>
                   <span className="course-instructor__body">
                     <span className="course-instructor__name">{c.name}</span>

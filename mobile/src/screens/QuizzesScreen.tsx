@@ -53,7 +53,7 @@ import {
   type LogEntry, type SessionItem, type SessionMode,
 } from '../components/journey/practice/session';
 import {
-  chaptersFor, countQuizzable, courseWideScope, findCourse, itemsForScope, normalizeCourseCode,
+  COURSE_WIDE, chaptersFor, countQuizzable, courseWideScope, findCourse, itemsForScope, normalizeCourseCode,
   resolvePracticeScope, scopeForChapter, type BrowseChapter, type ResolvedScope,
 } from '../components/journey/practice/practiceScope';
 
@@ -328,6 +328,9 @@ export default function QuizzesScreen() {
     return displayCourseName(readableCourseMeta([subj, lvl].filter(Boolean).join(' · '), isCreole));
   }, [isCreole]);
   const contextOf = useCallback((scope: ResolvedScope) => {
+    // Whole-course scope: the header title IS the course name ("Quiz ·
+    // Mathématiques NS I"), so a "Mathématiques · NS I" line would repeat it.
+    if (scope.unit?.value === COURSE_WIDE) return '';
     const chapter = scope.unitIndex ? t(`Chapitre ${scope.unitIndex}`, `Chapit ${scope.unitIndex}`) : '';
     return [subjectLabelOf(scope), chapter].filter(Boolean).join(' · ');
   }, [subjectLabelOf, t]);
@@ -473,7 +476,7 @@ export default function QuizzesScreen() {
         >
           {session.mode === 'quiz' && tl.scored > 0 && tl.total - tl.unanswered > 0 ? (
             <View style={{ gap: 12, marginTop: 8 }}>
-              <BeatMyScoreCard title={`${subjectLabelOf(entry.scope)} — ${entry.scope.unit?.label || ''}`} score={tl.correct} total={tl.scored} variant="surface" source="quiz" />
+              <BeatMyScoreCard title={`${subjectLabelOf(entry.scope)} · ${entry.scope.unit?.label || ''}`} score={tl.correct} total={tl.scored} variant="surface" source="quiz" />
               <DefiHandoffCard />
             </View>
           ) : null}

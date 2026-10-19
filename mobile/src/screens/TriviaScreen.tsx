@@ -636,12 +636,9 @@ export function QuizPlayer({
         {/* Question card */}
         <StageEnter playKey={idx} index={0} springy>
           <View style={{ padding: 22, gap: 10, borderRadius: 24, backgroundColor: C.surfaceRaised }}>
-            {categoryName ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.coral }} />
-                <Text numberOfLines={1} style={[arenaType.status, { color: C.muted }]}>{categoryName}</Text>
-              </View>
-            ) : null}
+            {/* No category eyebrow here: every caller's header title already
+                names the round ("Défi du jour", "Trivia · Sciences",
+                "Défi · Sciences"), so a dot-label repeated it. */}
             <Text accessibilityRole="header" style={{ fontFamily: fonts.heading, fontSize: 22, lineHeight: 30, letterSpacing: -0.3, color: C.ink }}>
               {questionText}
             </Text>
@@ -785,7 +782,7 @@ function TriviaResults({
       <ShareCardCapture ref={shareRef} />
       <NightResult
         title={t('Résultat', 'Rezilta')}
-        subtitle={`Trivia · ${categoryName}`}
+        subtitle={isDaily ? categoryName : `Trivia · ${categoryName}`}
         onClose={onChooseCategory}
         closeLabel={t('Fermer', 'Fèmen')}
         me={{ seed: user?.uid || 'toi', label: t('Toi', 'Ou') }}

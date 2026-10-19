@@ -211,6 +211,12 @@ export default function LearnWorkspace({
     return () => { alive = false; };
   }, [uid, preview, reviewTry]);
   const weakList = Array.isArray(weak) ? weak : [];
+  const reviewHref = (code: string, unitNo?: number | string | null) => {
+    if (!code) return '/revision';
+    const q = new URLSearchParams({ course: code, from: 'workspace' });
+    if (unitNo) q.set('unit', `U${unitNo}`);
+    return `/revision?${q.toString()}`;
+  };
   const dueCount = Array.isArray(weak) ? weakList.reduce((n, w) => n + w.count, 0) : null;
   const weakTotal = dueCount || 0;
 
@@ -402,7 +408,11 @@ export default function LearnWorkspace({
                 const cta = recordsFailed ? L('Ouvrir', 'Louvri') : started ? L('Continuer', 'Kontinye') : L('Commencer', 'Kòmanse');
                 return (
                   <li key={code}>
-                    <Link to={`/courses/${course.id}`} className="lws-subj">
+                    {/* Opens on the next lesson it names, like Reprendre does. */}
+                    <Link
+                      to={`/courses/${course.id}${nextLesson?.id ? `?lesson=${encodeURIComponent(nextLesson.id)}` : ''}`}
+                      className="lws-subj"
+                    >
                       <SubjectFrame subject={code} still={frameFor(course, nextLesson)} size="md" className="lws-subj__frame" />
                       <span className="lws-subj__body">
                         <strong className="lws-subj__title">{subjectName(code)}</strong>
@@ -512,10 +522,11 @@ export default function LearnWorkspace({
                     const unit = unitTitle(w.code, w.unitNo);
                     return (
                       <li key={`${w.code}-${w.unitNo}`}>
-                        <Link to="/revision" className="jh-review__row">
+                        {/* The row names one subject and unit: review exactly that. */}
+                        <Link to={reviewHref(w.code, w.unitNo)} className="jh-review__row">
                           <strong>{w.code ? weakName(w.code) : L('Divers', 'Divès')}</strong>
                           {(w.unitNo || unit) && (
-                            <span>{w.unitNo ? L(`Unité ${w.unitNo}`, `Inite ${w.unitNo}`) : ''}{w.unitNo && unit ? ' — ' : ''}{unit}</span>
+                            <span>{w.unitNo ? L(`Unité ${w.unitNo}`, `Inite ${w.unitNo}`) : ''}{w.unitNo && unit ? ' · ' : ''}{unit}</span>
                           )}
                           <span className="jh-review__count">{w.count} {w.count === 1 ? L('question', 'kesyon') : L('questions', 'kesyon')}</span>
                         </Link>

@@ -15,7 +15,7 @@ jest.mock('../../hooks/useTriviaContent', () => ({ useTriviaContent: () => ({ ca
 jest.mock('../../services/answerEventsService', () => ({ logAnswerEvent: jest.fn() }));
 jest.mock('../../utils/telemetry', () => ({ trackEvent: jest.fn() }));
 jest.mock('../../components/Leaderboard', () => () => null);
-jest.mock('../../components/ArenaBanner', () => () => null);
+jest.mock('../../components/HomeSpotlightCard', () => () => null);
 jest.mock('../../components/MySchoolCard', () => () => null);
 jest.mock('../../components/SchoolRanking', () => () => null);
 

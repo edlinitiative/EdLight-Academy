@@ -524,6 +524,48 @@ export function subscribeRegistration(
   );
 }
 
+/** States in which a registration still ties a student to the school they registered for. */
+const SCHOOL_BOUND_STATES = ['registration', 'doors', 'live', 'grading', 'provisional'] as const;
+
+export interface ArenaSchoolBinding {
+  tid: string;
+  title: string;
+  state: ArenaState;
+  schoolKey: string;
+}
+
+/**
+ * Is this student registered for a championship that is not over yet?
+ *
+ * Asked once, when the student changes school on their profile — not watched:
+ * the profile does not need four live listeners to word one confirmation.
+ * Read-only and fail-open (null on any error): it only decides what the
+ * confirmation SAYS, because a profile school change never alters an Arène
+ * registration (that lives in `tournamentRegistrations`, server-written).
+ */
+export async function fetchMyArenaSchoolBinding(uid: string): Promise<ArenaSchoolBinding | null> {
+  if (!uid) return null;
+  try {
+    const snap = await getDocs(query(collection(db, 'tournaments'), where('state', 'in', [...SCHOOL_BOUND_STATES])));
+    const rows = snap.docs.map((d) => toTournament(d.id, d.data()));
+    // Furthest along first: a championship being played binds harder than one
+    // still open for sign-up.
+    const rank = (s: ArenaState) => -SCHOOL_BOUND_STATES.indexOf(s as (typeof SCHOOL_BOUND_STATES)[number]);
+    rows.sort((a, b) => rank(a.state) - rank(b.state));
+    for (const tour of rows) {
+      const reg = await getDoc(doc(db, 'tournamentRegistrations', `${tour.id}_${uid}`));
+      if (!reg.exists()) continue;
+      const d: any = reg.data();
+      if (d?.eligible === false) continue;
+      return { tid: tour.id, title: tour.title, state: tour.state, schoolKey: str(d?.schoolKey) };
+    }
+    return null;
+  } catch (err) {
+    console.warn('[Arena] fetchMyArenaSchoolBinding failed:', err);
+    return null;
+  }
+}
+
 /**
  * The single standings document every surface reads. Ten thousand spectators
  * subscribe to this one doc — which is the whole spectator read cost, and the
@@ -851,52 +893,53 @@ export interface ArenaInviteInput {
 }
 
 /**
- * The invite, framed around the SCHOOL and never the sender.
+ * The invite: ONE short sentence and the link, no emoji, no em-dash.
  *
- * "Viens jouer avec moi" asks for a favour and gets the reply a favour gets.
- * "Il manque 2 joueurs à CODOSA pour se qualifier" is a fact about something
- * the reader already belongs to, and it is the only mechanic in the product
- * where a student benefits from recruiting people who are not close friends.
+ * The owner's verdict on the old three-clause pitch (build 61, "that's too
+ * much noo?") set the shape: "Rejoins-moi dans l'Arène EdLight avec mon code
+ * QYN5SR : <lien>". When a referral code exists, that is the message. Without
+ * one, the line still states the school's shortfall, because "il manque 2
+ * joueurs à CODOSA" is the only mechanic where recruiting non-friends pays.
  *
- * Three cases, because the ask genuinely changes:
  *  - short, before doors      → register, there is still time
- *  - doors open and short     → come NOW, the room is open and it ends tonight
- *  - qualified                → the team is in; bring people to the stands
+ *  - doors open and short     → come NOW, the room is open
+ *  - qualified                → the team is in; come and play
  */
 export function buildArenaInviteMessage(input: ArenaInviteInput): string {
-  const { schoolName, qualification, lang, url } = input;
+  const { qualification, lang, url } = input;
   const ht = lang === 'ht';
+  const code = input.referralCode || null;
   const n = qualification.needed;
-  // Kreyòl does not inflect the noun for number — "2 jwè" is correct as it
-  // stands, and pluralising it would read as a translation of French.
+  // Kreyòl does not inflect the noun for number: "2 jwè" stands as is.
   const players = ht ? 'jwè' : n > 1 ? 'joueurs' : 'joueur';
+  // A missing school name must not become "ton école" in a message sent to
+  // SOMEONE ELSE (it would name the reader's school, not the sender's).
+  const school = input.schoolName.trim();
 
-  let head: string;
+  let line: string;
   switch (inviteCase(qualification)) {
     case 'qualified':
-      head = ht
-        ? `🏆 ${schoolName} KALIFYE pou Chanpyona EdLight la ! Vin jwe ak nou.`
-        : `🏆 ${schoolName} EST QUALIFIÉ pour le Championnat EdLight ! Viens jouer avec nous.`;
+      line = ht
+        ? `${school || 'Lekòl nou an'} kalifye pou Arèn EdLight la, vin jwe avè nou${code ? ` ak kòd mwen ${code}` : ''}`
+        : `${school || 'Notre école'} a sa place dans l'Arène EdLight, viens jouer avec nous${code ? ` avec mon code ${code}` : ''}`;
       break;
     case 'doors-short':
-      head = ht
-        ? `⏰ Sal la louvri — ${schoolName} manke ${n} ${players}. Si nou pa konplè, lekòl la pa nan konpetisyon an aswè a.`
-        : `⏰ La salle est ouverte — il manque ${n} ${players} à ${schoolName}. Sans eux, l'école ne concourt pas ce soir.`;
+      line = ht
+        ? `Arèn EdLight la louvri e ${school || 'lekòl nou an'} manke ${n} ${players}, vin vit`
+        : `L'Arène EdLight est ouverte et il manque ${n} ${players} à ${school || 'notre école'}, viens vite`;
       break;
     default:
-      head = ht
-        ? `🏆 Li manke ${n} ${players} nan ${schoolName} pou lekòl la kalifye nan Chanpyona EdLight la.`
-        : `🏆 Il manque ${n} ${players} à ${schoolName} pour se qualifier au Championnat EdLight.`;
+      line = code
+        ? ht
+          ? `Vin jwenn mwen nan Arèn EdLight la ak kòd mwen ${code}`
+          : `Rejoins-moi dans l'Arène EdLight avec mon code ${code}`
+        : ht
+          ? `${school || 'Lekòl nou an'} manke ${n} ${players} pou Arèn EdLight la, vin jwenn nou`
+          : `Il manque ${n} ${players} à ${school || 'notre école'} pour l'Arène EdLight, rejoins-nous`;
       break;
   }
 
-  const codeLine = input.referralCode
-    ? ht
-      ? ` Sèvi ak kòd mwen ${input.referralCode} lè w enskri, nou chak ap genyen yon bonus.`
-      : ` Utilise mon code ${input.referralCode} en t'inscrivant — on gagne chacun un bonus.`
-    : '';
-
-  return `${head}${codeLine} ${url}`;
+  return `${line} : ${url}`;
 }
 
 /** Open the native share sheet with the school-framed invite. */

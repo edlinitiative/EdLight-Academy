@@ -21,7 +21,7 @@
 import { db } from './firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { recordActivity as recordStreakActivity, todayStr } from './streakService';
-import { addWeeklyXp, isValidAlias } from './leaderboardService';
+import { addWeeklyXp, isValidAlias, updateEntryProfile, updateAllTimeEntrySchool } from './leaderboardService';
 import { isWeeklyGame, WEEKLY_GAME_XP_MULTIPLIER } from '../utils/weeklyGame';
 
 // ─── XP & levels ────────────────────────────────────────────────────────────
@@ -278,7 +278,6 @@ export async function setLeaderboardOptIn(
     await setDoc(profileRef(uid), { leaderboard, updatedAt: serverTimestamp() }, { merge: true });
 
     if (leaderboard.optedIn) {
-      const { updateEntryProfile } = await import('./leaderboardService');
       await updateEntryProfile(uid, {
         displayName: leaderboard.displayName,
         level: levelInfo(current.xp).level,
@@ -292,6 +291,39 @@ export async function setLeaderboardOptIn(
     console.error('[Trivia] setLeaderboardOptIn error:', err);
     return null;
   }
+}
+
+/**
+ * Change the learner's school WITHOUT touching their leaderboard opt-in — the
+ * mobile twin of the web's `setMySchool` (src/services/triviaService.ts), and
+ * built on the same writer, `setLeaderboardOptIn`, so there is one way a school
+ * gets saved.
+ *
+ * Writes, in order:
+ *  1. `users/{uid}/gamification/profile.leaderboard.school` — what every screen
+ *     reads ("Ton classement", the avatar's school colours, the Arène hub);
+ *  2. this week's entry (via `updateEntryProfile`, opted-in only) — so the
+ *     week's points move with the student at once, the rule the award endpoint
+ *     already applies on every game;
+ *  3. the all-time entry's `school` (opted-in only) — otherwise it would keep
+ *     the old school until the next XP award.
+ *
+ * Only the SCHOOL changes. The student's département/ville is where they LIVE,
+ * never where their school is, so it is left exactly as it was.
+ *
+ * An Arène registration is NOT touched: it is its own server-side record
+ * (`tournamentRegistrations/{tid}_{uid}.schoolKey`), changed only by
+ * re-registering in the lobby while registration is open.
+ */
+export async function setMySchool(uid: string, school: string | null) {
+  if (!uid) return null;
+  const current = await loadTriviaProfile(uid);
+  const optedIn = current.leaderboard?.optedIn !== false;
+  const updated = await setLeaderboardOptIn(uid, { optedIn, school });
+  if (updated && optedIn) {
+    await updateAllTimeEntrySchool(uid, updated.leaderboard.school ?? null);
+  }
+  return updated;
 }
 
 // ─── Arcade games (non-trivia) XP ────────────────────────────────────────────

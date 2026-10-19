@@ -24,6 +24,7 @@ export const queryKeys = {
   examResults: (uid: Uid) => ['exam-results-by-subject', uid ?? null] as const,
   reviewQueue: (uid: Uid) => ['review-queue', uid ?? null] as const,
   myChallenges: (uid: Uid) => ['my-challenges', uid ?? null] as const,
+  myTournaments: (uid: Uid) => ['my-tournaments', uid ?? null] as const,
 };
 
 /** First key segments of student-private queries. Keep in sync with `queryKeys`. */
@@ -33,6 +34,7 @@ export const STUDENT_SCOPED_ROOTS: ReadonlySet<string> = new Set([
   'exam-results-by-subject',
   'review-queue',
   'my-challenges',
+  'my-tournaments',
 ]);
 
 export function isStudentScopedKey(key: readonly unknown[] | undefined | null): boolean {

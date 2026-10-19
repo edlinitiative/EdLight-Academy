@@ -23,6 +23,7 @@ import { mathToText } from '../utils/mathText';
 import MathText from '../components/MathText';
 import DefiHandoffCard from '../components/DefiHandoffCard';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
+import { examStackRoot } from '../navigation/navHelpers';
 
 type Route = RouteProp<ExamsParamList, 'ExamResults'>;
 type Nav = NativeStackNavigationProp<ExamsParamList, 'ExamResults'>;
@@ -261,7 +262,7 @@ export default function ExamResultsScreen() {
   const goBack = () => {
     const stackRoutes = navigation.getState()?.routes ?? [];
     if (stackRoutes.length > 1) navigation.goBack();
-    else navigation.reset({ index: 0, routes: [{ name: 'ExamLanding' }] });
+    else navigation.reset({ index: 0, routes: [{ name: examStackRoot(navigation) as 'ExamLanding' }] });
   };
   const withChrome = (body: React.ReactNode) => (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
@@ -295,7 +296,7 @@ export default function ExamResultsScreen() {
             onPress={() => {
               const stackRoutes = navigation.getState()?.routes ?? [];
               if (stackRoutes.length > 1) navigation.goBack();
-              else navigation.reset({ index: 0, routes: [{ name: 'ExamLanding' }] });
+              else navigation.reset({ index: 0, routes: [{ name: examStackRoot(navigation) as 'ExamLanding' }] });
             }}
             style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginLeft: -10, marginRight: 2 }}
             hitSlop={8}
@@ -348,7 +349,7 @@ export default function ExamResultsScreen() {
           onPress={() => {
             const stackRoutes = navigation.getState()?.routes ?? [];
             if (stackRoutes.length > 1) navigation.goBack();
-            else navigation.reset({ index: 0, routes: [{ name: 'ExamLanding' }] });
+            else navigation.reset({ index: 0, routes: [{ name: examStackRoot(navigation) as 'ExamLanding' }] });
           }}
           style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginLeft: -10, marginRight: 2 }}
           hitSlop={8}

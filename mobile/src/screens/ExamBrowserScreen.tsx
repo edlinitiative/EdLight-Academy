@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity, RefreshControl, Modal, FlatList,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useReduceMotion } from '../utils/motion';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
@@ -24,6 +24,7 @@ import Segmented from '../components/ui/Segmented';
 import Button from '../components/ui/Button';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
+import { examStackRoot } from '../navigation/navHelpers';
 
 type Route = RouteProp<ExamsParamList, 'ExamBrowser'>;
 type Nav = NativeStackNavigationProp<ExamsParamList, 'ExamBrowser'>;
@@ -158,6 +159,7 @@ function ExamCard({
 }
 
 export default function ExamBrowserScreen() {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { level, subject: initialSubject, explicit } = route.params;
@@ -344,7 +346,7 @@ export default function ExamBrowserScreen() {
   const goBackToExams = useCallback(() => {
     const stackRoutes = navigation.getState()?.routes ?? [];
     if (stackRoutes.length > 1) navigation.goBack();
-    else navigation.reset({ index: 0, routes: [{ name: 'ExamLanding' }] });
+    else navigation.reset({ index: 0, routes: [{ name: examStackRoot(navigation) as 'ExamLanding' }] });
   }, [navigation]);
 
   // Toggle the level chip between the grade-curated pool and every level.
@@ -603,7 +605,7 @@ export default function ExamBrowserScreen() {
         />
         <View
           accessibilityViewIsModal
-          style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 36 }}
+          style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingTop: 10, paddingBottom: Math.max(36, insets.bottom + 12) }}
         >
           <View style={{ alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: colors.surfaceAlt, marginBottom: 14 }} />
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>

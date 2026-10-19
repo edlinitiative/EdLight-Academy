@@ -194,14 +194,11 @@ export function duelShareMessage(opts: {
   isCreole: boolean;
 }): string {
   const { categoryLabel, score, total, url, referralCode, isCreole } = opts;
-  const codeLine = referralCode
-    ? isCreole
-      ? ` Sèvi ak kòd mwen ${referralCode} lè w enskri, nou chak ap genyen yon bonus.`
-      : ` Utilise mon code ${referralCode} en t'inscrivant — on gagne chacun un bonus.`
-    : '';
+  // One sentence + the link, no em-dash (owner feedback on long share texts).
+  const code = referralCode ? (isCreole ? ` (kòd ${referralCode})` : ` (code ${referralCode})`) : '';
   return isCreole
-    ? `M ap defye w sou EdLight Academy ! Mwen fè ${score}/${total} nan ${categoryLabel}. Menm ${total} kesyon yo, yon sèl tantativ, èske w ka bat mwen ?${codeLine} ${url}`
-    : `Je te défie sur EdLight Academy ! J'ai fait ${score}/${total} en ${categoryLabel}. Les mêmes ${total} questions, une seule tentative — tu peux me battre ?${codeLine} ${url}`;
+    ? `Mwen fè ${score}/${total} nan ${categoryLabel} sou EdLight, bat mwen sou menm kesyon yo${code} : ${url}`
+    : `J'ai fait ${score}/${total} en ${categoryLabel} sur EdLight, bats-moi sur les mêmes questions${code} : ${url}`;
 }
 
 /** The accept endpoint's error codes, in words a student can act on. */

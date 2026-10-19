@@ -7,6 +7,9 @@ import TournoisCreateForm, { TournoisPinCard } from '../TournoisCreateForm';
 import { ArenaButton } from '../ArenaKit';
 import type { TournamentDraft } from '../../../../../shared/tournois/creationInput';
 
+// Full-form renders are slow under a loaded full-suite run; the default 5 s flakes.
+jest.setTimeout(20000);
+
 interface TestNode {
   type: unknown;
   props: Record<string, any>;
@@ -169,6 +172,7 @@ describe('TournoisPinCard', () => {
     press(tree, 'Copier ou partager le PIN');
     expect(share).toHaveBeenLastCalledWith({ message: '482913' });
     press(tree, 'Partager le lien d’invitation');
-    expect(share).toHaveBeenLastCalledWith({ message: `Salle NS3 — PIN 482 913\n${link}` });
+    // One sentence + the link, no em-dash (owner feedback on share texts).
+    expect(share).toHaveBeenLastCalledWith({ message: `Rejoins mon tournoi « Salle NS3 » avec le PIN 482 913 : ${link}` });
   });
 });
