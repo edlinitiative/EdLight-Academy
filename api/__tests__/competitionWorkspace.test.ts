@@ -246,6 +246,33 @@ describe("French and Kreyòl", () => {
     expect(formatInviteCode("K7Q2M9XD")).toBe("K7Q2-M9XD");
   });
 
+  it("team modes: captain sets roles or relay order by name before the start; payload carries the slots", () => {
+    const relay = { ...event, event: { ...event.event, gameMode: "relay" } };
+    const page = workspacePage({ kind: "event", id: "ev1" }, relay, mine, 1_000_000_000_000);
+    expectNoUid(page);
+    const tasks = page.panels.flatMap((p) => p.tasks || []);
+    const roles = tasks.find((t) => t.id === "roles-team1")!;
+    expect(roles.fields!.map((f) => f.key)).toEqual(["slot1", "slot2", "slot3"]);
+    expect(
+      taskPayload(roles, { slot1: CARA, slot2: ALICE, slot3: BOB }, 0),
+    ).toMatchObject({ action: "team-roles", entryId: "team1", slots: [CARA, ALICE, BOB] });
+    expect(tasks.some((t) => t.action === "team-roles-confirm")).toBe(true);
+    const text = printed(page).join(" ");
+    expect(text).toContain("Relais 1");
+    expect(text).toContain("relais : chacun répond à son tour");
+    const shared = workspacePage(
+      { kind: "event", id: "ev1" },
+      { ...event, event: { ...event.event, gameMode: "shared" } },
+      mine,
+      1_000_000_000_000,
+    );
+    const sharedRoles = shared.panels.flatMap((p) => p.tasks || []).find((t) => t.id === "roles-team1")!;
+    expect(sharedRoles.fields!.map((f) => f.key)).toEqual(["submitter", "deputy"]);
+    // After the start the roles are frozen: no role task is offered.
+    const late = workspacePage({ kind: "event", id: "ev1" }, relay, mine, 2_000_000_000_001);
+    expect(late.panels.flatMap((p) => p.tasks || []).some((t) => t.action.startsWith("team-roles"))).toBe(false);
+  });
+
   it("renders event state, audience and format through the label maps", () => {
     const page = workspacePage(
       { kind: "event", id: "ev1" },
