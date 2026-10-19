@@ -45,7 +45,7 @@ export function buildFallbackPlan(reqData: PlanRequest): GeneratedPlan {
   const safeTrack = sanitize(reqData.track);
   const isPrefac = safeTrack === 'PREFAC';
   return {
-    title: isPrefac ? "Plan d'étude — Concours d'admission" : `Plan d'étude — ${safeTrack}`,
+    title: isPrefac ? "Plan d'étude · Concours d'admission" : `Plan d'étude · ${safeTrack}`,
     description: isPrefac
       ? `Plan personnalisé pour les concours d'admission à l'université sur ${reqData.weeks} semaines.`
       : `Plan personnalisé pour la filière ${safeTrack} sur ${reqData.weeks} semaines.`,
@@ -129,6 +129,7 @@ Rules:
 5. Build complexity gradually (easier exams first, harder later).
 6. Mix task types: use "exam" for full exam practice, "practice" for short quiz exercises, and "video" for watching lesson videos.
 7. Start each subject with a video, then practice exercises, then full exams.
+8. Never use em dashes or en dashes in any text you write (title, description, tips, rationale); use commas or a middle dot (·).
 
 Return ONLY valid JSON:
 {
@@ -153,6 +154,10 @@ Return ONLY valid JSON:
   return { system, user };
 }
 
+/** House style: no em/en dashes as punctuation (the owner asked). */
+const noDashTitle = (s: string): string => s.replace(/\s*[—–]\s*/g, ' · ').replace(/\s{2,}/g, ' ').trim();
+const noDashText = (s: string): string => s.replace(/\s*[—–]\s*/g, ', ').replace(/\s{2,}/g, ' ').trim();
+
 const toPositiveInt = (v: unknown, fallback: number): number => {
   const n = Math.round(Number(v));
   return Number.isFinite(n) && n > 0 ? n : fallback;
@@ -162,15 +167,15 @@ const toPositiveInt = (v: unknown, fallback: number): number => {
 function normalizePlan(raw: unknown, reqData: PlanRequest): GeneratedPlan | null {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   const obj = raw as Record<string, unknown>;
-  const title = typeof obj.title === 'string' ? obj.title.trim() : '';
+  const title = typeof obj.title === 'string' ? noDashTitle(obj.title) : '';
   if (!title) return null;
   return {
     title,
-    description: typeof obj.description === 'string' ? obj.description.trim() : '',
+    description: typeof obj.description === 'string' ? noDashText(obj.description) : '',
     weeklyGoals: toPositiveInt(obj.weeklyGoals, reqData.weeks),
     dailyTargetMinutes: toPositiveInt(obj.dailyTargetMinutes, reqData.dailyMinutes),
     tips: Array.isArray(obj.tips)
-      ? obj.tips.map((t) => String(t ?? '').trim()).filter(Boolean)
+      ? obj.tips.map((t) => noDashText(String(t ?? ''))).filter(Boolean)
       : [],
     schedule: Array.isArray(obj.schedule)
       ? (obj.schedule.filter((e) => e && typeof e === 'object' && !Array.isArray(e)) as Array<Record<string, unknown>>)

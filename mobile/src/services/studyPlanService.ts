@@ -42,6 +42,18 @@ import { normalizeSubject, examDisplayTitle } from '../utils/examUtils';
 import { loadAllExamResultSummaries } from './examResults';
 import { loadAppData } from './dataService';
 import { TRACK_COEFFICIENTS, TRACKS, TRACK_LEVEL } from '../config/trackConfig';
+import {
+  dedupePlanTasks,
+  schedulePlanTasks,
+  selectExamsForPlan as selectExamsShared,
+  cleanPlanTitle,
+  cleanPlanText,
+  planNeedsReschedule,
+  rescheduleStoredPlan,
+  startOfLocalDay,
+  PLAN_SCHEDULE_VERSION,
+  SUBJECT_COURSE_PREFIX,
+} from '../../../shared/studyPlanTasks';
 
 const PLAN_URL = 'https://academy.edlight.org/api/generate-plan';
 
@@ -81,9 +93,13 @@ export interface PlanTask {
   questionCount?: number;
   courseCode?: string;
   courseTitle?: string;
+  courseId?: string;
+  lessonId?: string;
   videoTitle?: string;
   videoUrl?: string;
   duration?: number;
+  /** Exam paper length, for packing days against the daily budget. */
+  durationMinutes?: number;
   // AI schedule annotations
   aiRationale?: string;
   aiFocusArea?: string;
@@ -105,6 +121,8 @@ export interface StudyPlan {
   masteredCount?: number;
   status?: string;
   created_at_ms?: number;
+  /** PLAN_SCHEDULE_VERSION the task dates were spread with (absent = legacy). */
+  scheduleVersion?: number;
   [key: string]: any;
 }
 
@@ -172,9 +190,7 @@ function cleanUndefined<T extends Record<string, any>>(obj: T): T {
 }
 
 function todayMs(): number {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
+  return startOfLocalDay(Date.now());
 }
 
 function futureDayMs(days: number): number {
@@ -257,7 +273,20 @@ export async function loadActiveStudyPlan(uid: string): Promise<StudyPlan | null
   const snap = await getDocs(q);
   if (snap.empty) return null;
   const d = snap.docs[0];
-  return { id: d.id, ...d.data() } as StudyPlan;
+  const plan = { id: d.id, ...d.data() } as StudyPlan;
+  // Plans saved before PLAN_SCHEDULE_VERSION had every task due the instant
+  // they were made (43 tasks "aujourd'hui", all "En retard" the next morning).
+  // Spread the untouched ones from today, once, and save it.
+  if (planNeedsReschedule(plan)) {
+    const patch = rescheduleStoredPlan(plan);
+    Object.assign(plan, patch, { taskCount: patch.tasks.length });
+    updateStudyPlan(uid, d.id, {
+      tasks: patch.tasks.map((t) => cleanUndefined(t)),
+      taskCount: patch.tasks.length,
+      scheduleVersion: patch.scheduleVersion,
+    }).catch(() => {});
+  }
+  return plan;
 }
 
 export async function updateStudyPlan(uid: string, planId: string, patch: Record<string, any>): Promise<void> {
@@ -377,6 +406,7 @@ export function buildTasksFromExams(
       // "Chimie · 2024" instead, and already knows this letterhead by sight.
       examTitle: examDisplayTitle(exam, normalizeSubject(exam.subject ?? '') || 'Examen'),
       level: exam.level || '',
+      durationMinutes: Number(exam.duration_minutes) || undefined,
       year: exam.year || '',
       status,
       ...srsState,
@@ -386,11 +416,8 @@ export function buildTasksFromExams(
   });
 }
 
-const SUBJECT_TO_CODE_PREFIX: Record<string, string> = {
-  chimie: 'CHEM', physique: 'PHYS', mathématiques: 'MATH', mathematiques: 'MATH',
-  économie: 'ECON', economie: 'ECON', 'sciences physiques': 'PHYS',
-  svt: 'CHEM', biologie: 'CHEM',
-};
+// SVT used to map to CHEM here, so an SVT plan offered Chimie chapters.
+const SUBJECT_TO_CODE_PREFIX: Record<string, string> = SUBJECT_COURSE_PREFIX;
 
 /** Practice tasks from the quiz-bank index ({ bySubject, byUnit }). */
 export function buildPracticeTasksFromQuizBank(
@@ -518,6 +545,8 @@ export function buildVideoTasks(
             type: 'video',
             taskId: `video-${lesson.id || course.id + '-' + mod.id}`,
             subject,
+            courseId: course.id,
+            lessonId: lesson.id || undefined,
             courseCode: course.code || course.id,
             courseTitle: course.name || '',
             videoTitle: lesson.title || '',
@@ -559,38 +588,17 @@ export function sortTasksByPriority(tasks: PlanTask[]): PlanTask[] {
   });
 }
 
-/** Balanced exam subset for the plan, weighted by coefficient (mirror web). */
+/**
+ * Balanced exam subset for the plan, weighted by coefficient — spread across
+ * years and limited to papers set for the filière (shared with the web).
+ */
 export function selectExamsForPlan(
   exams: any[],
   coefficients: Record<string, number>,
   maxCount = 40,
+  track?: string | null,
 ): any[] {
-  const bySubject: Record<string, any[]> = {};
-  for (const e of exams) {
-    const s = normalizeSubject(e.subject);
-    if (!bySubject[s]) bySubject[s] = [];
-    bySubject[s].push(e);
-  }
-
-  const totalCoeff = Object.values(coefficients).reduce((s, v) => s + v, 0) || 1;
-  const selected: any[] = [];
-
-  for (const [subj, pool] of Object.entries(bySubject)) {
-    const coeff = coefficients[subj] || 1;
-    const slots = Math.max(1, Math.round((coeff / totalCoeff) * maxCount));
-    const sorted = [...pool].sort((a, b) => (a.difficulty || 3) - (b.difficulty || 3));
-    selected.push(...sorted.slice(0, slots));
-  }
-
-  if (selected.length > maxCount) {
-    selected.sort(
-      (a, b) =>
-        (coefficients[normalizeSubject(b.subject)] || 1) -
-        (coefficients[normalizeSubject(a.subject)] || 1),
-    );
-    return selected.slice(0, maxCount);
-  }
-  return selected;
+  return selectExamsShared(exams, coefficients, maxCount, track);
 }
 
 /** Per-subject performance summary for the AI prompt (mirror web). */
@@ -634,8 +642,8 @@ function annotateWithAiSchedule(tasks: PlanTask[], aiPlan: AiPlan | null): void 
     const matches = scheduleMap.get(key);
     if (matches?.length) {
       const entry = matches.shift()!;
-      task.aiRationale = entry.rationale || '';
-      task.aiFocusArea = entry.focusArea || '';
+      task.aiRationale = cleanPlanText(entry.rationale);
+      task.aiFocusArea = cleanPlanTitle(entry.focusArea);
       if (typeof entry.week === 'number') task.scheduledWeek = entry.week;
       if (typeof entry.day === 'number') task.scheduledDay = entry.day;
     }
@@ -705,8 +713,11 @@ export async function generateStudyPlan(opts: {
   track: string;
   weeks: number;
   dailyMinutes: number;
+  /** The plan this one replaces (Refaire): archived once the new one is saved,
+   *  so old plans stop piling up as 'active' documents. */
+  replacePlanId?: string;
 }): Promise<GeneratePlanResult> {
-  const { uid, track, weeks, dailyMinutes } = opts;
+  const { uid, track, weeks, dailyMinutes, replacePlanId } = opts;
   if (!uid || !auth.currentUser) return { kind: 'auth' };
 
   const coefficients = coefficientsFor(track);
@@ -766,7 +777,7 @@ export async function generateStudyPlan(opts: {
   }
 
   // 5 — build + persist (mirror web useStudyPlan generate mutation)
-  const selected = selectExamsForPlan(trackExams, coefficients, 40);
+  const selected = selectExamsForPlan(trackExams, coefficients, 40, track);
   let tasks = buildTasksFromExams(selected, coefficients, existingResults);
 
   const trackSubjects = Object.keys(coefficients);
@@ -780,22 +791,29 @@ export async function generateStudyPlan(opts: {
   }
 
   annotateWithAiSchedule(tasks, aiPlan);
-  tasks = sortTasksByPriority(tasks).map((t) => cleanUndefined(t));
+  // One row per exam/chapter/lesson, then give each untouched task its own day
+  // within the minutes-per-day budget (it used to put all of them on today).
+  tasks = schedulePlanTasks(dedupePlanTasks(sortTasksByPriority(tasks)), {
+    dailyMinutes,
+    weeks,
+  }).map((t) => cleanUndefined(t));
 
   // Use the full filière label so the title never reads as a bare code like
   // "SVT" (which doubles as a subject name and confuses students).
   const trackLabel = TRACKS.find((tk) => tk.code === track)?.label ?? track;
   const fallbackTitle =
     wantLevel === 'universite'
-      ? "Plan d'étude — Concours d'admission"
-      : `Plan d'étude — Filière ${trackLabel}`;
+      ? "Plan d'étude · Concours d'admission"
+      : `Plan d'étude · Filière ${trackLabel}`;
   const planData = {
     track,
-    title: aiPlan?.title || fallbackTitle,
-    description: aiPlan?.description || '',
-    tips: aiPlan?.tips || [],
-    dailyTargetMinutes: aiPlan?.dailyTargetMinutes || dailyMinutes,
-    weeklyGoals: aiPlan?.weeklyGoals || weeks,
+    title: cleanPlanTitle(aiPlan?.title) || fallbackTitle,
+    description: cleanPlanText(aiPlan?.description),
+    tips: (aiPlan?.tips || []).map(cleanPlanText).filter(Boolean),
+    // The student's own choices, not the model's echo: these drive the schedule.
+    dailyTargetMinutes: dailyMinutes,
+    weeklyGoals: weeks,
+    scheduleVersion: PLAN_SCHEDULE_VERSION,
     tasks,
     taskCount: tasks.length,
     masteredCount: tasks.filter((t) => t.status === 'mastered').length,
@@ -803,6 +821,9 @@ export async function generateStudyPlan(opts: {
 
   try {
     const planId = await createStudyPlan(uid, planData);
+    if (replacePlanId && replacePlanId !== planId) {
+      updateStudyPlan(uid, replacePlanId, { status: 'archived' }).catch(() => {});
+    }
     return {
       kind: 'ok',
       plan: { id: planId, ...planData, status: 'active', created_at_ms: Date.now() },

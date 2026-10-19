@@ -24,6 +24,7 @@ import Segmented from '../components/ui/Segmented';
 import Button from '../components/ui/Button';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
+import { examStackRoot } from '../navigation/navHelpers';
 
 type Route = RouteProp<ExamsParamList, 'ExamBrowser'>;
 type Nav = NativeStackNavigationProp<ExamsParamList, 'ExamBrowser'>;
@@ -344,7 +345,7 @@ export default function ExamBrowserScreen() {
   const goBackToExams = useCallback(() => {
     const stackRoutes = navigation.getState()?.routes ?? [];
     if (stackRoutes.length > 1) navigation.goBack();
-    else navigation.reset({ index: 0, routes: [{ name: 'ExamLanding' }] });
+    else navigation.reset({ index: 0, routes: [{ name: examStackRoot(navigation) as 'ExamLanding' }] });
   }, [navigation]);
 
   // Toggle the level chip between the grade-curated pool and every level.

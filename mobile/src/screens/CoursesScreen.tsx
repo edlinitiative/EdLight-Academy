@@ -8,7 +8,7 @@ import { useCourses } from '../hooks/useData';
 import { SUBJECT_META } from '../utils/subjectMeta';
 import useStore from '../contexts/store';
 import { ErrorState, EmptyState } from '../components/StateViews';
-import { summarize, courseLessonIds, type ProgressMap } from '../utils/mastery';
+import { summarize, courseLessonIds, chapterTestReady, type ProgressMap } from '../utils/mastery';
 import { CoursesParamList } from '../navigation/CoursesNavigator';
 import { useTheme } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
@@ -190,7 +190,14 @@ export default function CoursesScreen() {
       const s = summarize(lessonIdsByCourse.get(c.id) ?? [], progress as ProgressMap);
       if (s.started > 0 && s.points > bestPoints) { best = c; bestPoints = s.points; }
     }
-    return best;
+    // Open on the chapter whose test is ready (the first one), not the top
+    // of the syllabus: the tile promises a test, so land beside it.
+    const modules: any[] = Array.isArray(best?.modules) ? best.modules : [];
+    const ready = modules.findIndex((m) => {
+      const ids = (Array.isArray(m?.lessons) ? m.lessons : []).map((l: any) => l?.id).filter(Boolean);
+      return ids.length > 0 && chapterTestReady(summarize(ids, progress as ProgressMap));
+    });
+    return { course: best, chapterIndex: ready >= 0 ? ready : undefined };
   }, [openCourses, lessonIdsByCourse, progress]);
 
   const openCourse = (course: any, chapterIndex?: number) =>
@@ -386,7 +393,7 @@ export default function CoursesScreen() {
                     <PracticeTile
                       title={t('Tests de chapitre', 'Tès chapit')}
                       subtitle={t('Vise la maîtrise', 'Vize metriz la')}
-                      onPress={() => openCourse(chapterTestTarget)}
+                      onPress={() => openCourse(chapterTestTarget.course, chapterTestTarget.chapterIndex)}
                     />
                   ) : null}
                 </View>

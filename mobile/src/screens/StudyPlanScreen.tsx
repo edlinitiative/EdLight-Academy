@@ -23,8 +23,12 @@ import {
 } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { auth } from '../services/firebase';
-import { TRACKS, currentPlanSeason, gradeProfile } from '../config/trackConfig';
-import { resetTabToRoot } from '../navigation/navHelpers';
+import { TRACKS, currentPlanSeason } from '../config/trackConfig';
+import { planTaskNavAction } from '../navigation/planTaskNav';
+import { findCourse } from '../components/journey/practice/practiceScope';
+import { useCourses } from '../hooks/useData';
+import { dedupePlanTasks, planTaskKey, planTaskLabels, isTaskOverdue } from '../../../shared/studyPlanTasks';
+import { displayStoredExamTitle } from '../utils/examUtils';
 import { useTheme, touch } from '../theme/theme';
 import {
   getStudyReminderHour,
@@ -82,29 +86,31 @@ function startOfWeek(ms: number): number {
   return d.getTime();
 }
 
-function taskDisplayTitle(task: PlanTask, isCreole: boolean): string {
+/** A task's own name, before same-named tasks are told apart (planTaskLabels). */
+function taskBaseTitle(task: PlanTask, isCreole: boolean): string {
   if (task.type === 'practice') {
     return task.unitTitle || task.subjectCode || task.subject;
   }
   if (task.type === 'video') {
     return task.videoTitle || task.courseTitle || (isCreole ? 'Videyo' : 'Vidéo');
   }
-  if (task.examTitle) return task.examTitle;
-  return [task.subject, task.year].filter(Boolean).join(' · ') || (isCreole ? 'Egzamen' : 'Examen');
+  const fallback = [task.subject, task.year].filter(Boolean).join(' · ') || (isCreole ? 'Egzamen' : 'Examen');
+  // Older plans stored the ministry letterhead as the title; re-derive those.
+  return displayStoredExamTitle(task.examTitle, undefined, fallback);
 }
 
 /** Verb + object, like the design: "Regarder · …", "Pratiquer · …". */
-function taskLine(task: PlanTask, isCreole: boolean): string {
+function taskLine(task: PlanTask, title: string, isCreole: boolean): string {
   const verb = task.type === 'video'
     ? (isCreole ? 'Gade' : 'Regarder')
     : task.type === 'practice'
       ? (isCreole ? 'Pratike' : 'Pratiquer')
       : (isCreole ? 'Fè egzamen an' : 'Passer l’examen');
-  return `${verb} · ${taskDisplayTitle(task, isCreole)}`;
+  return `${verb} · ${title}`;
 }
 
 function taskKey(task: PlanTask, i: number): string {
-  return String(task.examId || task.taskId || i);
+  return planTaskKey(task) || `#${i}`;
 }
 
 // ─── Small building blocks ────────────────────────────────────────────────────
@@ -170,18 +176,21 @@ function ChoicePills<T extends string | number | null>({
 
 function TaskRow({
   task,
+  title,
   isCreole,
   done,
   onPress,
 }: {
   task: PlanTask;
+  title: string;
   isCreole: boolean;
   done: boolean;
   onPress?: () => void;
 }) {
   const { colors, typeScale, fonts } = useTheme();
   const TypeIcon = TASK_TYPE_ICON[task.type || 'exam'] || FileText;
-  const overdue = !done && task.status !== 'mastered' && !!task.nextReviewMs && task.nextReviewMs < startOfDay(Date.now());
+  // Late = due on a day that has passed, never "earlier today".
+  const overdue = !done && isTaskOverdue(task);
   const lastScore = task.history && task.history.length > 0 ? task.history[task.history.length - 1].scorePct : null;
 
   let secondary = '';
@@ -191,7 +200,7 @@ function TaskRow({
     secondary = `${task.duration} min`;
   }
   if (task.aiFocusArea) secondary = task.aiFocusArea;
-  const line = taskLine(task, isCreole);
+  const line = taskLine(task, title, isCreole);
 
   return (
     <PressableScale
@@ -228,7 +237,7 @@ function TaskRow({
           {line}
         </Text>
         {overdue ? (
-          <Text style={[typeScale.status, { color: colors.danger }]}>{isCreole ? 'Anreta' : 'En retard'}</Text>
+          <Text style={[typeScale.status, { color: colors.danger }]}>{isCreole ? 'Pou ratrape' : 'À rattraper'}</Text>
         ) : null}
         {!!secondary && !done ? (
           <Text numberOfLines={2} style={[typeScale.caption, { color: colors.muted }]}>{secondary}</Text>
@@ -416,7 +425,7 @@ function StudyReminderCard({ isCreole }: { isCreole: boolean }) {
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
-  const { user, isAuthenticated, language, track, grade, setTrack, toggleAuthModal } = useStore();
+  const { user, isAuthenticated, language, track, setTrack, toggleAuthModal } = useStore();
   const { colors, typeScale, fonts, cardSurface, featureSurface, radius } = useTheme();
   const navigation = useNavigation<any>();
   const centerColumn = useContentContainerStyle('readable');
@@ -485,7 +494,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
 
   // ── Generate / regenerate ───────────────────────────────────────────
   const runGenerate = useCallback(
-    async (opts: { track: string; weeks: number; dailyMinutes: number }) => {
+    async (opts: { track: string; weeks: number; dailyMinutes: number; replacePlanId?: string }) => {
       if (!uid) {
         toggleAuthModal();
         return;
@@ -531,6 +540,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
               track: plan.track || track || 'SVT',
               weeks: plan.weeklyGoals || 8,
               dailyMinutes: plan.dailyTargetMinutes || 90,
+              replacePlanId: plan.id,
             }),
         },
       ],
@@ -539,55 +549,40 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
   }, [plan, track, runGenerate, isCreole]);
 
   // ── Open a task ─────────────────────────────────────────────────────
-  // Tapping a task dismisses this modal and routes to where the work happens
-  // (the plan itself only tracks progress — practice/exams live elsewhere).
+  // Tapping a task dismisses this modal and opens THAT task: the exam's
+  // overview, the practice chapter, the lesson. Never a tab root or a subject
+  // picker (TestFlight build 61: an SVT exam task landed on "Chimie, Choisis
+  // un niveau"). A task missing its id is shown but not tappable.
+  const { data: courses } = useCourses();
+  const resolveCourseId = useCallback(
+    (codeOrId: string) => findCourse(courses || [], codeOrId)?.id as string | undefined,
+    [courses],
+  );
+  const actionFor = useCallback(
+    (task: PlanTask) => planTaskNavAction(task, resolveCourseId),
+    [resolveCourseId],
+  );
   const openTask = useCallback(
     (task: PlanTask) => {
-      const go = (screen: string, params?: object) => {
-        onClose?.();
-        navigation.navigate('Main', { screen, params });
-      };
-      // This screen sits on the ROOT stack, so the tab navigator is one level
-      // down under "Main"; this exposes that navigator to resetTabToRoot.
-      const tabNav = {
-        getState: () =>
-          navigation.getState()?.routes?.find((r: any) => r.name === 'Main')?.state,
-        dispatch: (action: any) => navigation.dispatch(action),
-        // Re-wrap in the "Main" hop the helper doesn't know about. Deliberately
-        // not `go` — that would fire onClose a second time and pop twice.
-        navigate: (screen: string, params?: object) =>
-          navigation.navigate('Main', { screen, params }),
-      };
-      // Going to a tab's ROOT is a reset, not a navigate: React Navigation 7's
-      // `navigate` no longer pops back to a screen already in the stack, it
-      // pushes a second copy over whatever the tab retained. See navHelpers.
-      const goTabRoot = (tab: string, root: string) => {
-        onClose?.();
-        resetTabToRoot(tabNav, tab, root);
-      };
-      // `initial: false` keeps the nested stack's root underneath the pushed
-      // screen — without it the target becomes the stack's ONLY route, so
-      // leaving it exits the tab entirely instead of stepping back one level.
-      if (task.type === 'exam' && task.examId && task.level) {
-        // Land on the exam's overview page (stats, attempts, one clear CTA)
-        // rather than dropping straight into the paper.
-        go('Exams', { screen: 'ExamOverview', params: { level: task.level, examId: task.examId }, initial: false });
-      } else if (task.type === 'exam') {
-        // Quiz-primary grades mount QuizNavigator behind the "Exams" route,
-        // which has no ExamLanding — reachable if a junior grade picked a Bac
-        // filière.
-        goTabRoot('Exams', gradeProfile(grade).primaryTab === 'Quiz' ? 'Quizzes' : 'ExamLanding');
-      } else if (task.type === 'practice') {
-        go('Courses', { screen: 'Quizzes', initial: false });
-      } else {
-        goTabRoot('Courses', 'CourseList');
-      }
+      const action = actionFor(task);
+      if (!action) return;
+      onClose?.();
+      // This screen sits on the ROOT stack; the tabs live one level down under
+      // "Main". `initial: false` (inside action.params) keeps the tab's root
+      // under the pushed screen so back steps into the tab, not out of it.
+      navigation.navigate('Main', { screen: action.tab, params: action.params });
     },
-    [navigation, onClose, grade],
+    [navigation, onClose, actionFor],
   );
 
   // ── Derived plan data ───────────────────────────────────────────────
-  const tasks = useMemo(() => plan?.tasks || [], [plan]);
+  // Older plans can hold the same exam twice; one row each.
+  const tasks = useMemo(() => dedupePlanTasks(plan?.tasks || []), [plan]);
+  // Same-titled papers ("SVT · 2021" ×3) get a topic or "Sujet n" tail.
+  const labels = useMemo(
+    () => planTaskLabels(tasks, (tk) => taskBaseTitle(tk, isCreole), { subjectWord: isCreole ? 'Sijè' : 'Sujet' }),
+    [tasks, isCreole],
+  );
   const totalTasks = tasks.length;
   const masteredCount = tasks.filter((tk) => tk.status === 'mastered').length;
   const progressPct = totalTasks > 0 ? Math.round((masteredCount / totalTasks) * 100) : 0;
@@ -610,7 +605,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
   const dueOn = useCallback(
     (start: number) =>
       start === todayStart
-        ? getTodayTasks(plan)
+        ? getTodayTasks({ ...(plan as StudyPlan), tasks })
         : tasks
             .filter((tk) => tk.status !== 'mastered' && (tk.nextReviewMs || 0) >= start && (tk.nextReviewMs || 0) < start + DAY_MS)
             .sort((a, b) => (a.nextReviewMs || 0) - (b.nextReviewMs || 0)),
@@ -625,7 +620,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
     ...dayDone.map((task) => ({ task, done: true })),
     ...dayDue.map((task) => ({ task, done: false })),
   ];
-  const nextTask = isToday ? dayDue[0] : undefined;
+  const nextTask = isToday ? dayDue.find((tk) => !!actionFor(tk)) : undefined;
 
   const weekStart = startOfWeek(Date.now());
   const weekDays = Array.from({ length: 7 }, (_, i) => {
@@ -904,9 +899,10 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
               <TaskRow
                 key={`${done ? 'd' : 'a'}-${taskKey(task, i)}`}
                 task={task}
+                title={labels.get(planTaskKey(task)) || taskBaseTitle(task, isCreole)}
                 isCreole={isCreole}
                 done={done}
-                onPress={done ? undefined : () => openTask(task)}
+                onPress={done || !actionFor(task) ? undefined : () => openTask(task)}
               />
             ))
           ) : (

@@ -101,9 +101,22 @@ function navigateFromSandra(navigation: any, path: string) {
     navigation.goBack();
     navigation.navigate('StudyPlan');
   } else if (p.startsWith('/exam')) {
-    goTab('Exams');
+    // Sandra links a specific paper ("/exams/terminale/<id>"), a level
+    // ("/exams/9e") or the results page; open that, not the tab root. Every
+    // grade's Exams stack carries these screens (QuizNavigator included).
+    // The id keeps its original case, so it is read from `path`, not `p`.
+    const [, , level, examId] = (path || '').split(/[?#]/)[0].split('/');
+    if (level === 'resultats') {
+      goTab('Exams', { screen: 'ExamHistory', initial: false });
+    } else if (level && examId) {
+      goTab('Exams', { screen: 'ExamOverview', params: { level: level.toLowerCase(), examId }, initial: false });
+    } else if (level) {
+      goTab('Exams', { screen: 'ExamBrowser', params: { level: level.toLowerCase() }, initial: false });
+    } else {
+      goTab('Exams');
+    }
   } else if (p.startsWith('/quiz')) {
-    goTab('Courses', { screen: 'Quizzes' });
+    goTab('Courses', { screen: 'Quizzes', initial: false });
   } else if (p.startsWith('/course')) {
     goTab('Courses');
   } else if (p.startsWith('/jeux') || p.startsWith('/game') || p.startsWith('/trivia')) {

@@ -36,6 +36,7 @@ import {
 } from 'firebase/firestore';
 import { recordActivity as recordStreakActivity } from './streakService';
 import { examDisplayTitle } from '../utils/examUtils';
+import { planNeedsReschedule, rescheduleStoredPlan } from '../../shared/studyPlanTasks';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -185,7 +186,20 @@ export async function loadActiveStudyPlan(
   const snap = await getDocs(q);
   if (snap.empty) return null;
   const d = snap.docs[0];
-  return { id: d.id, ...d.data() };
+  const plan: { id: string; [key: string]: any } = { id: d.id, ...d.data() };
+  // Plans saved before PLAN_SCHEDULE_VERSION had every task due the instant
+  // they were made, so a new plan showed its whole backlog as today's work and
+  // all of it late the next morning. Spread the untouched tasks once and save.
+  if (planNeedsReschedule(plan)) {
+    const patch = rescheduleStoredPlan(plan);
+    Object.assign(plan, patch, { taskCount: patch.tasks.length });
+    updateStudyPlan(uid, d.id, {
+      tasks: patch.tasks.map((t) => cleanUndefined(t)),
+      taskCount: patch.tasks.length,
+      scheduleVersion: patch.scheduleVersion,
+    }).catch(() => {});
+  }
+  return plan;
 }
 
 /**
@@ -384,6 +398,7 @@ export function buildTasksFromExams(exams, coefficients = {}, existingResults = 
       topics: exam.topics || [],
       examTitle: examDisplayTitle(exam, ''),
       level: exam.level || '',
+      durationMinutes: Number(exam.duration_minutes) || undefined,
       year: exam.year || '',
       status,
       ...srsState,
@@ -571,6 +586,10 @@ export function buildVideoTasks(courses = [], trackSubjects = [], maxPerSubject 
             type: 'video',
             taskId: `video-${lesson.id || course.id + '-' + mod.id}`,
             subject,
+            // Course pages are keyed by course.id, not the code: store both so
+            // the task opens its own lesson (planTaskRoute).
+            courseId: course.id,
+            lessonId: lesson.id || undefined,
             courseCode: course.code || course.id,
             courseTitle: course.name || '',
             videoTitle: lesson.title || '',
