@@ -37,7 +37,14 @@ it('delivers a controlled error with binary and OTA context without private text
     platform: 'ios', appVersion: '1.6.0', buildNumber: '42', runtimeVersion: '1.2.0',
     updateId: 'ota-test', channel: 'preview', embeddedLaunch: false, environment: 'preview',
   }));
-  expect(events[0].detail).toEqual({ flow: 'exam' });
+  expect(events[0].detail).toEqual(expect.objectContaining({
+    flow: 'exam', signature: expect.stringMatching(/^[0-9a-f]{8}$/), errorKind: 'unknown', occurrence: 1,
+  }));
+  expect(Object.keys(events[0].detail).sort()).toEqual(
+    expect.arrayContaining(['errorKind', 'flow', 'occurrence', 'signature']),
+  );
+  expect(events[0].detail).not.toHaveProperty('answer');
+  expect(events[0].detail).not.toHaveProperty('email');
   expect(request.body).not.toMatch(/private|student@example/);
   expect(request.credentials).toBe('omit');
 });

@@ -8,6 +8,7 @@ import { registerRootComponent } from 'expo';
 import * as Linking from 'expo-linking';
 import * as Notifications from 'expo-notifications';
 import { useFonts } from 'expo-font';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SplashScreen from 'expo-splash-screen';
 import { onAuthStateChange } from './src/services/firebase';
 import useStore, { waitForStoreHydration } from './src/contexts/store';
@@ -54,6 +55,10 @@ installAccountIsolation();
 SplashScreen.preventAutoHideAsync().catch(() => {
   // Already hidden, or the module is unavailable — launch must not depend on it.
 });
+
+function forgetLastDestination() {
+  AsyncStorage.removeItem('competition:last-destination').catch(() => {});
+}
 
 /** Never leave a user staring at a splash because auth never resolved. */
 const SPLASH_MAX_MS = 4000;
@@ -327,7 +332,11 @@ function App() {
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
-        <AppErrorBoundary>
+        {/* Root containment around the whole navigator (each tab also has its
+            own, navigation/tabScreens). "Accueil" remounts the navigator at
+            Main and forgets the restored competition destination, so a
+            screen that crashes on open is not reopened. */}
+        <AppErrorBoundary boundary="root" onGoHome={forgetLastDestination}>
           <AuthGate />
         </AppErrorBoundary>
       </QueryClientProvider>

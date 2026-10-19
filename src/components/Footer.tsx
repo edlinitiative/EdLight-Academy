@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import useStore from '../contexts/store';
+import { getWebRelease } from '../utils/telemetry';
 
 export function Footer() {
   const { t } = useTranslation();
@@ -40,6 +41,11 @@ export function Footer() {
             <button type="button" className={language === 'ht' ? 'is-on' : ''} aria-pressed={language === 'ht'} onClick={() => setLanguage('ht')}>Kreyòl</button>
           </div>
           <span className="footer__copy">© {new Date().getFullYear()} EdLight Academy. {t('footer.rights')}</span>
+          {/* The deployed commit, so a tester's report names the exact build
+              (the same `release` every diagnostic event carries). */}
+          <span className="footer__copy footer__version" data-release={getWebRelease()}>
+            {t('footer.version')} {getWebRelease().slice(0, 7)}
+          </span>
         </div>
       </div>
     </footer>

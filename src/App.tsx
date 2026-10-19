@@ -53,6 +53,7 @@ const AdminModeration = lazyWithRetry(() => import('./pages/admin/AdminModeratio
 const AdminSandra = lazyWithRetry(() => import('./pages/admin/AdminSandra'));
 const AdminInstructors = lazyWithRetry(() => import('./pages/admin/AdminInstructors'));
 const AdminSiteStats = lazyWithRetry(() => import('./pages/admin/AdminSiteStats'));
+const AdminDiagnostics = lazyWithRetry(() => import('./pages/admin/AdminDiagnostics'));
 const AdminVideos = lazyWithRetry(() => import('./pages/admin/AdminVideos'));
 const AdminQuizzes = lazyWithRetry(() => import('./pages/admin/AdminQuizzes'));
 const AdminExams = lazyWithRetry(() => import('./pages/admin/AdminExams'));
@@ -240,6 +241,8 @@ export default function App() {
                 {/* Data */}
                 <Route path="data/collections" element={<Admin />} />
                 <Route path="data/stats" element={<AdminSiteStats />} />
+                {/* Production error signatures (api/telemetry ?view=errors) */}
+                <Route path="data/diagnostics" element={<AdminDiagnostics />} />
                 {/* Back-compat redirects from the old flat paths */}
                 <Route path="courses" element={<Navigate to="/admin/content/courses" replace />} />
                 <Route path="verify" element={<Navigate to="/admin/content/verify" replace />} />

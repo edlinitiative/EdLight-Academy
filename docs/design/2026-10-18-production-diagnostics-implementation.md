@@ -73,3 +73,15 @@ Use a separate record for each iOS, Android and browser run. Record commit, dirt
 | Production diagnostics | Controlled error received with deployed binary/update/backend identifiers | Production receipt pending |
 
 Run the roadmap's representative event with two physical phones and one browser before signing off competition continuity. Record defects and implement focused fixes from reproduced evidence. UI consolidation, further journey changes, performance baselines, motion and larger product additions remain subsequent roadmap work; this change introduces no visual redesign or new competition mode.
+
+## Crash and error capture (October 19, 2026)
+
+Delivered over the air (no native dependency; runtime 1.2.0 unchanged):
+
+- Shared `shared/errorSignature.ts`: 8-hex signature over error class, kind, a normalized message (URLs, emails, ids, numbers and quoted text removed) and the top bundle frame. The message itself is never transmitted. Per-session gate: each signature at most 3 times, 30 errors in all.
+- Mobile: chained `ErrorUtils` handler; a fatal JS error in a release build first writes a sanitized AsyncStorage breadcrumb (bounded 400 ms wait), delivered as `js_fatal_crash` on the next launch with the crashed build's identifiers. Hermes unhandled-rejection tracking. Root and per-tab error boundaries with an FR/HT recovery screen (retry / home). Profil shows version, build, OTA update and runtime.
+- Web: `window_error`, `unhandled_rejection`, `chunk_load_error`; root boundary plus a per-route boundary in the site and admin layouts (chunk failure offers a reload; the service-worker guards are untouched). Footer and profile show the deployed commit.
+- Server: allowlist extended deliberately (`signature`, `errorKind`, `topFrame`, `screen`, `boundary`, `occurrence`, `previousSession`, `updateGroup`, `osVersion`). Error events are aggregated in `diagnosticErrors/{YYYYMMDD}_{signature}` (server-only). Admin console: Données → Diagnostics / Erreurs (`GET /api/telemetry?view=errors`).
+- Alerts: a fatal signature never seen on an earlier day, or a known one reaching 5 fatal reports in a day, sends one admin inbox item + push per signature per day.
+
+Native crashes (for example the build-59 SIGSEGV inside a TurboModule) terminate the process before JavaScript runs and are not captured. A native crash reporter must ship with the next store build.

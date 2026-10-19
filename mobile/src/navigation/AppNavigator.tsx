@@ -32,6 +32,7 @@ import { savedCompetitionTarget, restoreCompetitionTarget } from './competitionC
 import * as ExpoLinking from 'expo-linking';
 import { useReduceMotion } from '../utils/motion';
 import { resolveAppPath, stateForTarget, type ArenaHubSection } from './arenaLinks';
+import { setCurrentRouteProvider } from '../services/telemetry';
 
 export type RootParamList = {
   Loading: undefined;
@@ -69,6 +70,8 @@ const Stack = createNativeStackNavigator<RootParamList>();
 // Ref so out-of-tree callers (e.g. the notification-tap handler in App.tsx) can
 // drive navigation without a component's `navigation` prop.
 export const navigationRef = createNavigationContainerRef<RootParamList>();
+// Error reports carry the focused screen's static NAME (never its params).
+setCurrentRouteProvider(() => (navigationRef.isReady() ? navigationRef.getCurrentRoute()?.name : null));
 
 /**
  * Navigate from a tapped notification. Safe to call before the tree mounts —

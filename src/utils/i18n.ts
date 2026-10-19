@@ -30,7 +30,12 @@ const resources = {
         boundaryTitle: 'The app ran into a problem',
         boundaryBody: 'Sorry for the inconvenience. You can reload the page to continue.',
         reload: 'Reload the page',
-        offlineHint: 'You appear to be offline.'
+        offlineHint: 'You appear to be offline.',
+        routeBody: 'This page ran into a problem. You can try again or go back home.',
+        chunkTitle: 'A new version is available',
+        chunkBody: 'This page could not load. Reload to get the latest version.',
+        retry: 'Try again',
+        home: 'Back to home'
       },
       notFound: {
         code: '404',
@@ -91,7 +96,8 @@ const resources = {
         privacy: 'Privacy',
         terms: 'Terms',
         rights: 'All rights reserved.',
-        home: 'EdLight Academy home'
+        home: 'EdLight Academy home',
+        version: 'Version'
       },
       meta: {
         titleTemplate: '{{page}} · EdLight Academy',
@@ -364,7 +370,12 @@ const resources = {
         boundaryTitle: 'L’application a rencontré un problème',
         boundaryBody: 'Désolé pour la gêne occasionnée. Vous pouvez recharger la page pour continuer.',
         reload: 'Recharger la page',
-        offlineHint: 'Vous semblez être hors ligne.'
+        offlineHint: 'Vous semblez être hors ligne.',
+        routeBody: 'Cette page a rencontré un problème. Tu peux réessayer ou revenir à l’accueil.',
+        chunkTitle: 'Une nouvelle version est disponible',
+        chunkBody: 'Cette page n’a pas pu se charger. Recharge pour obtenir la dernière version.',
+        retry: 'Réessayer',
+        home: 'Retour à l’accueil'
       },
       notFound: {
         code: '404',
@@ -425,7 +436,8 @@ const resources = {
         privacy: 'Confidentialité',
         terms: 'Conditions',
         rights: 'Tous droits réservés.',
-        home: 'Accueil EdLight Academy'
+        home: 'Accueil EdLight Academy',
+        version: 'Version'
       },
       sandra: {
         subtitle: 'Assistante EdLight',
@@ -717,7 +729,12 @@ const resources = {
         boundaryTitle: 'Aplikasyon an jwenn yon pwoblèm',
         boundaryBody: 'Eskize pou pwoblèm nan. Ou ka rechaje paj la pou kontinye.',
         reload: 'Rechaje paj la',
-        offlineHint: 'Sanble ou pa gen koneksyon.'
+        offlineHint: 'Sanble ou pa gen koneksyon.',
+        routeBody: 'Paj sa a jwenn yon pwoblèm. Ou ka eseye ankò oswa retounen nan Akèy.',
+        chunkTitle: 'Gen yon nouvo vèsyon',
+        chunkBody: 'Paj sa a pa t ka chaje. Rechaje l pou w jwenn dènye vèsyon an.',
+        retry: 'Eseye ankò',
+        home: 'Retounen nan Akèy'
       },
       notFound: {
         code: '404',
@@ -778,7 +795,8 @@ const resources = {
         privacy: 'Konfidansyalite',
         terms: 'Kondisyon',
         rights: 'Tout dwa rezève.',
-        home: 'Akèy EdLight Academy'
+        home: 'Akèy EdLight Academy',
+        version: 'Vèsyon'
       },
       sandra: {
         subtitle: 'Asistan EdLight',

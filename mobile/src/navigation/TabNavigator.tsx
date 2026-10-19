@@ -15,12 +15,7 @@ import { tapLight } from '../utils/haptics';
 import { useReduceMotion } from '../utils/motion';
 import { JS_TAB_BAR } from '../onboarding/tourGeometry';
 
-import DashboardScreen from '../screens/DashboardScreen';
-import CoursesNavigator from './CoursesNavigator';
-import ExamsNavigator from './ExamsNavigator';
-import QuizNavigator from './QuizNavigator';
-import TriviaScreen from '../screens/TriviaScreen';
-import ProfileScreen from '../screens/ProfileScreen';
+import { DashboardTab, CoursesTab, ExamsTab, QuizTab, TriviaTab, ProfileTab } from './tabScreens';
 
 export type TabParamList = {
   Dashboard: undefined;
@@ -224,7 +219,7 @@ function JsTabNavigator() {
     >
       <Tab.Screen
         name="Dashboard"
-        component={DashboardScreen}
+        component={DashboardTab}
         options={{
           tabBarAccessibilityLabel: t('Accueil', 'Akèy'),
           tabBarIcon: ({ color, focused }) => (
@@ -234,7 +229,7 @@ function JsTabNavigator() {
       />
       <Tab.Screen
         name="Courses"
-        component={CoursesNavigator}
+        component={CoursesTab}
         listeners={({ navigation }) => ({
           // Tapping "Cours" always lands on the catalog root, never a retained
           // lesson. The `resetAt` nonce also clears CourseList's own
@@ -252,7 +247,7 @@ function JsTabNavigator() {
       />
       <Tab.Screen
         name="Exams"
-        component={quizPrimary ? QuizNavigator : ExamsNavigator}
+        component={quizPrimary ? QuizTab : ExamsTab}
         listeners={({ navigation }) => ({
           // Tapping "Examens" should land on the exam home (the level/subject
           // picker) — not resume whatever the nested stack retained (a specific
@@ -278,7 +273,7 @@ function JsTabNavigator() {
       />
       <Tab.Screen
         name="Trivia"
-        component={TriviaScreen}
+        component={TriviaTab}
         options={{
           tabBarAccessibilityLabel: t('Jeux', 'Jwèt'),
           tabBarIcon: ({ color, focused }) => (
@@ -288,7 +283,7 @@ function JsTabNavigator() {
       />
       <Tab.Screen
         name="Profile"
-        component={ProfileScreen}
+        component={ProfileTab}
         options={{
           tabBarAccessibilityLabel: t('Profil', 'Pwofil'),
           tabBarIcon: ({ color, focused }) => (

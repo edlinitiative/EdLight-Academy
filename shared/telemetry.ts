@@ -23,10 +23,21 @@ const DETAIL_KEYS = new Set([
   // options and correctness. Competition requests already report through
   // `competition_action` { action, outcome, durationMs }.
   'phase', 'round', 'errorCode', 'recovered',
+  // Crash/error capture (shared/errorSignature.ts), added deliberately:
+  // `signature` (8-hex FNV hash of class + kind + a normalized message + top
+  // frame; the message itself is never sent), `errorKind` (fixed vocabulary),
+  // `topFrame` (bundle file:line:col), `screen` (a static route/screen NAME,
+  // never a path with ids), `boundary` (which error boundary caught it),
+  // `occurrence` (n-th time this session) and `previousSession` (a fatal
+  // breadcrumb persisted before the app died, delivered on the next launch).
+  'signature', 'errorKind', 'topFrame', 'screen', 'boundary', 'occurrence', 'previousSession',
 ]);
 const CONTEXT_KEYS = new Set([
   'platform', 'appVersion', 'buildNumber', 'runtimeVersion', 'updateId',
   'channel', 'embeddedLaunch', 'release', 'environment',
+  // Release identification for crash triage, added deliberately: EAS update
+  // group and the OS version (no device model or identifier).
+  'updateGroup', 'osVersion',
 ]);
 const TOKEN = /^[a-zA-Z0-9_.:-]{1,100}$/;
 
@@ -55,13 +66,13 @@ export function sanitizeDiagnostic(input: unknown): DiagnosticEvent | null {
   };
   if (event.type === 'error') {
     const error = event.error as { name?: unknown; stack?: unknown; frames?: unknown } | undefined;
-    const names = ['Error', 'TypeError', 'ReferenceError', 'SyntaxError', 'RangeError', 'URIError', 'EvalError', 'FirebaseError', 'AbortError'];
+    const names = ['Error', 'TypeError', 'ReferenceError', 'SyntaxError', 'RangeError', 'URIError', 'EvalError', 'FirebaseError', 'AbortError', 'ChunkLoadError', 'Invariant Violation'];
     // Only source coordinates, never the message, first stack line, function
     // arguments, URL query parameters or an absolute filesystem path.
     const raw = typeof error?.stack === 'string' ? error.stack.split('\n').slice(1) : error?.frames;
     const frames = Array.isArray(raw) ? raw.slice(0, 12).flatMap((line) => {
       if (typeof line !== 'string') return [];
-      const match = line.match(/(?:^|[\s/@(])([a-zA-Z0-9_.-]{1,120}\.(?:js|jsx|ts|tsx|mjs|bundle)):(\d{1,8}):(\d{1,8})\)?$/);
+      const match = line.match(/(?:^|[\s/@(])([a-zA-Z0-9_.-]{1,120}\.(?:js|jsx|ts|tsx|mjs|bundle|jsbundle|hbc)):(\d{1,8}):(\d{1,8})\)?$/);
       return match ? [`${match[1]}:${match[2]}:${match[3]}`] : [];
     }) : [];
     clean.error = { name: names.includes(String(error?.name)) ? String(error?.name) : 'Error', frames };

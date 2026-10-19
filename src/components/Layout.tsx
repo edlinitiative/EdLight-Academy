@@ -7,6 +7,7 @@ import { Footer } from './Footer';
 import BottomNav from './BottomNav';
 import NetworkStatus from './NetworkStatus';
 import RouteMeta from './RouteMeta';
+import { RouteErrorBoundary } from './ErrorBoundary';
 import { AuthModal } from './Auth';
 import { StreakMilestoneModal } from './Streak';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
@@ -139,7 +140,11 @@ export function Layout() {
       <NetworkStatus />
       <Navbar />
       <main id="main-content" className="app-shell__main">
-        <Outlet />
+        {/* Per-route containment: a broken page (or a lazy chunk that will
+            not load) keeps the navbar and offers retry / home / reload. */}
+        <RouteErrorBoundary>
+          <Outlet />
+        </RouteErrorBoundary>
       </main>
       {!isTrivia && <Footer />}
       {!isFocused && <BottomNav />}

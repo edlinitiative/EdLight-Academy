@@ -18,6 +18,7 @@ import { useTrivia } from '../hooks/useTrivia';
 import { useStreak } from '../hooks/useStreak';
 import { useAllProgress } from '../hooks/useProgress';
 import { logoutUser } from '../services/authService';
+import { getWebRelease } from '../utils/telemetry';
 import { STREAK_MILESTONES } from '../services/streakService';
 import { setLeaderboardOptIn as saveBoardIdentity } from '../services/triviaService';
 import { isValidAlias } from '../services/leaderboardService';
@@ -1295,6 +1296,10 @@ export default function Profile() {
             </div>
           </section>
           <button type="button" className="pr-textbtn pr-logout" onClick={handleLogout}>{t('Se déconnecter', 'Dekonekte')}</button>
+          {/* À propos / version: the deployed commit, quoted in tester reports. */}
+          <p className="pr-version" style={{ textAlign: 'center', fontSize: '0.8125rem', color: 'var(--text-muted, #5F6B7A)', margin: '0.75rem 0 0', userSelect: 'all' }}>
+            {t('Version', 'Vèsyon')} {getWebRelease().slice(0, 7)}
+          </p>
         </div>
         {showTrackSelector && (
           <TrackSelectorModal currentTrack={track} onClose={() => setShowTrackSelector(false)} />
