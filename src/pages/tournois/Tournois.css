@@ -146,7 +146,9 @@
   border: 0;
   border-radius: var(--radius-sm);
   background: #fff;
-  color: var(--tn-navy);
+  /* Literal ink: night-theme token remaps turned this white on white. */
+  color: #0B296B;
+  -webkit-text-fill-color: #0B296B;
   font: inherit;
   font-weight: 700;
   font-size: var(--text-sm);
@@ -157,6 +159,7 @@
 .tn-btn-glass--ghost {
   background: rgba(255, 255, 255, 0.14);
   color: #fff;
+  -webkit-text-fill-color: #fff;
 }
 
 .tn-btn-glass:focus-visible {
@@ -1228,3 +1231,10 @@ body.arena-night .tn-podium__pts { color: #C1CFE4; }
 body.arena-night .tn-squad__bar { background: #0E1C33; }
 body.arena-night .tn-squad__bar > span { background: #4A6A8F; }
 body.arena-night .tn-squad:first-child .tn-squad__bar > span { background: #8FBFFF; }
+
+/* The sticky "Votre position" strip must not hide the last board rows:
+   leave room for it at the end of the board it follows. */
+.tn-section:has(+ .tn-me),
+div:has(+ .tn-me) {
+  padding-bottom: 4.5rem;
+}

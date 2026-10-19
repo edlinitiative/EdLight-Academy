@@ -21,6 +21,7 @@ import '../styles/pf.css';
 import './Courses.css';
 import LearnWorkspace from './courses/LearnWorkspace';
 import { buildHomePreview } from '../components/journey/home/homePreview';
+import HomeSpotlightCard from '../components/HomeSpotlightCard';
 
 const SUBJECT_ORDER = ['MATH', 'PHYS', 'CHEM', 'ECON'];
 const LEVEL_ORDER = ['NSI', 'NSII', 'NSIII', 'NSIV'];
@@ -609,6 +610,9 @@ export default function Courses({ mode = 'catalog' }: { mode?: 'catalog' | 'work
       <section className="section pf lrn lrn--workspace">
         <div className="container">
           <h1 className="lrn-sr-title">{L('Espace de travail', 'Espas travay')}</h1>
+          {/* An open championship or a tournament the student is in becomes the
+              first content card (renders nothing otherwise; not a top band). */}
+          {!preview && <HomeSpotlightCard />}
           <LearnWorkspace
             courses={courses}
             courseStats={courseStats}
