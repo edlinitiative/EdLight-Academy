@@ -5,6 +5,9 @@ import { flattenQuestions, gradeExam } from '../../shared/examUtils';
 import { isEssayType } from '../../shared/essayGradeCore';
 import { examFetcher } from './explainGate';
 
+/** Essay grading updates the result shortly after submit; edits later than this aren't trusted. */
+export const RESULT_EDIT_GRACE_MS = 10 * 60 * 1000;
+
 const fetchExam = examFetcher('https://academy.edlight.org');
 const codeAlphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const newCode = () => Array.from({ length: 6 }, () => codeAlphabet[randomInt(codeAlphabet.length)]).join('');
@@ -214,6 +217,11 @@ export async function completeAssignment(db: Firestore, uid: string, id: string,
     // Firestore timestamps (not client *_ms values) establish that this was submitted after assignment publication.
     const submittedAt = attempt.data()?.submitted_at?.toMillis?.() || 0;
     if (attempt.data()?.status !== 'submitted' || !result.exists || submittedAt < assignment.createdAt) throw new ClassError('not_submitted');
+    // The result doc is client-writable: its server-set updateTime must sit at the
+    // submission (plus time for essay grading to land), so answers rewritten after
+    // seeing the correction can't be counted for the class.
+    const resultUpdatedAt = result.updateTime?.toMillis?.();
+    if (resultUpdatedAt != null && resultUpdatedAt > submittedAt + RESULT_EDIT_GRACE_MS) throw new ClassError('not_submitted');
     const questions = flattenQuestions(exam);
     const answers = result.data()?.answers || {};
     const objective = questions.filter((q: any) => !isEssayType(q));

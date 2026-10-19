@@ -1,6 +1,8 @@
 /** Transactional Firestore test double: commits together and rejects reads after writes. */
 export class ClassDb {
   store = new Map<string, any>();
+  /** Server-set update times (ms) by path, like DocumentSnapshot.updateTime. */
+  updateTimes = new Map<string, number>();
   private tail: Promise<unknown> = Promise.resolve();
   clone(value: any): any {
     if (value == null || typeof value !== 'object') return value;
@@ -9,7 +11,8 @@ export class ClassDb {
   }
   doc = (path: string): any => ({
     path, id: path.split('/').pop(),
-    get: async () => ({ id: path.split('/').pop(), ref: this.doc(path), exists: this.store.has(path), data: () => this.clone(this.store.get(path)) }),
+    get: async () => ({ id: path.split('/').pop(), ref: this.doc(path), exists: this.store.has(path), data: () => this.clone(this.store.get(path)),
+      updateTime: this.updateTimes.has(path) ? { toMillis: () => this.updateTimes.get(path)! } : undefined }),
     set: async (data: any) => { this.store.set(path, this.clone(data)); },
     delete: async () => { this.store.delete(path); },
     collection: (name: string) => this.collection(`${path}/${name}`),

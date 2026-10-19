@@ -22,6 +22,7 @@ const assign = () => mutateClass(db(), 'teacher', 'assign', { id, requestId: 'as
 const seedSubmission = (at = now + 1000) => {
   memory.store.set('users/student/examAttempts/exam1', { status: 'submitted', submitted_at: { toMillis: () => at } });
   memory.store.set('users/student/examResults/exam1', { answers: { 0: 'a', 1: 'private essay text' }, summary: { percentage: 999 } });
+  memory.updateTimes.set('users/student/examResults/exam1', at);
 };
 beforeEach(async () => {
   memory = new ClassDb(); teacher();
@@ -80,6 +81,16 @@ it('does not count a prior submission, an in-progress retake, or a forged client
   await expect(completeAssignment(db(), 'student', id, aid, now)).rejects.toMatchObject({ code: 'not_submitted' });
   seedSubmission(); memory.store.get('users/student/examAttempts/exam1').status = 'in_progress';
   await expect(completeAssignment(db(), 'student', id, aid, now)).rejects.toMatchObject({ code: 'not_submitted' });
+});
+it('does not count answers rewritten long after the submission (result updateTime)', async () => {
+  await join(); await approve(); await assign(); seedSubmission();
+  // The client rewrote its result 30 minutes after submitting (e.g. after seeing the key).
+  memory.updateTimes.set('users/student/examResults/exam1', now + 1000 + 30 * 60 * 1000);
+  const aid = memory.store.get(`classes/${id}`).assignments[0].id;
+  await expect(completeAssignment(db(), 'student', id, aid, now)).rejects.toMatchObject({ code: 'not_submitted' });
+  // Essay grading landing within the grace window is fine.
+  memory.updateTimes.set('users/student/examResults/exam1', now + 1000 + 60 * 1000);
+  await expect(completeAssignment(db(), 'student', id, aid, now)).resolves.toBeTruthy();
 });
 it('opening the class repairs a lost post-submit handoff once', async () => {
   await join(); await approve(); await assign(); seedSubmission();
