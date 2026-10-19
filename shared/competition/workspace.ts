@@ -6,8 +6,52 @@ import {
   isInboxAction,
   isInboxTargetKind,
 } from './notifications';
-import { identityText as who } from './deletedAccount';
-export type Copy = [string, string];
+import {
+  DELETED_ACCOUNT_COPY,
+  isDeletedAccount,
+  identityText as who,
+} from './deletedAccount';
+import {
+  DISPUTE_STATE,
+  ENTRY_MODE,
+  ENTRY_STATE,
+  EVENT_AUDIENCE,
+  EVENT_STATE,
+  FIXTURE_STATUS,
+  HOST_KIND,
+  INVITE_STATUS,
+  LEAGUE_STATE,
+  MEMBERSHIP_STATUS,
+  PLAY_FORMAT,
+  REPORT_KIND,
+  RESULT_STATUS,
+  REWARD_STATUS,
+  enumLabel,
+  formatInviteCode,
+  haitiDate,
+  type Copy,
+} from './labels';
+export type { Copy } from './labels';
+/**
+ * A person as the workspace shows them: public name + chosen avatar. The uid
+ * is only the avatar seed and a hidden form value — renderers never print it.
+ */
+export interface Person {
+  uid: string;
+  name: string;
+  avatar: string | null;
+}
+/** { uid → { name, avatar } } as returned by the read endpoints. */
+export type People = Record<
+  string,
+  { name?: string | null; avatar?: string | null } | undefined
+>;
+/** A row is plain text, or text about a person (drawn with their avatar). */
+export type Row = Copy | { text: Copy; person: Person };
+export const rowCopy = (row: Row): Copy =>
+  Array.isArray(row) ? row : row.text;
+export const rowPerson = (row: Row): Person | undefined =>
+  Array.isArray(row) ? undefined : row.person;
 export type Field = {
   key: string;
   label: Copy;
@@ -23,6 +67,8 @@ export interface Task {
   values?: Record<string, unknown>;
   fields?: Field[];
   confirm?: Copy;
+  /** The person this task is about (a request, an invitation…), for an avatar. */
+  person?: Person;
 }
 export interface Destination {
   label: Copy;
@@ -31,7 +77,7 @@ export interface Destination {
 export interface Panel {
   title: Copy;
   paragraphs?: Copy[];
-  rows?: Copy[];
+  rows?: Row[];
   links?: Destination[];
   tasks?: Task[];
 }
@@ -65,19 +111,67 @@ const select = (
 });
 const nameField = field('name', 'Nom de l’équipe', 'Non ekip la');
 const schoolField = field('schoolKey', 'École approuvée', 'Lekòl ki apwouve');
-const personField = field(
-  'recipientUid',
-  'Identifiant d’invitation du destinataire',
-  'Idantifyan envitasyon moun nan',
+/** Someone not yet known on this page: they share their short invite code. */
+const codeField = field(
+  'recipientCode',
+  'Code d’invitation de la personne (ex. K7Q2-M9XD)',
+  'Kòd envitasyon moun nan (egz. K7Q2-M9XD)',
 );
 const eventPath = (id: string) => `/arena/evenements/${id}`;
 const teamPath = (id: string) => `/arena/equipes/${id}`;
-const date = (ms: number) =>
-  new Date(ms).toLocaleString('fr-HT', {
-    timeZone: 'America/Port-au-Prince',
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }) + ' (Haïti / Ayiti)';
+const date = haitiDate;
+/** Join copies with a separator, language by language. */
+const join = (sep: string, ...parts: Array<Copy | string>): Copy => [
+  parts.map((p) => (typeof p === 'string' ? p : p[0])).join(sep),
+  parts.map((p) => (typeof p === 'string' ? p : p[1])).join(sep),
+];
+const pts = (n: unknown): Copy => [`${n} pts`, `${n} pwen`];
+/** Resolve a uid to a person; an unknown uid is a localized "Participant". */
+function personOf(people: People | undefined, uid: string): Person {
+  const known = people?.[uid];
+  const name =
+    typeof known?.name === 'string' && known.name.trim()
+      ? known.name.trim()
+      : '';
+  return { uid, name, avatar: known?.avatar ?? null };
+}
+/** The person's display name in both languages. */
+const nameOf = (p: Person): Copy =>
+  isDeletedAccount(p.name) || isDeletedAccount(p.uid)
+    ? DELETED_ACCOUNT_COPY
+    : p.name && p.name !== 'Participant'
+      ? [p.name, p.name]
+      : ['Participant', 'Patisipan'];
+/** A stored public name (host, entry label), with the deleted-account sentinel localized. */
+const named = (value: unknown): Copy => [who(value, 0), who(value, 1)];
+const personRow = (p: Person, ...rest: Copy[]): Row => ({
+  text: join(' · ', nameOf(p), ...rest),
+  person: p,
+});
+/** Append copies to a row, keeping its person. */
+const extendRow = (row: Row, ...rest: Copy[]): Row =>
+  Array.isArray(row)
+    ? join(' · ', row, ...rest)
+    : { text: join(' · ', row.text, ...rest), person: row.person };
+/** A select whose options are people, by name; the uid is only the value. */
+const personSelect = (
+  key: string,
+  label: Copy,
+  people: Person[],
+): Field => ({
+  key,
+  label,
+  type: 'select',
+  required: true,
+  value: '',
+  options: people.map((p) => ({ value: p.uid, label: nameOf(p) })),
+});
+/** A school's display name when the directory knows it, else its key. */
+function schoolName(data: any, key: string): string {
+  return (
+    (data?.schools || []).find((s: any) => s.key === key)?.name || key || '—'
+  );
+}
 export const copyFor = (copy: Copy, ht: boolean) => copy[ht ? 1 : 0];
 /** "Mon activité" row: unread marker + what happened + the target's title. Legacy rows keep the bare title. */
 function inboxLabel(row: any): Copy {
@@ -93,17 +187,20 @@ export function workspacePage(
   mine: any,
   now: number,
 ): WorkspacePage {
+  const people: People = { ...(mine?.people || {}), ...(data?.people || {}) };
   if (target.kind === 'home') {
     const panels: Panel[] = [];
     if (mine) {
       panels.push({
         title: c('Mon activité', 'Aktivite mwen'),
-        paragraphs: [
-          c(
-            `Mon identifiant d’invitation : ${mine.uid}`,
-            `Idantifyan envitasyon mwen : ${mine.uid}`,
-          ),
-        ],
+        paragraphs: mine.inviteCode
+          ? [
+              c(
+                `Mon code d’invitation : ${formatInviteCode(mine.inviteCode)} — donnez-le au capitaine qui veut vous inviter dans son équipe.`,
+                `Kòd envitasyon mwen : ${formatInviteCode(mine.inviteCode)} — bay kapitèn ki vle envite w nan ekip li a kòd sa a.`,
+              ),
+            ]
+          : [],
         links: [
           ...(mine.inbox || []).map((row: any) => ({
             label: inboxLabel(row),
@@ -178,7 +275,11 @@ export function workspacePage(
       panels.push({
         title: c('Mon école', 'Lekòl mwen'),
         rows: (mine.memberships || []).map((m: any) =>
-          c(`${m.schoolKey} · ${m.status}`),
+          join(
+            ' · ',
+            schoolName(data, m.schoolKey),
+            enumLabel(MEMBERSHIP_STATUS, m.status),
+          ),
         ),
         tasks: [
           {
@@ -220,7 +321,7 @@ export function workspacePage(
                   ),
                   fields: [
                     schoolField,
-                    personField,
+                    codeField,
                     select(
                       'approve',
                       c('Décision', 'Desizyon'),
@@ -284,7 +385,7 @@ export function workspacePage(
                   ),
                   fields: [
                     schoolField,
-                    personField,
+                    codeField,
                     select(
                       'approve',
                       c('Décision', 'Desizyon'),
@@ -311,14 +412,19 @@ export function workspacePage(
       ],
       links: [
         ...(data.events || []).map((e: any) => ({
-          label: c(
-            `${e.title} · ${who(e.hostName, 0)} · ${e.entryMode === 'named_team' ? '3 joueurs / équipe' : 'individuel'} · ${date(e.startsAt)}`,
-            `${e.title} · ${who(e.hostName, 1)} · ${e.entryMode === 'named_team' ? '3 joueurs / équipe' : 'individuel'} · ${date(e.startsAt)}`,
+          label: join(
+            ' · ',
+            e.title,
+            named(e.hostName),
+            e.entryMode === 'named_team'
+              ? c('3 joueurs par équipe', '3 jwè pa ekip')
+              : enumLabel(ENTRY_MODE, 'individual'),
+            date(e.startsAt),
           ),
           path: eventPath(e.id),
         })),
         ...(data.summaries || []).map((s: any) => ({
-          label: c(`${s.title} · ${s.host} · ${s.format}`),
+          label: join(' · ', s.title, s.host, enumLabel(PLAY_FORMAT, s.format)),
           path: s.href,
         })),
         ...(data.leagues || []).map((l: any) => ({
@@ -341,7 +447,12 @@ export function workspacePage(
         tasks: mine.membershipRequests.map((r: any) => ({
           id: `membership-${r.schoolKey}-${r.uid}`,
           action: 'membership-review',
-          label: c(`${r.schoolKey} · ${r.uid}`),
+          label: join(
+            ' · ',
+            nameOf(personOf(people, r.uid)),
+            schoolName(data, r.schoolKey),
+          ),
+          person: personOf(people, r.uid),
           values: { schoolKey: r.schoolKey, recipientUid: r.uid },
           fields: [
             select(
@@ -362,7 +473,7 @@ export function workspacePage(
         tasks: mine.moderationReports.map((r: any) => ({
           id: `moderate-${r.id}`,
           action: 'moderation-review',
-          label: c(`${r.kind} · ${r.reason}`),
+          label: join(' · ', enumLabel(REPORT_KIND, r.kind), String(r.reason ?? '')),
           values: { reportId: r.id },
           fields: [
             field(
@@ -434,7 +545,7 @@ export function workspacePage(
               ]
             : [],
           links: data.teams.map((team: any) => ({
-            label: c(`${team.name} · ${team.memberCount}`),
+            label: c(`${team.name} · ${team.memberCount} membre(s)`, `${team.name} · ${team.memberCount} manm`),
             path: teamPath(team.id),
           })),
           tasks: !data.member
@@ -457,7 +568,17 @@ export function workspacePage(
       panels: [
         {
           title: c(invite.teamName),
-          rows: [c(`${invite.status} · ${date(invite.expiresAt)}`)],
+          rows: [
+            personRow(
+              personOf(people, invite.senderUid),
+              c('a envoyé cette invitation', 'voye envitasyon sa a'),
+            ),
+            join(
+              ' · ',
+              enumLabel(INVITE_STATUS, invite.status),
+              join(' ', c('Expire le', 'Ekspire'), date(invite.expiresAt)),
+            ),
+          ],
           tasks:
             invite.status === 'pending'
               ? [
@@ -500,6 +621,12 @@ export function workspacePage(
   if (target.kind === 'team') {
     const team = data.team;
     const captain = team.captainUid === mine?.uid;
+    const requestPerson = (r: any): Person => {
+      const p = personOf(people, r.uid);
+      return p.name
+        ? p
+        : { uid: r.uid, name: r.publicName || '', avatar: r.publicAvatar ?? null };
+    };
     const requestTasks: Task[] = [
       ...(data.canRequest
         ? [
@@ -517,7 +644,12 @@ export function workspacePage(
       ...(data.requests || []).map((r: any) => ({
         id: `recruit-${r.uid}`,
         action: 'recruitment-review',
-        label: c(`Demande / Demann : ${r.publicName}`),
+        label: join(
+          ' : ',
+          c('Demande pour rejoindre', 'Demann pou antre'),
+          nameOf(requestPerson(r)),
+        ),
+        person: requestPerson(r),
         values: { teamId: target.id, recipientUid: r.uid },
         fields: [
           select(
@@ -536,9 +668,12 @@ export function workspacePage(
         .map((i: any) => ({
           id: `revoke-${i.id}`,
           action: 'invite-revoke',
-          label: c(
-            `Révoquer invitation / Revoke envitasyon : ${i.recipientUid}`,
+          label: join(
+            ' : ',
+            c('Retirer l’invitation envoyée à', 'Retire envitasyon ki voye bay'),
+            nameOf(personOf(people, i.recipientUid)),
           ),
+          person: personOf(people, i.recipientUid),
           values: { inviteId: i.id },
         })),
       ...(captain
@@ -573,9 +708,9 @@ export function workspacePage(
         {
           title: c('Membres et capitaine', 'Manm ak kapitèn'),
           rows: (team.members || []).map((uid: string) =>
-            c(
-              `${uid}${uid === team.captainUid ? ' · Capitaine / Kapitèn' : ''}`,
-            ),
+            uid === team.captainUid
+              ? personRow(personOf(people, uid), c('Capitaine', 'Kapitèn'))
+              : personRow(personOf(people, uid)),
           ),
           paragraphs: [
             c(
@@ -590,7 +725,7 @@ export function workspacePage(
                   action: 'team-invite',
                   label: c('Inviter un membre', 'Envite yon manm'),
                   values: { teamId: target.id },
-                  fields: [personField],
+                  fields: [codeField],
                 },
                 {
                   id: 'transfer',
@@ -598,13 +733,12 @@ export function workspacePage(
                   label: c('Transférer le capitanat', 'Transfere wòl kapitèn'),
                   values: { teamId: target.id },
                   fields: [
-                    select(
+                    personSelect(
                       'recipientUid',
                       c('Nouveau capitaine', 'Nouvo kapitèn'),
                       team.members
                         .filter((u: string) => u !== mine.uid)
-                        .map((u: string) => [u, u, u]),
-                      '',
+                        .map((u: string) => personOf(people, u)),
                     ),
                   ],
                 },
@@ -641,7 +775,7 @@ export function workspacePage(
     };
   }
   if (target.kind === 'league') return leaguePage(target.id, data);
-  return eventPage(target.id, data, mine, now);
+  return eventPage(target.id, data, mine, now, people);
 }
 function eventFields(host: boolean, now: number): Field[] {
   return [
@@ -805,6 +939,7 @@ function eventPage(
   data: any,
   mine: any,
   now: number,
+  people: People,
 ): WorkspacePage {
   const e = data.event,
     manager = data.role === 'manager',
@@ -812,31 +947,70 @@ function eventPage(
   const teams = (mine?.teams || []).filter(
     (team: any) => team.captainUid === mine.uid,
   );
+  const entryLabel = (entryId: string): Row => {
+    const entry = (data.entries || []).find((x: any) => x.id === entryId);
+    if (entry && !entry.teamId)
+      return personRow(personOf(people, entry.captainUid));
+    return entry?.label
+      ? named(entry.label)
+      : c('Participation', 'Patisipasyon');
+  };
   const panels: Panel[] = [
     {
       title: c(e.title),
       paragraphs: [
         c(e.description),
-        c(
-          `${who(e.hostName, 0)} · ${e.hostKind === 'school' ? 'Organisateur scolaire approuvé' : 'Organisé par des étudiants'}`,
-          `${who(e.hostName, 1)} · ${e.hostKind === 'school' ? 'Organisateur scolaire approuvé' : 'Organisé par des étudiants'}`,
+        join(' · ', named(e.hostName), enumLabel(HOST_KIND, e.hostKind)),
+        e.delivery === 'external'
+          ? join(
+              ' · ',
+              c('Activité externe', 'Aktivite ekstèn'),
+              e.entryMode === 'named_team'
+                ? c('3 participants par équipe', '3 patisipan pa ekip')
+                : enumLabel(ENTRY_MODE, 'individual'),
+              c('score déclaré de 0 à 100', 'nòt deklare ant 0 ak 100'),
+            )
+          : join(
+              ' · ',
+              e.entryMode === 'named_team'
+                ? c(
+                    '3 titulaires · réponses indépendantes · somme des points · absent = zéro',
+                    '3 titilè · repons endepandan · total pwen yo · absan = zewo',
+                  )
+                : enumLabel(ENTRY_MODE, 'individual'),
+              enumLabel(PLAY_FORMAT, e.config.format),
+              c(
+                `${e.config.questionCount} questions`,
+                `${e.config.questionCount} kesyon`,
+              ),
+              c(
+                `${e.config.secondsPerQuestion} s par question`,
+                `${e.config.secondsPerQuestion} s pou chak kesyon`,
+              ),
+            ),
+        join(
+          ' · ',
+          join(' : ', c('Début', 'Kòmansman'), date(e.config.startsAt)),
+          join(
+            ' : ',
+            c('Fin des inscriptions', 'Fen enskripsyon'),
+            date(e.registrationClosesAt),
+          ),
         ),
-        c(
-          e.delivery === 'external'
-            ? `Activité externe / Aktivite ekstèn · ${e.entryMode === 'named_team' ? '3 participants / patisipan' : 'Individuel / Endividyèl'} · score déclaré de 0 à 100 / nòt deklare 0 rive 100`
-            : `${e.entryMode === 'named_team' ? '3 titulaires · réponses indépendantes · somme des points · absents = zéro' : 'Individuel'} · ${e.config.format} · ${e.config.questionCount} questions · ${e.config.secondsPerQuestion} s/question`,
+        join(
+          ' · ',
+          join(' : ', c('Audience', 'Odyans'), enumLabel(EVENT_AUDIENCE, e.audience)),
+          c('Internet requis', 'Entènèt nesesè'),
+          enumLabel(EVENT_STATE, e.state),
         ),
-        c(
-          `Début / Kòmansman : ${date(e.config.startsAt)} · Inscriptions / Enskripsyon : ${date(e.registrationClosesAt)}`,
-        ),
-        c(
-          `Audience / Odyans : ${e.audience} · Internet requis / Entènèt nesesè · ${e.state}`,
-        ),
-        c(
-          e.reward
-            ? `Prix externe / Pri ekstèn : ${e.reward.description} · ${e.reward.provider} · ${e.reward.contact}`
-            : 'Sans prix matériel / San pri materyèl',
-        ),
+        e.reward
+          ? join(
+              ' · ',
+              join(' : ', c('Prix externe', 'Pri ekstèn'), e.reward.description),
+              e.reward.provider,
+              e.reward.contact,
+            )
+          : c('Sans prix matériel', 'San pri materyèl'),
       ],
       rows: [
         ...(e.venue ? [c(e.venue)] : []),
@@ -884,7 +1058,9 @@ function eventPage(
         'Remise du prix — déclaration de l’organisateur',
         'Livrezon pri — deklarasyon òganizatè',
       ),
-      rows: data.rewards.map((r: any) => c(`${r.entryId} · ${r.status}`)),
+      rows: data.rewards.map((r: any) =>
+        extendRow(entryLabel(r.entryId), enumLabel(REWARD_STATUS, r.status)),
+      ),
     });
   if (mine && e.state !== 'draft')
     panels[0].tasks!.push({
@@ -906,8 +1082,11 @@ function eventPage(
           : 'Klasman ekip yo an kou',
       ),
       rows: data.namedTeams.map((r: any) =>
-        c(
-          `${r.rank}. ${r.label} · ${r.points} pts · ${r.missing} absents / absan`,
+        join(
+          ' · ',
+          `${r.rank}. ${r.label}`,
+          pts(r.points),
+          c(`${r.missing} absent(s)`, `${r.missing} absan`),
         ),
       ),
     });
@@ -919,40 +1098,50 @@ function eventPage(
           'Afilyasyon ou dwe apwouve anvan enskripsyon. Gade pa enskri ou.',
         ),
       );
-    panels[0].tasks!.push(
-      e.entryMode === 'individual'
-        ? {
-            id: 'entry-draft',
-            action: 'roster-save',
-            label:
-              e.delivery === 'external'
-                ? c(
-                    'Ajouter ma participation au suivi EdLight',
-                    'Ajoute patisipasyon mwen nan swivi EdLight',
-                  )
-                : c('Préparer mon inscription', 'Prepare enskripsyon mwen'),
-            values: { eventId },
-          }
-        : {
-            id: 'roster',
-            action: 'roster-save',
-            label: c('Choisir trois titulaires', 'Chwazi twa titilè'),
-            values: { eventId },
-            fields: [
-              select(
-                'teamId',
-                c('Mon équipe', 'Ekip mwen'),
-                teams.map((team: any) => [team.id, team.name, team.name]),
-                '',
-              ),
-              field(
-                'starters',
-                'Trois identifiants de membres séparés par des virgules',
-                'Twa idantifyan manm separe ak vigil',
-              ),
-            ],
-          },
-    );
+    if (e.entryMode === 'individual')
+      panels[0].tasks!.push({
+        id: 'entry-draft',
+        action: 'roster-save',
+        label:
+          e.delivery === 'external'
+            ? c(
+                'Ajouter ma participation au suivi EdLight',
+                'Ajoute patisipasyon mwen nan swivi EdLight',
+              )
+            : c('Préparer mon inscription', 'Prepare enskripsyon mwen'),
+        values: { eventId },
+      });
+    else if (!teams.length)
+      panels[0].paragraphs!.push(
+        c(
+          'Seul le capitaine d’une équipe peut choisir les trois titulaires.',
+          'Se sèlman kapitèn yon ekip ki ka chwazi twa titilè yo.',
+        ),
+      );
+    // One form per team I captain: starters are picked by name among its
+    // members; the uid is only the hidden option value.
+    for (const team of teams) {
+      const members = ((team.members || []) as string[]).map((u) =>
+        personOf(people, u),
+      );
+      panels[0].tasks!.push({
+        id: `roster-${team.id}`,
+        action: 'roster-save',
+        label: join(
+          ' · ',
+          c('Choisir trois titulaires', 'Chwazi twa titilè'),
+          team.name,
+        ),
+        values: { eventId, teamId: team.id },
+        fields: [1, 2, 3].map((n) =>
+          personSelect(
+            `starter${n}`,
+            c(`Titulaire ${n}`, `Titilè ${n}`),
+            members,
+          ),
+        ),
+      });
+    }
   }
   for (const entry of data.entries) {
     const tasks: Task[] = [];
@@ -1015,13 +1204,20 @@ function eventPage(
     panels.push({
       title: c(who(entry.label, 0), who(entry.label, 1)),
       rows: [
-        c(
-          `${entry.state} · ${entry.confirmed.length}/${entry.starters.length} confirmations`,
+        join(
+          ' · ',
+          enumLabel(ENTRY_STATE, entry.state),
+          c(
+            `${entry.confirmed.length}/${entry.starters.length} confirmations`,
+            `${entry.confirmed.length}/${entry.starters.length} konfimasyon`,
+          ),
         ),
         ...entry.starters.map((s: string) =>
-          c(
-            `${who(s, 0)} · ${entry.confirmed.includes(s) ? 'Confirmé / Konfime' : 'À confirmer / Pou konfime'}`,
-            `${who(s, 1)} · ${entry.confirmed.includes(s) ? 'Confirmé / Konfime' : 'À confirmer / Pou konfime'}`,
+          personRow(
+            personOf(people, s),
+            entry.confirmed.includes(s)
+              ? c('Confirmé', 'Konfime')
+              : c('À confirmer', 'Pou konfime'),
           ),
         ),
       ],
@@ -1030,16 +1226,22 @@ function eventPage(
   }
   if (e.delivery === 'external')
     panels.push({
-      title: c(
-        `Résultat déclaré par l’organisateur · ${e.resultStatus}`,
-        `Rezilta òganizatè deklare · ${e.resultStatus}`,
+      title: join(
+        ' · ',
+        c('Résultat déclaré par l’organisateur', 'Rezilta òganizatè a deklare'),
+        enumLabel(RESULT_STATUS, e.resultStatus),
       ),
-      rows: e.resultRows.map((r: any) =>
-        c(
-          `${who(r.label || r.entryId, 0)} · ${r.score} pts`,
-          `${who(r.label || r.entryId, 1)} · ${r.score} pts`,
-        ),
-      ),
+      rows: e.resultRows.map((r: any) => {
+        const known = (data.entries || []).some((x: any) => x.id === r.entryId);
+        return extendRow(
+          known
+            ? entryLabel(r.entryId)
+            : r.label
+              ? named(r.label)
+              : c('Participation', 'Patisipasyon'),
+          pts(r.score),
+        );
+      }),
     });
   if (mine && data.role === 'participant')
     panels.push({
@@ -1054,29 +1256,59 @@ function eventPage(
         },
       ],
     });
-  if (manager) panels.push(...organizerPanels(eventId, e, data));
-  if (data.role === 'checkin' || manager)
+  if (manager) panels.push(...organizerPanels(eventId, e, data, people));
+  if (data.role === 'checkin' || manager) {
+    const attendees = [
+      ...new Set<string>(
+        (data.entries || [])
+          .filter((x: any) => x.state === 'registered')
+          .flatMap((x: any) => x.starters as string[]),
+      ),
+    ].map((u) => personOf(people, u));
     panels.push({
       title: c('Accueil des inscrits', 'Akèy moun ki enskri'),
+      paragraphs:
+        e.delivery === 'physical' && !attendees.length
+          ? [c('Aucun inscrit pour le moment.', 'Pa gen moun ki enskri pou kounye a.')]
+          : [],
       tasks:
-        e.delivery === 'physical'
+        e.delivery === 'physical' && attendees.length
           ? [
               {
                 id: 'checkin',
                 action: 'checkin',
                 label: c('Confirmer une présence', 'Konfime yon prezans'),
                 values: { eventId },
-                fields: [personField],
+                fields: [
+                  personSelect(
+                    'recipientUid',
+                    c('Personne inscrite', 'Moun ki enskri'),
+                    attendees,
+                  ),
+                ],
               },
             ]
           : [],
     });
+  }
   panels.push(reportPanel('event', eventId));
   return { title: c(e.title), panels };
 }
-function organizerPanels(eventId: string, e: any, data: any): Panel[] {
+function organizerPanels(
+  eventId: string,
+  e: any,
+  data: any,
+  people: People,
+): Panel[] {
   const values = { eventId };
   const tasks: Task[] = [];
+  const registered = (data.entries || []).filter(
+    (x: any) => x.state === 'registered',
+  );
+  const entryCopy = (x: any): Copy =>
+    x.teamId
+      ? c(x.label)
+      : nameOf(personOf(people, x.captainUid));
   if (e.state === 'draft')
     tasks.push({
       id: 'edit-draft',
@@ -1181,22 +1413,50 @@ function organizerPanels(eventId: string, e: any, data: any): Panel[] {
   tasks.push({
     id: 'cohost',
     action: 'event-cohost',
-    label: c('Gérer un co-organisateur', 'Jere yon ko-òganizatè'),
+    label: c('Ajouter un co-organisateur', 'Ajoute yon ko-òganizatè'),
     values,
     fields: [
-      personField,
+      codeField,
       select(
         'role',
         c('Rôle', 'Wòl'),
         [
           ['checkin', 'Accueil seulement', 'Akèy sèlman'],
           ['manage', 'Gestion de l’événement', 'Jesyon evènman'],
-          ['remove', 'Retirer l’accès', 'Retire aksè'],
         ],
         'checkin',
       ),
     ],
   });
+  // Current co-hosts, by name: change their role or remove their access.
+  for (const [uid, role] of Object.entries(data.cohosts || {})) {
+    const person = personOf(people, uid);
+    tasks.push({
+      id: `cohost-${uid}`,
+      action: 'event-cohost',
+      label: join(
+        ' · ',
+        nameOf(person),
+        role === 'manage'
+          ? c('Gestion de l’événement', 'Jesyon evènman')
+          : c('Accueil seulement', 'Akèy sèlman'),
+      ),
+      person,
+      values: { eventId, recipientUid: uid },
+      fields: [
+        select(
+          'role',
+          c('Nouveau rôle', 'Nouvo wòl'),
+          [
+            ['checkin', 'Accueil seulement', 'Akèy sèlman'],
+            ['manage', 'Gestion de l’événement', 'Jesyon evènman'],
+            ['remove', 'Retirer l’accès', 'Retire aksè'],
+          ],
+          String(role),
+        ),
+      ],
+    });
+  }
   if (e.delivery === 'external' && e.state !== 'draft')
     tasks.push(
       {
@@ -1204,14 +1464,13 @@ function organizerPanels(eventId: string, e: any, data: any): Panel[] {
         action: 'event-report-result',
         label: c('Déclarer les scores externes', 'Deklare nòt ekstèn yo'),
         values: { ...values, revision: e.resultRevision },
-        fields: [
-          field(
-            'rows',
-            'Une ligne par entrée : code, score',
-            'Yon liy pa antre : kòd, nòt',
-            'long',
-          ),
-        ],
+        // One score per registered entry, labelled by team or player name.
+        fields: registered.map((x: any) => ({
+          key: `score:${x.id}`,
+          label: join(' · ', entryCopy(x), c('score sur 100', 'nòt sou 100')),
+          type: 'number' as const,
+          required: false,
+        })),
       },
       {
         id: 'confirm-result',
@@ -1227,20 +1486,21 @@ function organizerPanels(eventId: string, e: any, data: any): Panel[] {
       label: c('Mettre à jour la remise du prix', 'Mete livrezon pri ajou'),
       values,
       fields: [
-        field(
-          'entryId',
-          'Code de l’entrée bénéficiaire',
-          'Kòd antre benefisyè a',
-        ),
+        {
+          key: 'entryId',
+          label: c('Bénéficiaire', 'Benefisyè'),
+          type: 'select',
+          required: true,
+          value: '',
+          options: registered.map((x: any) => ({
+            value: x.id,
+            label: entryCopy(x),
+          })),
+        },
         select(
           'status',
           c('Remise déclarée par l’organisateur', 'Livrezon òganizatè deklare'),
-          [
-            ['eligible', 'Éligible', 'Kalifye'],
-            ['fulfillment_pending', 'Remise en attente', 'Livrezon annatant'],
-            ['fulfilled', 'Remis', 'Livre'],
-            ['disputed', 'Contesté', 'Konteste'],
-          ],
+          Object.entries(REWARD_STATUS).map(([v, [fr, ht]]) => [v, fr, ht]),
           'fulfillment_pending',
         ),
       ],
@@ -1248,7 +1508,12 @@ function organizerPanels(eventId: string, e: any, data: any): Panel[] {
   return [
     {
       title: c('Console organisateur', 'Konsòl òganizatè'),
-      paragraphs: [c(`Code de l’événement / Kòd evènman : ${eventId}`)],
+      paragraphs: [
+        c(
+          `Code de l’événement : ${eventId}`,
+          `Kòd evènman an : ${eventId}`,
+        ),
+      ],
       links: [
         {
           label: c(
@@ -1262,7 +1527,7 @@ function organizerPanels(eventId: string, e: any, data: any): Panel[] {
     },
     ...data.disputes.map((d: any) => ({
       title: c('Contestation privée', 'Kontestasyon prive'),
-      rows: [c(d.reason), c(d.state)],
+      rows: [c(d.reason), enumLabel(DISPUTE_STATE, d.state)],
       tasks:
         d.state === 'open'
           ? [
@@ -1374,12 +1639,20 @@ function leaguePage(leagueId: string, data: any): WorkspacePage {
             'Victoire 3 · nul 1 · défaite 0. Égalités : différence de points, puis points marqués, puis rang partagé. Les résultats contestés ne donnent pas de points. Trois titulaires confirmés à chaque rencontre.',
             'Viktwa 3 · nil 1 · defèt 0. Egalite : diferans pwen, apre sa pwen make, apre sa ran pataje. Rezilta konteste pa bay pwen. Twa titilè konfime nan chak rankont.',
           ),
-          c(`Code de saison / Kòd sezon : ${leagueId} · ${league.state}`),
-          c(
-            league.sourcePolicy === 'external_100_points_v1'
-              ? 'Activité externe, barème identique de 0 à 100 points par équipe / Aktivite ekstèn, menm echèl 0 rive 100 pwen pa ekip'
-              : 'Quiz : 10 questions de culture générale, 20 s/question, fenêtre de 24 h / Kiz : 10 kesyon kilti jeneral, 20 s/kesyon, fenèt 24 è',
+          join(
+            ' · ',
+            c(`Code de la saison : ${leagueId}`, `Kòd sezon an : ${leagueId}`),
+            enumLabel(LEAGUE_STATE, league.state),
           ),
+          league.sourcePolicy === 'external_100_points_v1'
+            ? c(
+                'Activité externe, barème identique de 0 à 100 points par équipe',
+                'Aktivite ekstèn, menm echèl 0 rive 100 pwen pou chak ekip',
+              )
+            : c(
+                'Quiz : 10 questions de culture générale, 20 s par question, fenêtre de 24 h',
+                'Kiz : 10 kesyon kilti jeneral, 20 s pou chak kesyon, fenèt 24 è',
+              ),
         ],
         tasks,
       },
@@ -1391,8 +1664,16 @@ function leaguePage(leagueId: string, data: any): WorkspacePage {
           league.state === 'closed' ? 'Klasman final' : 'Klasman an kou',
         ),
         rows: data.table.map((r: any) =>
-          c(
-            `${r.rank}. ${r.label} · ${r.points} pts · ${r.played} joués / jwe · ${r.remaining} restants / rete · ${r.wins}/${r.draws}/${r.losses}`,
+          join(
+            ' · ',
+            `${r.rank}. ${r.label}`,
+            pts(r.points),
+            c(`${r.played} joués`, `${r.played} jwe`),
+            c(`${r.remaining} restants`, `${r.remaining} ki rete`),
+            c(
+              `V ${r.wins} / N ${r.draws} / D ${r.losses}`,
+              `V ${r.wins} / N ${r.draws} / D ${r.losses}`,
+            ),
           ),
         ),
       },
@@ -1401,8 +1682,11 @@ function leaguePage(leagueId: string, data: any): WorkspacePage {
           `${league.entrants.find((e: any) => e.id === f.home)?.label} / ${league.entrants.find((e: any) => e.id === f.away)?.label}`,
         ),
         rows: [
-          c(
-            `${date(f.startsAt)} · ${f.status} · ${f.homeScore ?? '—'} / ${f.awayScore ?? '—'}`,
+          join(
+            ' · ',
+            date(f.startsAt),
+            enumLabel(FIXTURE_STATUS, f.status),
+            `${f.homeScore ?? '—'} / ${f.awayScore ?? '—'}`,
           ),
         ],
         tasks:
@@ -1507,19 +1791,35 @@ export function taskPayload(
   for (const key of ['approve', 'public', 'hide'])
     if (values[key] !== undefined)
       values[key] = values[key] === 'true' || values[key] === true;
-  if (task.action === 'roster-save' && values.starters)
-    values.starters = String(values.starters)
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-  if (task.action === 'event-report-result')
-    values.rows = String(values.rows)
-      .split('\n')
-      .filter(Boolean)
-      .map((line) => {
-        const [entryId, score] = line.split(',');
-        return { entryId: entryId.trim(), score: Number(score) };
-      });
+  if (task.action === 'roster-save') {
+    const picked = ['starter1', 'starter2', 'starter3']
+      .map((key) => values[key])
+      .filter((v): v is string => typeof v === 'string' && !!v);
+    for (const key of ['starter1', 'starter2', 'starter3']) delete values[key];
+    if (picked.length) values.starters = picked;
+    else if (values.starters)
+      values.starters = String(values.starters)
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+  }
+  if (task.action === 'event-report-result') {
+    const scored = Object.keys(values).filter((k) => k.startsWith('score:'));
+    if (scored.length) {
+      values.rows = scored.map((k) => ({
+        entryId: k.slice('score:'.length),
+        score: Number(values[k]),
+      }));
+      for (const k of scored) delete values[k];
+    } else if (typeof values.rows === 'string')
+      values.rows = String(values.rows)
+        .split('\n')
+        .filter(Boolean)
+        .map((line) => {
+          const [entryId, score] = line.split(',');
+          return { entryId: entryId.trim(), score: Number(score) };
+        });
+  }
   if (task.action === 'event-save') {
     values.config = {
       title: values.title,

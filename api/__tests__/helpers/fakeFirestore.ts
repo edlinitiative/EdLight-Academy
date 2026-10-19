@@ -35,6 +35,10 @@ export class FakeDb {
       if (p === ref.path || p.startsWith(`${ref.path}/`)) this.store.delete(p);
   }
 
+  async getAll(...refs: FakeDocRef[]) {
+    return Promise.all(refs.map((r) => r.get()));
+  }
+
   batch() {
     const ops: Array<() => void> = [];
     return {

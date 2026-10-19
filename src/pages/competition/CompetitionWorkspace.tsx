@@ -16,12 +16,25 @@ import {
 } from '../../../shared/competition/client';
 import {
   copyFor,
+  rowCopy,
+  rowPerson,
   taskPayload,
   workspacePage,
+  type Person,
   type Task,
   type WorkspaceTarget,
 } from '../../../shared/competition/workspace';
+import Avatar from '../../arena-art/avatars/Avatar';
 import './CompetitionWorkspace.css';
+
+/** A person's face (chosen avatar, else seeded) — decorative next to their name. */
+function PersonFace({ person, size = 36 }: { person: Person; size?: number }) {
+  return (
+    <span className="cw-face" aria-hidden="true">
+      <Avatar seed={person.uid} config={person.avatar} size={size} still />
+    </span>
+  );
+}
 
 function localDate(value: string) {
   if (!value) return '';
@@ -139,7 +152,10 @@ export function TaskForm({
   };
   return (
     <details className="cw-task">
-      <summary>{copyFor(task.label, ht)}</summary>
+      <summary>
+        {task.person ? <PersonFace person={task.person} size={32} /> : null}
+        {copyFor(task.label, ht)}
+      </summary>
       <form onSubmit={submit} aria-label={copyFor(task.label, ht)}>
         <h3>{copyFor(task.label, ht)}</h3>
         {task.fields?.map((f) => (
@@ -411,9 +427,15 @@ export default function CompetitionWorkspace({
           {panel.paragraphs?.map((p, i) => <p key={i}>{copyFor(p, ht)}</p>)}
           {panel.rows?.length ? (
             <ul>
-              {panel.rows.map((r, i) => (
-                <li key={i}>{copyFor(r, ht)}</li>
-              ))}
+              {panel.rows.map((r, i) => {
+                const person = rowPerson(r);
+                return (
+                  <li key={i} className={person ? 'cw-person' : undefined}>
+                    {person ? <PersonFace person={person} /> : null}
+                    <span>{copyFor(rowCopy(r), ht)}</span>
+                  </li>
+                );
+              })}
             </ul>
           ) : null}
           {panel.links?.length ? (

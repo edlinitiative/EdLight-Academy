@@ -19,6 +19,13 @@ import { arenaColors as C, arenaType } from '../../theme/arenaTheme';
 import * as service from '../../services/tournoisService';
 import type { Match } from '../../../../shared/tournois/bracket';
 import { TRIVIA_CATEGORIES } from '../../data/triviaData';
+import {
+  POINTS,
+  TOURNAMENT_STATE,
+  enumLabel,
+  haitiDate,
+} from '../../../../shared/competition/labels';
+import Avatar from '../../components/arena/art/avatars/Avatar';
 
 export default function TournoisScreen() {
   const navigation = useNavigation<any>(),
@@ -27,6 +34,7 @@ export default function TournoisScreen() {
   const user = useStore((s) => s.user);
   const ht = useStore((s) => s.language) === 'ht';
   const t = (fr: string, creole: string) => (ht ? creole : fr);
+  const pts = POINTS[ht ? 1 : 0];
   const [tid, setTid] = useState<string | null>(
     route.params?.tournamentId ?? null,
   );
@@ -433,10 +441,9 @@ export default function TournoisScreen() {
                   service.formatLabel(tournament.format, ht),
                 )}
                 <Text style={{ color: C.muted }}>
-                  {new Date(tournament.startsAt).toLocaleString(
-                    ht ? 'fr-HT' : 'fr-FR',
-                  )}{' '}
-                  · {tournament.state} · {roster.length}/{tournament.maxPlayers}
+                  {haitiDate(tournament.startsAt)[ht ? 1 : 0]} ·{' '}
+                  {enumLabel(TOURNAMENT_STATE, tournament.state)[ht ? 1 : 0]} ·{' '}
+                  {roster.length}/{tournament.maxPlayers}
                 </Text>
                 {tournament.teamRule !== 'solo'
                   ? label(
@@ -607,20 +614,40 @@ export default function TournoisScreen() {
                     : t('Classement en cours', 'Klasman an kou')}
                 </Text>
                 {board.rows.slice(0, 30).map((row) => (
-                  <Text key={row.uid} style={{ color: C.ink }}>
-                    {row.rank}. {row.displayName} · {row.points} pts
-                  </Text>
+                  <View
+                    key={row.uid}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 10,
+                    }}
+                  >
+                    <View
+                      accessibilityElementsHidden
+                      importantForAccessibility="no-hide-descendants"
+                    >
+                      <Avatar
+                        seed={row.uid}
+                        config={row.avatar}
+                        size={32}
+                        still
+                      />
+                    </View>
+                    <Text style={{ color: C.ink, flexShrink: 1 }}>
+                      {row.rank}. {row.displayName} · {row.points} {pts}
+                    </Text>
+                  </View>
                 ))}
                 {board.namedTeams?.map((row) => (
                   <Text key={row.id} style={{ color: C.ink }}>
-                    {row.rank}. {row.label} · {row.points} pts · {row.missing}{' '}
-                    {t('absents', 'absan')}
+                    {row.rank}. {row.label} · {row.points} {pts} ·{' '}
+                    {row.missing} {t('absent(s)', 'absan')}
                   </Text>
                 ))}
                 {board.teams.map((row) => (
                   <Text key={row.key} style={{ color: C.muted }}>
-                    {row.rank}. {row.label} · {row.score} pts · {row.counted}{' '}
-                    {t('comptés', 'konte')}
+                    {row.rank}. {row.label} · {row.score} {pts} ·{' '}
+                    {row.counted} {t('comptés', 'konte')}
                   </Text>
                 ))}
                 {!board.rows.length
@@ -633,13 +660,40 @@ export default function TournoisScreen() {
             ) : null}
             {matches.length ? (
               <ArenaPanel>
-                {matches.map((m) => (
-                  <Text key={m.id} style={{ color: C.ink }}>
-                    {t('Manche', 'Manch')} {m.round + 1}:{' '}
-                    {m.a?.displayName || '—'} / {m.b?.displayName || '—'} ·{' '}
-                    {m.winnerUid || '—'}
-                  </Text>
-                ))}
+                {matches.map((m) => {
+                  const winner = [m.a, m.b].find(
+                    (side) => side && side.uid === m.winnerUid,
+                  );
+                  return (
+                    <View
+                      key={m.id}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 8,
+                      }}
+                    >
+                      {[m.a, m.b].map((side, i) =>
+                        side ? (
+                          <View
+                            key={i}
+                            accessibilityElementsHidden
+                            importantForAccessibility="no-hide-descendants"
+                          >
+                            <Avatar seed={side.uid} size={28} still />
+                          </View>
+                        ) : null,
+                      )}
+                      <Text style={{ color: C.ink, flexShrink: 1 }}>
+                        {t('Manche', 'Manch')} {m.round + 1} :{' '}
+                        {m.a?.displayName || '—'} / {m.b?.displayName || '—'}
+                        {winner
+                          ? ` · ${t('Gagnant', 'Ganyan')} : ${winner.displayName}`
+                          : ''}
+                      </Text>
+                    </View>
+                  );
+                })}
               </ArenaPanel>
             ) : null}
             {joined && tournament ? (

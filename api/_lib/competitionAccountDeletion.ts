@@ -73,6 +73,7 @@ import type {
   Team,
 } from '../../shared/competition/platform';
 import { DELETED_ACCOUNT_NAME } from '../../shared/competition/deletedAccount';
+import { inviteCodeFor } from './competitionPeople';
 import { defaultAlias, isValidAlias } from '../../shared/alias';
 import { CompetitionError, mutateCompetition } from './competition';
 
@@ -612,7 +613,7 @@ async function tournaments(ctx: Ctx, tids: Set<string>) {
     for (const col of ['roster', 'players']) {
       const ref = db.doc(`${base}/${col}/${uid}`);
       if ((await ref.get()).exists)
-        w.update(ref, { uid: key, displayName: DELETED_ACCOUNT_NAME });
+        w.update(ref, { uid: key, displayName: DELETED_ACCOUNT_NAME, avatar: null });
     }
     if (!bracket)
       for (const col of ['attempts', 'answers'])
@@ -626,7 +627,7 @@ async function tournaments(ctx: Ctx, tids: Set<string>) {
       const rows = (board.rows || []).map((r: DocumentData) => {
         if (r.uid !== uid) return r;
         changed = true;
-        return { ...r, uid: key, displayName: DELETED_ACCOUNT_NAME };
+        return { ...r, uid: key, displayName: DELETED_ACCOUNT_NAME, avatar: null };
       });
       const namedTeams = (board.namedTeams || []).map((r: DocumentData) => {
         if (!(r.starters || []).includes(uid)) return r;
@@ -646,11 +647,21 @@ async function tournaments(ctx: Ctx, tids: Set<string>) {
       for (const d of (await db.collection(`${base}/matches`).limit(300).get()).docs) {
         const m = d.data();
         const side = (s: DocumentData | null) =>
-          s?.uid === uid ? { ...s, displayName: DELETED_ACCOUNT_NAME } : s;
+          s?.uid === uid ? { ...s, displayName: DELETED_ACCOUNT_NAME, avatar: null } : s;
         if (m.a?.uid === uid || m.b?.uid === uid)
           w.update(d.ref, { a: side(m.a), b: side(m.b) });
       }
     await w.flush();
+  }
+}
+
+/** Shareable invite codes map straight to the uid, so they go entirely. */
+async function inviteCodes(ctx: Ctx) {
+  const { db, uid } = ctx;
+  for (const length of [8, 12, 16]) {
+    const ref = db.doc(`competitionInviteCodes/${inviteCodeFor(uid, length)}`);
+    const snap = await ref.get();
+    if (snap.exists && snap.data()?.uid === uid) await ref.delete();
   }
 }
 
@@ -841,6 +852,7 @@ export async function eraseCompetitionAccount(
   );
   await step('tournaments', () => tournaments(ctx, found.tournaments));
   await step('leagues', () => leagues(ctx));
+  await step('invite_codes', () => inviteCodes(ctx));
   await personal(ctx, step);
   return { warnings: ctx.warnings };
 }

@@ -12,6 +12,8 @@ import {
   type Standings,
 } from '../../services/tournoisService';
 import { workspaceError } from '../../../shared/competition/client';
+import { POINTS } from '../../../shared/competition/labels';
+import Avatar from '../../arena-art/avatars/Avatar';
 import './CompetitionProjector.css';
 export default function CompetitionProjector() {
   const { id = '' } = useParams();
@@ -76,6 +78,7 @@ export default function CompetitionProjector() {
     return () => clearInterval(timer);
   }, [offset]);
   const question = live?.question;
+  const pts = POINTS[ht ? 1 : 0];
   if (eventUid !== uid)
     return (
       <main className="competition-projector">
@@ -170,18 +173,23 @@ export default function CompetitionProjector() {
           {board?.namedTeams?.length
             ? board.namedTeams.slice(0, 10).map((r) => (
                 <p key={r.id}>
-                  {r.rank}. {r.label} · {r.points} pts
+                  {r.rank}. {r.label} · {r.points} {pts}
                 </p>
               ))
             : board?.teams.length
               ? board.teams.slice(0, 10).map((r) => (
                   <p key={r.key}>
-                    {r.rank}. {r.label} · {r.score} pts
+                    {r.rank}. {r.label} · {r.score} {pts}
                   </p>
                 ))
               : board?.rows.slice(0, 10).map((r) => (
-                  <p key={r.uid}>
-                    {r.rank}. {r.displayName} · {r.points} pts
+                  <p key={r.uid} className="competition-projector__person">
+                    <span aria-hidden="true" className="competition-projector__face">
+                      <Avatar seed={r.uid} config={r.avatar} size={48} still />
+                    </span>
+                    <span>
+                      {r.rank}. {r.displayName} · {r.points} {pts}
+                    </span>
                   </p>
                 ))}
         </aside>

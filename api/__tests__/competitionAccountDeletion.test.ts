@@ -211,7 +211,8 @@ it('pseudonymizes a started event without changing a single score, and clears di
   // Outside the user tree the raw uid survives only as the individual entry's id (a result key, kept by policy).
   const rest = JSON.stringify(
     [...mockDb.store.entries()]
-      .filter(([p]) => p !== 'users/a' && !p.startsWith('users/a/'))
+      // Drawn question sets can legitimately contain an answer option "a".
+      .filter(([p]) => p !== 'users/a' && !p.startsWith('users/a/') && !p.includes('/questions/'))
       .map(([, d]) => d),
   );
   expect(rest.replace(/"id":"a"/g, '')).not.toMatch(/"a"/);
@@ -272,4 +273,12 @@ it('is idempotent: a rerun changes nothing', async () => {
   const { warnings } = await erase('a', later + 60000);
   expect(warnings).toEqual([]);
   expect(snapshot()).toEqual(first);
+});
+it('deletes the user’s invite code but never someone else’s', async () => {
+  const { ensureInviteCode } = await import('../_lib/competitionPeople');
+  const mine = await ensureInviteCode(db, 'a');
+  const theirs = await ensureInviteCode(db, 'b');
+  await erase('a');
+  expect(mockDb.store.has(`competitionInviteCodes/${mine}`)).toBe(false);
+  expect(doc(`competitionInviteCodes/${theirs}`)).toMatchObject({ uid: 'b' });
 });
