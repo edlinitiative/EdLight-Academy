@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowRight, Check } from 'lucide-react-native';
+import { ArrowRight } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { updateUserGrade } from '../services/firebase';
 import { navigateToTab } from '../navigation/AppNavigator';
@@ -135,77 +135,65 @@ export default function WelcomeGradeModal() {
 
   // ── pieces ────────────────────────────────────────────────────────────────
 
-  const CheckDisc = ({ on }: { on: boolean }) =>
-    on ? (
-      <View style={[styles.disc, { backgroundColor: colors.azureFill }]}>
-        <Check color="#ffffff" size={16} strokeWidth={3} />
-      </View>
-    ) : (
-      <View style={[styles.disc, { borderWidth: 2, borderColor: colors.surfaceAlt, backgroundColor: colors.surface }]} />
-    );
-
+  /**
+   * One tile for every choice on this page (TestFlight build 63, "size
+   * formatting and all look weird"): the same height, the same title size per
+   * row, no 26–44pt display numerals in tall cards. Selection is the filled
+   * azure ground (white label) instead of a 28pt disc, so a 4-up row of ~80pt
+   * tiles keeps its whole width for the label. Titles are one line and shrink
+   * rather than wrap, so large text never breaks a word ("Fondamenta / l").
+   */
   const Tile = ({
-    selected, onPress, title, meta, titleSize, minHeight, a11y, role, compact = false,
+    selected, onPress, title, meta, a11y, titleSize = 19,
   }: {
     selected: boolean; onPress: () => void; title: string; meta?: string;
-    titleSize: number; minHeight: number; a11y: string; role: 'radio';
-    /** 3-up tiles: ~80pt wide, so the disc goes UNDER the title (a title
-     *  squeezed beside it broke "7yèm" mid-word) and the title is one line
-     *  that shrinks rather than wraps inside a word at large text sizes. */
-    compact?: boolean;
+    a11y: string; titleSize?: number;
   }) => (
     <PressableScale
       onPress={onPress}
       haptic={false}
       pressedScale={0.97}
-      accessibilityRole={role}
+      accessibilityRole="radio"
       accessibilityState={{ selected, checked: selected }}
       accessibilityLabel={a11y}
       style={[
         cardSurface,
-        { borderRadius: 20, padding: compact ? 14 : 18, minHeight, flex: 1, justifyContent: 'space-between' },
-        selected ? { backgroundColor: colors.azureSoft, shadowOpacity: 0, elevation: 0 } : null,
+        styles.tile,
+        selected ? { backgroundColor: colors.azureFill, shadowOpacity: 0, elevation: 0 } : null,
       ]}
     >
-      {compact ? (
-        <>
-          <Text
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.7}
-            maxFontSizeMultiplier={1.4}
-            style={{ fontFamily: fonts.heading, fontSize: titleSize, lineHeight: Math.round(titleSize * 1.18), letterSpacing: -0.6, color: selected ? colors.azureInk : colors.ink }}
-          >
-            {title}
-          </Text>
-          <View style={{ marginTop: 10 }}><CheckDisc on={selected} /></View>
-        </>
-      ) : (
-      <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+      <Text
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.6}
+        maxFontSizeMultiplier={1.3}
+        style={{ fontFamily: fonts.heading, fontSize: titleSize, lineHeight: Math.round(titleSize * 1.25), letterSpacing: -0.4, textAlign: 'center', color: selected ? '#ffffff' : colors.ink }}
+      >
+        {title}
+      </Text>
+      {meta ? (
         <Text
           numberOfLines={2}
-          adjustsFontSizeToFit
-          minimumFontScale={0.7}
-          maxFontSizeMultiplier={1.4}
-          style={{ fontFamily: fonts.heading, fontSize: titleSize, lineHeight: Math.round(titleSize * 1.18), letterSpacing: -0.6, color: selected ? colors.azureInk : colors.ink, flexShrink: 1 }}
+          maxFontSizeMultiplier={1.3}
+          style={[typeScale.caption, { textAlign: 'center', marginTop: 2, color: selected ? '#ffffff' : colors.muted }]}
         >
-          {title}
+          {meta}
         </Text>
-        <CheckDisc on={selected} />
-      </View>
-      )}
-      {meta ? (
-        <Text style={[typeScale.caption, { color: selected ? colors.azureInk : colors.muted, marginTop: 8 }]}>{meta}</Text>
       ) : null}
     </PressableScale>
   );
 
   const SectionLabel = ({ ht, fr }: { ht: string; fr: string }) => (
-    <Text accessibilityRole="header" style={[typeScale.meta, { color: colors.muted, marginTop: 28, marginBottom: 12 }]}>
+    <Text accessibilityRole="header" style={[typeScale.meta, { color: colors.muted, marginTop: 24, marginBottom: 10 }]}>
       <Text style={{ fontFamily: fonts.bold, color: colors.ink }}>{ht}</Text>
       {' · '}
       {fr}
     </Text>
+  );
+
+  /** "Nouveau secondaire" / "Fondamental" — once per row, never per tile. */
+  const GroupLabel = ({ children }: { children: string }) => (
+    <Text style={[typeScale.caption, { color: colors.muted, marginBottom: -2 }]}>{children}</Text>
   );
 
   const nsMeta = t('Nouveau secondaire', 'Nouvo segondè');
@@ -225,7 +213,7 @@ export default function WelcomeGradeModal() {
         {!showMission ? (
         <View style={{ flex: 1, backgroundColor: colors.bg, paddingTop: insets.top, paddingBottom: insets.bottom }}>
           <View style={styles.header}>
-            <Text style={{ fontFamily: fonts.heading, fontSize: 24, letterSpacing: -0.8, color: colors.azureInk }}>EdLight</Text>
+            <Text maxFontSizeMultiplier={1.2} style={{ fontFamily: fonts.heading, fontSize: 20, lineHeight: 26, letterSpacing: -0.6, color: colors.azureInk }}>EdLight</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               {isFirstRun ? (
                 <View
@@ -250,7 +238,7 @@ export default function WelcomeGradeModal() {
 
           <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
             <View style={{ width: '100%', maxWidth: 520, alignSelf: 'center' }}>
-              <Text accessibilityRole="header" style={[typeScale.pageTitle, { color: colors.ink, marginTop: 8 }]}>
+              <Text accessibilityRole="header" maxFontSizeMultiplier={1.3} style={[typeScale.pageTitle, { fontSize: 28, lineHeight: 33, color: colors.ink, marginTop: 4 }]}>
                 {isFirstRun ? t('Bienvenue sur EdLight', 'Byenvini sou EdLight') : t('Ta classe', 'Klas ou')}
               </Text>
               <Text style={[typeScale.body, { color: colors.muted, marginTop: 8 }]}>
@@ -262,63 +250,33 @@ export default function WelcomeGradeModal() {
               {/* Language first — the rest of the page re-renders in it. */}
               <SectionLabel ht="Chwazi lang ou" fr="Choisis ta langue" />
               <View accessibilityRole="radiogroup" style={styles.row}>
-                <Tile
-                  role="radio"
-                  selected={isCreole}
-                  onPress={() => chooseLanguage('ht')}
-                  title="Kreyòl ayisyen"
-                  meta="Tout aplikasyon an an kreyòl"
-                  titleSize={20}
-                  minHeight={120}
-                  a11y="Kreyòl ayisyen"
-                />
-                <Tile
-                  role="radio"
-                  selected={!isCreole}
-                  onPress={() => chooseLanguage('fr')}
-                  title="Français"
-                  meta="Toute l’appli en français"
-                  titleSize={20}
-                  minHeight={120}
-                  a11y="Français"
-                />
+                <Tile selected={isCreole} onPress={() => chooseLanguage('ht')} title="Kreyòl" meta="Tout an kreyòl" a11y="Kreyòl ayisyen" />
+                <Tile selected={!isCreole} onPress={() => chooseLanguage('fr')} title="Français" meta="Tout en français" a11y="Français" />
               </View>
 
               <SectionLabel ht="Ki klas ou ye ?" fr="Quelle classe ?" />
-              <View accessibilityRole="radiogroup" style={{ gap: 12 }}>
+              <View accessibilityRole="radiogroup" style={{ gap: 10 }}>
+                <GroupLabel>{nsMeta}</GroupLabel>
                 <View style={styles.row}>
-                  {NS_TILES.slice(0, 2).map((g) => (
-                    <Tile key={g.code} role="radio" selected={picked === g.code} onPress={() => pick(g.code)} title={g.label} meta={nsMeta} titleSize={26} minHeight={116} a11y={`${g.label}, ${nsMeta}`} />
+                  {NS_TILES.map((g) => (
+                    <Tile key={g.code} selected={picked === g.code} onPress={() => pick(g.code)} title={g.label} a11y={`${g.label}, ${nsMeta}`} />
                   ))}
                 </View>
-                <View style={styles.row}>
-                  {NS_TILES.slice(2).map((g) => (
-                    <Tile key={g.code} role="radio" selected={picked === g.code} onPress={() => pick(g.code)} title={g.label} meta={nsMeta} titleSize={26} minHeight={116} a11y={`${g.label}, ${nsMeta}`} />
-                  ))}
-                </View>
-                {/* "Fondamental" once for the row, not under each of three
-                    narrow tiles: at ~74pt of text width the word could not fit
-                    and iOS broke it mid-word ("Fondamenta / l", build 63). */}
-                <Text style={[typeScale.caption, { color: colors.muted, marginTop: 4, marginBottom: -4 }]}>
-                  {t('Fondamental', 'Fondamantal')}
-                </Text>
+                <GroupLabel>{t('Fondamental', 'Fondamantal')}</GroupLabel>
                 <View style={styles.row}>
                   {FONDAMENTAL.map((g) => {
                     const label = isCreole ? g.ht : g.label;
                     return (
-                      <Tile key={g.code} role="radio" selected={picked === g.code} onPress={() => pick(g.code)} title={label} titleSize={22} minHeight={84} compact a11y={`${t(`${g.label} année`, `${g.ht} ane`)}, ${t('Fondamental', 'Fondamantal')}`} />
+                      <Tile key={g.code} selected={picked === g.code} onPress={() => pick(g.code)} title={label} a11y={`${t(`${g.label} année`, `${g.ht} ane`)}, ${t('Fondamental', 'Fondamantal')}`} />
                     );
                   })}
                 </View>
-                <View style={styles.row}>
+                <View style={[styles.row, { marginTop: 6 }]}>
                   <Tile
-                    role="radio"
                     selected={picked === 'POSTBAC'}
                     onPress={() => pick('POSTBAC')}
                     title={t('Après le Bac', 'Apre Bak')}
                     meta={t('Préfac et concours', 'Prefak ak konkou')}
-                    titleSize={20}
-                    minHeight={84}
                     a11y={t('Après le Bac, préfac et concours', 'Apre Bak, prefak ak konkou')}
                   />
                 </View>
@@ -386,8 +344,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingLeft: 20, paddingRight: 10, minHeight: 56,
   },
-  row: { flexDirection: 'row', gap: 12 },
-  disc: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  row: { flexDirection: 'row', gap: 10 },
+  // Same height everywhere on the page; grows (never clips) with large text.
+  tile: { flex: 1, minHeight: 60, borderRadius: 16, paddingHorizontal: 8, paddingVertical: 10, alignItems: 'center', justifyContent: 'center' },
   footer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
   // Opaque scrim (a solid colour at fixed alpha, no blur): the app behind stays
   // legible as context while the sheet is the one thing in focus.

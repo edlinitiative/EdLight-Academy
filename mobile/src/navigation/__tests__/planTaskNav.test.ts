@@ -32,10 +32,9 @@ describe('planTaskNavAction: a study-plan task opens its own screen', () => {
 });
 
 describe('examStackRoot', () => {
-  it('ExamsNavigator resets to ExamLanding; QuizNavigator (quiz-primary grades) to Quizzes', () => {
+  it('the Exams tab is ExamsNavigator for every grade, so its root is ExamLanding', () => {
     const nav = (routeNames: string[]) => ({ getState: () => ({ routeNames }) });
-    expect(examStackRoot(nav(['ExamLanding', 'ExamBrowser', 'ExamOverview']))).toBe('ExamLanding');
-    expect(examStackRoot(nav(['Quizzes', 'ExamBrowser', 'ExamOverview']))).toBe('Quizzes');
+    expect(examStackRoot(nav(['ExamLanding', 'ExamBrowser', 'ExamOverview', 'Quizzes']))).toBe('ExamLanding');
     expect(examStackRoot({})).toBe('ExamLanding');
   });
 });

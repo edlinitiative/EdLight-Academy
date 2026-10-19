@@ -43,7 +43,7 @@ import { useChangeSchool } from '../hooks/useChangeSchool';
 import { useSaveFullName } from '../hooks/useSaveFullName';
 import { openInstagram } from '../components/FollowInstagram';
 import { gradeProfile } from '../config/trackConfig';
-import { resetTabToRoot } from '../navigation/navHelpers';
+import { resetTabToRoot, openPractice } from '../navigation/navHelpers';
 import { useTheme, touch } from '../theme/theme';
 import { usePreference } from '../settings/preferences';
 import { countLessonEvidence } from '../settings/profileEvidence';
@@ -139,9 +139,6 @@ export default function ProfileScreen() {
 
   const allAttempts = Object.values(quizAttempts).flat() as { score: number; total: number; date: number }[];
   const totalQuizzes = allAttempts.length;
-  // The 3rd tab is always named "Exams", but Quiz-primary grades (7e–8e, NS1–NS3)
-  // mount QuizNavigator behind it, which has no ExamLanding route.
-  const practiceRoot = gradeProfile(grade).primaryTab === 'Quiz' ? 'Quizzes' : 'ExamLanding';
   const firstName = getFirstName(user);
   const isAmbassador = useIsAmbassador(user?.uid);
 
@@ -727,7 +724,7 @@ export default function ProfileScreen() {
         {profile && level ? (
           <View style={{ paddingHorizontal: GUTTER, marginTop: GAP }}>
             <PressableScale
-              onPress={() => resetTabToRoot(navigation, 'Exams', practiceRoot)}
+              onPress={() => openPractice(navigation, grade)}
               pressedScale={0.985}
               accessibilityRole="button"
               accessibilityLabel={[

@@ -2015,7 +2015,7 @@
     },
     {
       "source": "mobile/src/navigation/ExamsNavigator.tsx",
-      "line": 32,
+      "line": 46,
       "kind": "native-screen",
       "destination": "ExamLanding",
       "owner": null,
@@ -2025,7 +2025,7 @@
     },
     {
       "source": "mobile/src/navigation/ExamsNavigator.tsx",
-      "line": 33,
+      "line": 47,
       "kind": "native-screen",
       "destination": "ExamBrowser",
       "owner": null,
@@ -2035,7 +2035,7 @@
     },
     {
       "source": "mobile/src/navigation/ExamsNavigator.tsx",
-      "line": 34,
+      "line": 48,
       "kind": "native-screen",
       "destination": "ExamOverview",
       "owner": null,
@@ -2045,7 +2045,7 @@
     },
     {
       "source": "mobile/src/navigation/ExamsNavigator.tsx",
-      "line": 35,
+      "line": 49,
       "kind": "native-screen",
       "destination": "ExamTake",
       "owner": null,
@@ -2055,7 +2055,7 @@
     },
     {
       "source": "mobile/src/navigation/ExamsNavigator.tsx",
-      "line": 36,
+      "line": 50,
       "kind": "native-screen",
       "destination": "ExamResults",
       "owner": null,
@@ -2065,7 +2065,7 @@
     },
     {
       "source": "mobile/src/navigation/ExamsNavigator.tsx",
-      "line": 37,
+      "line": 51,
       "kind": "native-screen",
       "destination": "ExamHistory",
       "owner": null,
@@ -2075,7 +2075,7 @@
     },
     {
       "source": "mobile/src/navigation/ExamsNavigator.tsx",
-      "line": 38,
+      "line": 52,
       "kind": "native-screen",
       "destination": "OfflinePacks",
       "owner": null,
@@ -2084,58 +2084,8 @@
       "evidence": []
     },
     {
-      "source": "mobile/src/navigation/NativeTabNavigator.tsx",
-      "line": 99,
-      "kind": "native-screen",
-      "destination": "Dashboard",
-      "owner": null,
-      "scenarioIds": [],
-      "statesReviewed": [],
-      "evidence": []
-    },
-    {
-      "source": "mobile/src/navigation/NativeTabNavigator.tsx",
-      "line": 104,
-      "kind": "native-screen",
-      "destination": "Courses",
-      "owner": null,
-      "scenarioIds": [],
-      "statesReviewed": [],
-      "evidence": []
-    },
-    {
-      "source": "mobile/src/navigation/NativeTabNavigator.tsx",
-      "line": 114,
-      "kind": "native-screen",
-      "destination": "Exams",
-      "owner": null,
-      "scenarioIds": [],
-      "statesReviewed": [],
-      "evidence": []
-    },
-    {
-      "source": "mobile/src/navigation/NativeTabNavigator.tsx",
-      "line": 127,
-      "kind": "native-screen",
-      "destination": "Trivia",
-      "owner": null,
-      "scenarioIds": [],
-      "statesReviewed": [],
-      "evidence": []
-    },
-    {
-      "source": "mobile/src/navigation/NativeTabNavigator.tsx",
-      "line": 132,
-      "kind": "native-screen",
-      "destination": "Profile",
-      "owner": null,
-      "scenarioIds": [],
-      "statesReviewed": [],
-      "evidence": []
-    },
-    {
-      "source": "mobile/src/navigation/QuizNavigator.tsx",
-      "line": 45,
+      "source": "mobile/src/navigation/ExamsNavigator.tsx",
+      "line": 53,
       "kind": "native-screen",
       "destination": "Quizzes",
       "owner": null,
@@ -2144,60 +2094,50 @@
       "evidence": []
     },
     {
-      "source": "mobile/src/navigation/QuizNavigator.tsx",
-      "line": 46,
+      "source": "mobile/src/navigation/NativeTabNavigator.tsx",
+      "line": 95,
       "kind": "native-screen",
-      "destination": "ExamBrowser",
+      "destination": "Dashboard",
       "owner": null,
       "scenarioIds": [],
       "statesReviewed": [],
       "evidence": []
     },
     {
-      "source": "mobile/src/navigation/QuizNavigator.tsx",
-      "line": 47,
+      "source": "mobile/src/navigation/NativeTabNavigator.tsx",
+      "line": 100,
       "kind": "native-screen",
-      "destination": "ExamOverview",
+      "destination": "Courses",
       "owner": null,
       "scenarioIds": [],
       "statesReviewed": [],
       "evidence": []
     },
     {
-      "source": "mobile/src/navigation/QuizNavigator.tsx",
-      "line": 48,
+      "source": "mobile/src/navigation/NativeTabNavigator.tsx",
+      "line": 110,
       "kind": "native-screen",
-      "destination": "ExamTake",
+      "destination": "Exams",
       "owner": null,
       "scenarioIds": [],
       "statesReviewed": [],
       "evidence": []
     },
     {
-      "source": "mobile/src/navigation/QuizNavigator.tsx",
-      "line": 49,
+      "source": "mobile/src/navigation/NativeTabNavigator.tsx",
+      "line": 121,
       "kind": "native-screen",
-      "destination": "ExamResults",
+      "destination": "Trivia",
       "owner": null,
       "scenarioIds": [],
       "statesReviewed": [],
       "evidence": []
     },
     {
-      "source": "mobile/src/navigation/QuizNavigator.tsx",
-      "line": 50,
+      "source": "mobile/src/navigation/NativeTabNavigator.tsx",
+      "line": 126,
       "kind": "native-screen",
-      "destination": "ExamHistory",
-      "owner": null,
-      "scenarioIds": [],
-      "statesReviewed": [],
-      "evidence": []
-    },
-    {
-      "source": "mobile/src/navigation/QuizNavigator.tsx",
-      "line": 51,
-      "kind": "native-screen",
-      "destination": "OfflinePacks",
+      "destination": "Profile",
       "owner": null,
       "scenarioIds": [],
       "statesReviewed": [],
@@ -2205,7 +2145,7 @@
     },
     {
       "source": "mobile/src/navigation/TabNavigator.tsx",
-      "line": 220,
+      "line": 217,
       "kind": "native-screen",
       "destination": "Dashboard",
       "owner": null,
@@ -2215,7 +2155,7 @@
     },
     {
       "source": "mobile/src/navigation/TabNavigator.tsx",
-      "line": 230,
+      "line": 227,
       "kind": "native-screen",
       "destination": "Courses",
       "owner": null,
@@ -2225,7 +2165,7 @@
     },
     {
       "source": "mobile/src/navigation/TabNavigator.tsx",
-      "line": 248,
+      "line": 245,
       "kind": "native-screen",
       "destination": "Exams",
       "owner": null,
@@ -2235,7 +2175,7 @@
     },
     {
       "source": "mobile/src/navigation/TabNavigator.tsx",
-      "line": 274,
+      "line": 269,
       "kind": "native-screen",
       "destination": "Trivia",
       "owner": null,
@@ -2245,7 +2185,7 @@
     },
     {
       "source": "mobile/src/navigation/TabNavigator.tsx",
-      "line": 284,
+      "line": 279,
       "kind": "native-screen",
       "destination": "Profile",
       "owner": null,
@@ -3735,7 +3675,7 @@
         {
           "source": "mobile/src/screens/ProfileScreen.tsx",
           "match": "label={t('Compétitions et équipes'",
-          "line": 842
+          "line": 839
         }
       ],
       "requirementIds": [
@@ -3882,7 +3822,7 @@
         {
           "source": "mobile/src/screens/ProfileScreen.tsx",
           "match": "tes résultats restent dans les classements sous le nom « Compte supprimé »",
-          "line": 293
+          "line": 290
         },
         {
           "source": "src/pages/DeleteAccount.tsx",

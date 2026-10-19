@@ -4,9 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useScrollToTop, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ChevronRight, ArrowRight, X, History } from 'lucide-react-native';
+import { ChevronRight, ArrowRight, X, History, Zap } from 'lucide-react-native';
 import useStore from '../contexts/store';
-import { gradeProfile, TRACKS as ALL_TRACKS, TRACK_LEVEL } from '../config/trackConfig';
+import { gradeProfile, examLandingLevel, TRACKS as ALL_TRACKS, TRACK_LEVEL } from '../config/trackConfig';
 import { useTheme, fonts } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
 import OfflinePacksEntry from '../components/OfflinePacksEntry';
@@ -221,10 +221,14 @@ export default function ExamLandingScreen() {
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
-  // The student's own exam level is preselected on the switch.
+  // The student's own exam level — or, below the first national paper, the
+  // next one they will sit (7ᵉ–8ᵉ → 9ᵉ AF, NS1–NS3 → Bac) — is preselected.
   const EXAM_LEVEL_TO_ID: Record<string, LevelId> = { baccalaureat: 'terminale', universite: 'university', '9eme_af': '9e' };
-  // gradeProfile(null) falls through to Bac — only trust it when a grade is set.
-  const myLevelId: LevelId | null = grade ? (EXAM_LEVEL_TO_ID[gradeProfile(grade).examLevel ?? ''] ?? null) : null;
+  // examLandingLevel(null) is null: with no grade the switch keeps Bac.
+  const myLevelId: LevelId | null = EXAM_LEVEL_TO_ID[examLandingLevel(grade) ?? ''] ?? null;
+  // 7ᵉ, 8ᵉ, NS1–NS3: no national paper is theirs yet — quick practice leads.
+  const offLevel = !!grade && !gradeProfile(grade).examLevel;
+  const gradeShort = ({ '7e': '7ᵉ', '8e': '8ᵉ', NS1: 'NS I', NS2: 'NS II', NS3: 'NS III' } as Record<string, string>)[grade ?? ''] ?? '';
   const [level, setLevel] = React.useState<LevelId>(myLevelId ?? 'terminale');
   const levelTouched = React.useRef(false);
   React.useEffect(() => {
@@ -339,6 +343,38 @@ export default function ExamLandingScreen() {
     navigation.navigate('ExamBrowser', { level, explicit: true });
   };
 
+  // Quick practice — reachable from this tab for every grade. One row card
+  // (not a band): leads for off-level grades, closes the page for the others.
+  const openQuizzes = () => { tapLight(); navigation.navigate('Quizzes', undefined); };
+  const practiceCard = (
+    <PressableScale
+      onPress={openQuizzes}
+      pressedScale={0.98}
+      accessibilityRole="button"
+      accessibilityLabel={t('Quiz rapides', 'Quiz rapid')}
+      accessibilityHint={t('Ouvre les quiz par matière et chapitre', 'Louvri quiz pa matyè ak chapit')}
+      style={{ ...cardSurface, flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, minHeight: 72 }}
+    >
+      <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: colors.azureSoft, alignItems: 'center', justifyContent: 'center' }}>
+        <Zap color={colors.azureInk} size={20} strokeWidth={2.2} />
+      </View>
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={{ fontFamily: fonts.headingBold, fontSize: 17, lineHeight: 22, color: colors.ink }}>
+          {t('Quiz rapides', 'Quiz rapid')}
+        </Text>
+        <Text style={[typeScale.meta, { color: colors.muted }]}>
+          {offLevel
+            ? t(
+              `Pas encore d’examen national${gradeShort ? ` en ${gradeShort}` : ''} : entraîne-toi par chapitre.`,
+              `Poko gen egzamen nasyonal${gradeShort ? ` an ${gradeShort}` : ''} : antrene w pa chapit.`,
+            )
+            : t('Quelques questions par chapitre, dans toutes les matières.', 'Kèk kesyon pa chapit, nan tout matyè.')}
+        </Text>
+      </View>
+      <ChevronRight color={colors.faint} size={20} />
+    </PressableScale>
+  );
+
   // Two tiles per row on a phone, three on a wide iPad column.
   const cols = width >= 700 ? 3 : 2;
   const tileBasis = `${(100 / cols) - 2}%` as const;
@@ -421,7 +457,9 @@ export default function ExamLandingScreen() {
             </View>
           )}
 
-          {/* Level switch — the student's own level preselected. */}
+          {offLevel ? <View style={{ marginTop: 20 }}>{practiceCard}</View> : null}
+
+          {/* Level switch — the student's own (or next) level preselected. */}
           <Segmented<LevelId>
             options={LEVELS.map((l) => ({ key: l.id, label: t(l.label, l.labelHt), accessibilityLabel: t(l.long, l.longHt) }))}
             value={level}
@@ -564,8 +602,10 @@ export default function ExamLandingScreen() {
             </>
           ) : null}
 
+          {!offLevel ? <View style={{ marginTop: 28 }}>{practiceCard}</View> : null}
+
           {/* Hors ligne: revision packs kept on the phone (no video). */}
-          <View style={{ marginTop: 28 }}>
+          <View style={{ marginTop: offLevel ? 28 : 12 }}>
             <OfflinePacksEntry
               onPress={() => navigation.navigate('OfflinePacks', {
                 kind: 'exam',

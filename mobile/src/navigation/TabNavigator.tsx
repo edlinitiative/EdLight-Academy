@@ -10,12 +10,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import TabIcon, { type TabIconName } from './TabIcon';
 import useStore from '../contexts/store';
-import { gradeProfile } from '../config/trackConfig';
 import { tapLight } from '../utils/haptics';
 import { useReduceMotion } from '../utils/motion';
 import { JS_TAB_BAR } from '../onboarding/tourGeometry';
 
-import { DashboardTab, CoursesTab, ExamsTab, QuizTab, TriviaTab, ProfileTab } from './tabScreens';
+import { DashboardTab, CoursesTab, ExamsTab, TriviaTab, ProfileTab } from './tabScreens';
 
 export type TabParamList = {
   Dashboard: undefined;
@@ -125,11 +124,9 @@ function JsTabNavigator() {
   const language = useStore((s) => s.language);
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
   const focusMode = useStore((s) => s.focusMode);
-  // Adaptive 3rd tab: Quiz-primary grades (7e–8e, NS1–NS3) get a Quiz tab where
-  // Exams would be, so practice leads instead of Bac exams. Route name stays
-  // "Exams" so navigate('Exams') keeps working everywhere.
-  const grade = useStore((s) => s.grade);
-  const quizPrimary = gradeProfile(grade).primaryTab === 'Quiz';
+  // The 3rd tab is "Examens" for EVERY grade (TestFlight build 63: an NS I
+  // student never saw the exam landing because 7e–8e/NS1–NS3 got a Quiz-only
+  // stack here). Quick practice lives inside the same stack (`Quizzes`).
   const insets = useSafeAreaInsets();
   const dark = theme === 'dark';
   const queryClient = useQueryClient();
@@ -247,7 +244,7 @@ function JsTabNavigator() {
       />
       <Tab.Screen
         name="Exams"
-        component={quizPrimary ? QuizTab : ExamsTab}
+        component={ExamsTab}
         listeners={({ navigation }) => ({
           // Tapping "Examens" should land on the exam home (the level/subject
           // picker) — not resume whatever the nested stack retained (a specific
@@ -256,15 +253,13 @@ function JsTabNavigator() {
           // tapping the tab, so the retained top is a stale exam context. Reset
           // the stack to ExamLanding whenever it isn't already there.
           // (In-progress answers aren't lost — the "Reprendre" banner resumes.)
-          // Quiz-primary grades land on the quiz picker, which now shares its
-          // stack with the exam screens a deep link may have pushed.
-          tabPress: popToRootOnTabPress(navigation, 'Exams', quizPrimary ? 'Quizzes' : 'ExamLanding'),
+          tabPress: popToRootOnTabPress(navigation, 'Exams', 'ExamLanding'),
         })}
         options={{
-          tabBarAccessibilityLabel: quizPrimary ? t('Quiz', 'Quiz') : t('Examens', 'Egzamen'),
+          tabBarAccessibilityLabel: t('Examens', 'Egzamen'),
           tabBarIcon: ({ color, focused }) => (
             <TabItem
-              icon={quizPrimary ? 'quiz' : 'exams'}
+              icon="exams"
               color={color}
               focused={focused} tone={tone}
             />

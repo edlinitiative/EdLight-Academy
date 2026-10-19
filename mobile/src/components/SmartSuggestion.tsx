@@ -4,10 +4,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { GraduationCap, Landmark, ClipboardList, Gamepad2, BookOpen, RefreshCw, ChevronRight, Sparkles, X } from 'lucide-react-native';
 import useStore from '../contexts/store';
-import { pickHomeSuggestion, gradeProfile, type HomeSuggestionKind } from '../config/trackConfig';
+import { pickHomeSuggestion, type HomeSuggestionKind } from '../config/trackConfig';
 import { useReviewQueue } from '../hooks/useReviewQueue';
 import PressableScale from './ui/PressableScale';
-import { resetTabToRoot } from '../navigation/navHelpers';
+import { resetTabToRoot, openPractice } from '../navigation/navHelpers';
 import { radius, useTheme, typeScale } from '../theme/theme';
 import { tapLight } from '../utils/haptics';
 
@@ -40,10 +40,6 @@ export default function SmartSuggestion() {
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
-  // The 3rd tab is named "Exams" for every grade, but Quiz-primary grades
-  // (7e–8e, NS1–NS3) mount QuizNavigator behind it, which has no ExamLanding
-  // route — naming the wrong screen would make these cards dead for them.
-  const practiceRoot = gradeProfile(grade).primaryTab === 'Quiz' ? 'Quizzes' : 'ExamLanding';
 
   const card = pickCard();
   if (!card || card.dismissKey === dismissedSuggestionKey) return null;
@@ -71,7 +67,7 @@ export default function SmartSuggestion() {
         // Reset, don't navigate: React Navigation 7's `navigate` no longer pops
         // back to a screen already in the stack — it pushes a second copy of the
         // root over whatever the tab retained (a stale exam). See navHelpers.
-        onPress: () => resetTabToRoot(navigation, 'Exams', practiceRoot),
+        onPress: () => openPractice(navigation, grade),
         dismissKey: `review-${dayStamp}`,
       };
     }
@@ -139,7 +135,7 @@ export default function SmartSuggestion() {
         title: t('Choisis ta filière', 'Chwazi seri ou'),
         subtitle: t('Pour des recommandations sur mesure.', 'Pou rekòmandasyon ki fèt pou ou.'),
         cta: t('Choisir', 'Chwazi'),
-        onPress: () => resetTabToRoot(navigation, 'Exams', practiceRoot),
+        onPress: () => resetTabToRoot(navigation, 'Exams', 'ExamLanding'),
       },
       'prefac-switch': {
         Icon: Landmark,
@@ -163,7 +159,7 @@ export default function SmartSuggestion() {
         title: t('Le Bac approche', 'Bak la ap pwoche'),
         subtitle: t('Révise avec les vrais sujets officiels.', 'Revize ak vre sijè ofisyèl yo.'),
         cta: t("S'entraîner", 'Antrene'),
-        onPress: () => resetTabToRoot(navigation, 'Exams', practiceRoot),
+        onPress: () => resetTabToRoot(navigation, 'Exams', 'ExamLanding'),
       },
       'trivia-first': {
         Icon: Gamepad2,

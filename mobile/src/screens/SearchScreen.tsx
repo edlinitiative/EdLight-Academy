@@ -220,9 +220,8 @@ export default function SearchScreen({ onClose, navigation }: { onClose?: () => 
         });
         break;
       case 'exam': {
-        // Every grade's "Exams" tab carries ExamOverview (QuizNavigator
-        // registers the exam screens too), so the result opens THAT paper;
-        // it used to drop 7e–NS3 students on the quiz picker. The index
+        // Every grade's "Exams" tab is ExamsNavigator, so the result opens
+        // THAT paper with the exam landing underneath. The index
         // stores the raw catalog level; the stacks route on slugs.
         const slug = EXAM_LEVEL_SLUG[nav.level] || nav.level;
         navigation.navigate('Main', {

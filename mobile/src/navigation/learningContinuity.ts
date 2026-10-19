@@ -173,8 +173,8 @@ export function learningStateToNavState(rec: SavedLearningState, ctx: Pick<Resto
   let tabState: any;
   if (rec.tab === 'Courses' || rec.tab === 'Exams') {
     const rootName = rec.tab === 'Courses' ? 'CourseList' : ctx.examsRoot;
-    // ExamLanding exists only in the Exams navigator; QuizNavigator has no
-    // Landing. Both stacks carry ExamBrowser/Overview/History.
+    // The Exams tab is ExamsNavigator for every grade now (root ExamLanding);
+    // `examsRoot: 'Quizzes'` survives only for records from older builds.
     const routes = [{ name: rootName }, ...rec.stack.map((r) => (r.params ? { name: r.name, params: { ...r.params } } : { name: r.name }))];
     tabState = { routes, index: routes.length - 1 };
   }

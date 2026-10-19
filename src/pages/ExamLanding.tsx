@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { History, ChevronRight, Search, ArrowRight } from '../components/icons';
 import useStore from '../contexts/store';
-import { GRADES, gradeProfile, getCoefficient, DEFAULT_SUBJECT_ORDER } from '../config/trackConfig';
+import { GRADES, gradeProfile, examLandingLevel, getCoefficient, DEFAULT_SUBJECT_ORDER } from '../config/trackConfig';
 import { Skeleton } from '../components/Skeleton';
 import { ErrorState, LoadingState } from '../components/StateViews';
 import { useExamAttempts } from '../hooks/useExamAttempts';
@@ -144,8 +144,11 @@ const ExamLanding = () => {
   }, [userId]);
 
   // ── Level ──
-  const [level, setLevel] = useState<string>(myLevelRaw || 'baccalaureat');
-  useEffect(() => { if (myLevelRaw) setLevel(myLevelRaw); }, [myLevelRaw]);
+  // Off-level grades open on the NEXT paper they will sit (7ᵉ–8ᵉ → 9ᵉ AF,
+  // NS1–NS3 → Bac), shared with the app's Exams tab.
+  const landingLevel = examLandingLevel(grade);
+  const [level, setLevel] = useState<string>(landingLevel || 'baccalaureat');
+  useEffect(() => { if (landingLevel) setLevel(landingLevel); }, [landingLevel]);
   const slug = levelToSlug(level);
   const [query, setQuery] = useState('');
 
@@ -329,11 +332,11 @@ const ExamLanding = () => {
             <div>
               <strong>{L('Pas encore d’examen national pour ta classe', 'Poko gen egzamen nasyonal pou klas ou')}</strong>
               <span>
-                {L(`${gradeLabel ? `En ${gradeLabel}, ` : ''}les quiz et les cours sont plus utiles pour l’instant. Les sujets restent ouverts si tu veux voir à quoi ils ressemblent.`,
-                  `${gradeLabel ? `Nan ${gradeLabel}, ` : ''}kiz ak kou yo pi itil pou kounye a. Sijè yo rete louvri si w vle wè jan yo ye.`)}
+                {L(`${gradeLabel ? `En ${gradeLabel}, ` : ''}les quiz et les cours sont plus utiles pour l’instant. Voici les sujets de ton prochain examen, pour voir à quoi ils ressemblent.`,
+                  `${gradeLabel ? `Nan ${gradeLabel}, ` : ''}kiz ak kou yo pi itil pou kounye a. Men sijè pwochen egzamen ou, pou w wè jan yo ye.`)}
               </span>
             </div>
-            <Link to="/courses" className="xp-btn xp-btn--tonal xp-btn--sm">{L('Mes cours', 'Kou mwen yo')}</Link>
+            <Link to="/quizzes" className="xp-btn xp-btn--tonal xp-btn--sm">{L('Quiz rapides', 'Quiz rapid')}</Link>
           </section>
         )}
 
