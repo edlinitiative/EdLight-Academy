@@ -916,7 +916,7 @@ export default function ProfileScreen() {
             />
             <SettingsRow icon={GraduationCap} label={t('Mes classes', 'Klas mwen yo')} onPress={() => navigation.navigate('Classes')} />
             <SettingsRow icon={Share2} label={t('Partager mon suivi', 'Pataje swivi mwen')} onPress={() => navigation.navigate('ProgressShare')} />
-            {isAmbassador && <SettingsRow icon={Trophy} label={t('Tableau ambassadeur', 'Tablo anbasadè')} onPress={() => navigation.navigate('Ambassador')} />}
+            <SettingsRow icon={Trophy} label={isAmbassador ? t('Tableau ambassadeur', 'Tablo anbasadè') : t('Devenir ambassadeur', 'Vin anbasadè')} onPress={() => navigation.navigate('Ambassador')} />
             <SettingsRow
               icon={Instagram}
               label={t('Suivre EdLight sur Instagram', 'Swiv EdLight sou Instagram')}

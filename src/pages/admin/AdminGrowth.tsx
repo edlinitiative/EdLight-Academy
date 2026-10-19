@@ -2,6 +2,7 @@
  * Admin → Croissance: the school ambassador programme.
  *   1. Find a student and designate them for a school (max 2 per school), or revoke.
  *   2. Monthly report: ambassadors × recruits × retained, with fraud flags,
+ *      the designation's origin (this console, or an EdLight Apply application id + reviewer),
  *      CSV export, and the manual "récompense remise" record with notes.
  * Rewards are handed over by a person, off-app; nothing here pays anyone.
  * Definitions: shared/ambassadors.ts.
@@ -100,11 +101,15 @@ export default function AdminGrowth() {
         <button className="admin-btn admin-btn--ghost" disabled={busy} onClick={() => loadReport()}>Actualiser</button>
         {rows == null ? <div className="admin-empty">Chargement…</div> : rows.length === 0 ? <div className="admin-empty">Aucun ambassadeur désigné.</div> : (
           <div className="admin-table__scroll"><table className="admin-table">
-            <thead><tr><th>Ambassadeur</th><th>École</th><th>Recrues</th><th>Retenues</th><th>Sans signalement</th><th>En cours</th><th>Signalées</th><th>Récompense remise</th><th /></tr></thead>
+            <thead><tr><th>Ambassadeur</th><th>École</th><th>Origine</th><th>Recrues</th><th>Retenues</th><th>Sans signalement</th><th>En cours</th><th>Signalées</th><th>Récompense remise</th><th /></tr></thead>
             <tbody>{rows.map((r) => (
               <tr key={r.uid}>
                 <td>{r.name || r.uid}{!r.active && <><br /><small>révoqué</small></>}</td>
-                <td>{r.school}</td><td>{r.recruits}</td><td>{r.retained}</td><td>{r.retainedUnflagged}</td><td>{r.pending}</td><td>{r.flagged}</td>
+                <td>{r.school}</td>
+                <td>{r.source === 'edlight-apply'
+                  ? <>EdLight Apply<br /><small>Candidature {r.applicationId || '—'}{r.reviewerName ? ` · ${r.reviewerName}` : ''}</small></>
+                  : 'Console admin'}</td>
+                <td>{r.recruits}</td><td>{r.retained}</td><td>{r.retainedUnflagged}</td><td>{r.pending}</td><td>{r.flagged}</td>
                 <td>
                   <label><input type="checkbox" checked={r.rewardDelivered} disabled={busy} onChange={(e) => act('reward', { uid: r.uid, period, delivered: e.target.checked, notes: notes[r.uid] || '' }, 'Récompense enregistrée.')} /> remise</label>
                   <input className="admin-input" maxLength={500} placeholder="Notes (montant, date, qui)" value={notes[r.uid] || ''} onChange={(e) => setNotes((n) => ({ ...n, [r.uid]: e.target.value }))}

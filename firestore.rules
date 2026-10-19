@@ -684,6 +684,9 @@ service cloud.firestore {
     match /ambassadors/{document=**} { allow read, write: if false; }
     match /ambassadorRecruits/{document=**} { allow read, write: if false; }
     match /ambassadorRewards/{document=**} { allow read, write: if false; }
+    // Designation audit trail and the EdLight Apply idempotency ledger (webhook only).
+    match /ambassadorAudit/{document=**} { allow read, write: if false; }
+    match /ambassadorApplications/{document=**} { allow read, write: if false; }
 
     // Default: deny all other access
     match /{document=**} {
