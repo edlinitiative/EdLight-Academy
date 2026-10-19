@@ -16,6 +16,12 @@
  *   • comments authored by the user (+ their replies) and replies the user
  *     left under others' comments
  *   • chatConversations (Sandra transcripts) and commentReports they filed
+ *   • competition records (teams, invites, events, entries, leagues, claims,
+ *     memberships, receipts, tournament rosters…): deleted when personal or
+ *     pending, pseudonymized when results/audit/locked rosters depend on them —
+ *     see api/_lib/competitionAccountDeletion.ts for the per-collection policy.
+ *     Runs first: it reads the user's inbox/myTournaments and acts through the
+ *     competition engine as the user, so the profile must still exist.
  *
  * Data steps are best-effort and logged; the Auth deletion is the one that
  * must succeed for the response to be a success.
@@ -23,6 +29,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getDb, getAuthAdmin, isAdminConfigured } from '../_lib/firebaseAdmin';
 import { requireAuth } from '../_lib/requireAuth';
+import { eraseCompetitionAccount } from '../_lib/competitionAccountDeletion';
 
 /** Delete an array of doc refs in chunked batches (Firestore caps at 500/batch). */
 async function deleteRefs(db: FirebaseFirestore.Firestore, refs: FirebaseFirestore.DocumentReference[]) {
@@ -60,6 +67,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       console.error(`[delete-account] ${label} failed for ${uid}:`, e);
     }
   };
+
+  // 0. Competition records — before the user tree, which it reads.
+  await step('competition', async () => {
+    const out = await eraseCompetitionAccount(db, uid, Date.now());
+    warnings.push(...out.warnings);
+    out.warnings.forEach((w) => console.error(`[delete-account] ${w} for ${uid}`));
+  });
 
   // 1. The user document tree (doc + every subcollection).
   await step('user_tree', () => db.recursiveDelete(db.collection('users').doc(uid)));
