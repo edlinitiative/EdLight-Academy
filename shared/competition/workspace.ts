@@ -1,5 +1,11 @@
 /** Shared French/Creole task composition; renderers retain platform conventions. */
 import { TRIVIA_CATEGORY_IDS } from './workspaceCategories';
+import {
+  INBOX_ACTIONS,
+  inboxPath,
+  isInboxAction,
+  isInboxTargetKind,
+} from './notifications';
 export type Copy = [string, string];
 export type Field = {
   key: string;
@@ -72,6 +78,14 @@ const date = (ms: number) =>
     timeStyle: 'short',
   }) + ' (Haïti / Ayiti)';
 export const copyFor = (copy: Copy, ht: boolean) => copy[ht ? 1 : 0];
+/** "Mon activité" row: unread marker + what happened + the target's title. Legacy rows keep the bare title. */
+function inboxLabel(row: any): Copy {
+  const action: unknown = row.action;
+  if (!isInboxAction(action)) return c(row.title);
+  const [fr, ht] = INBOX_ACTIONS[action].label;
+  const dot = row.read === false ? '● ' : '';
+  return c(`${dot}${fr} · ${row.title}`, `${dot}${ht} · ${row.title}`);
+}
 export function workspacePage(
   target: WorkspaceTarget,
   data: any,
@@ -91,9 +105,10 @@ export function workspacePage(
         ],
         links: [
           ...(mine.inbox || []).map((row: any) => ({
-            label: c(row.title),
-            path:
-              row.kind === 'team'
+            label: inboxLabel(row),
+            path: isInboxTargetKind(row.targetKind)
+              ? inboxPath(row.targetKind, row.targetId)
+              : row.kind === 'team'
                 ? teamPath(row.targetId)
                 : row.kind === 'invite'
                   ? `/arena/invitations/${row.targetId}`
@@ -106,6 +121,21 @@ export function workspacePage(
             path: `/tournois/${row.tid}`,
           })),
         ],
+        tasks: (mine.inbox || []).some((row: any) => row.read === false)
+          ? [
+              {
+                id: 'inbox-read',
+                action: 'inbox-read',
+                label: c('Tout marquer comme lu', 'Make tout kòm li'),
+                values: {
+                  ids: (mine.inbox || [])
+                    .filter((row: any) => row.read === false)
+                    .map((row: any) => row.id)
+                    .slice(0, 60),
+                },
+              },
+            ]
+          : undefined,
       });
       panels.push({
         title: c('Mes équipes', 'Ekip mwen yo'),
