@@ -13,6 +13,7 @@ import {
 import { SANDRA_TOOL_DEFS, createToolExecutor } from './_lib/sandraTools';
 import { getDb } from './_lib/firebaseAdmin';
 import { sanitizeQuestionContext, type QuestionContext } from '../shared/explainContext';
+import { examFetcher, gateQuestionContext } from './_lib/explainGate';
 
 /**
  * POST /api/chat
@@ -67,7 +68,7 @@ interface StoredMessage {
    * not worth duplicating). Lets the admin transcript browser and the success
    * metric join an explanation to the question it was about.
    */
-  explain?: { surface: string; questionId?: string; examId?: string; status?: string };
+  explain?: { surface: string; questionId?: string; examId?: string; status?: string; gate?: string };
 }
 
 const CHAT_LIMIT_MAX = 30; // mirrors LIMITS['chat'] in _lib/rateLimit.ts
@@ -243,12 +244,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     // created yet — if the LLM call below fails, nothing is persisted, so no
     // empty 0-message shells pollute the admin transcript browser.
     // "Explique-moi I don't get it" says nothing about the topic: search the
-    // knowledge base on the question itself (and its key) instead.
-    const retrievalQuery = questionContext
-      ? [questionContext.question, questionContext.expectedAnswer].filter(Boolean).join('\n')
-      : message;
+    // knowledge base on the question itself instead. The context is
+    // client-asserted, so explainGate decides whether the never-reveal rule
+    // may be lifted (verified + server copy) or this is hint-only tutoring.
+    const gate = questionContext
+      ? await gateQuestionContext(questionContext, uid, { db, fetchExam: examFetcher(resolveOrigin()) })
+      : undefined;
+    const retrievalQuery = gate ? gate.retrievalQuery : message;
     const { chunks, failed: kbFailed } = await retrieveChunks(db, retrievalQuery, page);
-    const system = buildSandraSystemPrompt({ lang, page, chunks, student, questionContext });
+    const system = buildSandraSystemPrompt({
+      lang, page, chunks, student, questionContext: gate?.explain, tutorQuestion: gate?.tutor,
+    });
     const llmMessages = [
       ...history.slice(-SANDRA_LIMITS.historyTurns).map((m) => ({
         role: m.role === 'assistant' ? ('assistant' as const) : ('user' as const),
@@ -323,6 +329,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       if (questionContext.questionId) explain.questionId = questionContext.questionId;
       if (questionContext.examId) explain.examId = questionContext.examId;
       if (questionContext.status) explain.status = questionContext.status;
+      if (gate) explain.gate = gate.reason;
       userMsg.explain = explain;
     }
     const assistantMsg: StoredMessage = {
