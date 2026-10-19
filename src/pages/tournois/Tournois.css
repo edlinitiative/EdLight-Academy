@@ -1119,3 +1119,8 @@ body.arena-night .tn-choice { background: rgba(255, 255, 255, 0.04); border-colo
 body.arena-night .tn-choice[aria-pressed='true'] { background: rgba(255, 194, 74, 0.1); border-color: #FFC24A; box-shadow: 0 0 24px -8px rgba(255, 194, 74, 0.6); }
 body.arena-night .tn-toggle { background: rgba(255, 255, 255, 0.05); border-color: rgba(160, 190, 255, 0.18); color: #DCE6FF; }
 body.arena-night .tn-toggle[aria-pressed='true'] { background: #3D8BFF; border-color: #3D8BFF; color: #fff; }
+
+/* Missing / private room: the title row, then one card with a way forward and a way back. */
+.tn-missing { display: grid; gap: 1rem; }
+.tn-missing p { margin: 0; line-height: 1.55; }
+.tn-missing__actions { display: flex; flex-wrap: wrap; gap: 0.6rem; }

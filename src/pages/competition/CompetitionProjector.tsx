@@ -1,6 +1,6 @@
 /** Audience-only composition: never renders account, host, check-in or attendee controls. */
 import React, { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import useStore from '../../contexts/store';
 import { competitionRequest } from '../../services/competitionService';
 import {
@@ -12,8 +12,7 @@ import {
   type Standings,
 } from '../../services/tournoisService';
 import { workspaceError } from '../../../shared/competition/client';
-import { POINTS } from '../../../shared/competition/labels';
-import Avatar from '../../arena-art/avatars/Avatar';
+import { CompetitionProjectorView } from './CompetitionProjectorView';
 import './CompetitionProjector.css';
 export default function CompetitionProjector() {
   const { id = '' } = useParams();
@@ -77,8 +76,6 @@ export default function CompetitionProjector() {
     const timer = setInterval(() => setNow(Date.now() + offset), 250);
     return () => clearInterval(timer);
   }, [offset]);
-  const question = live?.question;
-  const pts = POINTS[ht ? 1 : 0];
   if (eventUid !== uid)
     return (
       <main className="competition-projector">
@@ -86,121 +83,16 @@ export default function CompetitionProjector() {
       </main>
     );
   return (
-    <main className="competition-projector">
-      <header>
-        <p>EdLight · {ht ? 'Ekran piblik' : 'Écran public'}</p>
-        <h1>{event?.title || (ht ? 'Konpetisyon' : 'Compétition')}</h1>
-        <p role="status">
-          {phase === 'finished'
-            ? ht
-              ? 'Rezilta final tounwa a'
-              : 'Résultat final du tournoi'
-            : phase === 'cancelled'
-              ? ht
-                ? 'Evènman an anile'
-                : 'Événement annulé'
-              : live?.phase === 'question'
-                ? ht
-                  ? 'Kesyon an kou'
-                  : 'Question en cours'
-                : live?.phase === 'reveal'
-                  ? ht
-                    ? 'Repons lan'
-                    : 'Révélation'
-                  : ht
-                    ? 'Ap tann pwochen etap la'
-                    : 'En attente de la prochaine phase'}
-        </p>
-      </header>
-      {error ? (
-        <p role="alert">
-          {error}{' '}
-          <button onClick={() => setEpoch(epoch + 1)}>
-            {ht ? 'Eseye ankò' : 'Réessayer'}
-          </button>
-        </p>
-      ) : null}
-      <div className="competition-projector__stage">
-        <section aria-label={ht ? 'Kesyon aktyèl' : 'Question actuelle'}>
-          {question ? (
-            <>
-              <p>
-                {(live?.index ?? 0) + 1}/{live?.questionCount} ·{' '}
-                {Math.max(0, Math.ceil(((live?.closesAt ?? now) - now) / 1000))}{' '}
-                s
-              </p>
-              <h2>{ht ? question.qHt || question.q : question.q}</h2>
-              <ol>
-                {(ht && question.optionsHt
-                  ? question.optionsHt
-                  : question.options
-                ).map((option, i) => (
-                  <li
-                    key={i}
-                    className={
-                      live?.phase === 'reveal' && live.reveal?.answer === i
-                        ? 'is-correct'
-                        : ''
-                    }
-                  >
-                    {option}
-                  </li>
-                ))}
-              </ol>
-            </>
-          ) : (
-            <p>
-              {event?.delivery === 'external'
-                ? ht
-                  ? 'Aktivite sa a fèt deyò kiz aplikasyon an.'
-                  : 'Cette activité se déroule en dehors du quiz de l’application.'
-                : ht
-                  ? 'Kesyon an ap parèt isit lè li louvri.'
-                  : 'La question apparaîtra ici à son ouverture.'}
-            </p>
-          )}
-        </section>
-        <aside>
-          <h2>
-            {board?.final
-              ? ht
-                ? 'Rezilta'
-                : 'Résultats'
-              : ht
-                ? 'Klasman an kou'
-                : 'Classement en cours'}
-          </h2>
-          {board?.namedTeams?.length
-            ? board.namedTeams.slice(0, 10).map((r) => (
-                <p key={r.id}>
-                  {r.rank}. {r.label} · {r.points} {pts}
-                </p>
-              ))
-            : board?.teams.length
-              ? board.teams.slice(0, 10).map((r) => (
-                  <p key={r.key}>
-                    {r.rank}. {r.label} · {r.score} {pts}
-                  </p>
-                ))
-              : board?.rows.slice(0, 10).map((r) => (
-                  <p key={r.uid} className="competition-projector__person">
-                    <span aria-hidden="true" className="competition-projector__face">
-                      <Avatar seed={r.uid} config={r.avatar} size={48} still />
-                    </span>
-                    <span>
-                      {r.rank}. {r.displayName} · {r.points} {pts}
-                    </span>
-                  </p>
-                ))}
-        </aside>
-      </div>
-      <footer>
-        <Link to={`/arena/evenements/${id}`}>
-          {ht
-            ? 'Retounen nan paj evènman an'
-            : 'Retour à la page de l’événement'}
-        </Link>
-      </footer>
-    </main>
+    <CompetitionProjectorView
+      eventId={id}
+      event={event}
+      live={live}
+      board={board}
+      phase={phase}
+      error={error}
+      now={now}
+      ht={ht}
+      onRetry={() => setEpoch(epoch + 1)}
+    />
   );
 }

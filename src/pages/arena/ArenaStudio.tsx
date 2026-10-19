@@ -6,6 +6,7 @@ import AvatarShowcase from '../../arena-art/avatars/AvatarShowcase';
 import SoundShowcase from '../../arena-art/sound/SoundShowcase';
 import MotionShowcase from '../../arena-art/motion/MotionShowcase';
 import IdentityShowcase from '../../arena-art/IdentityShowcase';
+import CompetitionShowcase from './CompetitionShowcase';
 import './ArenaStudio.css';
 
 /**
@@ -27,6 +28,7 @@ export default function ArenaStudio() {
     { id: 'personnages', title: t('Les personnages', 'Pèsonaj yo'), sub: t('Avatars originaux et leurs états.', 'Avata orijinal ak eta yo.'), el: <AvatarShowcase /> },
     { id: 'identite', title: t('Écoles et joueurs', 'Lekòl ak jwè'), sub: t('Blasons d’école, emblèmes de rang et cartes de joueur.', 'Blazon lekòl, anblèm ran ak kat jwè.'), el: <IdentityShowcase /> },
     { id: 'son', title: t('Le son', 'Son an'), sub: t('L’identité sonore de l’Arène. Coupé par défaut.', 'Idantite son Arèn nan. Koupe pa defo.'), el: <SoundShowcase /> },
+    { id: 'competitions', title: t('Compétitions', 'Konpetisyon'), sub: t('Espace compétitions et écran public, rendus depuis des données fictives.', 'Espas konpetisyon ak ekran piblik, ak done fiktif.'), el: <CompetitionShowcase /> },
     { id: 'mouvement', title: t('Le mouvement', 'Mouvman an'), sub: t('Révélation de l’adversaire, compte à rebours, cérémonie.', 'Revelasyon advèsè a, konte a, seremoni an.'), el: <MotionShowcase /> },
   ];
   return (
