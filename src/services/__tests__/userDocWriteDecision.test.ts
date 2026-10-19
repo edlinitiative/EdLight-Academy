@@ -19,6 +19,6 @@ describe('shouldCreateUserDoc', () => {
     expect(shouldCreateUserDoc(false, { status: 'error' })).toBe(false);
   });
   it('touches an existing document', () => {
-    expect(shouldCreateUserDoc(false, { status: 'found', data: {} })).toBe(false);
+    expect(shouldCreateUserDoc(false, { status: 'found' })).toBe(false);
   });
 });
