@@ -767,6 +767,22 @@ describe('report-content reaches an owner', () => {
   beforeEach(() => {
     for (const uid of ['adm1', 'adm2'])
       mockDb.store.set(`users/${uid}`, { displayName: uid, role: 'admin' });
+    for (let i = 0; i < 12; i++)
+      mockDb.store.set(`teams/target${i}`, { id: `target${i}`, name: `Équipe ${i}` });
+  });
+  it('rejects reports about records that do not exist', async () => {
+    await expect(report('b', 'invented')).rejects.toMatchObject({ code: 'not_found' });
+    expect(mockDb.childrenOf('competitionReports')).toHaveLength(0);
+  });
+  it('limits each reporter per hour and caps admin pushes platform-wide', async () => {
+    mockExpoPush.mockClear();
+    for (let i = 0; i < 10; i++) await report('b', `target${i}`, undefined, now + i);
+    await expect(report('b', 'target10', undefined, now + 20)).rejects.toMatchObject({
+      code: 'rate_limit_exceeded',
+    });
+    // 10 distinct targets, but admins were interrupted only 6 times (2 admins each).
+    expect(mockExpoPush).toHaveBeenCalledTimes(12);
+    expect(mockDb.childrenOf('users/adm1/competitionInbox')).toHaveLength(10);
   });
   it('gives every admin one unread inbox item per target and a push without the reason', async () => {
     const teamId = (await mutate('a', 'team-create', { name: 'Les étoiles' }))

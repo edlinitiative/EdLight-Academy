@@ -44,6 +44,9 @@ import { clearReminders, scheduleReminders } from './competitionReminders';
 
 /** Admins are pushed about a reported target at most once per this interval; the inbox item updates every time. */
 export const REPORT_PUSH_INTERVAL_MS = 60 * 60 * 1000;
+/** One account can file this many reports per hour; admins get at most this many report pushes per hour in total. */
+export const REPORTS_PER_REPORTER_PER_HOUR = 10;
+export const ADMIN_REPORT_PUSHES_PER_HOUR = 6;
 const REPORT_FALLBACK_TITLE = 'Modération · Moderasyon';
 export class CompetitionError extends Error {
   constructor(
@@ -2163,12 +2166,33 @@ export async function mutateCompetition(
           db,
           `${kind === 'team' ? 'teams' : kind === 'event' ? 'competitionEvents' : 'leagues'}/${targetId}`,
         );
+        // Only real records can be reported, so invented ids can't mint new push targets.
+        ensure(record, 'not_found', 404);
+        // Per-reporter and platform-wide hourly windows bound what any one account
+        // (or a coordinated flood) can file and how often admins are interrupted.
+        const window = Math.floor(now / REPORT_PUSH_INTERVAL_MS);
+        const reporterRef = db.doc(`competitionReportAlerts/_reporter_${uid}`);
+        const reporter = await data(tx, db, reporterRef.path);
+        const reporterCount =
+          reporter?.window === window && typeof reporter.count === 'number'
+            ? reporter.count
+            : 0;
+        ensure(reporterCount < REPORTS_PER_REPORTER_PER_HOUR, 'rate_limit_exceeded', 429);
+        const globalRef = db.doc('competitionReportAlerts/_global');
+        const global = await data(tx, db, globalRef.path);
+        const globalPushes =
+          global?.window === window && typeof global.pushes === 'number'
+            ? global.pushes
+            : 0;
         const targetTitle =
           text(record?.title ?? record?.name ?? '', 80) ||
           REPORT_FALLBACK_TITLE;
         const push =
-          typeof alert?.lastPushedAt !== 'number' ||
-          now - alert.lastPushedAt >= REPORT_PUSH_INTERVAL_MS;
+          globalPushes < ADMIN_REPORT_PUSHES_PER_HOUR &&
+          (typeof alert?.lastPushedAt !== 'number' ||
+            now - alert.lastPushedAt >= REPORT_PUSH_INTERVAL_MS);
+        tx.set(reporterRef, { window, count: reporterCount + 1 });
+        if (push) tx.set(globalRef, { window, pushes: globalPushes + 1 });
         tx.create(db.doc(`competitionReports/${generatedId}`), {
           uid,
           kind: body.kind,

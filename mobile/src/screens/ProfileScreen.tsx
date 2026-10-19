@@ -146,6 +146,7 @@ export default function ProfileScreen() {
   const [notificationsBlocked, setNotificationsBlocked] = useState(false);
   const [emailRemindersEnabled, setEmailRemindersEnabled] = useState(true);
   const [competitionUpdatesEnabled, setCompetitionUpdatesEnabled] = useState(true);
+  const [arenaAnnouncementsEnabled, setArenaAnnouncementsEnabled] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [hapticsEnabled, setHapticsEnabled] = usePreference('hapticsEnabled');
 
@@ -171,6 +172,7 @@ export default function ProfileScreen() {
       .then((p) => {
         setEmailRemindersEnabled(p.emailNotifications !== false);
         setCompetitionUpdatesEnabled(p.competitionUpdates !== false);
+        setArenaAnnouncementsEnabled(p.arenaAnnouncements !== false);
       })
       .catch(() => {});
   }, [user?.uid]);
@@ -192,6 +194,16 @@ export default function ProfileScreen() {
       await saveNotificationPrefs(user.uid, { competitionUpdates: value });
     } catch {
       setCompetitionUpdatesEnabled(!value);
+    }
+  }
+
+  async function handleArenaAnnouncementsToggle(value: boolean) {
+    setArenaAnnouncementsEnabled(value);
+    if (!user?.uid) return;
+    try {
+      await saveNotificationPrefs(user.uid, { arenaAnnouncements: value });
+    } catch {
+      setArenaAnnouncementsEnabled(!value);
     }
   }
 
@@ -775,6 +787,22 @@ export default function ProfileScreen() {
                   value={competitionUpdatesEnabled}
                   onValueChange={handleCompetitionUpdatesToggle}
                   accessibilityLabel={t('Compétitions et équipes', 'Konpetisyon ak ekip')}
+                />
+              }
+            />
+            {/* Server-side: api/arena/_announce.ts skips this student when false. */}
+            <SettingsRow
+              icon={Bell}
+              label={t('Championnats de l’Arène', 'Chanpyona Arèn nan')}
+              sublabel={t(
+                'Quand un championnat est annoncé, et quand les portes ouvrent si tu es inscrit·e.',
+                'Lè yo anonse yon chanpyona, ak lè pòt yo louvri si ou enskri.',
+              )}
+              accessory={
+                <SettingsSwitch
+                  value={arenaAnnouncementsEnabled}
+                  onValueChange={handleArenaAnnouncementsToggle}
+                  accessibilityLabel={t('Championnats de l’Arène', 'Chanpyona Arèn nan')}
                 />
               }
             />

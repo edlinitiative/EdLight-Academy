@@ -246,12 +246,15 @@ it('deletes personal school, block and receipt records and tombstones review sta
   await mutate('a', 'membership-review', { schoolKey: 'school', recipientUid: 'b', approve: true });
   await mutate('a', 'block-inviter', { recipientUid: 'd' });
   await mutate('d', 'block-inviter', { recipientUid: 'a' });
+  mockDb.store.set('teams/x', { id: 'x', name: 'X' });
   await mutate('a', 'report-content', { kind: 'team', targetId: 'x', reason: 'Contenu offensant' });
+  expect(mockDb.store.has('competitionReportAlerts/_reporter_a')).toBe(true);
   // The follower reverse index written beside users/{uid}/competitionFollows.
   mockDb.store.set('users/a/competitionFollows/ev1', { eventId: 'ev1', createdAt: now });
   mockDb.store.set('competitionEvents/ev1/followers/a', { uid: 'a', createdAt: now });
   mockDb.store.set('competitionEvents/ev1/followers/b', { uid: 'b', createdAt: now });
   await erase('a');
+  expect(mockDb.store.has('competitionReportAlerts/_reporter_a')).toBe(false);
   expect(doc('competitionEvents/ev1/followers/a')).toBeUndefined();
   expect(doc('competitionEvents/ev1/followers/b')).toBeTruthy();
   expect(doc('schoolMemberships/school_a')).toBeUndefined();

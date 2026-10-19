@@ -383,7 +383,7 @@ describe("payloads chosen by name", () => {
 describe("closed creation never advertises what can't be done", () => {
   const home = (overrides: Record<string, unknown>) =>
     workspacePage(
-      { kind: "home", id: "" },
+      { kind: "home" },
       { events: [], schools: [] },
       { ...mine, creationEnabled: false, ...overrides },
       0,
