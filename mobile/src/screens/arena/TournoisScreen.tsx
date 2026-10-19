@@ -265,6 +265,7 @@ export default function TournoisScreen() {
         />
         <Text
           accessibilityRole="header"
+          maxFontSizeMultiplier={1.5}
           style={[arenaType.hero, { color: C.ink }]}
         >
           {tournament?.title || t('Tournois entre amis', 'Tounwa ant zanmi')}

@@ -120,7 +120,11 @@ export function ArenaButton({
       style={[{
         minHeight: ARENA_TOUCH,
         flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-        paddingHorizontal: 20, paddingVertical: 10, borderRadius: arenaRadius.control,
+        paddingHorizontal: 20, paddingVertical: 10,
+        // Half the touch height, not 999: a one-line button is the same pill,
+        // but a label wrapped by large text stays a rounded rectangle instead
+        // of ballooning into an oval that clips its first and last lines.
+        borderRadius: ARENA_TOUCH / 2,
         // Opaque grounds only — a translucent fill under a hairline read as generic.
         backgroundColor: primary ? (off ? '#76362D' : C.coral) : C.secondary,
       }, style]}

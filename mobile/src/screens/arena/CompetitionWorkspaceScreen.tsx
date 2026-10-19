@@ -7,6 +7,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ChevronLeft } from 'lucide-react-native';
@@ -41,6 +42,8 @@ export default function CompetitionWorkspaceScreen() {
     route = useRoute<any>();
   const kind = (route.params?.kind || 'home') as WorkspaceTarget['kind'],
     id = route.params?.id || '';
+  // Shortcut pills sit side by side, and stack once large text needs the width.
+  const { fontScale } = useWindowDimensions();
   const uid = useStore((s) => s.user?.uid),
     ht = useStore((s) => s.language) === 'ht';
   const [data, setData] = useState<any>(null),
@@ -158,6 +161,9 @@ export default function CompetitionWorkspaceScreen() {
         />
         <Text
           accessibilityRole="header"
+          // A 60-character team name at 30pt × accessibility sizes broke
+          // mid-word; past 1.5× the hero stops growing (body text still does).
+          maxFontSizeMultiplier={1.5}
           style={[arenaType.hero, { color: C.ink }]}
         >
           {page ? copyFor(page.title, ht) : ht ? 'Konpetisyon' : 'Compétitions'}
@@ -168,13 +174,13 @@ export default function CompetitionWorkspaceScreen() {
             variant="secondary"
             label={ht ? 'Jwe yon pati' : 'Jouer une partie'}
             onPress={() => navigation.navigate('Main', { screen: 'Trivia' })}
-            style={{ flexGrow: 1, flexBasis: 150 }}
+            style={{ flexGrow: 1, flexBasis: fontScale > 1.35 ? '100%' : 150 }}
           />
           <ArenaButton
             variant="secondary"
             label={ht ? 'Tounwa ant zanmi' : 'Tournois entre amis'}
             onPress={() => navigation.push('Tournois', {})}
-            style={{ flexGrow: 1, flexBasis: 150 }}
+            style={{ flexGrow: 1, flexBasis: fontScale > 1.35 ? '100%' : 150 }}
           />
         </View>
         {!uid ? (
