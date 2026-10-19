@@ -183,7 +183,10 @@ export default function CourseDetail() {
   // True while we're showing the catalog version and the enriched one
   // (real video URLs) is still on its way.
   const enriching = !enrichedCourse && (isLoading || isFetching);
-  const isEnrolled = enrolledCourses.some((c) => c.id === courseId);
+  // Any signed-in student can complete a lesson. Nothing calls enrollInCourse
+  // any more, so gating on the local enrolled list hid "Terminer la leçon" and
+  // switched off video-progress tracking for every newer account (P0 validation).
+  const isEnrolled = enrolledCourses.some((c) => c.id === courseId) || (!!isAuthenticated && !!user?.uid);
   const modules = course?.modules ?? [];
   const activeModuleData = modules[activeModule] ?? null;
   const lessonBreakdown = Array.isArray(activeModuleData?.lessons) ? activeModuleData.lessons : [];
@@ -936,6 +939,11 @@ export default function CourseDetail() {
                         promoted, so `mastered` means the student still knew it
                         when it wasn't the only thing in front of them. */}
                     <UnitQuiz
+                      /* Remount per unit+lesson: the frozen question draw and
+                         run state otherwise survived a jump to another unit's
+                         quiz lesson, and the chapter test then promoted unit
+                         2's lessons with unit 1's answers (P0 validation). */
+                      key={`quiz:${activeModuleData?.id ?? ''}:${activeLessonData?.id ?? ''}`}
                       subjectCode={course?.code}
                       unitId={undefined}
                       chapterNumber={activeModuleData?.unit_no}
@@ -1170,6 +1178,7 @@ export default function CourseDetail() {
                     </h2>
                     {showChapterTest && (
                       <UnitQuiz
+                        key={`test:${activeModuleData?.id ?? ''}`}
                         subjectCode={course?.code}
                         unitId={undefined}
                         chapterNumber={activeModuleData?.unit_no}
@@ -1189,6 +1198,7 @@ export default function CourseDetail() {
                          the score to the lesson, so it can climb the mastery
                          ladder. */
                       <UnitQuiz
+                        key={`practice:${activeModuleData?.id ?? ''}:${activeLessonData?.id ?? ''}`}
                         subjectCode={course?.code}
                         unitId={undefined}
                         chapterNumber={activeModuleData?.unit_no}
