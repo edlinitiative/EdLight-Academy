@@ -66,6 +66,7 @@ describe('web a11y static guards', () => {
       'pages/ArenaClaim.tsx',
       'pages/competition/CompetitionProjector.tsx',
       'pages/competition/CompetitionProjectorView.tsx',
+      'pages/suivi/Suivi.tsx',
     ]);
     const bad = elements.filter((e) => e.tag === 'main' && !STANDALONE.has(e.file)).map((e) => `${e.file}:${e.line}`);
     expect(bad).toEqual([]);

@@ -20,11 +20,11 @@
  *     memberships, receipts, tournament rosters…): deleted when personal or
  *     pending, pseudonymized when results/audit/locked rosters depend on them —
  *     see api/_lib/competitionAccountDeletion.ts for the per-collection policy.
+ *     Runs first: it reads the user's inbox/myTournaments and acts through the
+ *     competition engine as the user, so the profile must still exist.
  *   • parent progress links (progressShares) — deleted
  *   • ambassador designation, rewards and recruit links — pseudonymized
  *     (api/_lib/ambassadors.ts eraseAmbassadorAccount)
- *     Runs first: it reads the user's inbox/myTournaments and acts through the
- *     competition engine as the user, so the profile must still exist.
  *
  * Data steps are best-effort and logged; the Auth deletion is the one that
  * must succeed for the response to be a success.

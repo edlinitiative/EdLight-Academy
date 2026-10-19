@@ -18,6 +18,8 @@ import LeaderboardScreen from '../screens/LeaderboardScreen';
 import ChallengeScreen from '../screens/ChallengeScreen';
 import TeachScreen from '../screens/TeachScreen';
 import ClassesScreen from '../screens/ClassesScreen';
+import ProgressShareScreen from '../screens/ProgressShareScreen';
+import AmbassadorScreen from '../screens/AmbassadorScreen';
 import SearchScreen from '../screens/SearchScreen';
 import ArenaLobbyScreen from '../screens/arena/ArenaLobbyScreen';
 import ArenaLiveScreen from '../screens/arena/ArenaLiveScreen';
@@ -79,6 +81,8 @@ export type RootParamList = {
   Leaderboard: undefined;
   Teach: undefined;
   Classes: undefined;
+  ProgressShare: undefined;
+  Ambassador: undefined;
   Defi: { code: string };
   /** Mon avatar (web /profile/avatar). `preview` is dev-only (signed-out screenshots). */
   AvatarEditor: { section?: AvatarSection; preview?: string | boolean; theme?: string } | undefined;
@@ -456,6 +460,8 @@ export default function AppNavigator() {
                 options={{ presentation: 'modal', ...tx('slide_from_bottom') }}
               />
               <Stack.Screen name="Classes" component={ClassesScreen} options={tx('slide_from_right')} />
+              <Stack.Screen name="ProgressShare" component={ProgressShareScreen} options={tx('slide_from_right')} />
+              <Stack.Screen name="Ambassador" component={AmbassadorScreen} options={tx('slide_from_right')} />
               <Stack.Screen
                 name="AvatarEditor"
                 component={AvatarEditorScreen}

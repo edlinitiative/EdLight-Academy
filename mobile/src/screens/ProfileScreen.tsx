@@ -5,8 +5,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Flame, Trophy, Zap, LogOut, Moon, Languages, Trash2, Target, Bell, GraduationCap,
   Sprout, Brain, Mail, Vibrate, Palette, UserPlus, Eye, Info, Instagram, ChevronRight, Pencil,
-  School as SchoolIcon,
+  School as SchoolIcon, Share2,
 } from 'lucide-react-native';
+import { useIsAmbassador } from '../hooks/useAmbassadors';
+import { AMBASSADOR_LABEL } from '../../../shared/ambassadors';
 import * as Notifications from 'expo-notifications';
 import { Avatar as Face, SchoolCrest } from '../components/arena/art';
 import { schoolColors } from '../components/arena/art/crest/SchoolCrest';
@@ -141,6 +143,7 @@ export default function ProfileScreen() {
   // mount QuizNavigator behind it, which has no ExamLanding route.
   const practiceRoot = gradeProfile(grade).primaryTab === 'Quiz' ? 'Quizzes' : 'ExamLanding';
   const firstName = getFirstName(user);
+  const isAmbassador = useIsAmbassador(user?.uid);
 
   const avgPct: number | null = (() => {
     if (allAttempts.length === 0) return null;
@@ -512,6 +515,15 @@ export default function ProfileScreen() {
               >
                 {displayName}
               </Text>
+              {isAmbassador && (
+                <Text
+                  accessibilityRole="link"
+                  onPress={() => navigation.navigate('Ambassador')}
+                  style={[typeScale.meta, { alignSelf: 'flex-start', marginTop: 4, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, backgroundColor: colors.azureSoft, color: colors.azure, fontFamily: fonts.bold, overflow: 'hidden' }]}
+                >
+                  {isCreole ? AMBASSADOR_LABEL.ht : AMBASSADOR_LABEL.fr}
+                </Text>
+              )}
               <Text numberOfLines={2} style={[typeScale.meta, { color: colors.muted, marginTop: 2 }]}>
                 {identityMeta || user.email}
               </Text>
@@ -906,6 +918,8 @@ export default function ProfileScreen() {
               onPress={() => navigation.navigate('Teach')}
             />
             <SettingsRow icon={GraduationCap} label={t('Mes classes', 'Klas mwen yo')} onPress={() => navigation.navigate('Classes')} />
+            <SettingsRow icon={Share2} label={t('Partager mon suivi', 'Pataje swivi mwen')} onPress={() => navigation.navigate('ProgressShare')} />
+            {isAmbassador && <SettingsRow icon={Trophy} label={t('Tableau ambassadeur', 'Tablo anbasadè')} onPress={() => navigation.navigate('Ambassador')} />}
             <SettingsRow
               icon={Instagram}
               label={t('Suivre EdLight sur Instagram', 'Swiv EdLight sou Instagram')}

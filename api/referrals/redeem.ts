@@ -153,7 +153,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     //     fraud review). Best effort: never blocks or fails the redemption.
     try {
       await recordRecruitSignal(db, referrerUid, uid, hashAddress(clientAddress(req as any), 'referral'), Date.now());
-    } catch (err) {
+    } catch {
       console.warn('[referrals/redeem] recruit signal skipped');
     }
 
