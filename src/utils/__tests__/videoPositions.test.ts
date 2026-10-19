@@ -1,5 +1,5 @@
 import {
-  LEGACY_VIDEO_POS_KEY, videoPositionsKey, readVideoPositions, saveVideoPosition, clearVideoPosition, resumeSecondsFor,
+  LEGACY_VIDEO_POS_KEY, videoPositionsKey, readVideoPositions, saveVideoPosition, clearVideoPosition, resumeSecondsFor, cloudResumeSeconds,
 } from '../videoPositions';
 import { readResumeSeconds } from '../../components/journey/home/homeJourney';
 
@@ -54,5 +54,18 @@ describe('video positions are per student', () => {
     expect(resumeSecondsFor('alice', 'a:1')).toBe(0);
     saveVideoPosition('alice', 'a:1', 60, 600);
     expect(resumeSecondsFor('alice', 'a:1')).toBe(60);
+  });
+});
+
+describe('cloudResumeSeconds (cross-device fallback)', () => {
+  it("resumes from another device's saved position", () => {
+    expect(cloudResumeSeconds({ watchDuration: 132.7, totalDuration: 600, completed: false })).toBe(132);
+  });
+  it('ignores tiny, finished and junk positions', () => {
+    expect(cloudResumeSeconds({ watchDuration: 10, totalDuration: 600 })).toBe(0);
+    expect(cloudResumeSeconds({ watchDuration: 590, totalDuration: 600 })).toBe(0);
+    expect(cloudResumeSeconds({ watchDuration: 300, totalDuration: 600, completed: true })).toBe(0);
+    expect(cloudResumeSeconds({ watchDuration: 'x' })).toBe(0);
+    expect(cloudResumeSeconds(null)).toBe(0);
   });
 });
