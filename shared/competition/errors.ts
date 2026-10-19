@@ -369,6 +369,16 @@ export const COMPETITION_ERROR_MESSAGES: Record<string, Pair> = {
     "Rezilta evènman sa a deja konte pou yon lòt rankont.",
   ],
 
+  // ── Admin console: competition switches ───────────────────────────────
+  not_admin: [
+    "Réservé aux administrateurs.",
+    "Se administratè sèlman ki ka fè sa.",
+  ],
+  invalid_changes: [
+    "Réglage invalide.",
+    "Paramèt sa a pa valab.",
+  ],
+
   // ── Shared-answer and relay team play ─────────────────────────────────
   team_modes_not_enabled: [
     "La réponse commune et le relais ne sont pas encore ouverts.",

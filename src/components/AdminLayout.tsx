@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Outlet, NavLink, Link } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, Video, Target, ClipboardList, CheckSquare, Gamepad2,
-  Users, ShieldAlert, MessageCircle, Database, BarChart3, ArrowLeft, GraduationCap, Menu, X, Swords, AlertTriangle,
+  Users, ShieldAlert, MessageCircle, Database, BarChart3, ArrowLeft, GraduationCap, Menu, X, Swords, AlertTriangle, Trophy,
 } from './icons';
 import useStore from '../contexts/store';
 import { getFirstName } from '../utils/shared';
@@ -45,6 +45,7 @@ const NAV: Array<{ section?: string; items: Array<{ to: string; end?: boolean; I
       { to: '/admin/data/collections', Icon: Database, label: 'Collections' },
       { to: '/admin/data/stats', Icon: BarChart3, label: 'Statistiques du site' },
       { to: '/admin/data/diagnostics', Icon: AlertTriangle, label: 'Diagnostics / Erreurs' },
+      { to: '/admin/data/competitions', Icon: Trophy, label: 'Compétitions' },
     ],
   },
 ];
