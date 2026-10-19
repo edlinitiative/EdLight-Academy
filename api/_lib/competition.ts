@@ -46,6 +46,8 @@ import { clearReminders, scheduleReminders } from './competitionReminders';
 export const REPORT_PUSH_INTERVAL_MS = 60 * 60 * 1000;
 /** One account can file this many reports per hour, and trigger at most one admin push per hour. */
 export const REPORTS_PER_REPORTER_PER_HOUR = 10;
+/** Platform-wide ceiling on report pushes per hour; reaching it sends one "many waiting" digest push. */
+export const ADMIN_REPORT_PUSHES_PER_HOUR = 30;
 const REPORT_FALLBACK_TITLE = 'Modération · Moderasyon';
 export class CompetitionError extends Error {
   constructor(
@@ -2181,17 +2183,28 @@ export async function mutateCompetition(
         const targetTitle =
           text(record?.title ?? record?.name ?? '', 80) ||
           REPORT_FALLBACK_TITLE;
+        // A high global ceiling still bounds a many-account flood; hitting it
+        // sends one digest push rather than going silent.
+        const globalRef = db.doc('competitionReportAlerts/_global');
+        const global = await data(tx, db, globalRef.path);
+        const globalPushes =
+          global?.window === window && typeof global.pushes === 'number'
+            ? global.pushes
+            : 0;
         const reporterPushed =
           reporter?.window === window && reporter.pushed === true;
-        const push =
+        const wanted =
           !reporterPushed &&
           (typeof alert?.lastPushedAt !== 'number' ||
             now - alert.lastPushedAt >= REPORT_PUSH_INTERVAL_MS);
+        const push = wanted && globalPushes <= ADMIN_REPORT_PUSHES_PER_HOUR;
+        const digest = push && globalPushes === ADMIN_REPORT_PUSHES_PER_HOUR;
         tx.set(reporterRef, {
           window,
           count: reporterCount + 1,
           pushed: reporterPushed || push,
         });
+        if (push) tx.set(globalRef, { window, pushes: globalPushes + 1 });
         tx.create(db.doc(`competitionReports/${generatedId}`), {
           uid,
           kind: body.kind,
@@ -2224,14 +2237,15 @@ export async function mutateCompetition(
             'report_received',
             adminUid === uid,
           );
-          // Never the reason or the reporter: only that a report is waiting.
+          // Never the reason, the reporter or the user-written title: only that
+          // a report (or, past the ceiling, many reports) is waiting.
           if (push && adminUid !== uid)
             notices.push({
               uid: adminUid,
-              action: 'report_received',
+              action: digest ? 'reports_waiting' : 'report_received',
               targetKind: kind,
               targetId,
-              title: targetTitle,
+              title: '', // localized "Arène EdLight" (pushCopy)
             });
         }
         break;

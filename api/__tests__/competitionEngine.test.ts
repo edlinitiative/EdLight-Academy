@@ -788,6 +788,24 @@ describe('report-content reaches an owner', () => {
     await report('c', 'target11', undefined, now + 30);
     expect(mockExpoPush).toHaveBeenCalledTimes(2);
   });
+  it('keeps a platform ceiling: at it admins get one digest push, past it quiet; titles never in pushes', async () => {
+    const window = Math.floor(now / 3_600_000);
+    mockDb.store.set('teams/t1', { id: 't1', name: 'Nom offensant' });
+    mockDb.store.set('teams/t2', { id: 't2', name: 'Autre' });
+    mockDb.store.set('competitionReportAlerts/_global', { window, pushes: 30 });
+    mockExpoPush.mockClear();
+    await report('b', 't1');
+    expect(mockExpoPush.mock.calls.map((c) => (c[1] as any).data.action)).toEqual([
+      'reports_waiting',
+      'reports_waiting',
+    ]);
+    expect(JSON.stringify(mockExpoPush.mock.calls)).not.toContain('Nom offensant');
+    mockExpoPush.mockClear();
+    await report('c', 't2');
+    expect(mockExpoPush).not.toHaveBeenCalled();
+    // The admin inbox still records every report.
+    expect(doc('users/adm1/competitionInbox/report_team_t2')).toMatchObject({ read: false });
+  });
   it('gives every admin one unread inbox item per target and a push without the reason', async () => {
     const teamId = (await mutate('a', 'team-create', { name: 'Les étoiles' }))
       .teamId as string;

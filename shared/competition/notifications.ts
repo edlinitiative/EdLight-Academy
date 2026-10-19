@@ -58,6 +58,7 @@ export type InboxAction =
   | 'ownership_received'
   | 'owner_missing'
   | 'report_received'
+  | 'reports_waiting'
   | 'event_starting'
   | 'event_starting_soon'
   | 'registration_closing';
@@ -177,6 +178,13 @@ export const INBOX_ACTIONS: Record<InboxAction, { label: Pair; push?: Pair }> = 
     push: [
       'Un signalement attend une décision de modération.',
       'Yon siyalman ap tann yon desizyon moderasyon.',
+    ],
+  },
+  reports_waiting: {
+    label: ['Nombreux signalements', 'Anpil siyalman'],
+    push: [
+      'Beaucoup de signalements arrivent : ouvre la modération pour les traiter.',
+      'Anpil siyalman ap rive : louvri moderasyon an pou trete yo.',
     ],
   },
   announcement: {
