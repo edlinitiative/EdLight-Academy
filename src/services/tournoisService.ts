@@ -29,6 +29,7 @@ import type { TournamentConfig } from '../../shared/tournois/config';
 import type { PublicQuestion } from '../../shared/tournois/questions';
 import type { Match } from '../../shared/tournois/bracket';
 import { COMPETITION_ERROR_MESSAGES } from '../../shared/competition/errors';
+import { createTeamPlayApi } from '../../shared/teams/client';
 
 export type {
   TournamentState,
@@ -282,6 +283,10 @@ export const liveAnswer = (
       clientShownAt,
     }),
   );
+
+/** Shared-answer / relay team actions (server authority in api/tournois/_team). */
+export const teamApi = createTeamPlayApi(post);
+export type { TeamState } from '../../shared/teams/client';
 
 export interface RoundStep {
   round: number;
