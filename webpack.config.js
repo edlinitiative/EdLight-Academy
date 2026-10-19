@@ -157,6 +157,13 @@ module.exports = {
           to: 'exams',
           noErrorOnMissing: true
         },
+        // Offline revision packs (scripts/build_offline_packs.mjs): JSON only,
+        // fetched on demand when a student downloads a pack, never at boot.
+        {
+          from: 'public/packs',
+          to: 'packs',
+          noErrorOnMissing: true
+        },
         // PWA: service worker, manifest and icons served from the site root.
         {
           from: 'pwa',

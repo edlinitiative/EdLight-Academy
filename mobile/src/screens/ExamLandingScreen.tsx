@@ -9,6 +9,7 @@ import useStore from '../contexts/store';
 import { gradeProfile, TRACKS as ALL_TRACKS, TRACK_LEVEL } from '../config/trackConfig';
 import { useTheme, fonts } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
+import OfflinePacksEntry from '../components/OfflinePacksEntry';
 import PageTitle from '../components/ui/PageTitle';
 import Segmented from '../components/ui/Segmented';
 import StatNumeral from '../components/ui/StatNumeral';
@@ -562,6 +563,16 @@ export default function ExamLandingScreen() {
               </View>
             </>
           ) : null}
+
+          {/* Hors ligne: revision packs kept on the phone (no video). */}
+          <View style={{ marginTop: 28 }}>
+            <OfflinePacksEntry
+              onPress={() => navigation.navigate('OfflinePacks', {
+                kind: 'exam',
+                level: ({ terminale: 'baccalaureat', university: 'universite', '9e': '9eme_af' } as Record<string, string>)[level] ?? 'baccalaureat',
+              })}
+            />
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>

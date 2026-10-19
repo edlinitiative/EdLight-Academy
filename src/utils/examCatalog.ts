@@ -64,8 +64,27 @@ export async function fetchSingleExam(examIdParam) {
 
   if (!id) return null;
 
-  const res = await fetch(`/exams/${encodeURIComponent(id)}.json`);
-  if (!res.ok) return null;
+  // Offline (or the file is unreachable): a downloaded revision pack may hold
+  // this paper. Loaded on demand so the pack code stays out of the exam chunk.
+  const fromPack = async () => {
+    try {
+      const { findPackedExam } = await import(/* webpackChunkName: "offline-packs" */ '../services/offlinePacks');
+      return await findPackedExam(String(id));
+    } catch {
+      return null;
+    }
+  };
+
+  let res;
+  try {
+    res = await fetch(`/exams/${encodeURIComponent(id)}.json`);
+  } catch (err) {
+    const packed = await fromPack();
+    if (packed) return packed;
+    throw err;
+  }
+  const ct = res.headers?.get?.('content-type') || 'application/json';
+  if (!res.ok || !ct.includes('json')) return (await fromPack()) || null;
   return res.json();
 }
 

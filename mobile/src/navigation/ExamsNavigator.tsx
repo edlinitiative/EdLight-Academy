@@ -6,6 +6,7 @@ import ExamOverviewScreen from '../screens/ExamOverviewScreen';
 import ExamTakeScreen from '../screens/ExamTakeScreen';
 import ExamResultsScreen from '../screens/ExamResultsScreen';
 import ExamHistoryScreen from '../screens/ExamHistoryScreen';
+import OfflinePacksScreen from '../screens/OfflinePacksScreen';
 
 export type ExamsParamList = {
   ExamLanding: undefined;
@@ -19,6 +20,8 @@ export type ExamsParamList = {
   ExamResults: { level: string; examId: string };
   /** "Mes résultats" — every submitted exam, newest first. */
   ExamHistory: undefined;
+  /** "Hors ligne": downloadable exam and practice packs, storage management. */
+  OfflinePacks: { kind?: 'exam' | 'practice'; level?: string } | undefined;
 };
 
 const Stack = createNativeStackNavigator<ExamsParamList>();
@@ -32,6 +35,7 @@ export default function ExamsNavigator() {
       <Stack.Screen name="ExamTake" component={ExamTakeScreen} />
       <Stack.Screen name="ExamResults" component={ExamResultsScreen} />
       <Stack.Screen name="ExamHistory" component={ExamHistoryScreen} />
+      <Stack.Screen name="OfflinePacks" component={OfflinePacksScreen} />
     </Stack.Navigator>
   );
 }

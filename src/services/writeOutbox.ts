@@ -35,8 +35,27 @@ async function postAwardOnce(uid: string, body: Record<string, unknown>): Promis
   return result;
 }
 
+/**
+ * An exam submitted from an offline pack (or whose write did not settle):
+ * replayed in a transaction that never overwrites a newer result and treats
+ * its own already-written operation id as done (shared/offlineExamSync.ts).
+ * Loaded on demand so the exam write code stays out of the boot bundle.
+ */
+async function replayExamSubmit(op: { id: string; uid: string; payload: unknown; createdAt: number }): Promise<OutboxResult> {
+  if (!op.uid || auth.currentUser?.uid !== op.uid) return 'retry'; // never into another account
+  const { replayQueuedExamSubmission } = await import('./examAttempts');
+  const outcome = await replayQueuedExamSubmission(op.uid, op.id, op.payload);
+  if (outcome === 'retry') return 'retry';
+  if (outcome !== 'drop') {
+    const { trackEvent } = await import('../utils/telemetry');
+    trackEvent('offline_result_synced', { kind: 'exam', outcome, waitedMs: Math.max(0, Date.now() - op.createdAt), surface: 'web' });
+  }
+  return outcome === 'drop' ? 'drop' : 'done';
+}
+
 const handlers: OutboxHandlers = {
   'xp-award': (op) => postAwardOnce(op.uid, op.payload as Record<string, unknown>),
+  'exam-submit': replayExamSubmit,
 };
 
 /** A service that queues its own kind of write registers how to replay it. */

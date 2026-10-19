@@ -601,3 +601,47 @@ a.xp-row:hover, button.xp-row:hover { box-shadow: var(--xp-shadow-lift); color: 
   .xp-page--docked { padding-bottom: 120px; }
 }
 .xp-row__status { align-self: flex-start; margin-top: 6px; }
+
+/* ── Offline revision packs (components/OfflinePacksPanel) ──────────────── */
+.xp-offline__card { padding: 0; }
+.xp-offline__summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 20px 28px;
+  cursor: pointer;
+  list-style: none;
+  border-radius: 20px;
+}
+.xp-offline__summary::-webkit-details-marker { display: none; }
+.xp-offline__summary::after {
+  content: '';
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  margin-left: auto;
+  border-right: 2px solid var(--xp-muted);
+  border-bottom: 2px solid var(--xp-muted);
+  transform: rotate(45deg);
+}
+.xp-offline__card[open] > .xp-offline__summary::after { transform: rotate(-135deg); }
+.xp-offline__summary:focus-visible { outline: 3px solid var(--xp-azure); outline-offset: 2px; }
+.xp-offline__summary-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.xp-offline__title { margin: 0; }
+.xp-offline__body { display: flex; flex-direction: column; gap: 16px; padding: 0 28px 28px; }
+.xp-offline__controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.xp-offline__toggle { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font-size: 16px; color: var(--xp-ink); cursor: pointer; }
+.xp-offline__toggle input { width: 22px; height: 22px; accent-color: var(--xp-azure); }
+.xp-offline__row { min-height: 72px; flex-wrap: wrap; box-shadow: none; background: var(--xp-well); }
+.xp-offline__row .xp-row__end { flex-wrap: wrap; }
+.xp-offline__tag--ok { background: var(--xp-mint); color: var(--xp-mint-ink); }
+.xp-offline__tag--update { background: var(--xp-amber); color: var(--xp-amber-ink); }
+.xp-offline__msg { color: var(--xp-ink); }
+@media (max-width: 719px) {
+  .xp-offline__summary { padding: 16px 20px; }
+  .xp-offline__body { padding: 0 20px 20px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .xp-offline__summary::after { transition: transform 0.15s ease; }
+}
