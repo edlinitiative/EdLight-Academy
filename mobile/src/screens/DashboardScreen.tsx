@@ -44,6 +44,8 @@ import TodayPair from '../components/home/TodayPair';
 import CourseRail, { CourseRailSkeleton } from '../components/home/CourseRail';
 import ClassPickerCard, { HowItWorksCard } from '../components/home/ClassPickerCard';
 import { railCourses } from '../components/home/homeLayout';
+import SpotlightCard, { type SpotlightTarget } from '../components/home/SpotlightCard';
+import { useHomeSpotlight } from '../components/home/useHomeSpotlight';
 
 type Nav = BottomTabNavigationProp<TabParamList>;
 
@@ -109,6 +111,9 @@ export default function DashboardScreen() {
   const { streak } = useStreak();
   const { progress: allProgress } = useAllProgress();
   const { myEntry } = useLeaderboard(25);
+  // Something time-sensitive the student can act on now (the Arène event, a
+  // tournament they are in) — when present it is the FIRST content card.
+  const spotlight = useHomeSpotlight();
 
   const weeklyXp = (myEntry as any)?.xp ?? 0;
   const allAttemptsList = Object.values(quizAttempts as Record<string, any[]>).flat();
@@ -207,6 +212,14 @@ export default function DashboardScreen() {
   const goCourseList = () =>
     resetTabToRoot(navigation, 'Courses', 'CourseList', { resetAt: Date.now() });
   const startDaily = () => { setPendingDailyChallenge(true); navigation.navigate('Trivia'); };
+  // PressableScale already gives the tap its haptic.
+  const openSpotlight = (target: SpotlightTarget) =>
+    (navigation as any).navigate(target.screen, target.params);
+  // Owner feedback (build 61): an open/live event is "the main thing on the
+  // page" — a content card, first in the flow (memory: no-hero-bands).
+  const spotlightBlock = spotlight ? (
+    <SpotlightCard item={spotlight} isCreole={isCreole} onOpen={openSpotlight} />
+  ) : null;
 
   // Require a KNOWN grade: gradeProfile(null) falls through to the NS4/Bac
   // default, so a student who tapped "Passer" was shown Bac readiness.
@@ -317,6 +330,7 @@ export default function DashboardScreen() {
 
         {isNew ? (
           <View style={{ paddingHorizontal: GUTTER, marginTop: 16, gap: 20 }}>
+            {spotlightBlock}
             {/* Stitch 02: ask the class where the content will appear, then a
                 real first lesson, then how the ladder works. */}
             <ClassPickerCard />
@@ -325,11 +339,19 @@ export default function DashboardScreen() {
           </View>
         ) : (
           <>
-            <View style={{ paddingHorizontal: GUTTER, marginTop: 16 }}>{nextStepBlock}</View>
+            {spotlightBlock ? (
+              <View style={{ paddingHorizontal: GUTTER, marginTop: 16 }}>{spotlightBlock}</View>
+            ) : null}
+            <View style={{ paddingHorizontal: GUTTER, marginTop: spotlightBlock ? 20 : 16 }}>{nextStepBlock}</View>
 
-            {/* Aujourd'hui: the daily challenge + the Arène, side by side. */}
+            {/* Aujourd'hui: the daily challenge + the Arène, side by side —
+                the Arène tile steps aside while its event is the first card. */}
             <View style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>
-              <TodayPair onStartDaily={startDaily} school={(myEntry as any)?.school ?? null} />
+              <TodayPair
+                onStartDaily={startDaily}
+                school={(myEntry as any)?.school ?? null}
+                hideArena={spotlight?.kind === 'arena'}
+              />
             </View>
 
             {/* Evidence of progress (LJ-10) + this week's goal. */}
