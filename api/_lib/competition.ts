@@ -48,6 +48,7 @@ import {
   type CompetitionNotice,
 } from './competitionNotify';
 import { clearReminders, scheduleReminders } from './competitionReminders';
+import { competitionFlags } from './platformConfig';
 
 /** Admins are pushed about a reported target at most once per this interval; the inbox item updates every time. */
 export const REPORT_PUSH_INTERVAL_MS = 60 * 60 * 1000;
@@ -314,6 +315,9 @@ export async function mutateCompetition(
   // Pushes go out only for the attempt that actually committed here — never for a replayed receipt.
   let notices: CompetitionNotice[] = [];
   let executed = false;
+  // Admin-switchable (platformConfig/competition, env default). Read once, before
+  // the transaction: retries enforce the same switches as the first attempt.
+  const flags = await competitionFlags(db);
   const output = await db.runTransaction(async (tx) => {
     notices = [];
     executed = false;
@@ -345,7 +349,7 @@ export async function mutateCompetition(
       !body.eventId
     )
       ensure(
-        process.env.COMPETITION_CREATION_ENABLED === 'true',
+        flags.creationEnabled,
         'pilot_not_enabled',
         403,
       );
@@ -809,7 +813,7 @@ export async function mutateCompetition(
         // Slice E is outside the A–D pilot: its modes need their own switch.
         ensure(
           gameMode === 'independent' ||
-            process.env.COMPETITION_TEAM_MODES_ENABLED === 'true',
+            flags.teamModesEnabled,
           'team_modes_not_enabled',
           403,
         );
