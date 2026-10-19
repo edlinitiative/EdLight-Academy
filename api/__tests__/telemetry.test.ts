@@ -37,7 +37,12 @@ describe('error aggregates and admin read', () => {
     const docs = [...fakeDb.store.entries()].filter(([p]) => p.startsWith('diagnosticErrors/'));
     expect(docs).toHaveLength(1);
     expect(JSON.stringify(docs)).not.toContain('private');
-    expect([...fakeDb.store.keys()].some((p) => p.startsWith('users/admin1/competitionInbox/diag_'))).toBe(true);
+    // One reporter is not enough to alert; a second, distinct address is.
+    const hasAlert = () => [...fakeDb.store.keys()].some((p) => p.startsWith('users/admin1/competitionInbox/diag_'));
+    expect(hasAlert()).toBe(false);
+    const second = request(crash, { 'x-forwarded-for': 'aggregate-test-2' });
+    await handler(second.req, second.res);
+    expect(hasAlert()).toBe(true);
 
     const anon = request(null, {}, 'GET');
     anon.req.query = { view: 'errors' };
@@ -54,7 +59,7 @@ describe('error aggregates and admin read', () => {
     await handler(admin.req, admin.res);
     expect(admin.res.status).toHaveBeenCalledWith(200);
     const { errors } = admin.res.json.mock.calls[0][0];
-    expect(errors).toEqual([expect.objectContaining({ signature: 'deadbeef', count: 1, fatalCount: 1, alerted: true })]);
+    expect(errors).toEqual([expect.objectContaining({ signature: 'deadbeef', count: 2, fatalCount: 2, alerted: true })]);
     log.mockRestore();
   });
 });

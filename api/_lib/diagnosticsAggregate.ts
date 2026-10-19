@@ -30,6 +30,15 @@ import { SIGNATURE_PATTERN } from '../../shared/errorSignature';
 export const DIAG_COLLECTION = 'diagnosticErrors';
 export const FATAL_SPIKE_THRESHOLD = 5;
 export const WRITE_BUDGET_PER_MINUTE = 300;
+/** Telemetry is unauthenticated: an alert needs this many distinct reporters (hashed addresses) for the signature that day. */
+export const MIN_DISTINCT_REPORTERS = 2;
+/** Platform-wide cap on alert pushes per UTC day (Firestore-backed, shared by every instance); inbox items still record. */
+export const ALERT_PUSHES_PER_DAY = 20;
+const KNOWN_KINDS = new Set([
+  'chunk_load', 'network', 'undefined_access', 'not_a_function', 'not_defined', 'stack_overflow',
+  'invalid_hook', 'render_loop', 'invariant', 'permission', 'quota', 'timeout', 'abort', 'json_parse',
+  'storage', 'unknown',
+]);
 /** Not a person: only excluded from the push recipients. */
 export const DIAGNOSTICS_ACTOR_UID = 'system_diagnostics';
 
@@ -93,8 +102,9 @@ export function groupErrors(events: DiagnosticEvent[]): ErrorGroup[] {
 }
 
 /** Pure alert rule. */
-export function decideErrorAlert(input: { fatalCount: number; alreadyAlerted: boolean; seenBefore: boolean }): boolean {
+export function decideErrorAlert(input: { fatalCount: number; alreadyAlerted: boolean; seenBefore: boolean; reporters?: number }): boolean {
   if (input.alreadyAlerted || input.fatalCount <= 0) return false;
+  if ((input.reporters ?? MIN_DISTINCT_REPORTERS) < MIN_DISTINCT_REPORTERS) return false;
   if (!input.seenBefore) return true;
   return input.fatalCount >= FATAL_SPIKE_THRESHOLD;
 }
@@ -112,12 +122,31 @@ function takeBudget(now: number): boolean {
 
 export type AlertSender = (db: Firestore, alert: { signature: string; day: string; title: string }, now: number) => Promise<void>;
 
-/** Short, non-personal title: what crashed where. */
+const strict = (value: unknown, pattern: RegExp) =>
+  typeof value === 'string' && pattern.test(value) ? value : null;
+
+/** Short, non-personal title built only from validated vocabulary — never free-form client strings. */
 export function alertTitle(g: Pick<ErrorGroup, 'errorName' | 'errorKind' | 'release'>): string {
   const r = g.release;
-  const where = [r.platform, r.appVersion, r.buildNumber != null ? `(${r.buildNumber})` : null, r.release ? String(r.release).slice(0, 7) : null]
-    .filter((x) => x != null && x !== '').join(' ');
-  return `Crash ${g.errorName}${g.errorKind ? ` · ${g.errorKind}` : ''}${where ? ` · ${where}` : ''}`.slice(0, 80);
+  const name = strict(g.errorName, /^[A-Za-z]{1,40}$/) ?? 'Error';
+  const kind = g.errorKind && KNOWN_KINDS.has(g.errorKind) ? g.errorKind : null;
+  const platform = strict(r.platform, /^(web|ios|android)$/);
+  const version = strict(r.appVersion, /^\d{1,3}(\.\d{1,3}){0,2}$/);
+  const build = r.buildNumber != null ? strict(String(r.buildNumber), /^\d{1,6}$/) : null;
+  const commit = strict(r.release ? String(r.release).slice(0, 7) : null, /^[0-9a-f]{7}$/);
+  const where = [platform, version, build ? `(${build})` : null, commit].filter(Boolean).join(' ');
+  return `Crash ${name}${kind ? ` · ${kind}` : ''}${where ? ` · ${where}` : ''}`.slice(0, 80);
+}
+
+/** Claim one push from the day's shared budget; false once exhausted. */
+async function takeAlertPush(db: Firestore, day: string): Promise<boolean> {
+  const ref = db.doc(`diagnosticAlertBudget/${day}`);
+  return db.runTransaction(async (tx) => {
+    const used = ((await tx.get(ref)).data() as { used?: number } | undefined)?.used ?? 0;
+    if (used >= ALERT_PUSHES_PER_DAY) return false;
+    tx.set(ref, { day, used: used + 1 });
+    return true;
+  });
 }
 
 /** One inbox item + push per platform administrator. Mirrors competitionOrphans `alertAdmins`. */
@@ -138,6 +167,8 @@ export const alertAdminsOfError: AlertSender = async (db, alert, now) => {
       updatedAt: now,
     });
   await batch.commit();
+  // Past the shared daily cap admins still get the inbox item, but no push.
+  if (!(await takeAlertPush(db, alert.day))) return;
   // Lazy: the push senders stay out of the telemetry function's cold start.
   const { deliverCompetitionNotices } = await import('./competitionNotify');
   await deliverCompetitionNotices(
@@ -168,6 +199,7 @@ export async function recordErrorAggregates(
   events: DiagnosticEvent[],
   now: number,
   sendAlert: AlertSender = alertAdminsOfError,
+  reporter?: string,
 ): Promise<{ written: number; alerted: number }> {
   let written = 0;
   let alerted = 0;
@@ -182,6 +214,10 @@ export async function recordErrorAggregates(
         const platforms: Record<string, number> = { ...(prev?.platforms ?? {}) };
         for (const [k, n] of Object.entries(g.platforms)) platforms[k] = (platforms[k] ?? 0) + n;
         const fatalCount = (prev?.fatalCount ?? 0) + g.fatalCount;
+        // Bounded set of hashed reporters, so one sender can't raise an alert alone.
+        const reporters: string[] = Array.isArray(prev?.reporters) ? prev!.reporters.slice(0, 10) : [];
+        if (g.fatalCount && reporter && !reporters.includes(reporter) && reporters.length < 10)
+          reporters.push(reporter);
         tx.set(ref, {
           signature: g.signature,
           day,
@@ -197,13 +233,14 @@ export async function recordErrorAggregates(
           firstSeen: prev?.firstSeen ?? now,
           lastSeen: now,
           alertedAt: prev?.alertedAt ?? null,
+          reporters,
         });
-        return { fatalCount, alreadyAlerted: !!prev?.alertedAt };
+        return { fatalCount, alreadyAlerted: !!prev?.alertedAt, reporters: reporters.length };
       });
       written += 1;
       if (!g.fatalCount || state.alreadyAlerted) continue;
       const seenBefore = await seenOnEarlierDay(db, g.signature, day);
-      if (!decideErrorAlert({ fatalCount: state.fatalCount, alreadyAlerted: false, seenBefore })) continue;
+      if (!decideErrorAlert({ fatalCount: state.fatalCount, alreadyAlerted: false, seenBefore, reporters: state.reporters })) continue;
       // Claim the day's alert; a concurrent request that loses sends nothing.
       const claimed = await db.runTransaction(async (tx) => {
         const snap = await tx.get(ref);

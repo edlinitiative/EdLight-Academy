@@ -64,24 +64,26 @@ it('writes one bounded doc per signature per day and accumulates counts', async 
   expect(send).not.toHaveBeenCalled();
   // Nothing personal can be stored: only these keys exist.
   expect(Object.keys(doc).sort()).toEqual(['alertedAt', 'count', 'day', 'errorKind', 'errorName', 'eventName',
-    'fatalCount', 'firstSeen', 'last', 'lastSeen', 'platforms', 'screen', 'signature', 'topFrame']);
+    'fatalCount', 'firstSeen', 'last', 'lastSeen', 'platforms', 'reporters', 'screen', 'signature', 'topFrame']);
 });
 
 it('alerts a new fatal signature once per day, again the next day only if it spikes', async () => {
   const db = new FakeDb();
   const send = jest.fn().mockResolvedValue(undefined);
-  await recordErrorAggregates(db as any, [fatal()], NOW, send);
-  await recordErrorAggregates(db as any, [fatal(), fatal()], NOW + 60_000, send);
+  await recordErrorAggregates(db as any, [fatal()], NOW, send, 'r1');
+  // One reporter alone never alerts (telemetry is unauthenticated).
+  expect(send).not.toHaveBeenCalled();
+  await recordErrorAggregates(db as any, [fatal(), fatal()], NOW + 60_000, send, 'r2');
   expect(send).toHaveBeenCalledTimes(1);
   expect(send.mock.calls[0][1]).toEqual({ signature: 'deadbeef', day: '20261019', title: expect.stringMatching(/^Crash TypeError · undefined_access · ios 1\.2\.0 \(61\)/) });
 
   // Next day: known signature → no alert until the spike threshold.
   const tomorrow = NOW + DAY;
-  for (let i = 1; i < FATAL_SPIKE_THRESHOLD; i++) await recordErrorAggregates(db as any, [fatal()], tomorrow + i, send);
+  for (let i = 1; i < FATAL_SPIKE_THRESHOLD; i++) await recordErrorAggregates(db as any, [fatal()], tomorrow + i, send, `r${i}`);
   expect(send).toHaveBeenCalledTimes(1);
-  await recordErrorAggregates(db as any, [fatal()], tomorrow + 99, send);
+  await recordErrorAggregates(db as any, [fatal()], tomorrow + 99, send, 'r9');
   expect(send).toHaveBeenCalledTimes(2);
-  await recordErrorAggregates(db as any, [fatal(), fatal()], tomorrow + 120, send);
+  await recordErrorAggregates(db as any, [fatal(), fatal()], tomorrow + 120, send, 'r10');
   expect(send).toHaveBeenCalledTimes(2);
 });
 
@@ -89,7 +91,8 @@ it('a failing alert or write never throws into the request', async () => {
   const db = new FakeDb();
   const send = jest.fn().mockRejectedValue(new Error('push down'));
   jest.spyOn(console, 'warn').mockImplementation(() => {});
-  await expect(recordErrorAggregates(db as any, [fatal()], NOW, send)).resolves.toEqual({ written: 1, alerted: 0 });
+  await recordErrorAggregates(db as any, [fatal()], NOW, send, 'r1');
+  await expect(recordErrorAggregates(db as any, [fatal()], NOW + 1, send, 'r2')).resolves.toEqual({ written: 1, alerted: 0 });
   jest.restoreAllMocks();
 });
 
@@ -117,4 +120,22 @@ it('summaries fold days per signature, newest first, within the requested window
   expect(rows.map((r) => r.signature)).toEqual(['deadbeef', 'cafebabe']);
   expect(rows[0]).toEqual(expect.objectContaining({ count: 2, days: 2, lastSeen: NOW + 5 }));
   expect((await readErrorSummaries(db as any, NOW + 10, 30))[0].count).toBe(3);
+});
+
+it('alert titles carry only validated vocabulary, never client free text', () => {
+  const { alertTitle } = jest.requireActual('../_lib/diagnosticsAggregate');
+  expect(alertTitle({ errorName: 'Pwned<script>', errorKind: 'click http://evil' as any,
+    release: { platform: 'Buy now!', appVersion: 'visit evil.com', buildNumber: 'x' as any, release: 'ZZZZZZZ' } as any }))
+    .toBe('Crash Error');
+});
+
+it('caps alert pushes per day across instances; past the cap admins still get the inbox item', async () => {
+  const db = new FakeDb();
+  db.store.set('users/admin1', { role: 'admin' });
+  db.store.set('diagnosticAlertBudget/20261019', { day: '20261019', used: 20 });
+  const { deliverCompetitionNotices } = jest.requireMock('../_lib/competitionNotify');
+  deliverCompetitionNotices.mockClear();
+  await alertAdminsOfError(db as any, { signature: 'cafe1234', day: '20261019', title: 'Crash TypeError' }, NOW);
+  expect(db.store.get('users/admin1/competitionInbox/diag_20261019_cafe1234')).toBeTruthy();
+  expect(deliverCompetitionNotices).not.toHaveBeenCalled();
 });

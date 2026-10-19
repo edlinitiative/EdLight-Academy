@@ -33,7 +33,7 @@ async function readForAdmin(req: VercelRequest, res: VercelResponse) {
   return res.status(200).json({ errors });
 }
 
-async function aggregate(events: DiagnosticEvent[], now: number) {
+async function aggregate(events: DiagnosticEvent[], now: number, reporter: string) {
   if (!events.some((e) => e.type === 'error')) return;
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
@@ -41,7 +41,7 @@ async function aggregate(events: DiagnosticEvent[], now: number) {
     if (!isAdminConfigured()) return;
     const { recordErrorAggregates } = await aggregates();
     await Promise.race([
-      recordErrorAggregates(getDb(), events, now),
+      recordErrorAggregates(getDb(), events, now, undefined, reporter),
       new Promise<void>((resolve) => { timer = setTimeout(resolve, AGGREGATE_BUDGET_MS); }),
     ]);
   } catch {
@@ -107,6 +107,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       serverEnvironment: process.env.VERCEL_ENV || 'development', event }));
   }
   // Queryable per-signature/day aggregates + fatal alerts (sanitized events only).
-  await aggregate(events, now);
+  // The rate-limit key doubles as the reporter id (a hash; Vercel's edge sets x-forwarded-for).
+  await aggregate(events, now, key.slice(0, 16));
   return res.status(202).json({ accepted: events.length });
 }
