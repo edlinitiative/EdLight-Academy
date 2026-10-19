@@ -11,7 +11,14 @@
  * Integrity: this context only ever leaves a results / correction surface,
  * after the answer has been shown to the student. The callers never build it
  * on a live exam paper or in competition (SandraWidget's restriction rule
- * still applies on the web; mobile only offers it from corrections).
+ * still applies on the web; mobile only offers it from corrections). But all
+ * of it is client-asserted, so the SERVER decides (api/_lib/explainGate.ts):
+ * only an exam question with a submitted paper for the caller, or a quiz-bank
+ * question it can read itself, unlocks the explain-the-answer mode, and then
+ * with the server's own copy of the question, key and explanation. Anything
+ * else, or any live competition for the caller, is ordinary hint-only
+ * tutoring. The ids are what make that check possible: exam rows send the
+ * flattened question index as `questionId`, bank rows the quiz doc id.
  *
  * Privacy: the student's own answer is now sent to the LLM provider and kept
  * in the admin-visible transcript. The button sheet says so in one line
@@ -194,6 +201,8 @@ export function examQuestionContext(args: {
   subject?: string;
   level?: string;
   examId?: string;
+  /** Position in flattenQuestions(exam): the id the server verifies against. */
+  questionIndex?: number;
 }): QuestionContext | undefined {
   const q = args.question;
   return sanitizeQuestionContext({
@@ -207,6 +216,8 @@ export function examQuestionContext(args: {
     questionType: typeof q?.type === 'string' ? q.type : undefined,
     status: args.status,
     examId: args.examId,
-    questionId: typeof q?.id === 'string' ? q.id : undefined,
+    questionId: typeof q?.id === 'string'
+      ? q.id
+      : Number.isInteger(args.questionIndex) && (args.questionIndex as number) >= 0 ? String(args.questionIndex) : undefined,
   });
 }

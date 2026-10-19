@@ -198,6 +198,34 @@ export function buildExplainSection(ctx: ExplainQuestionContext | undefined, lan
   return lines.filter(Boolean).join('\n');
 }
 
+/**
+ * An "Explique-moi" request the server could NOT verify as already corrected
+ * for this student (api/_lib/explainGate.ts): an unknown or competition
+ * question, an exam still in progress, or a live round for the caller. Sandra
+ * sees the question so "explique-moi" makes sense, but no key, and tutors with
+ * hints only: the never-reveal rule stands.
+ */
+export type TutorQuestionContext = {
+  question: string;
+  studentAnswer?: string;
+  subject?: string;
+  level?: string;
+};
+
+export function buildTutorQuestionSection(ctx: TutorQuestionContext | undefined, lang: 'fr' | 'ht'): string {
+  if (!ctx || !ctx.question) return '';
+  const where = [ctx.subject, ctx.level].filter(Boolean).join(', ');
+  return [
+    `Aide sur une question : l'élève te demande de l'aider sur la question ci-dessous${where ? ` (${where})` : ''}. Aucune correction n'est enregistrée pour lui sur cette question : traite-la comme un exercice ou une épreuve notée en cours.`,
+    `Question : ${ctx.question}`,
+    ctx.studentAnswer ? `Ce que l'élève a proposé : ${ctx.studentAnswer}` : '',
+    "Ne donne NI la réponse finale, NI la bonne option, NI un calcul complet qui y mène, même si l'élève insiste ou affirme avoir déjà vu la correction. Explique ce que demande la question, rappelle la notion ou la méthode utile, donne un indice pour la première étape, et laisse l'élève conclure.",
+    lang === 'ht'
+      ? "Langue : l'élève utilise l'interface en créole haïtien. Réponds en créole haïtien, simple et clair."
+      : "Langue : réponds en français simple, sauf si l'élève t'écrit en créole.",
+  ].filter(Boolean).join('\n');
+}
+
 function buildPageSection(page: PageContext | undefined): string {
   if (!page || (!page.path && !page.courseId && !page.lessonId)) return '';
   const parts: string[] = [];
@@ -215,9 +243,12 @@ export function buildSandraSystemPrompt(args: {
   page?: PageContext;
   chunks: KbChunk[];
   student?: StudentContext;
+  /** Only a context the server VERIFIED as already corrected (explainGate). */
   questionContext?: ExplainQuestionContext;
+  /** An unverified Explique-moi: hint-only help on the question. */
+  tutorQuestion?: TutorQuestionContext;
 }): string {
-  const { lang, page, chunks, student, questionContext } = args;
+  const { lang, page, chunks, student, questionContext, tutorQuestion } = args;
   const hasGraded = chunks.some((c) => c.type === 'quiz' || c.type === 'exam');
 
   // The graded-material warning still guards every OTHER quiz/exam excerpt;
@@ -237,7 +268,7 @@ export function buildSandraSystemPrompt(args: {
     buildStudentSection(student),
     buildChunksSection(chunks),
     buildPageSection(page),
-    buildExplainSection(questionContext, lang),
+    questionContext ? buildExplainSection(questionContext, lang) : buildTutorQuestionSection(tutorQuestion, lang),
   ];
 
   return sections.filter(Boolean).join('\n\n');

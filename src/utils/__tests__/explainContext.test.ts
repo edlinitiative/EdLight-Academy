@@ -90,6 +90,11 @@ describe('exam rows → readable text', () => {
       expectedAnswer: 'A) Port-au-Prince', explanation: 'Siège du gouvernement.', status: 'incorrect', examId: 'e1',
     });
   });
+
+  it('sends the flattened index as questionId so the server can verify the row', () => {
+    const ctx = examQuestionContext({ question: mcq, answer: 'b', status: 'incorrect', examId: 'e1', questionIndex: 7 })!;
+    expect(ctx.questionId).toBe('7');
+  });
 });
 
 describe('Sandra prompt section', () => {

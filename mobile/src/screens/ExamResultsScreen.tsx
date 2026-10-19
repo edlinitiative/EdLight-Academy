@@ -142,7 +142,7 @@ function QuestionReviewItem({ question, index, answer, result, subject, level, e
   const neutral = isUnanswered || isPending;
   const essay = result?.essayFeedback && classifyEssayResponse(result.essayFeedback) !== 'failed' ? result.essayFeedback : null;
   const explainCtx = !isPending && !isUnanswered && !isCorrect
-    ? examQuestionContext({ question, answer: given, status: isPartial ? 'partial' : 'incorrect', subject, level, examId })
+    ? examQuestionContext({ question, answer: given, status: isPartial ? 'partial' : 'incorrect', subject, level, examId, questionIndex: index })
     : undefined;
   const questionText = mathToText(String(question._displayText ?? question.question ?? ''));
 

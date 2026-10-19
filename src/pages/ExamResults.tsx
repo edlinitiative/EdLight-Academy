@@ -1108,6 +1108,7 @@ const ExamResults = () => {
                   subject,
                   level: storedLevel,
                   examId: examKey || undefined,
+                  questionIndex: i,
                 });
                 return ctx ? <ExplainWithSandra context={ctx} /> : null;
               })()}
