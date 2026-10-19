@@ -212,7 +212,7 @@ const ROUTES = {
     body: wrap(`
       ${h1('Politique de confidentialité')}
       ${p('Nous respectons votre vie privée. Cette page explique quelles données EdLight Academy collecte, comment elles sont utilisées, avec qui elles sont partagées et quels sont vos droits.')}
-      ${p('<em>Date d’entrée en vigueur : 7 juillet 2026</em>')}
+      ${p('<em>Date d’entrée en vigueur : 7 juillet 2026 · mise à jour le 18 octobre 2026</em>')}
       ${h2('Qui sommes-nous')}
       ${p('EdLight Academy est une plateforme éducative gratuite qui aide les élèves haïtiens à préparer le Baccalauréat, avec des cours, des vidéos, des quiz et des examens en français et en créole haïtien (Kreyòl). Pour toute question relative à cette politique ou à vos données, contactez-nous à <a href="mailto:info@edlight.org" style="color:#1B6FE0">info@edlight.org</a> ou consultez <a href="https://edlight.org" style="color:#1B6FE0">edlight.org</a>.')}
       ${h2('Données que nous collectons')}
@@ -221,6 +221,7 @@ const ROUTES = {
         '<strong>Données d’apprentissage :</strong> votre progression dans les cours et les leçons, vos tentatives et scores aux quiz et aux examens, vos points d’expérience (XP) et votre série de jours consécutifs (streak).',
         '<strong>Contenu que vous publiez :</strong> les commentaires que vous laissez sous les leçons.',
         '<strong>Informations techniques de base :</strong> des données d’appareil et d’utilisation (type d’appareil, navigateur, identifiants techniques) nécessaires au bon fonctionnement du service et aux notifications.',
+        '<strong>Mesure d’audience :</strong> sur le site web, Google Analytics enregistre, à l’aide de cookies ou d’identifiants similaires, des données d’utilisation (pages vues, type d’appareil et de navigateur, pays approximatif, site ou annonce d’où vous venez) et certaines actions : création de compte, connexion, leçon ou quiz terminé, clic vers l’App Store ou Google Play. Les événements que nous envoyons ne contiennent ni votre nom ni votre adresse e-mail.',
       ])}
       ${h2('Comment nous utilisons vos données')}
       ${ul([
@@ -229,13 +230,16 @@ const ROUTES = {
         'Établir les classements (leaderboards) entre les élèves.',
         'Vous envoyer des notifications et des rappels d’étude.',
         'Assurer le fonctionnement, la sécurité et l’amélioration de la plateforme.',
+        'Mesurer l’efficacité de nos propres annonces Google Ads, par exemple savoir si une visite venue d’une annonce mène à une inscription ou à un téléchargement de l’application.',
       ])}
       ${h2('Partage et prestataires tiers')}
-      ${p('Nous <strong>ne vendons pas</strong> vos données personnelles. Nous faisons appel à un nombre limité de prestataires de services qui traitent des données pour notre compte : Google Firebase — authentification (Firebase Authentication), base de données (Firestore) et notifications (Cloud Messaging) ; YouTube — les vidéos des leçons sont intégrées via des lecteurs YouTube ; le visionnage d’une vidéo peut être soumis à la politique de confidentialité de Google/YouTube.')}
+      ${p('Nous <strong>ne vendons pas</strong> vos données personnelles. Nous faisons appel à un nombre limité de prestataires de services qui traitent des données pour notre compte : Google Firebase — authentification (Firebase Authentication), base de données (Firestore) et notifications (Cloud Messaging) ; YouTube — les vidéos des leçons sont intégrées via des lecteurs YouTube ; le visionnage d’une vidéo peut être soumis à la politique de confidentialité de Google/YouTube ; Google Analytics et Google Ads — mesure d’audience du site et mesure des résultats de nos annonces, traitées par Google selon ses propres règles (<a href="https://policies.google.com/privacy" style="color:#1B6FE0">policies.google.com/privacy</a>).')}
+      ${h2('Vos choix sur la mesure d’audience')}
+      ${p('Dans l’Espace économique européen, au Royaume-Uni et en Suisse, les cookies de mesure et publicitaires sont refusés par défaut. Ailleurs, ils sont actifs par défaut. Vous pouvez les refuser sur cette page pour votre navigateur ; Google peut alors encore recevoir des signaux sans cookie, utilisés pour des statistiques agrégées. Les réglages de votre navigateur et les bloqueurs de publicité peuvent aussi les bloquer.')}
       ${h2('Sécurité')}
       ${p('Vos données sont transmises de manière chiffrée (chiffrement en transit, HTTPS/TLS). Aucun système n’étant totalement infaillible, nous ne pouvons garantir une sécurité absolue, mais nous prenons des mesures raisonnables pour protéger vos informations.')}
       ${h2('Élèves et mineurs')}
-      ${p('EdLight Academy s’adresse principalement à des élèves du secondaire, dont certains sont mineurs. Nous ne collectons que les données nécessaires à l’apprentissage et nous n’utilisons pas les données des élèves à des fins publicitaires. Si vous êtes le parent ou le tuteur d’un mineur et souhaitez consulter ou supprimer ses données, contactez-nous à <a href="mailto:info@edlight.org" style="color:#1B6FE0">info@edlight.org</a>.')}
+      ${p('EdLight Academy s’adresse principalement à des élèves du secondaire, dont certains sont mineurs. Nous n’affichons pas de publicité sur la plateforme et ne vendons pas les données des élèves. Nous ne collectons que les données nécessaires à l’apprentissage, ainsi que la mesure d’audience décrite plus haut. Si vous êtes le parent ou le tuteur d’un mineur et souhaitez consulter ou supprimer ses données, contactez-nous à <a href="mailto:info@edlight.org" style="color:#1B6FE0">info@edlight.org</a>.')}
       ${h2('Conservation et suppression des données')}
       ${p('Nous conservons vos données tant que votre compte est actif. Vous pouvez à tout moment demander la suppression de votre compte et des données associées en écrivant à <a href="mailto:info@edlight.org" style="color:#1B6FE0">info@edlight.org</a>. Nous traiterons votre demande dans un délai raisonnable.')}
       ${h2('Modifications de cette politique')}

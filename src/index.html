@@ -126,21 +126,79 @@
   </script>
 
   <!-- Google Analytics 4 (gtag). Enables traffic measurement and lets Google
-       Ads import GA4 conversions (link Ads <-> GA4 in the Ads UI).
-       The library (~150 KB) is fetched after the page's load event, not in
+       Ads import GA4 conversions (sign_up, app_download_click, ...).
+       The library (~200 KB) is fetched after the page's load event, not in
        the head: on the slow mobile connections most students use it was
        competing with the app's own JavaScript for bandwidth before the first
        paint. Calls made before it arrives queue in dataLayer and are sent
-       when it loads, so no event is lost. -->
+       when it loads, so no event is lost. src/utils/analytics.ts can ask for
+       it early (window.__edlightLoadGtag) when an event must leave first.
+
+       Consent Mode v2, advanced: the tag always loads. In the EEA, the UK and
+       Switzerland every signal defaults to denied (Google then sends only
+       cookieless pings); elsewhere it defaults to granted. A visitor who
+       declines on /privacy is denied everywhere, from the next page on too.
+       This script is inlined verbatim, never transpiled: keep it ES5. -->
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){ dataLayer.push(arguments); }
-    gtag('js', new Date());
-    // Carry Google Ads click ids (gclid etc.) in internal links so ad clicks
-    // are attributed without relying on ad cookies.
-    gtag('set', 'url_passthrough', true);
-    gtag('config', 'G-KNBX35H1X1');
     (function () {
+      var optedOut = false;
+      try { optedOut = localStorage.getItem('edlight_analytics_optout') === '1'; } catch (e) { /* storage blocked */ }
+      if (optedOut) {
+        gtag('consent', 'default', {
+          analytics_storage: 'denied', ad_storage: 'denied',
+          ad_user_data: 'denied', ad_personalization: 'denied'
+        });
+      } else {
+        // EU-27 (with the outermost regions Google may geolocate on their own:
+        // GP, MQ, GF, RE, YT, MF, plus AX), the rest of the EEA (IS, LI, NO),
+        // the UK and Switzerland.
+        gtag('consent', 'default', {
+          analytics_storage: 'denied', ad_storage: 'denied',
+          ad_user_data: 'denied', ad_personalization: 'denied',
+          region: ['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR',
+            'HU','IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI',
+            'ES','SE','GP','MQ','GF','RE','YT','MF','AX','IS','LI','NO','GB','CH']
+        });
+        gtag('consent', 'default', {
+          analytics_storage: 'granted', ad_storage: 'granted',
+          ad_user_data: 'granted', ad_personalization: 'granted'
+        });
+      }
+    })();
+    // Where ad_storage is denied, ad requests also drop their identifiers.
+    gtag('set', 'ads_data_redaction', true);
+    // Carry Google Ads click ids (gclid, gbraid, wbraid) in internal links so
+    // ad clicks are attributed even where ad cookies are denied.
+    gtag('set', 'url_passthrough', true);
+    // One visitor across EdLight's sites. They share the edlight.org cookie
+    // domain already; the linker also covers a hop the cookie cannot make.
+    gtag('set', 'linker', {
+      domains: ['edlight.org', 'www.edlight.org', 'apply.edlight.org',
+        'academy.edlight.org', 'code.edlight.org']
+    });
+    gtag('js', new Date());
+    // The landing URL, read NOW, before the app runs. gtag.js arrives late,
+    // and by then the router may have rewritten the address bar (a legacy
+    // path redirect, a ?ref cleanup, the visitor's first tap), taking the
+    // gclid/gbraid/wbraid with it; a session whose first hit has no click id
+    // is never credited to the ad. So the first page_view carries this URL
+    // explicitly, as an event parameter (later SPA page views, sent by
+    // enhanced measurement on history changes, carry their own URL).
+    gtag('config', 'G-KNBX35H1X1', { send_page_view: false });
+    gtag('event', 'page_view', { page_location: location.href });
+    (function () {
+      var requested = false;
+      function inject() {
+        if (requested) return;
+        requested = true;
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://www.googletagmanager.com/gtag/js?id=G-KNBX35H1X1';
+        document.head.appendChild(s);
+      }
+      window.__edlightLoadGtag = inject;
       function loadGtag() {
         // On the prerendered landing page the app itself starts after the
         // first paint, which can be after `load` (scripts/prerender_routes.mjs,
@@ -149,10 +207,7 @@
           window.addEventListener('edlight:booted', loadGtag, { once: true });
           return;
         }
-        var s = document.createElement('script');
-        s.async = true;
-        s.src = 'https://www.googletagmanager.com/gtag/js?id=G-KNBX35H1X1';
-        document.head.appendChild(s);
+        inject();
       }
       if (document.readyState === 'complete') loadGtag();
       else window.addEventListener('load', loadGtag, { once: true });
