@@ -4,7 +4,11 @@
  *   { tid?: string, pin?: string, displayName?, school?, grade? }
  *     → 200 { ok, tid, already }
  *     · 404 not_found · 403 pin_required · 409 closed | full
- *     · 400 school_required | grade_required | name_required
+ *     · 400 school_required | grade_required | class_required | name_required
+ *
+ * teamRule 'class': the team is the student's teacher-approved class, resolved
+ * here (optionally `classId` to pick one of several) and re-checked in the join
+ * transaction. A class-vs-class fixture has no PIN and is entered from Mes classes.
  *
  * A PIN always works. A bare tid works for public and unlisted tournaments —
  * the link IS the invitation — but a private one must be joined with its PIN,
@@ -22,6 +26,7 @@ import {
   parseBody,
   readTournament,
   resolveIdentity,
+  resolveVerifiedClass,
 } from './_shared';
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
@@ -66,10 +71,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  const identity = await resolveIdentity(db, uid, decoded.name, body);
+  let identity = await resolveIdentity(db, uid, decoded.name, body);
   if (!identity) {
     res.status(400).json({ error: 'name_required' });
     return;
+  }
+  if (t.teamRule === 'class') {
+    const verified = await resolveVerifiedClass(db, uid, body.classId, t.classIds);
+    if (!verified) {
+      res.status(400).json({ error: 'class_required' });
+      return;
+    }
+    identity = { ...identity, ...verified };
   }
 
   const out = await joinTournament(db, tid, identity, now);

@@ -285,7 +285,9 @@ export default function TournoisCreate() {
                     { v: 'solo', label: t('Chacun pour soi', 'Chak moun pou tèt li') },
                     { v: 'school', label: t('École contre école', 'Lekòl kont lekòl') },
                     { v: 'grade', label: t('Classe contre classe', 'Klas kont klas') },
+                    { v: 'class', label: t('Classe vérifiée', 'Klas verifye') },
                   ]} />
+                  {teamRule === 'class' && <span className="tn-field__hint">{t('Seuls les élèves approuvés par leur professeur dans Mes classes peuvent jouer. Chaque élève compte pour sa classe.', 'Se sèlman elèv pwofesè yo apwouve nan Klas mwen yo ki ka jwe. Chak elèv konte pou klas li.')}</span>}
                   {teamRule !== 'solo' && (
                     <>
                       <span className="tn-field__hint">{t('Comme à l’Arène : chaque équipe compte ses meilleurs joueurs, pas le nombre d’inscrits.', 'Tankou nan Arèn nan : chak ekip konte pi bon jwè li yo, pa kantite enskri.')}</span>

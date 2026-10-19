@@ -33,10 +33,23 @@ export type TournamentFormat = (typeof FORMATS)[number];
  *   solo    — individuals only.
  *   school  — school vs school: each school is scored on its best `teamSize`
  *             players (the Arène rule), so a big school cannot win on turnout.
- *   grade   — class vs class: the same best-N rule, grouped by class (NS I…).
+ *   grade  : level vs level: the same best-N rule, grouped by the self-declared level (NS I…).
+ *   class  : "classe vérifiée": grouped by teacher-approved class membership
+ *             (api/_lib/classSpaces), resolved by the server at join. Never
+ *             inferred from a profile's school or level.
  */
-export const TEAM_RULES = ['solo', 'school', 'grade'] as const;
+export const TEAM_RULES = ['solo', 'school', 'grade', 'class'] as const;
 export type TeamRule = (typeof TEAM_RULES)[number];
+
+/**
+ * How a team's counted players become its score.
+ *   sum     : sum of the best N; a team needs N players to qualify (the Arène rule).
+ *   average : mean of the best N who actually played; a team qualifies with
+ *              TEAM_AVERAGE_MIN(N) players, so a small class can still face a large one.
+ */
+export const TEAM_AGGREGATES = ['sum', 'average'] as const;
+export type TeamAggregate = (typeof TEAM_AGGREGATES)[number];
+export const TEAM_AVERAGE_MIN = (teamSize: number) => Math.max(2, Math.ceil(teamSize / 2));
 
 /**
  *   public    — listed on /tournois, anyone can watch, any signed-in student can join.
@@ -75,6 +88,8 @@ export interface TournamentConfig {
   format: TournamentFormat;
   teamRule: TeamRule;
   teamSize: number;
+  /** Absent means 'sum' (every tournament created before this option). */
+  teamAggregate?: TeamAggregate;
   visibility: Visibility;
   categories: string[];
   questionCount: number;
@@ -137,6 +152,8 @@ export function validateTournamentInput(
   if (format === 'bracket') teamRule = 'solo';
 
   const teamSize = intIn(input.teamSize, 3, 5);
+  if (input.teamAggregate !== undefined && !oneOf(input.teamAggregate, TEAM_AGGREGATES)) errors.push('teamAggregate');
+  const teamAggregate = teamRule !== 'solo' && input.teamAggregate === 'average' ? 'average' as const : null;
   const visibility = oneOf(input.visibility, VISIBILITIES);
   if (!visibility) errors.push('visibility');
 
@@ -185,6 +202,8 @@ export function validateTournamentInput(
       format: format as TournamentFormat,
       teamRule,
       teamSize: teamRule === 'solo' ? 0 : (teamSize && (TEAM_SIZES as readonly number[]).includes(teamSize) ? teamSize : 5),
+      // Only written when chosen, so earlier creations keep their idempotency hash.
+      ...(teamAggregate ? { teamAggregate } : {}),
       visibility: visibility as Visibility,
       categories,
       questionCount: questionCount as number,
@@ -216,4 +235,13 @@ export function isValidPin(v: unknown): v is string {
 
 export function isValidTid(v: unknown): v is string {
   return isStr(v) && /^[A-Za-z0-9_-]{6,40}$/.test(v);
+}
+
+/** The team rule as a short bilingual label (pills, room headings, squad boards). */
+export function teamRuleLabel(rule: string | null | undefined, ht: boolean): string {
+  if (rule === 'school') return ht ? 'Lekòl kont lekòl' : 'École contre école';
+  // Existing wording kept: a `grade` squad is a self-declared level, not a verified class.
+  if (rule === 'grade') return ht ? 'Klas kont klas' : 'Classe contre classe';
+  if (rule === 'class') return ht ? 'Klas verifye' : 'Classe vérifiée';
+  return ht ? 'Endividyèl' : 'Individuel';
 }
