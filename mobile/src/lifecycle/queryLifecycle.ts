@@ -24,6 +24,7 @@ import { focusManager, onlineManager } from '@tanstack/react-query';
 import { isForegroundAppState, isOnlineSnapshot } from './connectivity';
 import { retryProfileSyncIfDue, sessionGuard } from './session';
 import { drainWriteOutbox } from '../services/writeOutbox';
+import { retryMasteryPushIfPending } from '../services/masterySync';
 import { flushTelemetry } from '../services/telemetry';
 
 let installed = false;
@@ -40,6 +41,7 @@ export function installQueryLifecycle(): () => void {
       if (online && !wasOnline) {
         retryProfileSyncIfDue('reconnect');
         void drainWriteOutbox(sessionGuard.current().uid);
+        void retryMasteryPushIfPending();
         void flushTelemetry();
       }
       wasOnline = online;
@@ -54,6 +56,7 @@ export function installQueryLifecycle(): () => void {
       if (focused) {
         retryProfileSyncIfDue('foreground');
         void drainWriteOutbox(sessionGuard.current().uid);
+        void retryMasteryPushIfPending();
       }
       void flushTelemetry();
     });

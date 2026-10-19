@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, runTransaction, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
 import useStore from '../contexts/store';
 import type { ProgressMap } from '../utils/mastery';
@@ -53,63 +53,57 @@ export async function fetchRemoteMastery(uid: string): Promise<ProgressMap> {
   }
 }
 
-/** The server's copy, or null when the read FAILED (unlike fetchRemoteMastery). */
-async function fetchRemoteMasteryOrNull(uid: string): Promise<ProgressMap | null> {
-  try {
-    const snap = await getDoc(masteryDoc(uid));
-    if (!snap.exists()) return {};
-    const lessons = snap.data()?.lessons;
-    return lessons && typeof lessons === 'object' ? (lessons as ProgressMap) : {};
-  } catch (error) {
-    console.warn('[Mastery] fetch failed:', error);
-    return null;
-  }
+/**
+ * Join this device's map with the server's and write the join, in ONE
+ * transaction (P0 validation L-10, F12 follow-up). `{merge:true}` merges field
+ * by field, so any write of a record computed from a stale read can lower a
+ * score another device just raised; inside a transaction a concurrent write
+ * makes Firestore re-run the join against the new value instead. Resolves to
+ * the join; throws when the server can't be reached (no blind write then: the
+ * device keeps its map and `retryMasteryPushIfPending` tries again).
+ */
+async function pushJoined(uid: string, local: ProgressMap): Promise<ProgressMap> {
+  const ref = masteryDoc(uid);
+  return runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    const lessons = snap.exists() ? snap.data()?.lessons : null;
+    const remote = (lessons && typeof lessons === 'object' ? lessons : {}) as ProgressMap;
+    const merged = mergeProgress(local, remote);
+    if (!sameProgress(remote, merged)) {
+      tx.set(ref, { lessons: toWireFormat(merged), updatedAt: serverTimestamp() }, { merge: true });
+    }
+    return merged;
+  });
 }
 
-/** The lessons whose record differs from the last pushed snapshot. */
-function changedSince(prev: ProgressMap | null, next: ProgressMap): ProgressMap {
-  if (!prev) return next;
-  const out: ProgressMap = {};
-  for (const [id, rec] of Object.entries(next)) {
-    if (!sameProgress({ [id]: (prev as any)[id] } as ProgressMap, { [id]: rec } as ProgressMap)) out[id] = rec;
-  }
-  return out;
-}
+/** A push that could not reach the server, waiting for reconnect / foreground. */
+let pushPending = false;
 
 /**
- * The background push. `{merge:true}` merges FIELD BY FIELD, so writing a map
- * this device last synced days ago put `lessons.X.bestPct: 40` over the 100
- * the student earned on the web since (P0 validation). Join with the server
- * copy first, write the join, and fold the server's progress back in. When
- * the read fails (offline), write only the lessons this device just changed.
+ * The background push: the transactional join above, then fold the server's
+ * progress back into the store.
  */
-async function pushMergedMastery(uid: string, local: ProgressMap, prevPushed: ProgressMap | null): Promise<void> {
-  const remote = await fetchRemoteMasteryOrNull(uid);
-  if (!isSameAccount(uid, useStore.getState())) return;
-  if (remote == null) {
-    const delta = changedSince(prevPushed, local);
-    if (Object.keys(delta).length > 0) await pushMastery(uid, delta);
+async function pushMergedMastery(uid: string, local: ProgressMap): Promise<void> {
+  let merged: ProgressMap;
+  try {
+    merged = await pushJoined(uid, local);
+    pushPending = false;
+  } catch (error) {
+    pushPending = true;
+    console.warn('[Mastery] push deferred (offline?):', error);
     return;
   }
-  const merged = mergeProgress(local, remote);
+  if (!isSameAccount(uid, useStore.getState())) return;
   // Mark the join as pushed first, so folding it into the store doesn't
   // schedule a redundant push of the same map.
   lastPushed = merged;
   if (!sameProgress(local, merged)) useStore.getState().mergeRemoteProgress(merged);
-  if (!sameProgress(remote, merged)) await pushMastery(uid, merged);
 }
 
-/** Overwrite the server's copy with `progress` (already merged by the caller). */
-export async function pushMastery(uid: string, progress: ProgressMap): Promise<void> {
-  try {
-    await setDoc(
-      masteryDoc(uid),
-      { lessons: toWireFormat(progress), updatedAt: serverTimestamp() },
-      { merge: true },
-    );
-  } catch (error) {
-    console.warn('[Mastery] push failed:', error);
-  }
+/** Reconnect / foreground: retry a push that could not reach the server. */
+export function retryMasteryPushIfPending(): Promise<void> {
+  if (!pushPending || pushTimer) return Promise.resolve();
+  return runMasteryPush();
 }
 
 /** Read the server's review copy. Returns `{}` when absent or unreachable. */
@@ -171,7 +165,7 @@ export async function syncMasteryOnLogin(uid: string): Promise<void> {
   lastPushed = merged;
   // Only write when the device is genuinely ahead — a fresh install with
   // nothing local must not clear the server.
-  if (!sameProgress(remote, merged)) await pushMastery(uid, merged);
+  if (!sameProgress(remote, merged)) await pushMergedMastery(uid, merged);
 
   // Same dance for the review map — independent doc, independent verdicts.
   if (!still()) return;
@@ -239,9 +233,8 @@ function runMasteryPush(): Promise<void> {
   const s = useStore.getState();
   const currentUid = s.user?.uid;
   if (!currentUid || !s.isAuthenticated) return Promise.resolve();
-  const prev = lastPushed;
   lastPushed = s.progress as ProgressMap;
-  return pushMergedMastery(currentUid, lastPushed, prev).catch((e) => {
+  return pushMergedMastery(currentUid, lastPushed).catch((e) => {
     console.warn('[Mastery] push failed:', e);
   });
 }
@@ -284,6 +277,7 @@ export function stopMasterySync(): void {
   if (reviewPushTimer) { clearTimeout(reviewPushTimer); reviewPushTimer = null; }
   lastPushed = null;
   lastPushedReview = null;
+  pushPending = false;
 }
 
 /** Full teardown — for tests and hot-reload, not for sign-out. */

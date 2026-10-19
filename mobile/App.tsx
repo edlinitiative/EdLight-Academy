@@ -21,6 +21,8 @@ import {
 import { registerForPushNotifications } from './src/services/pushService';
 import { syncMasteryOnLogin, startMasterySync, disposeMasterySync } from './src/services/masterySync';
 import { drainWriteOutbox } from './src/services/writeOutbox';
+// Registers the study-plan replay handler before the launch drain runs.
+import './src/services/planEvents';
 import { hydrateQueryCache, persistQueryCacheOnChange } from './src/services/queryPersistence';
 import { installGlobalErrorHandlers, installProductionTelemetry, reportError } from './src/services/telemetry';
 import AppErrorBoundary from './src/components/AppErrorBoundary';

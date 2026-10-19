@@ -31,6 +31,7 @@ import {
   classifyHttpStatus,
   createOutbox,
   newOperationId,
+  type OutboxHandlers,
   type OutboxOp,
   type OutboxResult,
 } from '../../../shared/outbox';
@@ -55,6 +56,20 @@ type LessonListener = (e: { uid: string; courseId: string; lessonId: string; res
 const lessonListeners = new Set<LessonListener>();
 /** Completions whose original write is still in flight in THIS session. */
 const inflight = new Set<string>();
+
+/**
+ * Every NEWLY saved completion — the direct write or a replay — for the plan
+ * (services/planEvents marks the matching video task done).
+ */
+type CompletedListener = (e: { uid: string; courseId: string; lessonId: string }) => void;
+const completedListeners = new Set<CompletedListener>();
+export function subscribeLessonCompleted(fn: CompletedListener): () => void {
+  completedListeners.add(fn);
+  return () => { completedListeners.delete(fn); };
+}
+function emitCompleted(e: Parameters<CompletedListener>[0]) {
+  completedListeners.forEach((fn) => { try { fn(e); } catch { /* ignore */ } });
+}
 
 export function subscribeLessonOutbox(fn: LessonListener): () => void {
   lessonListeners.add(fn);
@@ -85,6 +100,7 @@ export async function completeLessonDurably(uid: string, courseId: string, lesso
   try {
     const outcome = await confirmLessonComplete(uid, courseId, lessonId);
     await outbox.remove(uid, id);
+    if (outcome === 'saved') emitCompleted({ uid, courseId, lessonId });
     return outcome;
   } finally {
     inflight.delete(key);
@@ -115,6 +131,7 @@ async function replayLesson(op: OutboxOp): Promise<OutboxResult> {
   const settled = await settleWithin(write, REPLAY_SETTLE_MS);
   if (settled.status === 'confirmed') {
     applyLocally(op.uid, p.lessonId);
+    if (settled.value === 'saved') emitCompleted({ uid: op.uid, courseId: p.courseId, lessonId: p.lessonId });
     emitLesson({ uid: op.uid, courseId: p.courseId, lessonId: p.lessonId, result: 'confirmed' });
     return 'done';
   }
@@ -171,13 +188,29 @@ export async function awardXpDurably(uid: string, payload: Record<string, unknow
  * Replay everything this account queued. Safe to call often: concurrent calls
  * join, and it does nothing unless `uid` is the signed-in account.
  */
+const handlers: OutboxHandlers = {
+  'lesson-complete': replayLesson,
+  'xp-award': (op) => postAwardOnce(op.uid, op.payload as Record<string, unknown>),
+};
+
+/** Another service queues its own kind of write and registers its replay. */
+export function registerOutboxHandler(kind: string, handler: OutboxHandlers[string]): void {
+  handlers[kind] = async (op) => {
+    if (auth.currentUser?.uid !== op.uid) return 'retry'; // never into another account
+    return handler(op);
+  };
+}
+
+/** Keep a write that could not reach the server for the next drain. */
+export async function queueForReplay(uid: string, kind: string, payload: unknown, id?: string): Promise<void> {
+  if (!uid) return;
+  await outbox.enqueue(uid, { id, kind, payload }).catch(() => null);
+}
+
 export async function drainWriteOutbox(uid: string | null | undefined): Promise<void> {
   if (!uid || auth.currentUser?.uid !== uid) return;
   try {
-    await outbox.drain(uid, {
-      'lesson-complete': replayLesson,
-      'xp-award': (op) => postAwardOnce(op.uid, op.payload as Record<string, unknown>),
-    });
+    await outbox.drain(uid, handlers);
   } catch {
     /* next launch / reconnect tries again */
   }

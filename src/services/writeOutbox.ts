@@ -9,7 +9,11 @@
  * applies each opId once, so a retry after a lost response never double-awards.
  *
  * Lesson completion on the web needs no outbox: Firestore's persistent cache
- * (multi-tab) already survives a tab close (O-2).
+ * (multi-tab) already survives a tab close (O-2). Transactional writes are
+ * different — a transaction needs the server, so offline it fails outright.
+ * Mastery and study-plan updates (L-9, P-4) run as transactions and, when one
+ * fails, queue themselves here (`queueForReplay`) under a kind whose handler
+ * the owning service registers (`registerOutboxHandler`).
  */
 
 import { auth, authedFetch } from './firebase';
@@ -18,6 +22,7 @@ import {
   createOutbox,
   memoryOutboxStorage,
   newOperationId,
+  type OutboxHandlers,
   type OutboxResult,
   type OutboxStorage,
 } from '../../shared/outbox';
@@ -46,11 +51,30 @@ async function postAwardOnce(uid: string, body: Record<string, unknown>): Promis
   return result;
 }
 
-/** Replay this account's queued awards (no-op unless it is signed in). */
+const handlers: OutboxHandlers = {
+  'xp-award': (op) => postAwardOnce(op.uid, op.payload as Record<string, unknown>),
+};
+
+/** A service that queues its own kind of write registers how to replay it. */
+export function registerOutboxHandler(kind: string, handler: OutboxHandlers[string]): void {
+  handlers[kind] = async (op) => {
+    if (auth.currentUser?.uid !== op.uid) return 'retry'; // never into another account
+    return handler(op);
+  };
+}
+
+/** Keep a write that failed (offline transaction) for the next drain. */
+export async function queueForReplay(uid: string, kind: string, payload: unknown, id?: string): Promise<void> {
+  if (!uid) return;
+  installOnlineReplay();
+  await outbox.enqueue(uid, { id, kind, payload }).catch(() => null);
+}
+
+/** Replay this account's queued writes (no-op unless it is signed in). */
 export async function drainWriteOutbox(uid: string | null | undefined): Promise<void> {
   if (!uid || auth.currentUser?.uid !== uid) return;
   try {
-    await outbox.drain(uid, { 'xp-award': (op) => postAwardOnce(op.uid, op.payload as Record<string, unknown>) });
+    await outbox.drain(uid, handlers);
   } catch { /* next sign-in / reconnect tries again */ }
 }
 

@@ -13,11 +13,19 @@ jest.mock('firebase/firestore', () => ({
   getDoc: jest.fn(),
   setDoc: jest.fn(() => Promise.resolve()),
   serverTimestamp: jest.fn(() => 0),
+  // A transaction over the same spies: reads through getDoc, writes through setDoc.
+  runTransaction: jest.fn(async (_db: unknown, fn: (tx: any) => Promise<unknown>) => {
+    const { getDoc: get, setDoc: set } = jest.requireMock('firebase/firestore');
+    const writes: Array<() => unknown> = [];
+    const out = await fn({ get: (ref: unknown) => get(ref), set: (...a: unknown[]) => { writes.push(() => set(...a)); } });
+    await Promise.all(writes.map((w) => w()));
+    return out;
+  }),
 }));
 
 import { getDoc, setDoc } from 'firebase/firestore';
 import useStore from '../../contexts/store';
-import { startMasterySync, disposeMasterySync, flushMasterySync, syncMasteryOnLogin } from '../masterySync';
+import { startMasterySync, disposeMasterySync, flushMasterySync, syncMasteryOnLogin, retryMasteryPushIfPending } from '../masterySync';
 
 const flush = () => new Promise((r) => setImmediate(r));
 
@@ -60,11 +68,10 @@ describe('debounced push', () => {
     }
   });
 
-  it('on a failed read, pushes only the lessons this device changed', async () => {
+  it('offline, writes nothing blind and retries the transactional join on reconnect', async () => {
     jest.useFakeTimers();
     try {
       useStore.setState({ user: { uid: 'u1' }, isAuthenticated: true, progress: { X: { bestPct: 40 } }, review: {} } as any);
-      // Sign-in sync establishes what the server already has.
       (getDoc as jest.Mock).mockResolvedValue({ exists: () => true, data: () => ({ lessons: { X: { bestPct: 40 } } }) });
       await syncMasteryOnLogin('u1');
       (setDoc as jest.Mock).mockClear();
@@ -74,8 +81,14 @@ describe('debounced push', () => {
       jest.advanceTimersByTime(4000);
       jest.useRealTimers();
       await flush(); await flush();
+      // A blind merge write could lower a score the web raised meanwhile.
+      expect((setDoc as jest.Mock).mock.calls.filter(([ref]) => ref.path.endsWith('mastery/lessons'))).toHaveLength(0);
+      // Back online: the web had raised X to 100 meanwhile.
+      (getDoc as jest.Mock).mockResolvedValue({ exists: () => true, data: () => ({ lessons: { X: { bestPct: 100 } } }) });
+      await retryMasteryPushIfPending();
       const call = (setDoc as jest.Mock).mock.calls.find(([ref]) => ref.path.endsWith('mastery/lessons'));
-      expect(Object.keys(call[1].lessons)).toEqual(['Y']);
+      expect(call[1].lessons.X.bestPct).toBe(100);
+      expect(call[1].lessons.Y.bestPct).toBe(80);
     } finally {
       jest.useRealTimers();
     }

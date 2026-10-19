@@ -52,7 +52,16 @@ const trackVideoProgress = (...args: Parameters<typeof import('../services/progr
 // The completion write that REPORTS its outcome (the older markLessonComplete
 // swallows every error, so the screen could not tell saved from failed).
 const confirmLessonComplete = (uid: string, courseId: string, lessonId: string) =>
-  loadProgressTracking().then((m) => m.confirmLessonComplete(uid, courseId, lessonId));
+  loadProgressTracking().then(async (m) => {
+    const outcome = await m.confirmLessonComplete(uid, courseId, lessonId);
+    // A newly finished lesson completes its study-plan video task (P0 P-2).
+    if (outcome === 'saved') {
+      import('../services/studyPlanService')
+        .then((sp) => sp.recordPlanEvent(uid, { kind: 'lesson', courseId, lessonId }, 100))
+        .catch(() => {});
+    }
+    return outcome;
+  });
 
 // ── Video resume position ("reprendre la vidéo") ───────────────────────────
 // The last playback second per lesson, in localStorage — one bucket per

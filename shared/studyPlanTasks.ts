@@ -423,6 +423,111 @@ export function planTaskWebPath(route: PlanTaskRoute): string {
   }
 }
 
+// ─── The inverse: what a finished activity completes (P0 E-13, P-2, P-3) ────
+
+/**
+ * Something the student just finished, described the way `planTaskRoute`
+ * describes where a task opens — so "which task does this complete?" is the
+ * exact inverse of "where does this task go?" on both platforms.
+ */
+export type PlanEvent =
+  | { kind: 'exam'; examId: string }
+  | { kind: 'practice'; course: string; unit?: string | null }
+  | { kind: 'lesson'; courseId: string; lessonId?: string | null };
+
+const sameId = (a: unknown, b: unknown) =>
+  String(a ?? '').trim().toLowerCase() === String(b ?? '').trim().toLowerCase() && String(a ?? '').trim() !== '';
+
+/**
+ * Does finishing `event` complete `task`? Strict where the task is specific:
+ * a chapter practice task needs that chapter (a course-wide session does not
+ * count), a video task naming a lesson needs that lesson. A task that names
+ * only its course is completed by any activity in that course.
+ */
+export function planTaskMatchesEvent(
+  task: any,
+  event: PlanEvent,
+  opts: { resolveCourseId?: (codeOrId: string) => string | undefined } = {},
+): boolean {
+  if (!task || !event) return false;
+  const route = planTaskRoute(task, opts);
+  switch (event.kind) {
+    case 'exam':
+      return route.kind === 'exam' && sameId(route.examId, event.examId);
+    case 'practice': {
+      if (route.kind !== 'practice' || !sameId(route.course, event.course)) return false;
+      const unit = event.unit && event.unit !== '*' ? event.unit : null;
+      return !route.unit || (!!unit && sameId(route.unit, unit));
+    }
+    case 'lesson': {
+      if (route.kind !== 'lesson' || !sameId(route.courseId, event.courseId)) return false;
+      return !route.lessonId || (!!event.lessonId && sameId(route.lessonId, event.lessonId));
+    }
+    default:
+      return false;
+  }
+}
+
+export interface PlanSrs {
+  computeSRS: (task: any, quality: number) => Record<string, any>;
+  scoreToQuality: (pct: number) => number;
+}
+
+/** One task after a result: SRS reschedule + history, as recordTaskResult did. */
+export function applyTaskResult(task: any, scorePct: number, nowMs: number, srs: PlanSrs, answeredAt?: number): any {
+  const quality = srs.scoreToQuality(scorePct ?? 0);
+  const next = srs.computeSRS(task, quality);
+  const history = Array.isArray(task?.history) ? [...task.history] : [];
+  history.push({ scorePct, quality, answeredAt: answeredAt || nowMs });
+  return {
+    ...task,
+    ...next,
+    history,
+    lastPracticedMs: nowMs,
+    status: (next as any).repetitions >= 3 && quality >= 4 ? 'mastered' : 'active',
+  };
+}
+
+/**
+ * Apply a finished activity to a plan's task list. Returns the new list and
+ * how many tasks it advanced (0 → nothing to write). Pure: the platforms run
+ * it inside a Firestore transaction so two devices can't overwrite each other.
+ */
+export function applyPlanEvent(
+  tasks: any[],
+  event: PlanEvent,
+  scorePct: number,
+  nowMs: number,
+  srs: PlanSrs,
+  opts: { resolveCourseId?: (codeOrId: string) => string | undefined; answeredAt?: number } = {},
+): { tasks: any[]; changed: number } {
+  let changed = 0;
+  const out = (tasks || []).map((t) => {
+    if (!planTaskMatchesEvent(t, event, opts)) return t;
+    changed += 1;
+    return applyTaskResult(t, scorePct, nowMs, srs, opts.answeredAt);
+  });
+  return { tasks: out, changed };
+}
+
+/** The same, for a task named by its exam id or task id (the old recordTaskResult contract). */
+export function applyTaskIdResult(
+  tasks: any[],
+  taskId: string,
+  scorePct: number,
+  nowMs: number,
+  srs: PlanSrs,
+  answeredAt?: number,
+): { tasks: any[]; changed: number } {
+  const list = tasks || [];
+  let idx = list.findIndex((t) => t?.examId === taskId);
+  if (idx === -1) idx = list.findIndex((t) => t?.taskId === taskId);
+  if (idx === -1) return { tasks: list, changed: 0 };
+  const out = [...list];
+  out[idx] = applyTaskResult(list[idx], scorePct, nowMs, srs, answeredAt);
+  return { tasks: out, changed: 1 };
+}
+
 /** Course code prefix per canonical subject. SVT has no course of its own. */
 export const SUBJECT_COURSE_PREFIX: Record<string, string> = {
   chimie: 'CHEM',
