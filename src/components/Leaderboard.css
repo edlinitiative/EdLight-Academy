@@ -525,6 +525,7 @@ body.arena-night .leaderboard__member-rank,
 body.arena-night .leaderboard__chevron { color: #A7BAD5; }
 body.arena-night .leaderboard__xp-num { color: #F5F8FF; }
 body.arena-night .leaderboard__you { background: #9DC4FF; color: #091426; }
+body.arena-night .leaderboard__amb { color: #9DC4FF; border-color: #9DC4FF; }
 body.arena-night .lb-rank { color: #C1CFE4; }
 body.arena-night .lb-rank--gold { background: #FFB92E; color: #2A1A00; }
 body.arena-night .lb-rank--silver { background: #C9D4E5; color: #142238; }
@@ -543,3 +544,15 @@ body.arena-night .leaderboard__empty p,
 body.arena-night .leaderboard__error-note { color: #C1CFE4; }
 body.arena-night .leaderboard__field { color: #C1CFE4; }
 body.arena-night .leaderboard__field-error { color: #FFCF7A; }
+
+/* School ambassador badge beside the public alias (shared/ambassadors.ts). */
+.leaderboard__amb {
+  flex: none;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--primary);
+  border: 1px solid currentColor;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+}

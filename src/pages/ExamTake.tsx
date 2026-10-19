@@ -10,6 +10,8 @@ import MathKeyboard from '../components/MathKeyboard';
 import { useKatex, renderWithKatex } from '../utils/shared';
 import { loadExamAttemptDraft, saveExamAttemptDraft, commitExamSubmission } from '../services/examAttempts';
 import { examDraftKey, readLocalExamDraft, pickResumeDraft, draftPosition, settleWithin } from '../../shared/examDraft';
+import { EXAM_SUBMIT_KIND, examSubmitOpId } from '../../shared/offlineExamSync';
+import { queueForReplay } from '../services/writeOutbox';
 import { buildEssayGradeBody, isAiGradable } from '../../shared/essayRegrade';
 import { classifyEssayResponse, ESSAY_GRADE_TIMEOUT_MS } from '../../shared/essayGradeCore';
 import { authedFetch, auth } from '../services/firebase';
@@ -1201,7 +1203,12 @@ const ExamTake = () => {
     // time: the write stays queued in Firestore's persistent cache and commits
     // on reconnect; the results page says the account copy is still pending.
     if (userId && examKey) {
-      const commit = commitExamSubmission(userId, examKey, {
+      // One operation id per submission: stamped on the direct write and on
+      // the outbox copy below, so a replay that finds it already written is
+      // done, never a second write (shared/offlineExamSync.ts).
+      const submittedAtMs = Date.now();
+      const submissionOpId = examSubmitOpId(examKey, submittedAtMs);
+      const resultDoc = {
           exam_id: examKey,
           level: normalizeLevel(exam.level),
           subject: examSubject,
@@ -1217,10 +1224,11 @@ const ExamTake = () => {
               essayFeedback: v.essayFeedback || undefined,
             }])
           ),
-          submitted_at_ms: Date.now(),
-        }, {
-          last_result_at_ms: Date.now(),
-        });
+          submitted_at_ms: submittedAtMs,
+          submission_op_id: submissionOpId,
+        };
+      const attemptExtra = { last_result_at_ms: submittedAtMs };
+      const commit = commitExamSubmission(userId, examKey, resultDoc, attemptExtra);
       // Drop the local mirror only once the account holds the result; until
       // then it is what lets the student resume and resubmit if the queued
       // write is lost (e.g. storage without IndexedDB persistence).
@@ -1230,6 +1238,21 @@ const ExamTake = () => {
       const syncState = outcome.status === 'confirmed'
         ? (outcome.value ? 'saved' : 'failed')
         : outcome.status;
+      // Not on the account yet: Firestore's persistent cache usually commits
+      // it on reconnect, but a browser without IndexedDB persistence (private
+      // mode) loses that queue on close. The per-account outbox keeps a copy
+      // that is replayed only into this account, idempotently.
+      if (syncState !== 'saved') {
+        void queueForReplay(userId, EXAM_SUBMIT_KIND, {
+          examId: examKey,
+          submittedAtMs,
+          result: resultDoc,
+          attempt: attemptExtra,
+          pendingEssays: 0,
+          subject: examSubject,
+          level: normalizeLevel(exam.level),
+        }, submissionOpId);
+      }
       try {
         const key = `exam-result-${examKey}`;
         const raw = sessionStorage.getItem(key);

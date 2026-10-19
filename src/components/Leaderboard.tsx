@@ -25,6 +25,8 @@ import { schoolColors } from '../arena-art/crest/SchoolCrest';
 import { aggregateBy, normalizeName } from '../../shared/leaderboardAgg';
 import { canonicalSchoolName } from '../../shared/schools';
 import './Leaderboard.css';
+import { useAmbassadorUids } from '../hooks/useAmbassadors';
+import { AMBASSADOR_LABEL } from '../../shared/ambassadors';
 
 // First name only — the board is publicly readable, so never expose any part
 // of the last name (not even an initial). Empty when the account has no name:
@@ -60,6 +62,7 @@ function RankBadge({ rank }: { rank: number | null | undefined }) {
  */
 function BoardRow({
   rank, seed, name, uri = null, school, level, xp, isMe, youLabel, levelLabel, fmt, compact, sample = false, arenaFaces = false, avatar = null,
+  ambassadorLabel = null,
 }: {
   rank: number | null | undefined;
   seed: string;
@@ -79,6 +82,8 @@ function BoardRow({
   arenaFaces?: boolean;
   /** The student's chosen avatar (wire string on the entry). When valid it wins over the photo. */
   avatar?: string | null;
+  /** Shown beside the public alias when this learner is a school ambassador. */
+  ambassadorLabel?: string | null;
 }) {
   const sub = [school || null, level ? `${levelLabel} ${level}` : null].filter(Boolean).join(' · ');
   return (
@@ -95,6 +100,7 @@ function BoardRow({
       <span className="leaderboard__who">
         <span className="leaderboard__name">
           <span className="leaderboard__name-text">{name}</span>
+          {ambassadorLabel && <span className="leaderboard__amb">{ambassadorLabel}</span>}
           {isMe && <span className="leaderboard__you">{youLabel}</span>}
         </span>
         {sub && <span className="leaderboard__sub">{sub}</span>}
@@ -115,6 +121,8 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
   const fmt = (n: number) => new Intl.NumberFormat('fr-FR').format(Number(n) || 0);
   const youLabel = t('Toi', 'Ou');
   const levelLabel = t('Niv.', 'Niv.');
+  const ambassadors = useAmbassadorUids();
+  const ambLabel = (uid?: string | null) => (uid && ambassadors.has(uid) ? (isCreole ? AMBASSADOR_LABEL.ht : AMBASSADOR_LABEL.fr) : null);
 
   const [period, setPeriod] = useState('week'); // 'week' | 'all'
   const { entries, myEntry, myRank, isLoading, isError, refetch } = useLeaderboard(
@@ -364,6 +372,7 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
                               <span className="leaderboard__member-rank">{i + 1}</span>
                               <span className="leaderboard__name">
                                 <span className="leaderboard__name-text">{m.displayName || 'Élève'}</span>
+                                {ambLabel(m.uid) && <span className="leaderboard__amb">{ambLabel(m.uid)}</span>}
                                 {isMe && <span className="leaderboard__you">{youLabel}</span>}
                               </span>
                               <span className="leaderboard__xp">
@@ -426,6 +435,7 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
               level={e.level || null}
               xp={e.xp || 0}
               isMe={e.id === user?.uid}
+              ambassadorLabel={ambLabel(e.id)}
               youLabel={youLabel}
               levelLabel={levelLabel}
               fmt={fmt}
@@ -499,6 +509,7 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
               level={(myEntry as any).level || null}
               xp={myEntry.xp || 0}
               isMe
+              ambassadorLabel={ambLabel(user?.uid)}
               youLabel={youLabel}
               levelLabel={levelLabel}
               fmt={fmt}

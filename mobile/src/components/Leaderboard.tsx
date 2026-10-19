@@ -21,6 +21,8 @@ import { useMyAvatar } from '../hooks/useMyAvatar';
 import Stagger from './ui/Stagger';
 import LeaderboardJoinModal from './LeaderboardJoinModal';
 import { Skeleton, InlineError } from './StateViews';
+import { useAmbassadorUids } from '../hooks/useAmbassadors';
+import { AMBASSADOR_LABEL } from '../../../shared/ambassadors';
 
 /**
  * Two worlds share this board: the Jeux tab / full Classement page draw it on
@@ -99,6 +101,7 @@ function EntryRow({ entry, isMe, compact = false, delta = 0 }: { entry: any; isM
   const { language } = useStore();
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
   const name = entry.displayName || t('Élève', 'Elèv');
+  const ambassador = useAmbassadorUids().has(entry.id || entry.uid || '');
   // One grouped label so VoiceOver reads "Rang 3, Sandra, 215 XP" as a single
   // unit rather than three disjoint bits (rank chip · name · number · "XP").
   const deltaLabel = delta > 0
@@ -106,7 +109,7 @@ function EntryRow({ entry, isMe, compact = false, delta = 0 }: { entry: any; isM
     : delta < 0
       ? t(`, en baisse de ${-delta}`, `, desann ${-delta}`)
       : '';
-  const rowLabel = `${t('Rang', 'Ran')} ${entry.rank}, ${name}${isMe ? t(' (vous)', ' (ou)') : ''}, ${entry.xp ?? 0} XP${deltaLabel}`;
+  const rowLabel = `${t('Rang', 'Ran')} ${entry.rank}, ${name}${isMe ? t(' (vous)', ' (ou)') : ''}${ambassador ? `, ${t(AMBASSADOR_LABEL.fr, AMBASSADOR_LABEL.ht)}` : ''}, ${entry.xp ?? 0} XP${deltaLabel}`;
   // Only the leader's numeral is gold — the one place on the board that is won.
   const xpColor = night ? (Number(entry.rank) === 1 ? NC.gold : NC.ink) : colors.azure;
 
@@ -134,6 +137,7 @@ function EntryRow({ entry, isMe, compact = false, delta = 0 }: { entry: any; isM
         <Text style={{ fontFamily: fonts.bold, fontSize: 16, lineHeight: 21, color: colors.ink }} numberOfLines={1}>
           {name}
           {isMe ? t(' (toi)', ' (ou)') : ''}
+          {ambassador ? <Text style={{ fontFamily: fonts.bold, fontSize: 13, color: night ? NC.inkSoft : colors.azure }}>{`  ${t(AMBASSADOR_LABEL.fr, AMBASSADOR_LABEL.ht)}`}</Text> : null}
         </Text>
         {!compact && (entry.city || entry.school) && (
           <Text style={[typeScale.caption, { color: colors.muted }]} numberOfLines={1}>

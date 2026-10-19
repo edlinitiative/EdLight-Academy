@@ -36,6 +36,8 @@ import {
   type OutboxResult,
 } from '../../../shared/outbox';
 import { settleWithin } from '../../../shared/examDraft';
+import { EXAM_SUBMIT_KIND, isQueuedExamSubmission, type QueuedExamSubmission } from '../../../shared/offlineExamSync';
+import { trackEvent } from './telemetry';
 
 export const AWARD_URL = 'https://academy.edlight.org/api/leaderboard/award';
 /** A replayed completion that has not settled by then is left for next time. */
@@ -182,6 +184,75 @@ export async function awardXpDurably(uid: string, payload: Record<string, unknow
   if (result !== 'retry') await outbox.remove(uid, opId).catch(() => undefined);
 }
 
+// ── Exam submitted offline (larger product additions item 4) ──────────────
+
+/**
+ * Queue a finished paper BEFORE its write is attempted, under the uid of the
+ * student who took it. Resolves true only when the operation is really in
+ * storage (the outbox swallows a failed write), so the caller may then tell
+ * the student "gardé sur ce téléphone" honestly.
+ */
+export async function queueExamSubmission(uid: string, opId: string, payload: QueuedExamSubmission): Promise<boolean> {
+  if (!uid) return false;
+  try {
+    await outbox.enqueue<QueuedExamSubmission>(uid, { id: opId, kind: EXAM_SUBMIT_KIND, payload });
+    return (await outbox.list(uid)).some((o) => o.id === opId);
+  } catch {
+    return false;
+  }
+}
+
+/** The newest queued (not yet synced) paper of this account for one exam. */
+export async function queuedExamSubmission(uid: string | null | undefined, examId: string): Promise<{ opId: string; payload: QueuedExamSubmission } | null> {
+  if (!uid || !examId) return null;
+  const ops = (await outbox.list(uid)).filter((o) => o.kind === EXAM_SUBMIT_KIND && isQueuedExamSubmission(o.payload) && o.payload.examId === examId);
+  const last = ops.sort((a, b) => (a.payload as QueuedExamSubmission).submittedAtMs - (b.payload as QueuedExamSubmission).submittedAtMs).pop();
+  return last ? { opId: last.id, payload: last.payload as QueuedExamSubmission } : null;
+}
+
+/** How many papers this account still has waiting to sync. */
+export async function pendingExamSubmissionCount(uid: string | null | undefined): Promise<number> {
+  if (!uid) return 0;
+  return (await outbox.list(uid)).filter((o) => o.kind === EXAM_SUBMIT_KIND).length;
+}
+
+type ExamSyncListener = (e: { uid: string; examId: string; outcome: 'written' | 'done' | 'drop' }) => void;
+const examSyncListeners = new Set<ExamSyncListener>();
+export function subscribeExamSynced(fn: ExamSyncListener): () => void {
+  examSyncListeners.add(fn);
+  return () => { examSyncListeners.delete(fn); };
+}
+
+async function replayExamSubmit(op: OutboxOp): Promise<OutboxResult> {
+  if (auth.currentUser?.uid !== op.uid) return 'retry'; // never into another account
+  if (!isQueuedExamSubmission(op.payload)) return 'drop';
+  const payload = op.payload;
+  const { replayQueuedExamSubmission } = require('./examAttempts') as typeof import('./examAttempts');
+  const settled = await settleWithin(replayQueuedExamSubmission(op.uid, op.id, payload), REPLAY_SETTLE_MS);
+  if (settled.status !== 'confirmed') return 'retry';
+  const outcome = settled.value;
+  if (outcome === 'retry') return 'retry';
+  examSyncListeners.forEach((fn) => { try { fn({ uid: op.uid, examId: payload.examId, outcome }); } catch { /* ignore */ } });
+  trackEvent('offline_result_synced', {
+    kind: 'exam', outcome, source: payload.source ?? null, waitedMs: Math.max(0, Date.now() - op.createdAt),
+  });
+  // Written answers wait for the AI grader until the paper is on the account.
+  if (outcome === 'written' && payload.pendingEssays > 0) {
+    void (async () => {
+      try {
+        // Lazy requires (Metro inlines them; no cycle at module load).
+        const { fetchSingleExam } = require('../utils/examCatalog') as typeof import('../utils/examCatalog');
+        const { flattenQuestions } = require('../utils/examUtils') as typeof import('../utils/examUtils');
+        const { startEssayGrading } = require('./essayGrading') as typeof import('./essayGrading');
+        const exam = await fetchSingleExam(payload.examId);
+        const questions = exam ? (flattenQuestions(exam) as any[]) : [];
+        if (questions.length) await startEssayGrading(op.uid, payload.examId, questions, { subject: payload.subject, level: payload.level });
+      } catch { /* the results screen offers "Corriger maintenant" */ }
+    })();
+  }
+  return outcome === 'drop' ? 'drop' : 'done';
+}
+
 // ── Replay ─────────────────────────────────────────────────────────────────
 
 /**
@@ -191,6 +262,7 @@ export async function awardXpDurably(uid: string, payload: Record<string, unknow
 const handlers: OutboxHandlers = {
   'lesson-complete': replayLesson,
   'xp-award': (op) => postAwardOnce(op.uid, op.payload as Record<string, unknown>),
+  [EXAM_SUBMIT_KIND]: replayExamSubmit,
 };
 
 /** Another service queues its own kind of write and registers its replay. */

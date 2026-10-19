@@ -17,6 +17,9 @@ import { HUB_LEVELS, durationLabel, paperKey, type PaperStatus } from './examHub
 import { listRecentExamAttempts } from '../services/userActivity';
 import './examPremium.css';
 
+// Offline revision packs: its own chunk, loaded after the landing renders.
+const OfflinePacksPanel = React.lazy(() => import(/* webpackChunkName: "offline-packs-panel" */ '../components/OfflinePacksPanel'));
+
 function useExamCatalog() {
   return useQuery({
     queryKey: ['exam-catalog-index'],
@@ -457,6 +460,10 @@ const ExamLanding = () => {
                 <ul className="xp-rows">{latest.papers.map((e) => <PaperRow key={paperKey(e)} e={e} />)}</ul>
               </section>
             )}
+
+            <React.Suspense fallback={null}>
+              <OfflinePacksPanel level={level} ht={ht} />
+            </React.Suspense>
           </>
         )}
       </div>

@@ -22,6 +22,9 @@
  *     see api/_lib/competitionAccountDeletion.ts for the per-collection policy.
  *     Runs first: it reads the user's inbox/myTournaments and acts through the
  *     competition engine as the user, so the profile must still exist.
+ *   • parent progress links (progressShares) — deleted
+ *   • ambassador designation, rewards and recruit links — pseudonymized
+ *     (api/_lib/ambassadors.ts eraseAmbassadorAccount)
  *
  * Data steps are best-effort and logged; the Auth deletion is the one that
  * must succeed for the response to be a success.
@@ -31,6 +34,8 @@ import { getDb, getAuthAdmin, isAdminConfigured } from '../_lib/firebaseAdmin';
 import { requireAuth } from '../_lib/requireAuth';
 import { eraseCompetitionAccount } from '../_lib/competitionAccountDeletion';
 import { eraseClassAccount } from '../_lib/classSpaces';
+import { eraseProgressShares } from '../_lib/progressShare';
+import { eraseAmbassadorAccount } from '../_lib/ambassadors';
 
 /** Delete an array of doc refs in chunked batches (Firestore caps at 500/batch). */
 async function deleteRefs(db: FirebaseFirestore.Firestore, refs: FirebaseFirestore.DocumentReference[]) {
@@ -78,6 +83,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
   // 1. The user document tree (doc + every subcollection).
   await step('classes', () => eraseClassAccount(db, uid));
+
+  // Parent progress links stop working; ambassador/recruit links are pseudonymized.
+  await step('progress_shares', () => eraseProgressShares(db, uid));
+  await step('ambassadors', () => eraseAmbassadorAccount(db, uid));
 
   await step('user_tree', () => db.recursiveDelete(db.collection('users').doc(uid)));
 

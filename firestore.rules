@@ -540,6 +540,23 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Reviewed "Explique-moi" explanations, their hashed vote dedupe docs, and
+    // the essay-grader calibration runs. Server-only: written and read through
+    // /api/chat, /api/explanations and /api/essay-calibration (Admin SDK); the
+    // admin console reaches them through those endpoints, never directly.
+    match /explanations/{id} {
+      allow read, write: if false;
+    }
+    match /explanationVotes/{id} {
+      allow read, write: if false;
+    }
+    match /essayCalibration/{runId} {
+      allow read, write: if false;
+      match /items/{itemId} {
+        allow read, write: if false;
+      }
+    }
+
     // Referral code → uid lookup docs ({ uid, createdAt }). Server-side ONLY:
     // clients never read (the code is resolved by /api/referrals/redeem via the
     // Admin SDK) or write these (codes are minted by /api/referrals/code). The
@@ -655,6 +672,14 @@ service cloud.firestore {
     match /classAccounts/{document=**} { allow read, write: if false; }
     match /classTeachers/{document=**} { allow read, write: if false; }
     match /classCodes/{document=**} { allow read, write: if false; }
+
+    // Parent progress links: hashed tokens, read and written only by /api/progress-share.
+    match /progressShares/{document=**} { allow read, write: if false; }
+    // School ambassador programme: designation, recruit retention and the manual
+    // reward record are server-only (/api/ambassadors, /api/referrals/redeem).
+    match /ambassadors/{document=**} { allow read, write: if false; }
+    match /ambassadorRecruits/{document=**} { allow read, write: if false; }
+    match /ambassadorRewards/{document=**} { allow read, write: if false; }
 
     // Default: deny all other access
     match /{document=**} {

@@ -22,6 +22,12 @@ const CACHE_VERSION = 'v32';
 const SHELL_CACHE = `edlight-shell-${CACHE_VERSION}`;
 const ASSET_CACHE = `edlight-assets-${CACHE_VERSION}`;
 const DATA_CACHE = `edlight-data-${CACHE_VERSION}`;
+// Offline revision packs the STUDENT chose to download (src/services/
+// offlinePacks.ts writes them from the page). Deliberately NOT versioned with
+// CACHE_VERSION and never deleted here: a deploy must not silently throw away
+// a pack someone downloaded on metered data. Only the page removes them, when
+// the student asks. JSON only; never consulted for /js, /css or navigations.
+const PACK_CACHE_PREFIX = 'edlight-offline-packs';
 
 // Minimal app shell precached on install so the SPA boots offline.
 const SHELL_ASSETS = [
@@ -53,7 +59,11 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => !keep.has(k)).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(
+        keys
+          .filter((k) => !keep.has(k) && !k.startsWith(PACK_CACHE_PREFIX))
+          .map((k) => caches.delete(k))
+      ))
       .then(() => self.clients.claim())
   );
 });
@@ -232,6 +242,11 @@ self.addEventListener('fetch', (event) => {
 
   // Never cache API routes.
   if (url.pathname.startsWith('/api/')) return;
+
+  // Offline packs go straight to the network: the page verifies each one
+  // (size + hash) and keeps it in its own cache. Caching them here too would
+  // store every pack twice and could hand the page a stale manifest.
+  if (url.pathname.startsWith('/packs/')) return;
 
   // SPA navigations -> network-first with a short timeout, cached shell fallback.
   if (request.mode === 'navigate') {

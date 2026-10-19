@@ -16,6 +16,9 @@ import { startEssayGrading } from '../services/essayGrading';
 import { loadExamAttemptDraft, saveExamAttemptDraft, commitExamSubmission } from '../services/examAttempts';
 import { recordPlanEvent } from '../services/planEvents';
 import { examDraftKey, readLocalExamDraft, pickResumeDraft, draftPosition, settleWithin } from '../../../shared/examDraft';
+import { examSubmitOpId } from '../../../shared/offlineExamSync';
+import { outbox, queueExamSubmission } from '../services/writeOutbox';
+import { hasPackedExam } from '../services/offlinePacks';
 import { recordReview } from '../services/reviewService';
 import useStore from '../contexts/store';
 import { useColors, useTheme, typeScale, fonts } from '../theme/theme';
@@ -410,6 +413,8 @@ export default function ExamTakeScreen() {
   // Set once the exam is submitted so a late autosave can't revert the doc
   // back to `in_progress`.
   const submittedRef = useRef(false);
+  // True when this paper opened from a downloaded revision pack (telemetry).
+  const fromPackRef = useRef(false);
 
   // Only a real, playable exam is worth a full-screen takeover.
   const examReady = !loading && !error && !!exam && questions.length > 0;
@@ -478,6 +483,7 @@ export default function ExamTakeScreen() {
       .then((e) => {
         if (!active) return;
         setExam(e);
+        hasPackedExam(examId).then((v) => { fromPackRef.current = v; }, () => {});
         const qs = flattenQuestions(e) as any[];
         setQuestions(qs);
         // Show the overview NOW — the draft (a Firestore read, slow on cold
@@ -676,7 +682,11 @@ export default function ExamTakeScreen() {
         // awaits, attempt first: a failure between them left a "submitted"
         // attempt with no result). Bounded wait: offline the commit never
         // settles, which used to spin forever.
-        const commit = commitExamSubmission(user.uid, examId, {
+        // One operation id for this submission, on the direct write AND the
+        // queued copy: a replay that finds it already written is done.
+        const submittedAtMs = Date.now();
+        const opId = examSubmitOpId(examId, submittedAtMs);
+        const resultDoc = {
           exam_id: examId,
           level,
           // Save the cleaned short title, not the raw ministry boilerplate.
@@ -686,9 +696,43 @@ export default function ExamTakeScreen() {
           summary: graded.summary,
           results: gradedResults,
           answers,
-        }, { answers });
+          submitted_at_ms: submittedAtMs,
+          submission_op_id: opId,
+        };
+        // Queue FIRST (persisted, this account only): this app's Firestore
+        // cache is memory-only, so an offline write dies with the process. The
+        // queue survives a kill and replays at sign-in / reconnect / foreground.
+        const queued = await queueExamSubmission(user.uid, opId, {
+          examId,
+          submittedAtMs,
+          result: JSON.parse(JSON.stringify(resultDoc)),
+          attempt: { answers },
+          pendingEssays: graded.pending.length,
+          subject: subject || undefined,
+          level: normalizeLevel(String(exam?.level ?? '')) || undefined,
+          source: fromPackRef.current ? 'pack' : 'network',
+        });
+        const commit = commitExamSubmission(user.uid, examId, resultDoc, { answers });
         const outcome = await settleWithin(commit, 12000);
-        if (outcome.status !== 'confirmed' || !outcome.value) {
+        const saved = outcome.status === 'confirmed' && !!outcome.value;
+        if (saved) {
+          await outbox.remove(user.uid, opId).catch(() => undefined);
+        } else if (queued && outcome.status !== 'failed') {
+          // Graded here, kept on this phone, sent by the outbox when the
+          // network returns. The mirror can go: the queue holds the answers.
+          AsyncStorage.removeItem(localDraftKey).catch(() => {});
+          clearActivity();
+          if (subject && (graded.summary?.totalPoints ?? 0) > 0) {
+            recordReview(user.uid, subject, { subject, percentage: graded.summary?.percentage ?? 0 }).catch(() => {});
+          }
+          void recordPlanEvent(user.uid, { kind: 'exam', examId }, graded.summary?.percentage ?? 0);
+          navigation.replace('ExamResults', { level, examId });
+          return;
+        } else if (queued) {
+          // The write was refused outright (rules, no auth): nothing to replay.
+          await outbox.remove(user.uid, opId).catch(() => undefined);
+        }
+        if (!saved) {
           // Not on the account yet. Keep everything on this device and let the
           // student retry; the same doc ids make a retry idempotent.
           submittedRef.current = false;

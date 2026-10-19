@@ -2,8 +2,9 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { FieldValue } from 'firebase-admin/firestore';
 import { requireAuth } from './_lib/requireAuth';
 import { checkRateLimit } from './_lib/rateLimit';
-import { chatWithTools, embed, resolveLLMConfig, LLMError, type ToolCallRecord } from './_lib/llm';
+import { chatText, chatWithTools, embed, resolveLLMConfig, LLMError, type ToolCallRecord } from './_lib/llm';
 import {
+  buildCanonicalExplainPrompt,
   buildSandraSystemPrompt,
   SANDRA_LIMITS,
   type KbChunk,
@@ -14,6 +15,13 @@ import { SANDRA_TOOL_DEFS, createToolExecutor } from './_lib/sandraTools';
 import { getDb } from './_lib/firebaseAdmin';
 import { sanitizeQuestionContext, type QuestionContext } from '../shared/explainContext';
 import { examFetcher, gateQuestionContext } from './_lib/explainGate';
+import {
+  explanationKey,
+  getExplanation,
+  recordExplanationUse,
+  storeCandidate,
+  type ExplanationDoc,
+} from './_lib/explanationCache';
 
 /**
  * POST /api/chat
@@ -41,6 +49,9 @@ import { examFetcher, gateQuestionContext } from './_lib/explainGate';
  * the conversation the first attempt created instead of starting an orphan.
  *
  * 200 → { reply, conversationId, remaining }
+ * 200 → { reply, conversationId, remaining, explanation: { id, reviewed: true } }
+ *        (an admin-approved explanation answered the first Explique-moi turn,
+ *        no LLM call; the client offers "Utile / Pas utile" on that reply)
  * 200 → { conversationFull: true, conversationId, remaining }   (cap reached, LLM not called)
  * 400 / 401 / 403 / 405 / 429 / 502 on the corresponding failures.
  */
@@ -80,6 +91,8 @@ interface StoredMessage {
   explain?: { surface: string; questionId?: string; examId?: string; status?: string; gate?: string };
   /** The client's retry key, on user messages (S-2). */
   cid?: string;
+  /** On an assistant message answered from an approved explanation (no LLM call). */
+  explanationId?: string;
 }
 
 const CLIENT_MESSAGE_ID_RE = /^[A-Za-z0-9_-]{8,64}$/;
@@ -303,43 +316,92 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     const gate = questionContext
       ? await gateQuestionContext(questionContext, uid, { db, fetchExam: examFetcher(resolveOrigin()) })
       : undefined;
-    const retrievalQuery = gate ? gate.retrievalQuery : message;
-    const { chunks, failed: kbFailed } = await retrieveChunks(db, retrievalQuery, page);
-    const system = buildSandraSystemPrompt({
-      lang, page, chunks, student, questionContext: gate?.explain, tutorQuestion: gate?.tutor,
-    });
-    const llmMessages = [
-      ...history.slice(-SANDRA_LIMITS.historyTurns).map((m) => ({
-        role: m.role === 'assistant' ? ('assistant' as const) : ('user' as const),
-        content: m.text,
-      })),
-      { role: 'user' as const, content: message },
-    ];
 
+    // Reviewed explanation cache (api/_lib/explanationCache.ts). ONLY a request
+    // the gate verified carries a cacheRef, and only the first turn of an
+    // Explique-moi conversation is answered from it: follow-ups go to the LLM,
+    // which sees the approved text in the history and continues from it.
+    const cacheKey = gate?.verified && gate.cacheRef && gate.explain && history.length === 0
+      ? explanationKey(gate.cacheRef, lang)
+      : null;
+    let cachedDoc: ExplanationDoc | null = null;
+    if (cacheKey) {
+      try {
+        cachedDoc = await getExplanation(db, cacheKey);
+      } catch (error) {
+        console.warn('chat: explanation cache read failed:', error instanceof Error ? error.message : error);
+      }
+    }
+    const approvedText = cachedDoc?.status === 'approved' && typeof cachedDoc.text === 'string' ? cachedDoc.text.trim() : '';
+
+    let chunks: KbChunk[] = [];
+    let kbFailed = false;
     let reply: string;
-    let toolCalls: ToolCallRecord[];
-    try {
-      // 900-token default truncates detailed explanations mid-formula; give
-      // tutoring answers room to conclude properly. Tools are scoped to the
-      // authenticated uid — the model never chooses whose data it reads.
-      ({ reply, toolCalls } = await chatWithTools({
-        system,
-        messages: llmMessages,
-        tools: SANDRA_TOOL_DEFS,
-        // grade flows through so save_study_plan can build the plan from the
-        // student's own exam level instead of defaulting to Terminale papers.
-        executeTool: createToolExecutor({ uid, origin: resolveOrigin(), lang, grade: student?.grade }),
-        maxTokens: 1800,
-        config: resolveLLMConfig(),
-      }));
-    } catch (error) {
-      const detail = error instanceof LLMError ? `${error.provider} ${error.status}` : 'unknown';
-      console.error('chat: LLM failed:', detail, error instanceof Error ? error.message : error);
-      res.status(502).json({
-        error: 'llm_failed',
-        message: 'Sandra est momentanément indisponible. Réessayez dans un instant.',
+    let toolCalls: ToolCallRecord[] = [];
+    let candidate: Promise<unknown> | null = null;
+
+    if (approvedText) {
+      reply = approvedText;
+    } else {
+      const retrievalQuery = gate ? gate.retrievalQuery : message;
+      ({ chunks, failed: kbFailed } = await retrieveChunks(db, retrievalQuery, page));
+      const system = buildSandraSystemPrompt({
+        lang, page, chunks, student, questionContext: gate?.explain, tutorQuestion: gate?.tutor,
       });
-      return;
+      const llmMessages = [
+        ...history.slice(-SANDRA_LIMITS.historyTurns).map((m) => ({
+          role: m.role === 'assistant' ? ('assistant' as const) : ('user' as const),
+          content: m.text,
+        })),
+        { role: 'user' as const, content: message },
+      ];
+
+      // No doc yet for this verified question × language: write the canonical
+      // candidate IN PARALLEL with the student's own reply (no added wait), from
+      // the server's copy only. Its failure never affects the student's answer.
+      if (cacheKey && !cachedDoc && gate?.explain && gate.cacheRef) {
+        const explain = gate.explain;
+        const ref = gate.cacheRef;
+        const llmConfig = resolveLLMConfig();
+        const canonical = buildCanonicalExplainPrompt({ lang, chunks, question: explain });
+        candidate = chatText({
+          system: canonical.system,
+          messages: [{ role: 'user', content: canonical.user }],
+          temperature: 0.2,
+          maxTokens: 1800,
+          config: llmConfig,
+        })
+          .then((text) => storeCandidate(db, { key: cacheKey, ref, lang, explain, text, model: llmConfig?.label || 'unknown' }))
+          .catch((error) => {
+            console.warn('chat: explanation candidate failed:', error instanceof Error ? error.message : error);
+          });
+      }
+
+      try {
+        // 900-token default truncates detailed explanations mid-formula; give
+        // tutoring answers room to conclude properly. Tools are scoped to the
+        // authenticated uid — the model never chooses whose data it reads.
+        ({ reply, toolCalls } = await chatWithTools({
+          system,
+          messages: llmMessages,
+          tools: SANDRA_TOOL_DEFS,
+          // grade flows through so save_study_plan can build the plan from the
+          // student's own exam level instead of defaulting to Terminale papers.
+          executeTool: createToolExecutor({ uid, origin: resolveOrigin(), lang, grade: student?.grade }),
+          maxTokens: 1800,
+          config: resolveLLMConfig(),
+        }));
+      } catch (error) {
+        const detail = error instanceof LLMError ? `${error.provider} ${error.status}` : 'unknown';
+        console.error('chat: LLM failed:', detail, error instanceof Error ? error.message : error);
+        if (candidate) await candidate;
+        res.status(502).json({
+          error: 'llm_failed',
+          message: 'Sandra est momentanément indisponible. Réessayez dans un instant.',
+        });
+        return;
+      }
+      if (candidate) await candidate;
     }
 
     if (!convRef) {
@@ -394,13 +456,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     // Firestore rejects undefined fields — only attach the key when tools ran.
     if (toolCalls.length > 0) assistantMsg.toolCalls = toolCalls;
     if (kbFailed) assistantMsg.kbError = true;
+    if (approvedText && cacheKey) assistantMsg.explanationId = cacheKey;
     await convRef.update({
       messages: FieldValue.arrayUnion(userMsg, assistantMsg),
       messageCount: FieldValue.increment(2),
       lastMessageAt: FieldValue.serverTimestamp(),
     });
 
-    res.status(200).json({ reply, conversationId: convRef.id, remaining });
+    // A doc that already existed counts this request (a fresh candidate starts at 1).
+    if (cacheKey && cachedDoc) await recordExplanationUse(db, cacheKey, !!approvedText);
+
+    res.status(200).json({
+      reply,
+      conversationId: convRef.id,
+      remaining,
+      ...(approvedText && cacheKey ? { explanation: { id: cacheKey, reviewed: true } } : {}),
+    });
   } catch (error) {
     console.error('chat: unexpected failure:', error instanceof Error ? error.message : error);
     res.status(500).json({

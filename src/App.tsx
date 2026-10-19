@@ -62,6 +62,8 @@ const AdminExams = lazyWithRetry(() => import('./pages/admin/AdminExams'));
 const AdminTrivia = lazyWithRetry(() => import('./pages/admin/AdminTrivia'));
 const AdminArena = lazyWithRetry(() => import('./pages/admin/AdminArena'));
 const AdminArenaQuestions = lazyWithRetry(() => import('./pages/admin/AdminArenaQuestions'));
+const AdminExplanations = lazyWithRetry(() => import('./pages/admin/AdminExplanations'));
+const AdminEssayCalibration = lazyWithRetry(() => import('./pages/admin/AdminEssayCalibration'));
 const ExamLanding = lazyWithRetry(() => import('./pages/ExamLanding'));
 const ExamOverview = lazyWithRetry(() => import('./pages/ExamOverview'));
 const ExamSubject = lazyWithRetry(() => import('./pages/ExamSubject'));
@@ -76,6 +78,10 @@ const Profile = lazyWithRetry(() => import('./pages/Profile'));
 const AvatarEditor = lazyWithRetry(() => import('./pages/profile/AvatarEditor'));
 const Releve = lazyWithRetry(() => import('./pages/Releve'));
 const Classes = lazyWithRetry(() => import('./pages/Classes'));
+const PartagerSuivi = lazyWithRetry(() => import('./pages/PartagerSuivi'));
+const Suivi = lazyWithRetry(() => import('./pages/suivi/Suivi'));
+const Ambassadeur = lazyWithRetry(() => import('./pages/Ambassadeur'));
+const AdminGrowth = lazyWithRetry(() => import('./pages/admin/AdminGrowth'));
 const Classement = lazyWithRetry(() => import('./pages/Classement'));
 const NotFound = lazyWithRetry(() => import('./pages/NotFound'));
 const FigureEmbed = lazyWithRetry(() => import('./pages/FigureEmbed'));
@@ -161,6 +167,8 @@ export default function App() {
                     renders <AuthModal>. The print stylesheet hides the chrome. */}
                 <Route path="releve" element={<Releve />} />
                 <Route path="classes" element={<Classes />} />
+                <Route path="partager-suivi" element={<PartagerSuivi />} />
+                <Route path="ambassadeur" element={<Ambassadeur />} />
                 {/* Bare /arena is the link buildArenaInviteMessage()
                     (mobile/src/services/arenaService.ts) puts in every "il
                     manque N joueurs" share text, so it is the most-followed
@@ -211,6 +219,8 @@ export default function App() {
               {/* Chrome-free figure embed for the mobile app's WebView */}
               <Route path="/arena/ecran/:id" element={<CompetitionProjector />} />
               <Route path="/figure-embed" element={<FigureEmbed />} />
+              {/* A parent's read-only view of a shared progress record: signed out, minimal chrome. */}
+              <Route path="/suivi/:token" element={<Suivi />} />
 
               {/* Device-detecting "get the app" smart link (QR-code target) */}
               <Route path="/download" element={<Download />} />
@@ -229,12 +239,15 @@ export default function App() {
                 <Route path="content/arena/questions" element={<AdminArenaQuestions />} />
                 <Route path="content/arena" element={<AdminArena />} />
                 <Route path="content/verify" element={<AnswerVerification />} />
+                <Route path="content/explanations" element={<AdminExplanations />} />
+                <Route path="content/essay-calibration" element={<AdminEssayCalibration />} />
                 {/* Users */}
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="users/moderation" element={<AdminModeration />} />
                 <Route path="users/sandra" element={<AdminSandra />} />
                 {/* Must precede users/:uid — "instructors" would otherwise match as a uid */}
                 <Route path="users/instructors" element={<AdminInstructors />} />
+                <Route path="users/growth" element={<AdminGrowth />} />
                 <Route path="users/:uid" element={<AdminUserDetail />} />
                 {/* Data */}
                 <Route path="data/collections" element={<Admin />} />

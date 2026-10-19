@@ -5,9 +5,11 @@ import {
   setDoc,
   serverTimestamp,
   writeBatch,
+  runTransaction,
 } from 'firebase/firestore';
 import { recordActivity as recordStreakActivity } from './streakService';
 import { replaceFieldsOptions } from '../../../shared/examDraft';
+import { isQueuedExamSubmission, runExamReplay } from '../../../shared/offlineExamSync';
 
 function cleanUndefined(obj: any) {
   if (!obj || typeof obj !== 'object') return obj;
@@ -106,4 +108,28 @@ export async function commitExamSubmission(userId: string, examId: string, resul
   }
   recordStreakActivity(userId).catch(() => {});
   return true;
+}
+
+/**
+ * Replay an exam submission queued in the outbox (shared/offlineExamSync.ts):
+ * one transaction reads the current result and writes the queued paper only
+ * when nothing newer is there and this operation was not already written.
+ * 'retry' unless the signed-in account is the one that took the paper.
+ */
+export async function replayQueuedExamSubmission(userId: string, opId: string, payload: unknown): Promise<'written' | 'done' | 'drop' | 'retry'> {
+  if (!userId || !hasFirebaseAuth() || auth.currentUser?.uid !== userId) return 'retry';
+  if (!isQueuedExamSubmission(payload)) return 'drop';
+  const resultRef = doc(db, 'users', userId, 'examResults', payload.examId);
+  const attemptRef = doc(db, 'users', userId, 'examAttempts', payload.examId);
+  const outcome = await runExamReplay(opId, payload, (decide) => runTransaction(db, async (tx) => {
+    const snap = await tx.get(resultRef);
+    const decision = decide(snap.exists() ? (snap.data() as Record<string, any>) : null);
+    if (typeof decision === 'string') return decision;
+    tx.set(resultRef, cleanUndefined({ ...decision.result, created_at: serverTimestamp(), created_at_ms: Date.now() }));
+    const attempt = submittedAttemptPayload(decision.attempt);
+    tx.set(attemptRef, attempt, replaceFieldsOptions(attempt));
+    return decision;
+  }));
+  if (outcome === 'written') recordStreakActivity(userId).catch(() => {});
+  return outcome;
 }

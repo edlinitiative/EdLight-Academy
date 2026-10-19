@@ -1,0 +1,12 @@
+/* Partager mon suivi + ambassador dashboard: layout reuses .classes-page; these are the extras. */
+.share-days { display: flex; flex-wrap: wrap; gap: 12px; border: 0; padding: 0; margin: 0; }
+.share-days legend { margin-bottom: 8px; font-weight: 600; }
+.share-days label { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 1px solid var(--border, #8996a5); border-radius: 999px; cursor: pointer; }
+.share-days input { min-width: 20px; min-height: 20px; }
+.share-fresh { display: grid; gap: 12px; }
+.share-fresh input { width: 100%; min-height: 48px; padding: 10px; border: 1px solid var(--border, #8996a5); border-radius: 8px; font: inherit; color: inherit; background: var(--surface, transparent); box-sizing: border-box; }
+.share-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.amb-figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 12px; margin: 0; }
+.amb-figures dt { font-size: var(--text-sm, 0.875rem); color: var(--text-muted); }
+.amb-figures dd { margin: 4px 0 0; font-size: 1.6rem; font-weight: 700; color: var(--text-900); font-variant-numeric: tabular-nums; }
+.amb-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: var(--primary-50); color: var(--primary); white-space: nowrap; }

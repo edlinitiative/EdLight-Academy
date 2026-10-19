@@ -337,10 +337,31 @@ export function groupQuestionsIntoQuizzes(rows: any[]): any[] {
     .sort((a, b) => a.title.localeCompare(b.title, 'fr'));
 }
 
-/** Quizzes screen: grouped practice quizzes only — no courses/videos fetch. */
+/**
+ * Quizzes screen: grouped practice quizzes only — no courses/videos fetch.
+ * When the bank cache is empty and the network is not there (first launch in
+ * airplane mode, cleared cache), the downloaded practice packs stand in.
+ */
 export async function loadPracticeQuizzes(): Promise<any[]> {
-  const rows = await fetchQuizQuestionsCached();
+  let rows = await fetchQuizQuestionsCached();
+  if (!rows.length) {
+    try {
+      const { practiceRowsFromPacks } = require('./offlinePacks') as typeof import('./offlinePacks');
+      rows = await practiceRowsFromPacks();
+    } catch { rows = []; }
+  }
   return groupQuestionsIntoQuizzes(rows);
+}
+
+/** The raw question bank rows (cache first), for building practice packs. */
+export async function loadQuizBankRows(): Promise<any[]> {
+  return fetchQuizQuestionsCached();
+}
+
+/** Display fields for a practice pack built from one subject code ("CHEM-NSI"). */
+export function practicePackLabel(code: string): { title: string; level: string; subject: string } {
+  const [subj, level] = String(code).split('-');
+  return { title: prettySubject(code), level: level || '', subject: SUBJECT_FR[subj?.toUpperCase() ?? ''] ?? subj ?? code };
 }
 
 export async function loadAppData(): Promise<any> {
