@@ -64,7 +64,7 @@ function call(handler: (req: any, res: any) => Promise<void>, body: any, uid?: s
 }
 const play = (uid: string, body: Record<string, unknown>, tid: string) => call(playHandler, { tid, ...body }, uid);
 
-async function setup(gameMode: string, format: 'live' | 'window', questionCount = 5) {
+async function setup(gameMode: string, format: 'live' | 'window', questionCount = 5, starters = ['a', 'b', 'c']) {
   const startsAt = clock + 60 * MIN;
   const created = await mutate('host', 'event-save', {
     config: {
@@ -82,12 +82,12 @@ async function setup(gameMode: string, format: 'live' | 'window', questionCount 
   await mutate('host', 'event-publish', { eventId, revision: 1 });
   const team = await mutate('a', 'team-create', { name: 'Les étoiles' });
   const teamId = String(team.teamId);
-  for (const uid of ['b', 'c']) {
+  for (const uid of [...new Set(['b', 'c', ...starters])].filter((u) => u !== 'a')) {
     const invite = await mutate('a', 'team-invite', { teamId, recipientUid: uid });
     await mutate(uid, 'invite-respond', { inviteId: invite.inviteId, accept: true });
   }
-  await mutate('a', 'roster-save', { eventId, teamId, starters: ['a', 'b', 'c'] });
-  for (const uid of ['b', 'c']) await mutate(uid, 'entry-confirm', { eventId, entryId: teamId });
+  await mutate('a', 'roster-save', { eventId, teamId, starters });
+  for (const uid of starters.filter((u) => u !== 'a')) await mutate(uid, 'entry-confirm', { eventId, entryId: teamId });
   await mutate('a', 'entry-register', { eventId, entryId: teamId });
   return { eventId, teamId, startsAt };
 }
@@ -405,6 +405,58 @@ describe('account deletion', () => {
     expect(doc(`userTournaments/${eventId}/teamAnswers/0_${teamId}`).points).toBe(points);
     expect(doc(`userTournaments/${eventId}/teamControl/${teamId}`).holderUid).toBe('c');
     expect(doc(`competitionEvents/${eventId}/entries/${teamId}`).roles.submitter).toMatch(/^deleted_/);
+    delete process.env.ACCOUNT_DELETION_SALT;
+  });
+
+  const noRaw = (paths: string[], uid: string) => {
+    for (const p of paths) expect(JSON.stringify(doc(p))).not.toContain(`"${uid}"`);
+  };
+
+  it('captain who is not a starter, replaced by an heir in the same erase, leaves no raw uid', async () => {
+    process.env.ACCOUNT_DELETION_SALT = 'test-secret';
+    const { eraseCompetitionAccount } = await import('../_lib/competitionAccountDeletion');
+    const { eventId, teamId, startsAt } = await setup('shared', 'live', 5, ['b', 'c', 'd']);
+    clock = startsAt + 500;
+    await call(tickHandler, { tid: eventId });
+    await play('b', { action: 'team-state' }, eventId);
+    expect(doc(`userTournaments/${eventId}/teamControl/${teamId}`).captainUid).toBe('a');
+    expect((await eraseCompetitionAccount(db, 'a', clock)).warnings).toEqual([]);
+    // The heir handover already rewrote the entry's captain before the team-mode pass ran.
+    expect(doc(`competitionEvents/${eventId}/entries/${teamId}`).captainUid).not.toBe('a');
+    noRaw([`userTournaments/${eventId}/teamControl/${teamId}`, `competitionEvents/${eventId}/entries/${teamId}`], 'a');
+    delete process.env.ACCOUNT_DELETION_SALT;
+  });
+
+  it('the current authority holder and a relay slot owner are pseudonymized', async () => {
+    process.env.ACCOUNT_DELETION_SALT = 'test-secret';
+    const { eraseCompetitionAccount } = await import('../_lib/competitionAccountDeletion');
+    const shared = await setup('shared', 'live');
+    clock = shared.startsAt + 500;
+    await call(tickHandler, { tid: shared.eventId });
+    await play('a', { action: 'team-transfer', to: 'c', version: 1 }, shared.eventId);
+    expect((await eraseCompetitionAccount(db, 'c', clock)).warnings).toEqual([]);
+    const control = doc(`userTournaments/${shared.eventId}/teamControl/${shared.teamId}`);
+    expect(control.holderUid).toMatch(/^deleted_/);
+    noRaw([`userTournaments/${shared.eventId}/teamControl/${shared.teamId}`], 'c');
+
+    mockDb.store.clear();
+    for (const uid of ['a', 'b', 'c', 'host']) mockDb.store.set(`users/${uid}`, { displayName: uid });
+    clock = T0;
+    const relay = await setup('relay', 'window', 6);
+    await mutate('a', 'team-roles', { eventId: relay.eventId, entryId: relay.teamId, slots: ['b', 'a', 'c'] });
+    clock = relay.startsAt + MIN;
+    await play('b', { action: 'team-start' }, relay.eventId);
+    clock += 1000;
+    await play('b', { action: 'team-answer', round: 0, pos: 0, choice: 0 }, relay.eventId);
+    expect((await eraseCompetitionAccount(db, 'b', clock)).warnings).toEqual([]);
+    const attempt = doc(`userTournaments/${relay.eventId}/teamAttempts/0_${relay.teamId}`);
+    expect(attempt.legs[0].owner).toMatch(/^deleted_/);
+    expect(attempt.answeredBy[0]).toMatch(/^deleted_/);
+    noRaw([
+      `userTournaments/${relay.eventId}/teamControl/${relay.teamId}`,
+      `userTournaments/${relay.eventId}/teamAttempts/0_${relay.teamId}`,
+      `competitionEvents/${relay.eventId}/entries/${relay.teamId}`,
+    ], 'b');
     delete process.env.ACCOUNT_DELETION_SALT;
   });
 });

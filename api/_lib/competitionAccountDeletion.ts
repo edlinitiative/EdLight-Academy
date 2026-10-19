@@ -123,6 +123,12 @@ interface Ctx {
   now: number;
   warnings: string[];
   notices: CompetitionNotice[];
+  /**
+   * eventId → ids of every entry the user captained, started or confirmed,
+   * recorded by the entries pass BEFORE tombstoning or a captain handover, so
+   * the team-mode pass finds teamControl/teamAttempts by key afterwards.
+   */
+  teamEntries: Map<string, Set<string>>;
 }
 
 type Op = (b: FirebaseFirestore.WriteBatch) => void;
@@ -563,8 +569,11 @@ async function entries(
       (
         await db.collection(`competitionEvents/${eventId}/entries`).limit(100).get()
       ).docs.filter((d) => mine(d.data() as EventEntry));
+    const seen = ctx.teamEntries.get(eventId) ?? new Set<string>();
+    ctx.teamEntries.set(eventId, seen);
     // Engine withdrawal first: it checks the real captain uid and releases claims and seats itself.
     for (const d of await load()) {
+      seen.add(d.id);
       const x = d.data() as EventEntry;
       if (
         registrationOpen &&
@@ -707,16 +716,38 @@ async function tournaments(ctx: Ctx, tids: Set<string>) {
       // One answer per question at most (≤ 99): reaching PAGE means something is wrong.
       if (answers.size >= PAGE) ctx.warnings.push('competition_team_answers_bound');
       answers.docs.forEach((d) => w.update(d.ref, { uid: tomb }));
-      const entryIds = new Set<string>();
+      // Keys from the entries pass (captain, starter or confirmer, before any
+      // tombstone or heir handover), plus direct lookups that do not depend
+      // on it having run: entries naming the uid or its tombstone, and
+      // control records where the uid is captain, holder, deputy or a slot.
+      const entryIds = new Set<string>(
+        t.competitionEventId ? ctx.teamEntries.get(String(t.competitionEventId)) ?? [] : [],
+      );
       if (t.competitionEventId)
         for (const member of [uid, tomb])
-          for (const d of (
-            await db
-              .collection(`competitionEvents/${t.competitionEventId}/entries`)
-              .where('starters', 'array-contains', member)
-              .get()
-          ).docs)
-            entryIds.add(d.id);
+          for (const [field, op] of [
+            ['starters', 'array-contains'],
+            ['confirmed', 'array-contains'],
+            ['captainUid', '=='],
+          ] as const)
+            for (const d of (
+              await db
+                .collection(`competitionEvents/${t.competitionEventId}/entries`)
+                .where(field, op, member)
+                .get()
+            ).docs)
+              entryIds.add(d.id);
+      for (const [field, op] of [
+        ['captainUid', '=='],
+        ['holderUid', '=='],
+        ['deputyUid', '=='],
+        ['starters', 'array-contains'],
+        ['slots', 'array-contains'],
+      ] as const)
+        for (const d of (
+          await db.collection(`${base}/teamControl`).where(field, op, uid).get()
+        ).docs)
+          entryIds.add(d.id);
       const sw = (v: unknown) => (v === uid ? tomb : v);
       for (const entryId of entryIds) {
         const c = await get(db, `${base}/teamControl/${entryId}`);
@@ -942,7 +973,15 @@ export async function eraseCompetitionAccount(
   uid: string,
   now: number,
 ): Promise<{ warnings: string[] }> {
-  const ctx: Ctx = { db, uid, tomb: await tombstoneFor(db, uid), now, warnings: [], notices: [] };
+  const ctx: Ctx = {
+    db,
+    uid,
+    tomb: await tombstoneFor(db, uid),
+    now,
+    warnings: [],
+    notices: [],
+    teamEntries: new Map(),
+  };
   const step: Step = async (label, fn) => {
     try {
       await fn();
