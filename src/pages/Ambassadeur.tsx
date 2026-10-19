@@ -2,12 +2,14 @@
  * /ambassadeur — a designated school ambassador's dashboard: their invite
  * code and link, recruits, RETAINED recruits (shared/ambassadors.ts defines
  * it) and how their school stands. Every number is computed by the server.
+ * Anyone else (signed out, or the server answers `forbidden`) gets the pitch
+ * and a link to apply on EdLight Apply (AMBASSADOR_APPLY_URL).
  */
 import React from 'react';
 import useStore from '../contexts/store';
 import { ambassadorRequest } from '../services/ambassadorService';
 import { canNativeShare, schoolInviteMessage, sendInvite } from '../utils/schoolInvite';
-import { AMBASSADOR_RULES, ambassadorErrorMessage, type AmbassadorDashboard } from '../../shared/ambassadors';
+import { AMBASSADOR_APPLY_URL, AMBASSADOR_PITCH, AMBASSADOR_RULES, AmbassadorError, ambassadorErrorMessage, type AmbassadorDashboard } from '../../shared/ambassadors';
 import './Classes.css';
 import './PartagerSuivi.css';
 
@@ -28,10 +30,25 @@ export default function Ambassadeur() {
   }, [uid]);
   React.useEffect(() => { setData(null); void load(); }, [load]);
 
-  if (!uid) {
-    return <section className="section classes-page"><h1>{t('Ambassadeur', 'Anbasadè')}</h1>
-      <button className="btn btn-primary" onClick={() => useStore.getState().setShowAuthModal(true)}>{t('Se connecter', 'Konekte')}</button></section>;
-  }
+  const pick = (pair: readonly [string, string]) => (isCreole ? pair[1] : pair[0]);
+  const pitch = (signedIn: boolean) => (
+    <section className="section classes-page">
+      <header>
+        <p className="text-muted">{t('Programme ambassadeurs', 'Pwogram anbasadè')}</p>
+        <h1>{pick(AMBASSADOR_PITCH.title)}</h1>
+      </header>
+      <div className="card classes-form">
+        <p>{pick(AMBASSADOR_PITCH.lead)}</p>
+        <ul>{AMBASSADOR_PITCH.points.map((p) => <li key={p[0]}>{pick(p)}</li>)}</ul>
+        <div className="share-actions">
+          <a className="btn btn-primary" href={AMBASSADOR_APPLY_URL} target="_blank" rel="noopener noreferrer">{pick(AMBASSADOR_PITCH.cta)}</a>
+          {!signedIn && <button className="btn btn-secondary" onClick={() => useStore.getState().setShowAuthModal(true)}>{t('Se connecter', 'Konekte')}</button>}
+        </div>
+      </div>
+    </section>
+  );
+  if (!uid) return pitch(false);
+  if (error instanceof AmbassadorError && error.code === 'forbidden') return pitch(true);
   const message = data?.link ? schoolInviteMessage(data.school, data.code, data.link, isCreole) : '';
   const share = async (channel: 'whatsapp' | 'native' | 'copy') => {
     if (!message) return;

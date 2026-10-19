@@ -2,10 +2,13 @@
  * Server half of the school ambassador programme (rules: shared/ambassadors.ts).
  *
  * Data model (all server-only; firestore.rules denies every client):
- *   ambassadors/{uid}            { uid, name, school, schoolKey, active, designatedAt, designatedBy, revokedAt, revokedBy }
+ *   ambassadors/{uid}            { uid, name, school, schoolKey, active, designatedAt, designatedBy, revokedAt, revokedBy,
+ *                                  source, applicationId, reviewerName }
  *   ambassadorRecruits/{id}      { referrerUid, recruitUid, signupAt, redeemedAt, days[], scannedAt, final, ipHash, pseudonymized }
  *                                id = the recruit's uid, or `anon_…` after that account was deleted
  *   ambassadorRewards/{uid}_{YYYY-MM}  { uid, period, delivered, notes, updatedAt, updatedBy }
+ *   ambassadorAudit/{at}_{rand}  { action: designate|revoke, uid, school, by, at, source: admin|edlight-apply, applicationId, reviewerName }
+ *   ambassadorApplications/{applicationId}_{approve|revoke}  idempotency ledger for EdLight Apply decisions
  *
  * Recruits come from the existing referral system (`referrals/*`, written only
  * by /api/referrals/redeem). Retention is computed here from server write
@@ -29,7 +32,29 @@ const SCAN_LIMIT = 100;
 const ACTIVITY_COLLECTIONS = ['quizAttempts', 'examAttempts', 'examResults', 'progress', 'reviewState'];
 const ACTIVITY_DOCS = ['streaks/global', 'gamification/profile', 'mastery/lessons'];
 
-type AmbassadorDoc = { uid: string; name: string; school: string; schoolKey: string; active: boolean; designatedAt: number; designatedBy: string; revokedAt?: number | null; revokedBy?: string | null };
+type AmbassadorDoc = {
+  uid: string; name: string; school: string; schoolKey: string; active: boolean; designatedAt: number; designatedBy: string;
+  revokedAt?: number | null; revokedBy?: string | null;
+  /** Where the latest designation came from: the Academy admin console, or an approved EdLight Apply application. */
+  source?: DesignationSource; applicationId?: string | null; reviewerName?: string | null;
+};
+
+export type DesignationSource = 'admin' | 'edlight-apply';
+/**
+ * Provenance of a designation or revocation. `ledgerId` makes the change
+ * idempotent: the ledger doc `ambassadorApplications/{ledgerId}` is read and
+ * written in the SAME transaction as the designation, so a retried webhook
+ * replays the stored outcome instead of designating twice.
+ */
+export interface DesignationMeta {
+  source: DesignationSource;
+  applicationId?: string | null;
+  reviewerName?: string | null;
+  ledgerId?: string;
+}
+export type DesignationResult = { ok: true; uid: string; replayed?: boolean };
+const ADMIN_META: DesignationMeta = { source: 'admin' };
+const auditId = (now: number) => `${now}_${randomBytes(6).toString('hex')}`;
 type StoredRecruit = { referrerUid: string; recruitUid: string | null; signupAt: number; redeemedAt: number; days: string[]; scannedAt: number; final: boolean; ipHash: string | null; pseudonymized: boolean };
 
 const uidOf = (v: unknown): string => {
@@ -56,8 +81,14 @@ export async function isActiveAmbassador(db: Firestore, uid: string): Promise<Am
   return data?.active === true ? data : null;
 }
 
-/** Admin: designate (or re-activate) one student for one school. At most 2 active per school. */
-export async function designateAmbassador(db: Firestore, adminUid: string, rawUid: unknown, rawSchool: unknown, now: number) {
+/**
+ * Designate (or re-activate) one student for one school. At most 2 active per school.
+ * Called by the admin console (`meta.source === 'admin'`) and by the EdLight Apply
+ * webhook (`'edlight-apply'`, see ambassadorApplications.ts). Every change leaves an
+ * `ambassadorAudit/*` record. An Apply designation refuses a student who is already
+ * an active ambassador (`already_ambassador`), unless it is a replay of itself.
+ */
+export async function designateAmbassador(db: Firestore, adminUid: string, rawUid: unknown, rawSchool: unknown, now: number, meta: DesignationMeta = ADMIN_META): Promise<DesignationResult> {
   const uid = uidOf(rawUid);
   const school = typeof rawSchool === 'string' ? rawSchool.trim().slice(0, 120) : '';
   if (school.length < 2) throw new AmbassadorError('invalid_input');
@@ -65,27 +96,42 @@ export async function designateAmbassador(db: Firestore, adminUid: string, rawUi
   const user = await db.doc(`users/${uid}`).get();
   if (!user.exists) throw new AmbassadorError('not_found');
   const name = defaultAlias(user.data()?.full_name || user.data()?.name || '') || '';
-  await db.runTransaction(async (tx) => {
+  return db.runTransaction(async (tx) => {
+    const ledgerRef = meta.ledgerId ? db.doc(`ambassadorApplications/${meta.ledgerId}`) : null;
+    const ledger = ledgerRef ? await tx.get(ledgerRef) : null;
+    if (ledger?.exists) return { ok: true as const, uid: String(ledger.data()?.uid || uid), replayed: true };
     const peers = await tx.get(db.collection('ambassadors').where('schoolKey', '==', schoolKey).where('active', '==', true).limit(10));
-    if (peers.docs.filter((d) => d.id !== uid).length >= AMBASSADOR_RULES.maxPerSchool) throw new AmbassadorError('school_full');
     const ref = db.doc(`ambassadors/${uid}`);
     const prev = await tx.get(ref);
+    if (meta.source !== 'admin' && prev.data()?.active === true) throw new AmbassadorError('already_ambassador');
+    if (peers.docs.filter((d) => d.id !== uid).length >= AMBASSADOR_RULES.maxPerSchool) throw new AmbassadorError('school_full');
     const record: AmbassadorDoc = { uid, name, school, schoolKey, active: true,
-      designatedAt: prev.data()?.active ? prev.data()!.designatedAt : now, designatedBy: adminUid, revokedAt: null, revokedBy: null };
+      designatedAt: prev.data()?.active ? prev.data()!.designatedAt : now, designatedBy: adminUid, revokedAt: null, revokedBy: null,
+      source: meta.source, applicationId: meta.applicationId ?? null, reviewerName: meta.reviewerName ?? null };
     tx.set(ref, record);
+    tx.set(db.doc(`ambassadorAudit/${auditId(now)}`), { action: 'designate', uid, school, schoolKey, by: adminUid, at: now,
+      source: meta.source, applicationId: meta.applicationId ?? null, reviewerName: meta.reviewerName ?? null });
+    if (ledgerRef) tx.set(ledgerRef, { applicationId: meta.applicationId ?? null, decision: 'approve', uid, school, at: now, reviewerName: meta.reviewerName ?? null });
+    return { ok: true as const, uid };
   });
-  return { ok: true };
 }
 
-export async function revokeAmbassador(db: Firestore, adminUid: string, rawUid: unknown, now: number) {
+export async function revokeAmbassador(db: Firestore, adminUid: string, rawUid: unknown, now: number, meta: DesignationMeta = ADMIN_META): Promise<DesignationResult> {
   const uid = uidOf(rawUid);
-  await db.runTransaction(async (tx) => {
+  return db.runTransaction(async (tx) => {
+    const ledgerRef = meta.ledgerId ? db.doc(`ambassadorApplications/${meta.ledgerId}`) : null;
+    const ledger = ledgerRef ? await tx.get(ledgerRef) : null;
+    if (ledger?.exists) return { ok: true as const, uid: String(ledger.data()?.uid || uid), replayed: true };
     const ref = db.doc(`ambassadors/${uid}`);
     const snap = await tx.get(ref);
-    if (!snap.exists) throw new AmbassadorError('not_found');
-    tx.set(ref, { ...(snap.data() as AmbassadorDoc), active: false, revokedAt: now, revokedBy: adminUid });
+    if (!snap.exists) throw new AmbassadorError(meta.source === 'admin' ? 'not_found' : 'not_ambassador');
+    const prev = snap.data() as AmbassadorDoc;
+    tx.set(ref, { ...prev, active: false, revokedAt: prev.active ? now : prev.revokedAt ?? now, revokedBy: prev.active ? adminUid : prev.revokedBy ?? adminUid });
+    tx.set(db.doc(`ambassadorAudit/${auditId(now)}`), { action: 'revoke', uid, school: prev.school, schoolKey: prev.schoolKey, by: adminUid, at: now,
+      source: meta.source, applicationId: meta.applicationId ?? null, reviewerName: meta.reviewerName ?? null });
+    if (ledgerRef) tx.set(ledgerRef, { applicationId: meta.applicationId ?? null, decision: 'revoke', uid, school: prev.school, at: now, reviewerName: meta.reviewerName ?? null });
+    return { ok: true as const, uid };
   });
-  return { ok: true };
 }
 
 /** Public badge list. Only uids, which are already public on the leaderboard entries. */
@@ -194,6 +240,7 @@ export async function ambassadorReport(db: Firestore, rawPeriod: unknown, now: n
     const a = d.data() as AmbassadorDoc;
     const [recruits, reward] = await Promise.all([refreshRecruits(db, d.id, now), db.doc(`ambassadorRewards/${d.id}_${period}`).get()]);
     rows.push({ uid: d.id, name: a.name || '', school: a.school, period, active: a.active === true,
+      source: a.source === 'edlight-apply' ? 'edlight-apply' : 'admin', applicationId: a.applicationId || null, reviewerName: a.reviewerName || null,
       ...summarizeRecruits(recruits, now, period),
       rewardDelivered: reward.data()?.delivered === true, rewardNotes: String(reward.data()?.notes || '') });
   }
@@ -245,8 +292,12 @@ export async function eraseAmbassadorAccount(db: Firestore, uid: string) {
   const recruited = await db.collection('ambassadorRecruits').where('referrerUid', '==', uid).get();
   const rewards = await db.collection('ambassadorRewards').where('uid', '==', uid).get();
   const asReferrer = await db.collection('referrals').where('referrerUid', '==', uid).get();
-  if (amb.exists || recruited.size || rewards.size || asReferrer.size) {
+  const audit = await db.collection('ambassadorAudit').where('uid', '==', uid).get();
+  const ledger = await db.collection('ambassadorApplications').where('uid', '==', uid).get();
+  if (amb.exists || recruited.size || rewards.size || asReferrer.size || audit.size || ledger.size) {
     const alias = anonId();
+    // The audit trail and Apply ledger keep their shape (who decided, when, which application) under the alias.
+    for (const d of [...audit.docs, ...ledger.docs]) await d.ref.set({ ...d.data(), uid: alias });
     for (const d of asReferrer.docs) {
       const data = d.data();
       await db.doc(`referrals/${alias}_${data.referredUid || anonId()}`).set({ ...data, referrerUid: alias, pseudonymized: true });

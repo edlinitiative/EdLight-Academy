@@ -62,3 +62,22 @@ it('the ambassador dashboard shows server figures in Kreyòl', async () => {
   expect(all).toContain('Rekri aktif');
   await act(async () => view.unmount());
 });
+
+it('a student who is not an ambassador gets the pitch and opens EdLight Apply', async () => {
+  const { Linking } = require('react-native');
+  const { AMBASSADOR_APPLY_URL, AmbassadorError } = require('../../../../shared/ambassadors');
+  const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+  (ambassadorRequest as jest.Mock).mockRejectedValue(new AmbassadorError('forbidden'));
+  let view: any;
+  await act(async () => { view = renderer.create(<AmbassadorScreen navigation={nav} />); });
+  expect(texts(view)).toContain('Devenir ambassadeur');
+  expect(texts(view)).toContain('Au plus 2 ambassadeurs par école.');
+  await act(async () => { press(view, 'Postuler sur EdLight Apply'); });
+  expect(open).toHaveBeenCalledWith(AMBASSADOR_APPLY_URL);
+  await act(async () => view.unmount());
+  useStore.setState({ user: null, language: 'ht' } as any);
+  await act(async () => { view = renderer.create(<AmbassadorScreen navigation={nav} />); });
+  expect(texts(view)).toContain('Vin anbasadè');
+  expect(texts(view)).toContain('Aplike sou EdLight Apply');
+  await act(async () => view.unmount());
+});

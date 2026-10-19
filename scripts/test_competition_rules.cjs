@@ -126,7 +126,8 @@ const { doc, setDoc, getDoc } = requireTools('firebase/firestore');
     }
     // Team-mode authority and answers are server-only even for the team's own starter.
     for (const key of ['classes/private', 'classes/private/weeks/2026-10-19', 'classes/private/state/completions', 'classAccounts/entrant', 'classTeachers/entrant', 'classCodes/ABC234',
-      'progressShares/abc', 'ambassadors/entrant', 'ambassadorRecruits/entrant', 'ambassadorRewards/entrant_2026-10']) {
+      'progressShares/abc', 'ambassadors/entrant', 'ambassadorRecruits/entrant', 'ambassadorRewards/entrant_2026-10',
+      'ambassadorAudit/1_abc', 'ambassadorApplications/app1_approve']) {
       for (const db of [guest, member, hostDb, entrant]) {
         await assertFails(getDoc(doc(db, key)));
         await assertFails(setDoc(doc(db, key), { memberUids: ['entrant'], active: true }));

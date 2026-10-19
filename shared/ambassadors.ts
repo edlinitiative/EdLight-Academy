@@ -145,6 +145,10 @@ export interface AmbassadorReportRow extends RecruitSummary {
   active: boolean;
   rewardDelivered: boolean;
   rewardNotes: string;
+  /** Where the latest designation came from (EdLight Apply carries its application id and reviewer). */
+  source?: 'admin' | 'edlight-apply';
+  applicationId?: string | null;
+  reviewerName?: string | null;
 }
 
 /** A cell a spreadsheet would run as a formula is prefixed so it stays text. */
@@ -179,6 +183,10 @@ export const AMBASSADOR_ERRORS: Record<string, [string, string]> = {
   invalid_input: ['Vérifie les champs.', 'Verifye enfòmasyon yo.'],
   unauthorized: ['Connecte-toi pour continuer.', 'Konekte pou kontinye.'],
   rate_limit: ['Trop de demandes. Réessaie plus tard.', 'Twòp demann. Eseye pita.'],
+  already_ambassador: ['Cet élève est déjà ambassadeur.', 'Elèv sa a se anbasadè deja.'],
+  account_not_found: ['Aucun compte EdLight Academy avec cet e-mail.', 'Pa gen kont EdLight Academy ak imèl sa a.'],
+  not_ambassador: ['Cet élève n’est pas ambassadeur.', 'Elèv sa a pa anbasadè.'],
+  email_unverified: ['L’e-mail de ce compte n’est pas vérifié.', 'Imèl kont sa a poko verifye.'],
 };
 export function ambassadorErrorMessage(error: unknown, language: string): string {
   const code = error instanceof AmbassadorError ? error.code : '';
@@ -227,3 +235,25 @@ export async function fetchAmbassadorUids(base: string): Promise<string[]> {
 }
 
 export const AMBASSADOR_LABEL = { fr: 'Ambassadeur', ht: 'Anbasadè' };
+
+/**
+ * Where a student applies to become an ambassador: the "Ambassadeur EdLight
+ * Academy" programme on EdLight Apply. Admins review there; an approval calls
+ * `POST /api/ambassadors?action=ambassador-application` here. One constant for web and native.
+ */
+export const AMBASSADOR_APPLY_URL = 'https://apply.edlight.org/academy-ambassadors';
+
+/** The pitch shown to a student who is not (or no longer) an ambassador. */
+export const AMBASSADOR_PITCH = {
+  title: ['Devenir ambassadeur', 'Vin anbasadè'],
+  lead: [
+    'Représente ton école sur EdLight Academy : invite tes camarades avec ton code, aide ton école à monter au classement et reçois une récompense de l’équipe EdLight pour les élèves qui continuent d’étudier.',
+    'Reprezante lekòl ou sou EdLight Academy : envite kanmarad ou yo ak kòd ou, ede lekòl ou monte nan klasman an epi resevwa yon rekonpans nan men ekip EdLight pou elèv ki kontinye etidye yo.',
+  ],
+  points: [
+    [`Au plus ${AMBASSADOR_RULES.maxPerSchool} ambassadeurs par école.`, `Pa plis pase ${AMBASSADOR_RULES.maxPerSchool} anbasadè pou chak lekòl.`],
+    ['Postule sur EdLight Apply en te connectant avec le même e-mail que ton compte EdLight Academy (vérifié).', 'Aplike sou EdLight Apply, konekte ak menm imèl kont EdLight Academy ou a (verifye).'],
+    ['Si tu as moins de 18 ans, un parent ou tuteur doit donner son accord.', 'Si ou poko gen 18 an, yon paran oswa yon responsab dwe dakò.'],
+  ],
+  cta: ['Postuler sur EdLight Apply', 'Aplike sou EdLight Apply'],
+} as const;

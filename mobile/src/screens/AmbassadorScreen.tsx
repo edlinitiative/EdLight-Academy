@@ -1,14 +1,18 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ScrollView, Share, Text, View } from 'react-native';
+import { Linking, ScrollView, Share, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useStore from '../contexts/store';
 import { useTheme } from '../theme/theme';
 import Button from '../components/ui/Button';
 import { ambassadorRequest } from '../services/ambassadorService';
 import { logInviteSent } from '../services/referralService';
-import { AMBASSADOR_RULES, ambassadorErrorMessage, type AmbassadorDashboard } from '../../../shared/ambassadors';
+import { AMBASSADOR_APPLY_URL, AMBASSADOR_PITCH, AMBASSADOR_RULES, AmbassadorError, ambassadorErrorMessage, type AmbassadorDashboard } from '../../../shared/ambassadors';
 
-/** School ambassador dashboard. Every figure is computed by the server (shared/ambassadors.ts). */
+/**
+ * School ambassador dashboard. Every figure is computed by the server (shared/ambassadors.ts).
+ * A student who is not an ambassador (signed out, or the server answers `forbidden`)
+ * gets the pitch and a button to apply on EdLight Apply (AMBASSADOR_APPLY_URL).
+ */
 export default function AmbassadorScreen({ navigation }: { navigation: any }) {
   const user = useStore((s) => s.user), language = useStore((s) => s.language);
   const { colors, cardSurface } = useTheme();
@@ -49,6 +53,19 @@ export default function AmbassadorScreen({ navigation }: { navigation: any }) {
   const standing = (label: string, s: AmbassadorDashboard['schoolProgress']['week']) => (
     <Text style={text}>{label} : {s ? t(`${s.rank}e sur ${s.of} · ${s.totalXp} XP · ${s.members} élèves`, `${s.rank}yèm sou ${s.of} · ${s.totalXp} XP · ${s.members} elèv`) : t('pas encore au classement', 'poko nan klasman an')}</Text>
   );
+
+  const pick = (pair: readonly [string, string]) => (isCreole ? pair[1] : pair[0]);
+  if (!uid || (error instanceof AmbassadorError && error.code === 'forbidden')) {
+    return <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}><ScrollView contentContainerStyle={{ padding: 20, gap: 20, paddingBottom: 60 }}>
+      <Button label={t('Retour', 'Retounen')} variant="ghost" onPress={() => navigation.goBack()} />
+      <Text accessibilityRole="header" style={heading}>{pick(AMBASSADOR_PITCH.title)}</Text>
+      <View style={card}>
+        <Text style={text}>{pick(AMBASSADOR_PITCH.lead)}</Text>
+        {AMBASSADOR_PITCH.points.map((p) => <Text key={p[0]} style={muted}>{'\u2022 '}{pick(p)}</Text>)}
+        <Button label={pick(AMBASSADOR_PITCH.cta)} onPress={() => { Linking.openURL(AMBASSADOR_APPLY_URL).catch(() => undefined); }} />
+      </View>
+    </ScrollView></SafeAreaView>;
+  }
 
   return <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}><ScrollView contentContainerStyle={{ padding: 20, gap: 20, paddingBottom: 60 }}>
     <Button label={t('Retour', 'Retounen')} variant="ghost" onPress={() => navigation.goBack()} />
