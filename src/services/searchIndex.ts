@@ -11,7 +11,6 @@
 
 import { GAMES } from '../data/games';
 import { levelToSlug } from '../utils/examLevels';
-import { examDisplayTitle } from '../utils/examUtils';
 
 export type SearchItemType = 'course' | 'lesson' | 'exam' | 'game' | 'page' | 'action';
 
@@ -166,7 +165,13 @@ async function courseItems(lang: Lang): Promise<SearchItem[]> {
 
 async function examItems(lang: Lang): Promise<SearchItem[]> {
   try {
-    const res = await fetch('/exam_catalog_index.json');
+    // Lazy, like dataService above: examUtils (~96 KB minified with the
+    // question compiler and CAS) was riding in the INITIAL bundle of every
+    // page only because this always-mounted overlay imported it statically.
+    const [{ examDisplayTitle }, res] = await Promise.all([
+      import('../utils/examUtils'),
+      fetch('/exam_catalog_index.json'),
+    ]);
     if (!res.ok) return [];
     const idx = await res.json();
     if (!Array.isArray(idx)) return [];
