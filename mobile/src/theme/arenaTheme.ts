@@ -149,6 +149,12 @@ export const arenaPalette: Palette = {
   successSoft: arenaColors.successSoft,
   successFill: '#13845A',
   azureInk: arenaColors.signal,
+  // The night accents are already light enough to read as text.
+  dangerInk: arenaColors.danger,
+  successInk: arenaColors.success,
+  warnInk: arenaColors.warn,
+  coralInk: arenaColors.coral,
+  dangerFill: '#DC2626',
 };
 
 /** Hook form, for symmetry with `useColors()`. The night does not change with the OS theme. */

@@ -265,7 +265,7 @@ export default function TeachScreen({ onClose }: { onClose?: () => void }) {
           />
 
           {status === 'error' && (
-            <Text style={[typeScale.status, { marginTop: 14, color: colors.danger }]} accessibilityRole="alert">
+            <Text style={[typeScale.status, { marginTop: 14, color: colors.dangerInk }]} accessibilityRole="alert">
               {t('L’envoi a échoué. Vérifie ta connexion, puis réessaie.', 'Voye a echwe. Tcheke koneksyon ou, epi eseye ankò.')}
             </Text>
           )}

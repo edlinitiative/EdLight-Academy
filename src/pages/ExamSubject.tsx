@@ -11,6 +11,7 @@ import { examTopicTags } from '../../shared/examUtils';
 import { sessionRowName, yearRange } from '../utils/examNaming';
 import { URL_LEVEL_TO_RAW, LEVEL_SLUG_LABELS } from '../utils/examLevels';
 import { Skeleton } from '../components/Skeleton';
+import { EmptyState, ErrorState, LoadingState } from '../components/StateViews';
 import { durationLabel } from './examHubParts';
 import './examPremium.css';
 
@@ -161,11 +162,11 @@ export default function ExamSubject() {
 
   if (isPending) {
     return frame(
-      <div className="xp-skel" aria-busy="true">
+      <LoadingState className="xp-skel" label={L('Chargement des épreuves…', 'N ap chaje egzamen yo…')}>
         <Skeleton width={220} height={16} radius={999} />
         <Skeleton width="40%" height={40} radius={12} />
         {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} width="100%" height={84} radius={18} />)}
-      </div>,
+      </LoadingState>,
     );
   }
 
@@ -174,29 +175,32 @@ export default function ExamSubject() {
   // is a third state: the service worker keeps this index in DATA_CACHE, so
   // after one online load the list really is available offline.
   if (isError) {
-    const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
     return frame(
-      <section className="xp-empty">
-        <h1 className="xp-h2">{offline ? L('Hors ligne', 'Pa sou entènèt') : L('Catalogue indisponible', 'Katalòg la pa disponib')}</h1>
-        <p>
-          {offline
-            ? L('La liste des épreuves n’est pas encore enregistrée sur cet appareil. Connecte-toi une fois pour la charger : ensuite elle reste consultable hors ligne.',
-              'Lis egzamen yo poko anrejistre sou aparèy sa a. Konekte yon fwa pou chaje l : apre sa ou ka gade l san entènèt.')
-            : L('Nous n’avons pas pu charger les épreuves. Vérifie ta connexion, puis réessaie.',
-              'Nou pa t ka chaje egzamen yo. Tcheke koneksyon ou, epi eseye ankò.')}
-        </p>
-        <button type="button" className="xp-btn" onClick={() => { void refetch(); }}>{L('Réessayer', 'Eseye ankò')}</button>
-      </section>,
+      <ErrorState
+        page
+        headingLevel={1}
+        title={L('Catalogue indisponible', 'Katalòg la pa disponib')}
+        message={L('Nous n’avons pas pu charger les épreuves. Vérifie ta connexion, puis réessaie.',
+          'Nou pa t ka chaje egzamen yo. Tcheke koneksyon ou, epi eseye ankò.')}
+        offlineTitle={L('Hors ligne', 'Pa sou entènèt')}
+        offlineMessage={L('La liste des épreuves n’est pas encore enregistrée sur cet appareil. Connecte-toi une fois pour la charger : ensuite elle reste consultable hors ligne.',
+          'Lis egzamen yo poko anrejistre sou aparèy sa a. Konekte yon fwa pou chaje l : apre sa ou ka gade l san entènèt.')}
+        onRetry={() => { void refetch(); }}
+        retryLabel={L('Réessayer', 'Eseye ankò')}
+        action={{ label: L('Toutes les matières', 'Tout matyè yo'), onClick: () => navigate(`/exams/${level}`) }}
+      />,
     );
   }
 
   if (exams.length === 0) {
     return frame(
-      <section className="xp-empty">
-        <h1 className="xp-h2">{L('Aucune épreuve pour cette matière', 'Pa gen egzamen pou matyè sa a')}</h1>
-        <p>{L('Le catalogue évolue régulièrement, reviens bientôt.', 'Katalòg la ap grandi souvan, tounen talè.')}</p>
-        <button type="button" className="xp-btn" onClick={() => navigate(`/exams/${level}`)}>{L('Toutes les matières', 'Tout matyè yo')}</button>
-      </section>,
+      <EmptyState
+        page
+        headingLevel={1}
+        title={L('Aucune épreuve pour cette matière', 'Pa gen egzamen pou matyè sa a')}
+        message={L('Le catalogue évolue régulièrement, reviens bientôt.', 'Katalòg la ap grandi souvan, tounen talè.')}
+        action={{ label: L('Toutes les matières', 'Tout matyè yo'), onClick: () => navigate(`/exams/${level}`) }}
+      />,
     );
   }
 

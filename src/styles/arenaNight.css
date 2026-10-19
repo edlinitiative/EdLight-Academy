@@ -18,6 +18,13 @@ body.arena-night {
   --text-700: #C2D1F2;
   --text-600: #A3B5DC;
   --text-500: #8599C4;
+  /* text-400 carries real text (meta lines); the light-theme value is
+     unreadable on navy, so it joins text-500 here. */
+  --text-400: #8599C4;
+  /* Status ink on the night ground (the light-theme inks are too deep here). */
+  --success-ink: #4CC987;
+  --warning-ink: #F3B04A;
+  --danger-ink: #F58A8A;
   background:
     radial-gradient(1100px 520px at 15% -5%, rgba(61, 139, 255, 0.16), transparent 70%),
     radial-gradient(900px 500px at 100% 30%, rgba(255, 92, 57, 0.06), transparent 70%),
@@ -351,3 +358,11 @@ body .aph__title {
   background: none; -webkit-background-clip: border-box; background-clip: border-box;
   color: #FFF6E6; filter: none;
 }
+
+/* Shared StateViews (loading / empty / error) inside the night: same
+   component as the learning side, seated on the night surface. The light
+   icon tile (--primary-50) would glare on navy. */
+body.arena-night .state-view { box-shadow: none; }
+body.arena-night .state-view__icon { background: rgba(77, 143, 240, 0.16); color: #9DC2FA; }
+body.arena-night .state-view__icon--error { background: rgba(248, 113, 113, 0.16); color: #F7A8A8; }
+body.arena-night .state-loading__row { background: var(--surface); box-shadow: none; }

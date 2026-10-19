@@ -551,7 +551,7 @@
 .lp-signup__error {
   margin: 0.7rem 0 0;
   font-size: 0.85rem;
-  color: var(--danger-500);
+  color: var(--danger-ink);
 }
 
 .lp-signup__fine {

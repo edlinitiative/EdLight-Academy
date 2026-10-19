@@ -124,6 +124,8 @@ export default function ExamHistoryScreen() {
         <ErrorState
           title={t('Impossible de charger vos résultats.', 'Nou pa ka chaje rezilta ou yo.')}
           onRetry={() => setRetryCount((n) => n + 1)}
+          secondaryLabel={t('Retour', 'Retounen')}
+          onSecondary={() => navigation.goBack()}
         />
       );
     }

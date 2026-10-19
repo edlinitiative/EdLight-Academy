@@ -202,7 +202,7 @@ export default function ChapterTest({
               return (
                 <View key={lessonId} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                   <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: colors.successSoft, alignItems: 'center', justifyContent: 'center' }}>
-                    <Check color={colors.success} size={16} strokeWidth={3} />
+                    <Check color={colors.successInk} size={16} strokeWidth={3} />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={[typeScale.bodyMd, { color: colors.ink }]} numberOfLines={2}>{lesson?.title ?? t('Leçon', 'Leson')}</Text>

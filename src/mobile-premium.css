@@ -252,10 +252,10 @@
     box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--primary-500) 75%, transparent);
   }
 
-  .nav-link--danger { color: var(--danger-500) !important; }
+  .nav-link--danger { color: var(--danger-ink) !important; }
   .nav-link--danger .nav-link__icon {
     background: color-mix(in srgb, var(--danger-500) 12%, transparent);
-    color: var(--danger-500);
+    color: var(--danger-ink);
   }
 
   /* ---- Sectioned secondary area ---- */

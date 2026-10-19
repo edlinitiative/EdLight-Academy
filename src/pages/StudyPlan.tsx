@@ -346,7 +346,7 @@ export default function StudyPlan() {
           </div>
         </header>
         <div className="sp-dashboard">
-          <main className="sp-main">
+          <div className="sp-main">
             <Skeleton width="100%" height={120} radius={16} />
             <section className="sp-section" style={{ marginTop: '1.25rem' }}>
               <Skeleton width={160} height={20} style={{ marginBottom: '1rem' }} />
@@ -356,7 +356,7 @@ export default function StudyPlan() {
                 ))}
               </div>
             </section>
-          </main>
+          </div>
         </div>
       </div>
     );
@@ -495,7 +495,8 @@ export default function StudyPlan() {
       <div className="sp-dashboard">
 
         {/* ──── MAIN COLUMN ────────────────────────────────── */}
-        <main className="sp-main">
+        {/* A div, not <main>: Layout already provides the page's one main landmark. */}
+        <div className="sp-main">
 
           {/* Hero: Next task */}
           {heroTask ? (
@@ -504,7 +505,9 @@ export default function StudyPlan() {
               onClick={() => openTask(heroTask)}
               role="button"
               tabIndex={0}
-              onKeyDown={(e) => e.key === 'Enter' && openTask(heroTask)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openTask(heroTask); }
+              }}
             >
               <div className="sp-hero__content">
                 <span className="sp-hero__eyebrow">
@@ -523,9 +526,11 @@ export default function StudyPlan() {
                   )}
                 </div>
               </div>
-              <button className="sp-hero__go">
+              {/* Decorative: the whole hero card is the button. A nested
+                  <button> inside role="button" was a second, unlabeled tab stop. */}
+              <span className="sp-hero__go" aria-hidden="true">
                 <Play size={20} />
-              </button>
+              </span>
             </div>
           ) : (
             <div className="sp-hero sp-hero--done">
@@ -538,20 +543,24 @@ export default function StudyPlan() {
 
           {/* ── Tabbed task section ────────────────────────── */}
           <section className="sp-section">
-            <div className="sp-tabs">
+            <div className="sp-tabs" role="group" aria-label={isCreole ? 'Ki travay pou montre' : 'Tâches à afficher'}>
               <button
+                type="button"
+                aria-pressed={activeTab === 'today'}
                 className={`sp-tabs__btn ${activeTab === 'today' ? 'sp-tabs__btn--active' : ''}`}
                 onClick={() => { setActiveTab('today'); setShowAllTasks(false); }}
               >
-                <Target size={15} />
+                <Target size={15} aria-hidden="true" />
                 {isCreole ? 'Jodi a' : 'Aujourd\'hui'}
                 <span className="sp-pill sp-pill--sm">{todayTasks.length}</span>
               </button>
               <button
+                type="button"
+                aria-pressed={activeTab === 'week'}
                 className={`sp-tabs__btn ${activeTab === 'week' ? 'sp-tabs__btn--active' : ''}`}
                 onClick={() => { setActiveTab('week'); setShowAllTasks(false); }}
               >
-                <CalendarRange size={15} />
+                <CalendarRange size={15} aria-hidden="true" />
                 {isCreole ? 'Semèn' : 'Semaine'}
                 <span className="sp-pill sp-pill--sm">{upcomingTasks.length}</span>
               </button>
@@ -587,7 +596,7 @@ export default function StudyPlan() {
               </button>
             )}
           </section>
-        </main>
+        </div>
 
         {/* ──── SIDEBAR ────────────────────────────────────── */}
         <aside className="sp-sidebar">
@@ -627,8 +636,8 @@ export default function StudyPlan() {
 
           {/* Collapsible on mobile: mastery + tips */}
           <div className="sp-sidebar__details">
-            <button className="sp-sidebar__toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
-              <BarChart3 size={15} />
+            <button type="button" className="sp-sidebar__toggle" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(!sidebarOpen)}>
+              <BarChart3 size={15} aria-hidden="true" />
               {isCreole ? 'Detay & Metrize' : 'Détails & Maîtrise'}
               <ChevronDown size={14} className={`sp-sidebar__chevron ${sidebarOpen ? 'sp-sidebar__chevron--open' : ''}`} />
             </button>
@@ -779,11 +788,11 @@ function TaskCard({ task, title, isCreole, compact, onNavigate }) {
       onClick={onNavigate}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => e.key === 'Enter' && onNavigate()}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigate(); }
+      }}
     >
-      {/* Left accent bar */}
-      <div className="sp-task__accent" style={{ backgroundColor: meta.color }} />
-
+      {/* The type is carried by the tinted icon below — no left accent stripe. */}
       <div className="sp-task__body">
         <div className="sp-task__top-row">
           <span className="sp-task__type-icon" style={{ color: meta.color }}><TypeIcon size={15} /></span>

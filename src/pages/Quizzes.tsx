@@ -4,7 +4,7 @@ import { ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal } from '../co
 import DirectBankQuiz, { MAX_ATTEMPTS } from '../components/DirectBankQuiz';
 import QuizResult, { entryStatus, type QuizLogEntry } from '../components/QuizResult';
 import LearnSwitch from '../components/LearnSwitch';
-import { ErrorState } from '../components/StateViews';
+import { ErrorState, LoadingState } from '../components/StateViews';
 import { Skeleton, SkeletonText } from '../components/Skeleton';
 import PracticeEntry, { ModeRules, ScopeNotice, type PracticeMode } from '../components/journey/practice/PracticeEntry';
 import {
@@ -598,8 +598,8 @@ const Quizzes = () => {
     if (handoff) {
       return (
         <section className="section qz qz--entry">
-          <div className="container qz__container" aria-busy="true">
-            <div className="pe" aria-label={tx('Chargement de ta pratique…', 'N ap chaje pratik ou…')}>
+          <LoadingState className="container qz__container" label={tx('Chargement de ta pratique…', 'N ap chaje pratik ou…')}>
+            <div className="pe">
               <Skeleton width={180} height={14} />
               <Skeleton width="70%" height={34} />
               <Skeleton width="45%" height={16} />
@@ -610,13 +610,13 @@ const Quizzes = () => {
               <SkeletonText lines={3} lastWidth="55%" />
               <Skeleton width={220} height={52} radius={12} />
             </div>
-          </div>
+          </LoadingState>
         </section>
       );
     }
     return (
       <section className="section qz">
-        <div className="container qz__container" aria-busy="true">
+        <LoadingState className="container qz__container" label={tx('Chargement…', 'Ap chaje…')}>
           <Skeleton width={260} height={34} style={{ marginBottom: '0.75rem' }} />
           <SkeletonText lines={2} lastWidth="60%" />
           <div className="qz-setup" style={{ marginTop: '1.75rem' }}>
@@ -631,7 +631,7 @@ const Quizzes = () => {
             </div>
             <Skeleton width="100%" height={46} radius={10} style={{ marginTop: '1.25rem' }} />
           </div>
-        </div>
+        </LoadingState>
       </section>
     );
   }

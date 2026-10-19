@@ -237,7 +237,7 @@ function Chip({ label, Icon, onPress, disabled }: { label: string; Icon: any; on
       ]}
     >
       <Icon size={18} color={colors.azureInk} strokeWidth={2} />
-      <Text numberOfLines={1} style={{ fontFamily: fonts.medium, fontSize: 15, lineHeight: 20, color: colors.ink }}>{label}</Text>
+      <Text numberOfLines={1} maxFontSizeMultiplier={1.5} style={{ fontFamily: fonts.medium, fontSize: 15, lineHeight: 20, color: colors.ink }}>{label}</Text>
     </PressableScale>
   );
 }
@@ -576,7 +576,7 @@ export default function SandraScreen({
           {/* Notices — opaque tonal washes, no outlines. */}
           {notice?.kind === 'limit' ? (
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderRadius: 16, padding: 14, marginTop: 2, backgroundColor: colors.warnSoft }}>
-              <AlertTriangle size={18} color={colors.warn} style={{ marginTop: 1 }} />
+              <AlertTriangle size={18} color={colors.warnInk} style={{ marginTop: 1 }} />
               <Text accessibilityRole="alert" style={[typeScale.status, { flex: 1, color: colors.ink }]}>
                 {notice.message}
               </Text>

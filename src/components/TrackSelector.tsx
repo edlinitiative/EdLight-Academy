@@ -80,6 +80,7 @@ export default function TrackSelector({ onSelect, onClose, mode = 'modal', curre
             className={`track-selector__card ${selected === track.code ? 'track-selector__card--selected' : ''}`}
             onClick={() => setSelected(track.code)}
             type="button"
+            aria-pressed={selected === track.code}
             style={{
               '--track-color': track.color,
               borderColor: selected === track.code ? track.color : undefined,

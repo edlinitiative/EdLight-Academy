@@ -6,6 +6,7 @@ import PressableScale from '../ui/PressableScale';
 import { GRADES } from '../../../../shared/trackConfig';
 import { arenaColors as C, arenaType } from '../../theme/arenaTheme';
 import { select } from '../../utils/haptics';
+import { modalAnimation, isReduceMotionOn } from '../../utils/motion';
 
 /**
  * Pick a class, from the Arena lobby.
@@ -40,8 +41,8 @@ export default function ArenaGradeSheet({
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity
+    <Modal visible={visible} transparent animationType={modalAnimation(isReduceMotionOn(), 'slide')} onRequestClose={onClose}>
+      <TouchableOpacity accessibilityRole="button"
         style={{ flex: 1, backgroundColor: 'rgba(2, 6, 18, 0.72)' }}
         activeOpacity={1}
         onPress={onClose}

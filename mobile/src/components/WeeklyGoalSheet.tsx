@@ -45,7 +45,7 @@ export default function WeeklyGoalSheet({
 
   return (
     <Modal visible={visible} transparent animationType={reduce ? 'none' : 'slide'} onRequestClose={onClose}>
-      <TouchableOpacity
+      <TouchableOpacity accessibilityRole="button"
         style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.55)' }}
         activeOpacity={1}
         onPress={onClose}

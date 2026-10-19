@@ -20,6 +20,7 @@ import Avatar from './ui/Avatar';
 import { useMyAvatar } from '../hooks/useMyAvatar';
 import Stagger from './ui/Stagger';
 import LeaderboardJoinModal from './LeaderboardJoinModal';
+import { Skeleton, InlineError } from './StateViews';
 
 /**
  * Two worlds share this board: the Jeux tab / full Classement page draw it on
@@ -397,7 +398,7 @@ function BoardBody({ compact = false, maxRows = 10, onViewChange }: Omit<Leaderb
   const [period, setPeriod] = useState<BoardPeriod>('week');
   const [scope, setScope] = useState<BoardScope>('national');
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
-  const { entries, myEntry, myRank, isLoading, showingLastWeek, deltas } = useLeaderboard(maxRows, compact ? 'week' : period);
+  const { entries, myEntry, myRank, isLoading, isError, refetch, showingLastWeek, deltas } = useLeaderboard(maxRows, compact ? 'week' : period);
   const { profile, isAuthed } = useTrivia();
   const [showJoin, setShowJoin] = useState(false);
   const myUid = myEntry?.id;
@@ -450,13 +451,13 @@ function BoardBody({ compact = false, maxRows = 10, onViewChange }: Omit<Leaderb
   const joinFooter = isAuthed && !compact && (
     <>
       {needsAlias ? (
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           onPress={() => setShowJoin(true)}
           activeOpacity={0.85}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, padding: 12, borderRadius: 14, backgroundColor: colors.warnSoft }}
         >
-          <Pencil size={16} color={colors.warn} />
-          <Text style={{ flex: 1, fontFamily: fonts.bold, fontSize: 14, color: colors.warn }}>
+          <Pencil size={16} color={colors.warnInk} />
+          <Text style={{ flex: 1, fontFamily: fonts.bold, fontSize: 14, color: colors.warnInk }}>
             {t(
               'Il vous manque un pseudo. Choisissez-en un pour apparaître.',
               'Ou manke yon ti non. Chwazi youn pou parèt.',
@@ -464,10 +465,10 @@ function BoardBody({ compact = false, maxRows = 10, onViewChange }: Omit<Leaderb
           </Text>
         </TouchableOpacity>
       ) : optedIn ? (
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           onPress={() => setShowJoin(true)}
           activeOpacity={0.7}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, alignSelf: 'center' }}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, alignSelf: 'center', minHeight: 44 }}
         >
           <Pencil size={14} color={colors.muted} />
           <Text style={{ fontFamily: fonts.medium, fontSize: 14, color: colors.muted }}>
@@ -475,7 +476,7 @@ function BoardBody({ compact = false, maxRows = 10, onViewChange }: Omit<Leaderb
           </Text>
         </TouchableOpacity>
       ) : (
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           onPress={() => setShowJoin(true)}
           activeOpacity={0.85}
           style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, minHeight: 50, borderRadius: 999, backgroundColor: night ? NC.coral : colors.azure }}
@@ -492,7 +493,7 @@ function BoardBody({ compact = false, maxRows = 10, onViewChange }: Omit<Leaderb
 
   // Signed-out students see the board but can't join → give them a way in.
   const guestFooter = !isAuthed && !compact && (
-    <TouchableOpacity
+    <TouchableOpacity accessibilityRole="button"
       onPress={toggleAuthModal}
       activeOpacity={0.85}
       style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, minHeight: 50, borderRadius: 999, backgroundColor: night ? NC.coral : colors.azure }}
@@ -636,9 +637,41 @@ function BoardBody({ compact = false, maxRows = 10, onViewChange }: Omit<Leaderb
   );
 
   if (isLoading) {
+    // Rank rows shaped like the real ones (badge · avatar · name · XP) so the
+    // card keeps its height when the board arrives.
     return (
-      <View style={{ ...cardStyle, alignItems: 'center', paddingVertical: 32 }}>
-        <Text style={{ color: colors.faint, fontSize: 14 }}>{t('Chargement…', 'Ap chaje…')}</Text>
+      <View
+        style={cardStyle}
+        accessible
+        accessibilityRole="progressbar"
+        accessibilityLabel={t('Chargement du classement…', 'Klasman an ap chaje…')}
+        accessibilityState={{ busy: true }}
+      >
+        {Array.from({ length: Math.min(maxRows, 5) }).map((_, i) => (
+          <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 }}>
+            <Skeleton width={36} height={36} radius={10} />
+            <Skeleton width={36} height={36} radius={18} />
+            <View style={{ flex: 1, gap: 6 }}>
+              <Skeleton width="60%" height={14} />
+              <Skeleton width="30%" height={11} />
+            </View>
+            <Skeleton width={48} height={14} />
+          </View>
+        ))}
+      </View>
+    );
+  }
+
+  // A failed fetch is not an empty board: say so and offer a retry, so a
+  // network blip never reads as "nobody has played yet".
+  if (isError && displayList.length === 0) {
+    return (
+      <View style={cardStyle}>
+        {header}
+        <InlineError
+          message={t('Le classement n’a pas pu être chargé.', 'Klasman an pa t ka chaje.')}
+          onRetry={() => { void refetch(); }}
+        />
       </View>
     );
   }
@@ -683,10 +716,10 @@ function BoardBody({ compact = false, maxRows = 10, onViewChange }: Omit<Leaderb
               />
             ))}
             {!myGroupKey && isAuthed && (
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button"
                 onPress={() => setShowJoin(true)}
                 activeOpacity={0.7}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6, alignSelf: 'center' }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6, alignSelf: 'center', minHeight: 44 }}
               >
                 <Pencil size={14} color={night ? NC.inkSoft : colors.azure} />
                 <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: night ? NC.inkSoft : colors.azure }}>

@@ -484,7 +484,7 @@ export default function AuthScreen() {
 
       {/* Referral result overlay — shown briefly before entering the app. */}
       {celebration && (
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           activeOpacity={1}
           onPress={() => setUser(celebration.user)}
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(6,12,24,0.78)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }}

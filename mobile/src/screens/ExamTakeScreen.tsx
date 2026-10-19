@@ -333,15 +333,14 @@ function ExamHint({ hints, isCreole }: { hints?: any; isCreole: boolean }) {
 
   if (shown === 0) {
     return (
-      <TouchableOpacity
+      <Button
+        variant="secondary"
+        size="sm"
         onPress={() => setShown(1)}
-        accessibilityRole="button"
-        accessibilityLabel={t("Besoin d'un indice ?", 'Ou bezwen yon endis?')}
-        style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 18, alignSelf: 'flex-start', paddingHorizontal: 16, minHeight: 44, borderRadius: 12, backgroundColor: colors.azureSoft }}
-      >
-        <Lightbulb color={colors.azureInk} size={17} />
-        <Text style={{ fontFamily: fonts.bold, fontSize: 15, lineHeight: 20, color: colors.azureInk }}>{t("Besoin d'un indice ?", 'Ou bezwen yon endis?')}</Text>
-      </TouchableOpacity>
+        label={t("Besoin d'un indice ?", 'Ou bezwen yon endis?')}
+        icon={<Lightbulb color={colors.azureInk} size={17} />}
+        style={{ marginTop: 18, alignSelf: 'flex-start', minHeight: 44 }}
+      />
     );
   }
 
@@ -357,7 +356,7 @@ function ExamHint({ hints, isCreole }: { hints?: any; isCreole: boolean }) {
         <MathText key={i} text={clean.length > 1 ? `${i + 1}. ${h}` : h} style={{ fontSize: 16, lineHeight: 23, color: colors.ink }} />
       ))}
       {shown < clean.length ? (
-        <TouchableOpacity onPress={() => setShown((s) => s + 1)} style={{ alignSelf: 'flex-start', minHeight: 40, justifyContent: 'center' }} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+        <TouchableOpacity accessibilityRole="button" onPress={() => setShown((s) => s + 1)} style={{ alignSelf: 'flex-start', minHeight: 40, justifyContent: 'center' }} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
           <Text style={{ fontFamily: fonts.bold, fontSize: 15, lineHeight: 20, color: colors.azureInk }}>{t('Indice suivant', 'Endis swivan')} →</Text>
         </TouchableOpacity>
       ) : null}
@@ -776,8 +775,8 @@ export default function ExamTakeScreen() {
   );
 
   if (loading) return withChrome(<LoadingState message={t("Chargement de l'examen…", 'Egzamen an ap chaje…')} />);
-  if (error || !exam) return withChrome(<ErrorState onRetry={retryLoad} />);
-  if (questions.length === 0) return withChrome(<ErrorState message={t("Cet examen n'a pas de questions.", 'Egzamen sa a pa gen kesyon.')} onRetry={retryLoad} />);
+  if (error || !exam) return withChrome(<ErrorState onRetry={retryLoad} secondaryLabel={t('Retour', 'Retounen')} onSecondary={() => navigation.goBack()} />);
+  if (questions.length === 0) return withChrome(<ErrorState message={t("Cet examen n'a pas de questions.", 'Egzamen sa a pa gen kesyon.')} onRetry={retryLoad} secondaryLabel={t('Retour', 'Retounen')} onSecondary={() => navigation.goBack()} />);
 
   const answeredCount = Object.keys(answers).length;
 

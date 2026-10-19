@@ -24,6 +24,8 @@ import {
 } from '../../services/tournoisService';
 import { formatWhen, useLang } from './parts';
 import ArenaPageHead from '../../components/arena/ArenaPageHead';
+import { Skeleton } from '../../components/Skeleton';
+import { ErrorState, LoadingState } from '../../components/StateViews';
 import './Tournois.css';
 
 function StatePill({ t: tour }: { t: Pick<Tournament, 'state' | 'startsAt'> }) {
@@ -66,13 +68,17 @@ export default function TournoisHub() {
   const [mine, setMine] = useState<MyTournament[]>([]);
   const [pin, setPin] = useState('');
   const [loadError, setLoadError] = useState(false);
+  // Bumped by "Réessayer" so a failed list can be fetched again in place.
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let alive = true;
+    setLoadError(false);
+    if (reloadKey > 0) setOpen(null);
     listPublic('open').then((r) => alive && setOpen(r)).catch(() => { if (alive) { setOpen([]); setLoadError(true); } });
     listPublic('finished').then((r) => alive && setFinished(r)).catch(() => {});
     return () => { alive = false; };
-  }, []);
+  }, [reloadKey]);
 
   useEffect(() => {
     if (!user?.uid) { setMine([]); return; }
@@ -119,20 +125,31 @@ export default function TournoisHub() {
                 {!listEmpty && <span>{t('Tout le monde peut les regarder.', 'Tout moun ka gade yo.')}</span>}
               </div>
               {open === null ? (
-                <p className="tn-muted">{t('Chargement…', 'Ap chaje…')}</p>
+                <LoadingState label={t('Chargement des tournois…', 'N ap chaje tounwa yo…')}>
+                  <div className="tn-grid" aria-hidden="true">
+                    {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} height={112} radius={18} />)}
+                  </div>
+                </LoadingState>
+              ) : loadError ? (
+                /* A failed fetch is not an empty list: say so and offer a retry.
+                   PIN entry and "Créer" stay usable beside it. */
+                <ErrorState
+                  compact
+                  title={t('Liste indisponible', 'Lis la pa disponib')}
+                  message={t('Impossible de charger la liste pour l’instant.', 'Nou pa ka chaje lis la kounye a.')}
+                  offlineMessage={t('Tu es hors ligne. Reconnecte-toi pour voir les tournois publics.', 'Ou pa sou entènèt. Rekonekte pou wè tounwa piblik yo.')}
+                  onRetry={() => setReloadKey((k) => k + 1)}
+                  retryLabel={t('Réessayer', 'Eseye ankò')}
+                />
               ) : open.length === 0 ? (
                 /* An empty list is an invitation, not a panel announcing nothing. */
-                <div className="tn-hub__empty">
+                <div className="tn-hub__empty" role="status">
                   <p>
-                    {loadError
-                      ? t('Impossible de charger la liste pour l’instant. Réessaie dans un moment.', 'Nou pa ka chaje lis la kounye a. Eseye ankò talè.')
-                      : t('Aucun tournoi public en ce moment. Lance le premier : toute l’Arène pourra le suivre.', 'Pa gen tounwa piblik kounye a. Lanse premye a : tout Arèn nan ap ka swiv li.')}
+                    {t('Aucun tournoi public en ce moment. Lance le premier : toute l’Arène pourra le suivre.', 'Pa gen tounwa piblik kounye a. Lanse premye a : tout Arèn nan ap ka swiv li.')}
                   </p>
-                  {!loadError && (
-                    <button type="button" className="an-go" onClick={create}>
-                      <Plus size={18} aria-hidden="true" /> {t('Créer un tournoi', 'Kreye yon tounwa')}
-                    </button>
-                  )}
+                  <button type="button" className="an-go" onClick={create}>
+                    <Plus size={18} aria-hidden="true" /> {t('Créer un tournoi', 'Kreye yon tounwa')}
+                  </button>
                 </div>
               ) : (
                 <div className="tn-grid">

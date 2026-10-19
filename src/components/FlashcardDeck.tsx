@@ -174,9 +174,17 @@ export default function FlashcardDeck({ subjectCode, chapterNumber, subchapterNu
       </div>
 
       <div className="flashcard-container">
-        <div 
+        {/* The card is the flip control: keyboard-reachable, Enter/Space flip,
+            and aria-pressed says which face is showing. */}
+        <div
           className={`flashcard ${isFlipped ? 'flashcard--flipped' : ''} ${isMastered ? 'flashcard--mastered' : ''} ${isDifficult ? 'flashcard--difficult' : ''}`}
           onClick={toggleFlip}
+          role="button"
+          tabIndex={0}
+          aria-pressed={isFlipped}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleFlip(); }
+          }}
         >
           <div className="flashcard__inner">
             <div className="flashcard__front">

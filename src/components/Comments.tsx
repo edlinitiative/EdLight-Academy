@@ -196,6 +196,7 @@ export default function Comments({ threadKey, isAuthenticated, onRequireAuth }) 
         <textarea
           className="form-input"
           rows={3}
+          aria-label={isCreole ? 'Kòmantè ou' : 'Votre commentaire'}
           placeholder={isAuthenticated
             ? (isCreole ? 'Ekri yon kòmantè…' : 'Écrivez un commentaire…')
             : (isCreole ? 'Konekte pou ekri yon kòmantè' : 'Connectez-vous pour écrire un commentaire')}
@@ -316,6 +317,7 @@ export default function Comments({ threadKey, isAuthenticated, onRequireAuth }) 
                       <textarea
                         className="form-input"
                         rows={2}
+                        aria-label={isCreole ? 'Repons ou' : 'Votre réponse'}
                         placeholder={isCreole ? 'Ekri yon repons…' : 'Écrivez une réponse…'}
                         value={replyDrafts[c.id] || ''}
                         onChange={(e) => setReplyDrafts((d) => ({ ...d, [c.id]: e.target.value }))}

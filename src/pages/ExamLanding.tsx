@@ -7,6 +7,7 @@ import { History, ChevronRight, Search, ArrowRight } from '../components/icons';
 import useStore from '../contexts/store';
 import { GRADES, gradeProfile, getCoefficient, DEFAULT_SUBJECT_ORDER } from '../config/trackConfig';
 import { Skeleton } from '../components/Skeleton';
+import { ErrorState, LoadingState } from '../components/StateViews';
 import { useExamAttempts } from '../hooks/useExamAttempts';
 import { levelToSlug } from '../utils/examLevels';
 import { normalizeExamCatalog } from '../utils/examCatalog';
@@ -385,23 +386,20 @@ const ExamLanding = () => {
         )}
 
         {catalogError && (
-          <section className="xp-empty">
-            <h2>{L('Liste des examens indisponible', 'Lis egzamen yo pa disponib')}</h2>
-            <p>
-              {typeof navigator !== 'undefined' && navigator.onLine === false
-                ? L('Tu es hors ligne et la liste des examens n’est pas encore enregistrée sur cet appareil.', 'Ou pa sou entènèt e lis egzamen yo poko anrejistre sou aparèy sa a.')
-                : L('Impossible de charger la liste des examens.', 'Nou pa t ka chaje lis egzamen yo.')}
-            </p>
-            <button className="xp-btn" type="button" onClick={() => { void refetchCatalog(); }}>
-              {L('Réessayer', 'Eseye ankò')}
-            </button>
-          </section>
+          <ErrorState
+            headingLevel={2}
+            title={L('Liste des examens indisponible', 'Lis egzamen yo pa disponib')}
+            message={L('Impossible de charger la liste des examens.', 'Nou pa t ka chaje lis egzamen yo.')}
+            offlineMessage={L('Tu es hors ligne et la liste des examens n’est pas encore enregistrée sur cet appareil.', 'Ou pa sou entènèt e lis egzamen yo poko anrejistre sou aparèy sa a.')}
+            onRetry={() => { void refetchCatalog(); }}
+            retryLabel={L('Réessayer', 'Eseye ankò')}
+          />
         )}
 
         {catalogPending && (
-          <div className="xp-tiles" aria-busy="true">
+          <LoadingState className="xp-tiles" label={L('Chargement des examens…', 'N ap chaje egzamen yo…')}>
             {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} height={176} radius={20} />)}
-          </div>
+          </LoadingState>
         )}
 
         {results && (

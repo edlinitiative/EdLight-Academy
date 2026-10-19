@@ -65,7 +65,7 @@ export default function Button({
     secondary: { bg: colors.azureSoft, fg: isDark ? colors.ink : colors.azureInk, border: 'transparent' },
     outline: { bg: colors.surface, fg: colors.ink, border: colors.border },
     ghost: { bg: 'transparent', fg: colors.azureInk, border: 'transparent' },
-    danger: { bg: colors.danger, fg: '#ffffff', border: 'transparent' },
+    danger: { bg: colors.dangerFill, fg: '#ffffff', border: 'transparent' },
     success: { bg: colors.successFill, fg: '#ffffff', border: 'transparent' },
   }[variant];
   // Disabled is an OPAQUE neutral step with muted text (no half-transparent

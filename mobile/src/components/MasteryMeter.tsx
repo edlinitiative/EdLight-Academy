@@ -105,7 +105,7 @@ export function MasteryBadge({
         }}
       >
         <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: tint }} />
-        <Text style={[typeScale.micro, { color: colors.success }]}>
+        <Text maxFontSizeMultiplier={1.5} style={[typeScale.micro, { color: colors.successInk }]}>
           {masteryLabel(level, isCreole)}
         </Text>
       </View>
@@ -115,7 +115,7 @@ export function MasteryBadge({
   return (
     <View style={{ alignItems: 'flex-end', gap: 4 }}>
       {showLabel && (
-        <Text style={[typeScale.micro, { color: level === 'none' ? colors.faint : tint }]}>
+        <Text maxFontSizeMultiplier={1.5} style={[typeScale.micro, { color: level === 'none' ? colors.faint : tint }]}>
           {masteryLabel(level, isCreole)}
         </Text>
       )}

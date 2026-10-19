@@ -136,7 +136,8 @@ export default function ResumeBanner() {
       <TouchableOpacity
         onPress={clearActivity}
         activeOpacity={0.82}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        // 16pt glyph + 14pt slop each side = a 44pt target.
+        hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
         accessibilityRole="button"
         accessibilityLabel={t('Ignorer', 'Inyore')}
         style={{ flexShrink: 0 }}

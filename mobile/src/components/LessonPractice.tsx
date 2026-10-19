@@ -17,6 +17,7 @@ import {
 } from '../utils/mastery';
 import { success } from '../utils/haptics';
 import { MasteryMeter } from './MasteryMeter';
+import { modalAnimation, isReduceMotionOn } from '../utils/motion';
 
 // Cards come from the shared quiz bank (Firestore `quizzes`), keyed by
 // subject_code + unit_no + lesson_no — the same source the web flashcards /
@@ -233,7 +234,7 @@ export default function LessonPractice({
   React.useEffect(() => { if (visible) setMode(initialMode); }, [visible, initialMode]);
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} animationType={modalAnimation(isReduceMotionOn(), 'slide')} onRequestClose={onClose}>
       {/* Own provider so safe-area insets resolve inside the RN Modal window. */}
       <SafeAreaProvider>
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top', 'bottom']}>

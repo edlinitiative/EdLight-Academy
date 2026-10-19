@@ -108,7 +108,7 @@
 }
 
 .search-notice--failed > svg {
-  color: var(--warning-500);
+  color: var(--warning-ink);
   flex: none;
 }
 

@@ -237,7 +237,7 @@ function TaskRow({
           {line}
         </Text>
         {overdue ? (
-          <Text style={[typeScale.status, { color: colors.danger }]}>{isCreole ? 'Pou ratrape' : 'À rattraper'}</Text>
+          <Text style={[typeScale.status, { color: colors.dangerInk }]}>{isCreole ? 'Pou ratrape' : 'À rattraper'}</Text>
         ) : null}
         {!!secondary && !done ? (
           <Text numberOfLines={2} style={[typeScale.caption, { color: colors.muted }]}>{secondary}</Text>
@@ -394,7 +394,7 @@ function StudyReminderCard({ isCreole }: { isCreole: boolean }) {
       </PressableScale>
 
       {problem ? (
-        <Text accessibilityLiveRegion="polite" style={[typeScale.status, { color: colors.danger, marginTop: 4, marginBottom: 6 }]}>{problem}</Text>
+        <Text accessibilityLiveRegion="polite" style={[typeScale.status, { color: colors.dangerInk, marginTop: 4, marginBottom: 6 }]}>{problem}</Text>
       ) : null}
       {result === 'blocked' ? (
         <Button size="sm" variant="secondary" label={t('Ouvrir les réglages', 'Louvri paramèt yo')} onPress={openNotificationSettings} style={{ alignSelf: 'flex-start', marginBottom: 10 }} />

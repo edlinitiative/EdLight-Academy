@@ -12,6 +12,7 @@ import { Exercices } from './LessonPractice';
 import Button from './ui/Button';
 import { AnswerStatus } from './journey/practice/Answer';
 import { dueIdsInScope, dueRowsInScope, type ReviewScope } from './journey/practice/reviewScope';
+import { modalAnimation, isReduceMotionOn } from '../utils/motion';
 
 /**
  * Revizyon — a quiz made ONLY of the student's own missed questions.
@@ -98,7 +99,7 @@ export default function ReviewSession({
     : t('Les questions que tu as ratées', 'Kesyon ou te rate yo');
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} animationType={modalAnimation(isReduceMotionOn(), 'slide')} onRequestClose={onClose}>
       <SafeAreaProvider>
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top', 'bottom']}>
           <View

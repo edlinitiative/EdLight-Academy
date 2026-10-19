@@ -406,9 +406,9 @@
   color: var(--text-muted);
 }
 
-.leaderboard__join-pitch svg { color: var(--success-500); flex: 0 0 auto; }
+.leaderboard__join-pitch svg { color: var(--success-ink); flex: 0 0 auto; }
 
-.leaderboard__join-pitch--warn svg { color: var(--warning-500); }
+.leaderboard__join-pitch--warn svg { color: var(--warning-ink); }
 
 .leaderboard__field-error {
   font-size: 0.875rem;

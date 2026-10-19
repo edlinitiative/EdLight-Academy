@@ -113,11 +113,11 @@
 }
 
 .exam-results__tally-item--right svg,
-.exam-results__tally-item--right strong { color: var(--success-500); }
+.exam-results__tally-item--right strong { color: var(--success-ink); }
 .exam-results__tally-item--wrong svg,
-.exam-results__tally-item--wrong strong { color: var(--danger-500); }
+.exam-results__tally-item--wrong strong { color: var(--danger-ink); }
 .exam-results__tally-item--partial,
-.exam-results__tally-item--partial strong { color: var(--warning-500); }
+.exam-results__tally-item--partial strong { color: var(--warning-ink); }
 .exam-results__tally-item--pending svg,
 .exam-results__tally-item--pending strong { color: var(--primary-600); }
 
@@ -272,9 +272,9 @@
    flaw via --success-600. §7 asks for consistent semantic states; a warning
    painted the colour of body text is not one, and in the dark theme #5d5b54 is
    nearly invisible. Remapped onto the tokens that do exist — no new ones. */
-.exam-results .exam-results__mastery-pct--good { color: var(--success-500); }
-.exam-results .exam-results__mastery-pct--mid { color: var(--warning-500); }
-.exam-results .exam-results__mastery-pct--low { color: var(--danger-500); }
+.exam-results .exam-results__mastery-pct--good { color: var(--success-ink); }
+.exam-results .exam-results__mastery-pct--mid { color: var(--warning-ink); }
+.exam-results .exam-results__mastery-pct--low { color: var(--danger-ink); }
 
 .exam-results .exam-results__mastery-fill--good { background: var(--success-500); }
 .exam-results .exam-results__mastery-fill--mid { background: var(--warning-500); }
