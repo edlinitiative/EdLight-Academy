@@ -14,4 +14,4 @@
 .studio-cw__frame { border-radius: 24px; outline: 1px dashed rgba(160, 190, 255, 0.25); outline-offset: 8px; margin: 0 0 3rem; }
 .studio-cw__h { margin-top: 1rem; font-size: 1.4rem; }
 /* ?full=1: the public screen alone, the whole window, above the app chrome. */
-.studio-pj-full { position: fixed; inset: 0; z-index: 3000; margin: 0; border-radius: 0; outline: 0; overflow: auto; background: #040a1c; }
+.studio-pj-full { position: fixed; inset: 0; z-index: 2147483000; margin: 0; border-radius: 0; outline: 0; overflow: auto; background: #040a1c; }

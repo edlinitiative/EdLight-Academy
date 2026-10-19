@@ -675,6 +675,8 @@ export function roomScenarios(now: number): RoomScenario[] {
     createdAt: now - DAY,
   };
   const roster: RosterEntry[] = after.map((r, i) => ({ uid: r.uid, displayName: r.displayName, school: r.school, grade: null, seed: i, joinedAt: now - DAY }));
+  const pjReveal = at('reveal').live!;
+  const roomReveal: LiveState = { ...pjReveal, reveal: { ...pjReveal.reveal!, counts: [8, 2, 1, 1], answered: 12, correct: 8 } };
   const board = (rows: Standings['rows'], teams: Standings['teams'], final = false): Standings => ({ rows, teams, total: rows.length, final, updatedAt: now });
   return [
     {
@@ -687,11 +689,12 @@ export function roomScenarios(now: number): RoomScenario[] {
     },
     {
       id: 'room-reveal', label: 'Salle — révélation + reclassement',
-      tour, roster, live: at('reveal').live, progress: null, standings: board(after, sch.after), standingsBefore: board(before, sch.before), me: U.me,
+      // The room has 12 players: its own vote counts.
+      tour, roster, live: roomReveal, progress: null, standings: board(after, sch.after), standingsBefore: board(before, sch.before), me: U.me,
     },
     {
       id: 'room-final', label: 'Salle — podium final',
-      tour: { ...tour, state: 'finished' }, roster, live: { ...at('reveal').live!, phase: 'done' }, progress: null, standings: board(after, sch.after, true), me: U.me,
+      tour: { ...tour, state: 'finished' }, roster, live: { ...roomReveal, phase: 'done' }, progress: null, standings: board(after, sch.after, true), me: U.me,
     },
   ];
 }

@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import useStore from '../../contexts/store';
 import { workspaceError } from '../../../shared/competition/client';
@@ -125,6 +126,8 @@ export default function CompetitionShowcase() {
           <button type="button" onClick={replayPj}>Rejouer le reclassement</button>
         </div>
       ) : null}
+      {(() => {
+        const screen = (
       <div
         className={`studio-cw__frame studio-cw__frame--projector${full ? ' studio-pj-full' : ''}`}
         data-scenario={pj.id}
@@ -143,6 +146,10 @@ export default function CompetitionShowcase() {
           embedded
         />
       </div>
+        );
+        // Full window: above the app chrome, like the real /arena/ecran route.
+        return full ? createPortal(screen, document.body) : screen;
+      })()}
       <h3 className="studio__title studio-cw__h">
         {ht ? 'Sal tounwa a' : 'Salle de tournoi'}
       </h3>

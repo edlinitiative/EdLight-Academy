@@ -1215,3 +1215,16 @@ body.arena-night .tn-move.is-up { color: #7FE3B7; }
 .tn-teams__name { min-width: 0; font-weight: 750; }
 .tn-teams__name small { display: block; font-weight: 500; color: var(--tn-text-2, var(--text-500)); }
 .tn-teams__pts { font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* Night fixes for the live room: --tn-navy turns near-white on the night, so
+   the fills that used it (initials, "Votre position", the winner's step)
+   were white on white. Give them night surfaces; gold marks the winner only. */
+body.arena-night .tn-avatar { background: #1B3152; color: #F5F8FF; }
+body.arena-night .tn-me { background: #1C3254; color: #F5F8FF; box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.7); }
+body.arena-night .tn-podium__block { background: #1B3152; color: #C1CFE4; }
+body.arena-night .tn-podium__step--1 .tn-podium__block { background: #FFB92E; color: #1A1205; }
+body.arena-night .tn-podium__name { color: #F5F8FF; }
+body.arena-night .tn-podium__pts { color: #C1CFE4; }
+body.arena-night .tn-squad__bar { background: #0E1C33; }
+body.arena-night .tn-squad__bar > span { background: #4A6A8F; }
+body.arena-night .tn-squad:first-child .tn-squad__bar > span { background: #8FBFFF; }

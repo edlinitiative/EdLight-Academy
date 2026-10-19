@@ -7,6 +7,7 @@ import { Check, Copy, Share2 } from '../../components/icons';
 import useStore from '../../contexts/store';
 import { formatPin } from '../../../shared/tournois/config';
 import type { RowMove } from '../../../shared/competition/presentation';
+import { identityText } from '../../../shared/competition/deletedAccount';
 import SchoolCrest from '../../arena-art/crest/SchoolCrest';
 import { useReducedMotion } from '../../arena-art/motion/tokens';
 import { useFlipList } from '../../arena-art/motion/useFlipList';
@@ -26,6 +27,12 @@ export function useLang() {
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   return { isCreole, t };
+}
+
+/** A public name in one language (deleted accounts carry a bilingual sentinel). */
+function useShownName() {
+  const { isCreole } = useLang();
+  return (name: string) => identityText(name, isCreole ? 1 : 0);
 }
 
 /**
@@ -151,6 +158,7 @@ export function InviteButton({ t: tour, label }: { t: Tournament; label: string 
 
 export function Podium({ rows }: { rows: StandingRow[] }) {
   const { t } = useLang();
+  const shown = useShownName();
   const top = [rows[1], rows[0], rows[2]];
   if (!rows.length) return null;
   // Steps rise third → second → first (competition.css .mo-podium); static
@@ -163,8 +171,8 @@ export function Podium({ rows }: { rows: StandingRow[] }) {
           <div key={place} role="listitem" className={`tn-podium__step tn-podium__step--${place}`}>
             {r ? (
               <>
-                <span className="tn-avatar" aria-hidden="true">{initials(r.displayName)}</span>
-                <span className="tn-podium__name">{r.displayName}</span>
+                <span className="tn-avatar" aria-hidden="true">{initials(shown(r.displayName))}</span>
+                <span className="tn-podium__name">{shown(r.displayName)}</span>
                 {r.school ? (
                   <span className="tn-podium__school">
                     <SchoolCrest name={r.school} size={18} /> {r.school}
@@ -199,6 +207,7 @@ export function MoveBadge({ move }: { move: RowMove | undefined }) {
 
 export function Board({ rows, me, limit = 20, revealDelay = 0 }: { rows: StandingRow[]; me?: string | null; limit?: number; revealDelay?: number }) {
   const { t } = useLang();
+  const name = useShownName();
   const reduced = useReducedMotion();
   const shown = rows.slice(0, limit);
   const keys = shown.map((r) => r.uid);
@@ -213,7 +222,7 @@ export function Board({ rows, me, limit = 20, revealDelay = 0 }: { rows: Standin
           <li key={r.uid} ref={flip(r.uid)} className={r.uid === me ? 'is-me' : ''}>
             <span className="tn-board__rank">{r.rank}</span>
             <span className="tn-board__name">
-              {r.displayName}
+              {name(r.displayName)}
               {(r.school || r.grade) && (
                 <small>
                   {r.school ? <SchoolCrest name={r.school} size={14} /> : null}
@@ -232,7 +241,7 @@ export function Board({ rows, me, limit = 20, revealDelay = 0 }: { rows: Standin
         <ol className="tn-board" start={mine.rank}>
           <li className="is-me">
             <span className="tn-board__rank">{mine.rank}</span>
-            <span className="tn-board__name">{mine.displayName}</span>
+            <span className="tn-board__name">{name(mine.displayName)}</span>
             <span className="tn-board__pts">{nf(mine.points)}</span>
           </li>
         </ol>

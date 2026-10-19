@@ -402,6 +402,7 @@
   .cp-bar { height: 1vh; }
   .competition-projector__stage { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 2.4vh; }
   .cp-card { padding: 3vh; border-radius: 3vh; overflow: hidden; }
+  .cp-main { align-content: center; }
   .cp-card h2 { font-size: 3.4vh; margin-bottom: 2vh; }
   .cp-q { gap: 2.2vh; }
   .cp-q h2 {
@@ -418,6 +419,8 @@
   .cp-rows li { min-height: 0; font-size: 2.5vh; padding: 0.6vh 1vh; gap: 1.2vh; border-radius: 1.4vh; }
   .cp-rows .competition-projector__face svg { width: 4.6vh; height: 4.6vh; }
   .cp-name { -webkit-line-clamp: 1; }
+  /* No school subline (a school or team row): its name may take two lines. */
+  .cp-name:only-child { -webkit-line-clamp: 2; line-height: 1.12; font-size: 0.92em; }
   .cp-podium { min-height: 0; }
   .cp-podium .competition-projector__face svg { width: 9vh; height: 9vh; }
   .cp-step--1 .competition-projector__face svg { width: 12vh; height: 12vh; }
@@ -434,4 +437,11 @@
 @media (prefers-reduced-motion: reduce) {
   .cp-phase.is-live::before { animation: none; }
   .cp-bar span { transition: none; }
+}
+
+/* Phones: a narrower rail — smaller faces, tighter gaps, the name gets the room. */
+@media (max-width: 600px) {
+  .cp-rows li { gap: 8px; padding: 6px 6px; font-size: 1rem; }
+  .cp-rows .competition-projector__face svg { width: 30px; height: 30px; }
+  .cp-delta { padding: 1px 6px; }
 }

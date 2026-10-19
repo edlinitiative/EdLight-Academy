@@ -25,7 +25,6 @@ import TournoisCreateForm, {
 import type { TournamentDraft } from '../../../../shared/tournois/creationInput';
 import { useTrivia } from '../../hooks/useTrivia';
 import {
-  POINTS,
   TOURNAMENT_STATE,
   enumLabel,
   haitiDate,
@@ -49,7 +48,6 @@ export default function TournoisScreen() {
   const user = useStore((s) => s.user);
   const ht = useStore((s) => s.language) === 'ht';
   const t = (fr: string, creole: string) => (ht ? creole : fr);
-  const pts = POINTS[ht ? 1 : 0];
   const [tid, setTid] = useState<string | null>(
     route.params?.tournamentId ?? null,
   );
