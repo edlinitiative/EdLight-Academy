@@ -488,6 +488,7 @@ export default function NotificationCenter({ onClose }) {
             {([
               ['emailNotifications', t('E-mails', 'Imèl'), t('Les mises à jour importantes par e-mail.', 'Mizajou enpòtan yo pa imèl.')],
               ['studyReminders', t('Rappels d’étude', 'Rapèl etid'), t('Tes rappels et les relances pour garder ta série.', 'Rapèl ou yo ak relans pou kenbe seri ou.')],
+              ['competitionUpdates', t('Compétitions et équipes', 'Konpetisyon ak ekip'), t('Invitations, changements d’horaire, annulations et résultats. Tout reste dans Mon activité.', 'Envitasyon, chanjman orè, anilasyon ak rezilta. Tout rete nan Aktivite mwen.')],
               ['achievementNotifications', t('Succès', 'Siksè'), t('Quand tu gagnes un badge ou une série.', 'Lè ou genyen yon badj oswa yon seri.')],
               ['weeklyProgress', t('Bilan de la semaine', 'Bilan semèn nan'), t('Un résumé de tes progrès chaque semaine.', 'Yon rezime pwogrè ou chak semèn.')],
             ] as const).map(([key, label, help]) => (

@@ -120,3 +120,16 @@ test('the row destination is a link and the read control is a separate button', 
   expect(link).toHaveAttribute('href', '/profile');
   expect(within(link).queryByRole('button')).toBeNull();
 });
+
+test('the Compétitions switch writes competitionUpdates: false and says the inbox keeps recording', async () => {
+  mockSvc.getNotificationPreferences.mockResolvedValueOnce({ reminderTime: '18:00', studyReminders: true, competitionUpdates: true } as any);
+  renderInbox();
+  await screen.findByText('Nouveau succès');
+  fireEvent.click(screen.getByRole('tab', { name: 'Réglages' }));
+  const toggle = await screen.findByRole('checkbox', { name: /Compétitions et équipes/ });
+  expect(toggle).toBeChecked();
+  expect(screen.getByText(/Tout reste dans Mon activité/)).toBeInTheDocument();
+  fireEvent.click(toggle);
+  await waitFor(() => expect(mockSvc.updateNotificationPreferences).toHaveBeenCalledWith('u1', expect.objectContaining({ competitionUpdates: false })));
+  expect(toggle).not.toBeChecked();
+});
