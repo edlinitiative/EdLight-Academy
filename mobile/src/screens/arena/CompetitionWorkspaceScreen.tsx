@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   AppState,
   Linking,
   ScrollView,
@@ -7,322 +8,34 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { ChevronLeft } from 'lucide-react-native';
 import useStore from '../../contexts/store';
 import {
   ArenaScreen,
   ArenaPanel,
   ArenaButton,
 } from '../../components/arena/ArenaKit';
+import {
+  TaskForm,
+  WorkspacePanel,
+  arenaInputStyle,
+} from '../../components/arena/WorkspaceKit';
 import { arenaColors as C, arenaType } from '../../theme/arenaTheme';
 import { competitionRequest } from '../../services/competitionService';
 import {
-  operationId,
   workspaceError,
   WorkspaceError,
 } from '../../../../shared/competition/client';
 import {
   copyFor,
-  rowCopy,
-  rowPerson,
   taskPayload,
   workspacePage,
-  type Person,
   type Task,
   type WorkspaceTarget,
 } from '../../../../shared/competition/workspace';
 import { resolveAppPath } from '../../navigation/arenaLinks';
-import Avatar from '../../components/arena/art/avatars/Avatar';
 
-/** A person's face beside their public name; decorative for screen readers. */
-function PersonFace({ person, size = 36 }: { person: Person; size?: number }) {
-  return (
-    <View
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants"
-    >
-      <Avatar seed={person.uid} config={person.avatar} size={size} still />
-    </View>
-  );
-}
-
-function TaskForm({
-  task,
-  ht,
-  uid,
-  execute,
-}: {
-  task: Task;
-  ht: boolean;
-  uid?: string;
-  execute: (
-    task: Task,
-    input: Record<string, string>,
-    op: string,
-  ) => Promise<void>;
-}) {
-  const storageKey = `competition-draft:${uid || 'guest'}:${task.action}:${JSON.stringify(task.values || {})}`;
-  const [input, setInput] = useState<Record<string, string>>(
-    Object.fromEntries((task.fields || []).map((f) => [f.key, f.value || ''])),
-  );
-  const [expanded, setExpanded] = useState(false),
-    [ready, setReady] = useState(false),
-    [busy, setBusy] = useState(false),
-    [confirmed, setConfirmed] = useState(false),
-    [error, setError] = useState('');
-  const pendingTask = useRef<Task | null>(null);
-  const op = useRef(operationId()),
-    locked = useRef(false),
-    alive = useRef(true);
-  useEffect(() => {
-    alive.current = true;
-    let valid = true;
-    AsyncStorage.getItem(storageKey)
-      .then((raw) => {
-        if (!valid) return;
-        try {
-          const draft = raw ? JSON.parse(raw) : null;
-          if (draft) {
-            setInput(draft.input);
-            op.current = draft.operationId;
-            pendingTask.current = draft.pendingTask || null;
-          }
-        } catch {
-          /* ignore malformed local drafts */
-        }
-        setReady(true);
-      })
-      .catch(() => {
-        if (valid) setReady(true);
-      });
-    return () => {
-      valid = false;
-      alive.current = false;
-    };
-  }, [storageKey]);
-  useEffect(() => {
-    if (ready)
-      void AsyncStorage.setItem(
-        storageKey,
-        JSON.stringify({
-          input,
-          operationId: op.current,
-          pendingTask: pendingTask.current,
-        }),
-      ).catch(() => undefined);
-  }, [storageKey, input, ready]);
-  const submit = async () => {
-    if (locked.current || !ready) return;
-    if (task.confirm && !confirmed) {
-      setConfirmed(true);
-      setExpanded(true);
-      return;
-    }
-    locked.current = true;
-    setBusy(true);
-    setError('');
-    try {
-      pendingTask.current ??= task;
-      await AsyncStorage.setItem(
-        storageKey,
-        JSON.stringify({
-          input,
-          operationId: op.current,
-          pendingTask: pendingTask.current,
-        }),
-      ).catch(() => undefined);
-      await execute(pendingTask.current, input, op.current);
-      pendingTask.current = null;
-      op.current = operationId();
-      await AsyncStorage.removeItem(storageKey);
-      if (alive.current) {
-        setExpanded(false);
-        setConfirmed(false);
-      }
-    } catch (e) {
-      if (
-        e instanceof WorkspaceError &&
-        !['network', 'receipt_unknown'].includes(e.code)
-      ) {
-        pendingTask.current = null;
-        op.current = operationId();
-      }
-      if (alive.current)
-        setError(
-          workspaceError(
-            e instanceof WorkspaceError
-              ? e.code
-              : e instanceof Error
-                ? e.message
-                : 'network',
-            ht,
-          ),
-        );
-    } finally {
-      locked.current = false;
-      if (alive.current) setBusy(false);
-    }
-  };
-  return (
-    <View style={{ gap: 12, paddingVertical: 8 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        {task.person ? <PersonFace person={task.person} /> : null}
-        <View style={{ flex: 1 }}>
-          <ArenaButton
-            variant="secondary"
-            label={copyFor(task.label, ht)}
-            busy={busy}
-            disabled={!ready}
-            onPress={() =>
-              task.fields?.length ? setExpanded(!expanded) : void submit()
-            }
-          />
-        </View>
-      </View>
-      {expanded ? (
-        <>
-          {task.fields?.map((f) => (
-            <View key={f.key} style={{ gap: 8 }}>
-              <Text style={{ color: C.ink }}>
-                {copyFor(f.label, ht)}
-                {f.required ? ' *' : ''}
-              </Text>
-              {f.type === 'date' ? (
-                <View style={{ flexDirection: 'row', gap: 12 }}>
-                  <TextInput
-                    accessibilityLabel={`${copyFor(f.label, ht)} — ${ht ? 'dat (ane-mwa-jou)' : 'date (année-mois-jour)'}`}
-                    placeholder="AAAA-MM-JJ"
-                    placeholderTextColor={C.muted}
-                    value={
-                      input[`${f.key}Date`] ??
-                      (input[f.key]
-                        ? new Date(
-                            new Date(input[f.key]).getTime() -
-                              new Date(input[f.key]).getTimezoneOffset() *
-                                60000,
-                          )
-                            .toISOString()
-                            .slice(0, 10)
-                        : '')
-                    }
-                    onChangeText={(value) => {
-                      op.current = operationId();
-                      pendingTask.current = null;
-                      setConfirmed(false);
-                      setInput({ ...input, [`${f.key}Date`]: value });
-                    }}
-                    style={{
-                      color: C.ink,
-                      backgroundColor: C.surfaceRaised,
-                      minHeight: 48,
-                      padding: 12,
-                      flex: 2,
-                    }}
-                  />
-                  <TextInput
-                    accessibilityLabel={`${copyFor(f.label, ht)} — ${ht ? 'lè (èdtan:minit)' : 'heure (heures:minutes)'}`}
-                    placeholder="HH:MM"
-                    placeholderTextColor={C.muted}
-                    value={
-                      input[`${f.key}Time`] ??
-                      (input[f.key]
-                        ? new Date(input[f.key]).toTimeString().slice(0, 5)
-                        : '')
-                    }
-                    onChangeText={(value) => {
-                      op.current = operationId();
-                      pendingTask.current = null;
-                      setConfirmed(false);
-                      setInput({ ...input, [`${f.key}Time`]: value });
-                    }}
-                    style={{
-                      color: C.ink,
-                      backgroundColor: C.surfaceRaised,
-                      minHeight: 48,
-                      padding: 12,
-                      flex: 1,
-                    }}
-                  />
-                </View>
-              ) : f.type === 'select' ? (
-                f.options?.map((option) => (
-                  <ArenaButton
-                    key={option.value}
-                    variant={
-                      input[f.key] === option.value ? 'primary' : 'secondary'
-                    }
-                    label={`${input[f.key] === option.value ? '✓ ' : ''}${copyFor(option.label, ht)}`}
-                    onPress={() => {
-                      op.current = operationId();
-                      pendingTask.current = null;
-                      setConfirmed(false);
-                      setInput({ ...input, [f.key]: option.value });
-                    }}
-                  />
-                ))
-              ) : (
-                <TextInput
-                  accessibilityLabel={copyFor(f.label, ht)}
-                  value={input[f.key] || ''}
-                  onChangeText={(value) => {
-                    op.current = operationId();
-                    pendingTask.current = null;
-                    setConfirmed(false);
-                    setInput({ ...input, [f.key]: value });
-                  }}
-                  keyboardType={f.type === 'number' ? 'numeric' : 'default'}
-                  autoCapitalize="none"
-                  multiline={f.type === 'long'}
-                  maxLength={2000}
-                  style={{
-                    minHeight: f.type === 'long' ? 100 : 48,
-                    backgroundColor: C.surfaceRaised,
-                    color: C.ink,
-                    padding: 12,
-                    borderRadius: 12,
-                  }}
-                />
-              )}
-              {f.type === 'date' ? (
-                <Text style={{ color: C.muted }}>
-                  {ht
-                    ? 'Dat ak lè lokal aparèy ou.'
-                    : 'Date et heure locales de votre appareil.'}
-                </Text>
-              ) : null}
-            </View>
-          ))}
-          {task.fields?.length || confirmed ? (
-            <ArenaButton
-              label={
-                confirmed
-                  ? ht
-                    ? 'Konfime'
-                    : 'Confirmer'
-                  : copyFor(task.label, ht)
-              }
-              busy={busy}
-              onPress={() => {
-                void submit();
-              }}
-            />
-          ) : null}
-        </>
-      ) : null}
-      {confirmed && task.confirm ? (
-        <Text accessibilityLiveRegion="polite" style={{ color: C.ink }}>
-          {copyFor(task.confirm, ht)}
-        </Text>
-      ) : null}
-      {error ? (
-        <Text accessibilityRole="alert" style={{ color: C.ink }}>
-          {error}
-        </Text>
-      ) : null}
-    </View>
-  );
-}
 export default function CompetitionWorkspaceScreen() {
   const navigation = useNavigation<any>(),
     route = useRoute<any>();
@@ -434,12 +147,14 @@ export default function CompetitionWorkspaceScreen() {
       <ScrollView
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
-        contentContainerStyle={{ padding: 18, gap: 18, paddingBottom: 64 }}
+        contentContainerStyle={{ padding: 18, gap: 16, paddingBottom: 64 }}
       >
         <ArenaButton
           variant="secondary"
           label={ht ? 'Retounen' : 'Retour'}
+          icon={<ChevronLeft color={C.ink} size={18} />}
           onPress={() => navigation.goBack()}
+          style={{ alignSelf: 'flex-start' }}
         />
         <Text
           accessibilityRole="header"
@@ -447,16 +162,21 @@ export default function CompetitionWorkspaceScreen() {
         >
           {page ? copyFor(page.title, ht) : ht ? 'Konpetisyon' : 'Compétitions'}
         </Text>
-        <ArenaButton
-          variant="secondary"
-          label={ht ? 'Jwe yon pati' : 'Jouer une partie'}
-          onPress={() => navigation.navigate('Main', { screen: 'Trivia' })}
-        />
-        <ArenaButton
-          variant="secondary"
-          label={ht ? 'Tounwa ant zanmi' : 'Tournois entre amis'}
-          onPress={() => navigation.push('Tournois', {})}
-        />
+        {/* Two shortcuts side by side; they wrap onto two lines with large text. */}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+          <ArenaButton
+            variant="secondary"
+            label={ht ? 'Jwe yon pati' : 'Jouer une partie'}
+            onPress={() => navigation.navigate('Main', { screen: 'Trivia' })}
+            style={{ flexGrow: 1, flexBasis: 150 }}
+          />
+          <ArenaButton
+            variant="secondary"
+            label={ht ? 'Tounwa ant zanmi' : 'Tournois entre amis'}
+            onPress={() => navigation.push('Tournois', {})}
+            style={{ flexGrow: 1, flexBasis: 150 }}
+          />
+        </View>
         {!uid ? (
           <ArenaButton
             label={ht ? 'Konekte pou patisipe' : 'Se connecter pour participer'}
@@ -464,7 +184,13 @@ export default function CompetitionWorkspaceScreen() {
           />
         ) : null}
         {kind === 'home' ? (
-          <ArenaPanel>
+          <ArenaPanel style={{ gap: 12 }}>
+            <Text
+              accessibilityRole="header"
+              style={[arenaType.name, { color: C.ink }]}
+            >
+              {ht ? 'Chèche evènman' : 'Parcourir les événements'}
+            </Text>
             <TextInput
               accessibilityLabel={
                 ht ? 'Kòd lekòl pou dekouvri' : 'Code école à parcourir'
@@ -473,7 +199,9 @@ export default function CompetitionWorkspaceScreen() {
               onChangeText={setSchool}
               placeholder={ht ? 'Kòd lekòl' : 'Code école'}
               placeholderTextColor={C.muted}
-              style={{ color: C.ink, minHeight: 48 }}
+              autoCapitalize="none"
+              autoCorrect={false}
+              style={arenaInputStyle}
             />
             <TextInput
               accessibilityLabel={
@@ -483,7 +211,8 @@ export default function CompetitionWorkspaceScreen() {
               onChangeText={setDepartment}
               placeholder={ht ? 'Depatman' : 'Département'}
               placeholderTextColor={C.muted}
-              style={{ color: C.ink, minHeight: 48 }}
+              autoCorrect={false}
+              style={arenaInputStyle}
             />
             <ArenaButton
               variant="secondary"
@@ -497,7 +226,10 @@ export default function CompetitionWorkspaceScreen() {
         ) : null}
         {error || mineError || data?.errors?.length ? (
           <ArenaPanel tone="warn">
-            <Text accessibilityRole="alert" style={{ color: C.ink }}>
+            <Text
+              accessibilityRole="alert"
+              style={[arenaType.status, { color: C.ink }]}
+            >
               {error ||
                 mineError ||
                 (ht
@@ -513,64 +245,40 @@ export default function CompetitionWorkspaceScreen() {
             />
           </ArenaPanel>
         ) : null}
-        {!data && !error ? (
-          <Text accessibilityLiveRegion="polite" style={{ color: C.ink }}>
-            {ht ? 'Ap chaje…' : 'Chargement…'}
-          </Text>
+        {!visibleData && !error ? (
+          <View
+            accessibilityLiveRegion="polite"
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
+          >
+            <ActivityIndicator color={C.coral} />
+            <Text style={[arenaType.status, { color: C.muted }]}>
+              {ht ? 'Ap chaje…' : 'Chargement…'}
+            </Text>
+          </View>
         ) : null}
         {notice ? (
-          <Text accessibilityLiveRegion="polite" style={{ color: C.ink }}>
-            {notice}
-          </Text>
+          <View
+            style={{
+              backgroundColor: C.successSoft,
+              borderRadius: 14,
+              padding: 12,
+            }}
+          >
+            <Text
+              accessibilityLiveRegion="polite"
+              style={[arenaType.status, { color: C.ink }]}
+            >
+              {notice}
+            </Text>
+          </View>
         ) : null}
         {page?.panels.map((panel, index) => (
-          <ArenaPanel key={`${uid}:${kind}:${id}:${index}`}>
-            <Text
-              accessibilityRole="header"
-              style={[arenaType.name, { color: C.ink }]}
-            >
-              {copyFor(panel.title, ht)}
-            </Text>
-            {panel.paragraphs?.map((p, i) => (
-              <Text key={i} style={[arenaType.body, { color: C.inkSoft }]}>
-                {copyFor(p, ht)}
-              </Text>
-            ))}
-            {panel.rows?.map((r, i) => {
-              const person = rowPerson(r);
-              const text = (
-                <Text
-                  key={person ? undefined : i}
-                  style={[arenaType.body, { color: C.ink, flexShrink: 1 }]}
-                >
-                  {copyFor(rowCopy(r), ht)}
-                </Text>
-              );
-              return person ? (
-                <View
-                  key={i}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 12,
-                  }}
-                >
-                  <PersonFace person={person} />
-                  {text}
-                </View>
-              ) : (
-                text
-              );
-            })}
-            {panel.links?.map((link, i) => (
-              <ArenaButton
-                key={i}
-                variant="secondary"
-                label={copyFor(link.label, ht)}
-                onPress={() => open(link.path)}
-              />
-            ))}
-            {panel.tasks?.map((task) => (
+          <WorkspacePanel
+            key={`${uid}:${kind}:${id}:${index}`}
+            panel={panel}
+            ht={ht}
+            onOpen={open}
+            renderTask={(task) => (
               <TaskForm
                 key={`${uid}:${task.id}`}
                 task={task}
@@ -578,23 +286,25 @@ export default function CompetitionWorkspaceScreen() {
                 uid={uid}
                 execute={execute}
               />
-            ))}
-          </ArenaPanel>
+            )}
+          />
         ))}
         {data?.cursor ? (
           <ArenaButton
             variant="secondary"
             label={ht ? 'Plis evènman' : 'Plus d’événements'}
             onPress={() => {
+              // Same filters as the list on screen (the applied ones, not
+              // whatever is half-typed in the browse fields).
               void competitionRequest('directory', {
                 cursor: data.cursor,
-                schoolKey: school || undefined,
-                department: department || undefined,
+                schoolKey: appliedSchool || undefined,
+                department: appliedDepartment || undefined,
               })
                 .then((next) =>
                   setData({
                     ...next,
-                    events: [...data.events, ...next.events],
+                    events: [...(data.events || []), ...(next.events || [])],
                   }),
                 )
                 .catch(() => setError(workspaceError('network', ht)));

@@ -15,7 +15,7 @@
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
-import { CircleSlash, RefreshCw, ShieldAlert, WifiOff } from 'lucide-react-native';
+import { Check, CircleSlash, RefreshCw, ShieldAlert, WifiOff } from 'lucide-react-native';
 import PressableScale from '../ui/PressableScale';
 import { arenaColors as C, arenaType, arenaRadius, ARENA_TOUCH } from '../../theme/arenaTheme';
 import ArenaWorld from './art/environment/ArenaWorld';
@@ -86,7 +86,7 @@ export function ArenaPanel({
 // ── Buttons ─────────────────────────────────────────────────────────────────
 
 export function ArenaButton({
-  label, onPress, variant = 'primary', icon, disabled, busy, accessibilityHint, style,
+  label, onPress, variant = 'primary', icon, disabled, busy, selected, accessibilityHint, style,
 }: {
   label: string;
   onPress: () => void;
@@ -94,6 +94,11 @@ export function ArenaButton({
   icon?: React.ReactNode;
   disabled?: boolean;
   busy?: boolean;
+  /**
+   * A choice in a set (an option, a format, an answer): announced as
+   * selected and marked with a check, so the state is never colour alone.
+   */
+  selected?: boolean;
   accessibilityHint?: string;
   style?: StyleProp<ViewStyle>;
 }) {
@@ -107,17 +112,27 @@ export function ArenaButton({
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityHint={accessibilityHint}
-      accessibilityState={{ disabled: off, busy: !!busy }}
+      accessibilityState={{
+        disabled: off,
+        busy: !!busy,
+        ...(selected === undefined ? null : { selected }),
+      }}
       style={[{
         minHeight: ARENA_TOUCH,
         flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-        paddingHorizontal: 20, borderRadius: arenaRadius.control,
+        paddingHorizontal: 20, paddingVertical: 10, borderRadius: arenaRadius.control,
         // Opaque grounds only — a translucent fill under a hairline read as generic.
         backgroundColor: primary ? (off ? '#76362D' : C.coral) : C.secondary,
       }, style]}
     >
-      {busy ? <ActivityIndicator color={primary ? C.onCoral : C.ink} size="small" /> : icon}
-      <Text style={[arenaType.action, { color: primary ? C.onCoral : C.ink }]}>{label}</Text>
+      {busy ? (
+        <ActivityIndicator color={primary ? C.onCoral : C.ink} size="small" />
+      ) : selected ? (
+        <Check color={primary ? C.onCoral : C.ink} size={18} strokeWidth={2.6} />
+      ) : icon}
+      {/* flexShrink: a long label (a 60-character tournament title, large
+          text) wraps inside the pill instead of pushing past its edge. */}
+      <Text style={[arenaType.action, { color: primary ? C.onCoral : C.ink, flexShrink: 1, textAlign: 'center' }]}>{label}</Text>
     </PressableScale>
   );
 }
