@@ -120,6 +120,7 @@ export async function readEvent(
     audience: e.audience,
     entryPolicy: e.entryPolicy,
     entryMode: e.entryMode,
+    gameMode: e.gameMode ?? 'independent',
     delivery: e.delivery,
     state: e.state,
     config: e.config,

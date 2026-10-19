@@ -28,6 +28,7 @@ import { trackEvent } from '../utils/telemetry';
 import type { TournamentConfig } from '../../shared/tournois/config';
 import type { PublicQuestion } from '../../shared/tournois/questions';
 import type { Match } from '../../shared/tournois/bracket';
+import { COMPETITION_ERROR_MESSAGES } from '../../shared/competition/errors';
 
 export type {
   TournamentState,
@@ -435,11 +436,15 @@ export function errorMessage(
         'Connexion perdue. Réessayez.',
         'Koneksyon an koupe. Eseye ankò.',
       );
-    default:
+    default: {
+      // Team-mode and competition codes share one French/Kreyòl table.
+      const known = code ? COMPETITION_ERROR_MESSAGES[code] : undefined;
+      if (known) return known[isCreole ? 1 : 0];
       return t(
         'Une erreur est survenue. Réessayez.',
         'Gen yon erè. Eseye ankò.',
       );
+    }
   }
 }
 

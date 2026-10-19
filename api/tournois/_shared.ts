@@ -62,6 +62,16 @@ import {
   type Schedule,
 } from '../../shared/tournois/schedule';
 import { rankNamedTeams } from '../../shared/teams/policy';
+import {
+  isTeamGameMode,
+  liveTeamScore,
+  plannedRoles,
+  rankTeamModes,
+  windowTeamScore,
+  type GameMode,
+  type LiveTeamAnswer,
+  type TeamAttempt,
+} from '../../shared/teams/modes';
 import { rankPlayers, rankTournamentTeams, type PlayerRow } from '../../shared/tournois/scoring';
 import { firstRound, nextRound, resolveMatch, type Entrant, type Match, type RoundScore } from '../../shared/tournois/bracket';
 import { toPublicQuestion, type StoredQuestion } from '../../shared/tournois/questions';
@@ -74,6 +84,9 @@ export type TournamentState = 'scheduled' | 'running' | 'finished' | 'cancelled'
 export interface TournamentDoc extends TournamentConfig {
   schemaVersion?: 1 | 2;
   competitionEventId?: string;
+  /** Absent on legacy and independent events. Team modes are played only through api/tournois/_team. */
+  gameMode?: GameMode;
+  teamPolicy?: string;
   id: string;
   creatorUid: string;
   creatorName: string;
@@ -253,10 +266,42 @@ export async function recomputeStandings(db: Firestore, tid: string, now: number
     qualified: s.qualified,
     needed: s.needed,
   }));
-  let namedTeams: ReturnType<typeof rankNamedTeams> = [];
+  let namedTeams: Array<ReturnType<typeof rankNamedTeams>[number] | ReturnType<typeof rankTeamModes>[number]> = [];
+  let individualRows = ranked;
   if (t.schemaVersion === 2 && t.competitionEventId) {
     const event = (await tx.get(db.doc(`competitionEvents/${t.competitionEventId}`))).data();
-    if (event?.entryMode === 'named_team') {
+    if (event?.entryMode === 'named_team' && isTeamGameMode(t.gameMode)) {
+      // Shared-answer / relay: the team is scored from its own records; no member has an individual score.
+      const mode = t.gameMode;
+      const entries = await tx.get(db.collection(`competitionEvents/${t.competitionEventId}/entries`).where('state', '==', 'registered'));
+      const controls = await tx.get(subCol(db, tid, 'teamControl'));
+      const frozen = new Map(controls.docs.map((d) => [d.id, d.data().slots as string[]]));
+      const list = entries.docs.map((d) => {
+        const e = d.data();
+        const entry = { id: d.id, captainUid: e.captainUid as string, starters: e.starters as string[], roles: e.roles, relaySlots: e.relaySlots };
+        return { id: d.id, label: e.label as string, starters: entry.starters, slots: frozen.get(d.id) ?? plannedRoles(entry).slots };
+      });
+      const questionMs = t.schedule.questionMs;
+      let scores;
+      if (t.format === 'live') {
+        const answers = await tx.get(subCol(db, tid, 'teamAnswers'));
+        const byEntry = new Map<string, LiveTeamAnswer[]>();
+        for (const a of answers.docs) {
+          const x = a.data();
+          byEntry.set(x.entryId, [...(byEntry.get(x.entryId) || []), x as LiveTeamAnswer]);
+        }
+        const pos = livePositionAt(t.schedule, now);
+        const closed = pos.phase === 'done' ? t.schedule.questionCount
+          : pos.phase === 'reveal' ? pos.index + 1 : pos.phase === 'question' ? pos.index : 0;
+        scores = list.map((e) => liveTeamScore(e.id, mode, e.slots, byEntry.get(e.id) || [], closed, questionMs));
+      } else {
+        const attempts = await tx.get(subCol(db, tid, 'teamAttempts'));
+        const byEntry = new Map(attempts.docs.map((d) => [(d.data() as TeamAttempt).uid, d.data() as TeamAttempt]));
+        scores = list.map((e) => windowTeamScore(e.id, mode, e.slots, byEntry.get(e.id) ?? null, t.questionCount, questionMs));
+      }
+      namedTeams = rankTeamModes(mode, list, scores);
+      individualRows = [];
+    } else if (event?.entryMode === 'named_team') {
       const entries = await tx.get(db.collection(`competitionEvents/${t.competitionEventId}/entries`).where('state', '==', 'registered'));
       let namedScores = rows;
       if (t.format !== 'live') {
@@ -274,7 +319,7 @@ export async function recomputeStandings(db: Firestore, tid: string, now: number
   }
   const final = t.state === 'finished';
   tx.set(sub(db, tid, 'standings/current'), {
-    rows: ranked,
+    rows: individualRows,
     teams,
     namedTeams,
     total: rows.length,
@@ -357,7 +402,9 @@ async function advanceLive(db: Firestore, tx: Transaction, t: TournamentDoc, now
   let reveal: Record<string, unknown> | null = null;
   if (revealIndex >= 0 && items[revealIndex]) {
     const q = items[revealIndex];
-    const answers = await tx.get(subCol(db, t.id, 'answers').where('index', '==', revealIndex));
+    // Team modes keep one answer per team in their own server-only collection.
+    const answerCol = isTeamGameMode(t.gameMode) ? 'teamAnswers' : 'answers';
+    const answers = await tx.get(subCol(db, t.id, answerCol).where('index', '==', revealIndex));
     const counts = q.options.map(() => 0);
     let correct = 0;
     answers.docs.forEach((a) => {

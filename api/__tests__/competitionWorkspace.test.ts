@@ -264,7 +264,11 @@ describe("server error codes", () => {
   /** Every code thrown or returned by the competition API sources. */
   function thrownCodes(): string[] {
     const codes = new Set<string>();
-    for (const file of ["api/competition.ts", "api/_lib/competition.ts"]) {
+    for (const file of [
+      "api/competition.ts",
+      "api/_lib/competition.ts",
+      "api/tournois/_team.ts",
+    ]) {
       const source = ts.createSourceFile(
         file,
         fs.readFileSync(path.join(__dirname, "..", "..", file), "utf8"),
@@ -290,7 +294,7 @@ describe("server error codes", () => {
           literal(n.arguments[1]);
         if (
           ts.isNewExpression(n) &&
-          n.expression.getText() === "CompetitionError" &&
+          ["CompetitionError", "TeamError"].includes(n.expression.getText()) &&
           n.arguments?.[0]
         )
           literal(n.arguments[0]);

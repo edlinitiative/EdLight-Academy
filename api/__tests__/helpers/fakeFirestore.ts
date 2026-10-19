@@ -49,8 +49,24 @@ export class FakeDb {
     };
   }
 
+  /**
+   * Opt-in: run transactions one at a time, the outcome Firestore's
+   * optimistic concurrency guarantees (contending transactions retry until
+   * they commit in some serial order). Race tests fire requests together.
+   */
+  serializeTransactions = false;
+  private txQueue: Promise<unknown> = Promise.resolve();
+
   async runTransaction<T>(fn: (tx: any) => Promise<T>): Promise<T> {
+    if (!this.serializeTransactions) return this.runTransactionNow(fn);
+    const run = this.txQueue.then(() => this.runTransactionNow(fn));
+    this.txQueue = run.catch(() => undefined);
+    return run;
+  }
+
+  private async runTransactionNow<T>(fn: (tx: any) => Promise<T>): Promise<T> {
     const ops: Array<() => void> = [];
+    const creates: string[] = [];
     let wrote = false;
     const tx = {
       get: async (target: FakeDocRef | FakeQuery) => {
@@ -62,6 +78,7 @@ export class FakeDb {
       update: (ref: FakeDocRef, data: Data) => { wrote = true; ops.push(() => ref.applyUpdate(data)); },
       create: (ref: FakeDocRef, data: Data) => {
         wrote = true;
+        creates.push(ref.path);
         ops.push(() => {
           if (this.store.has(ref.path)) throw new Error('ALREADY_EXISTS');
           ref.applySet(data);
@@ -70,6 +87,8 @@ export class FakeDb {
       delete: (ref: FakeDocRef) => { wrote = true; ops.push(() => this.store.delete(ref.path)); },
     };
     const out = await fn(tx);
+    // A commit is all or nothing: a create that would collide aborts every write.
+    if (creates.some((p) => this.store.has(p))) throw new Error('ALREADY_EXISTS');
     ops.forEach((op) => op());
     return out;
   }
