@@ -24,12 +24,28 @@ import {
 } from '../../../../shared/competition/client';
 import {
   copyFor,
+  rowCopy,
+  rowPerson,
   taskPayload,
   workspacePage,
+  type Person,
   type Task,
   type WorkspaceTarget,
 } from '../../../../shared/competition/workspace';
 import { resolveAppPath } from '../../navigation/arenaLinks';
+import Avatar from '../../components/arena/art/avatars/Avatar';
+
+/** A person's face beside their public name; decorative for screen readers. */
+function PersonFace({ person, size = 36 }: { person: Person; size?: number }) {
+  return (
+    <View
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <Avatar seed={person.uid} config={person.avatar} size={size} still />
+    </View>
+  );
+}
 
 function TaskForm({
   task,
@@ -150,15 +166,20 @@ function TaskForm({
   };
   return (
     <View style={{ gap: 12, paddingVertical: 8 }}>
-      <ArenaButton
-        variant="secondary"
-        label={copyFor(task.label, ht)}
-        busy={busy}
-        disabled={!ready}
-        onPress={() =>
-          task.fields?.length ? setExpanded(!expanded) : void submit()
-        }
-      />
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        {task.person ? <PersonFace person={task.person} /> : null}
+        <View style={{ flex: 1 }}>
+          <ArenaButton
+            variant="secondary"
+            label={copyFor(task.label, ht)}
+            busy={busy}
+            disabled={!ready}
+            onPress={() =>
+              task.fields?.length ? setExpanded(!expanded) : void submit()
+            }
+          />
+        </View>
+      </View>
       {expanded ? (
         <>
           {task.fields?.map((f) => (
@@ -170,7 +191,7 @@ function TaskForm({
               {f.type === 'date' ? (
                 <View style={{ flexDirection: 'row', gap: 12 }}>
                   <TextInput
-                    accessibilityLabel={`${copyFor(f.label, ht)} — date`}
+                    accessibilityLabel={`${copyFor(f.label, ht)} — ${ht ? 'dat (ane-mwa-jou)' : 'date (année-mois-jour)'}`}
                     placeholder="AAAA-MM-JJ"
                     placeholderTextColor={C.muted}
                     value={
@@ -200,7 +221,7 @@ function TaskForm({
                     }}
                   />
                   <TextInput
-                    accessibilityLabel={`${copyFor(f.label, ht)} — heure`}
+                    accessibilityLabel={`${copyFor(f.label, ht)} — ${ht ? 'lè (èdtan:minit)' : 'heure (heures:minutes)'}`}
                     placeholder="HH:MM"
                     placeholderTextColor={C.muted}
                     value={
@@ -515,11 +536,32 @@ export default function CompetitionWorkspaceScreen() {
                 {copyFor(p, ht)}
               </Text>
             ))}
-            {panel.rows?.map((r, i) => (
-              <Text key={i} style={[arenaType.body, { color: C.ink }]}>
-                {copyFor(r, ht)}
-              </Text>
-            ))}
+            {panel.rows?.map((r, i) => {
+              const person = rowPerson(r);
+              const text = (
+                <Text
+                  key={person ? undefined : i}
+                  style={[arenaType.body, { color: C.ink, flexShrink: 1 }]}
+                >
+                  {copyFor(rowCopy(r), ht)}
+                </Text>
+              );
+              return person ? (
+                <View
+                  key={i}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 12,
+                  }}
+                >
+                  <PersonFace person={person} />
+                  {text}
+                </View>
+              ) : (
+                text
+              );
+            })}
             {panel.links?.map((link, i) => (
               <ArenaButton
                 key={i}

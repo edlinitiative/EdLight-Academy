@@ -20,7 +20,11 @@ import {
   type BankQuestion,
 } from '../../shared/tournois/questions';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../../src/data/triviaData';
-import { defaultAlias, isValidAlias } from '../../shared/alias';
+import {
+  publicPerson,
+  resolveInviteCode,
+  type PublicPerson,
+} from './competitionPeople';
 import {
   seedSchoolByKey,
   schoolFromDoc,
@@ -256,6 +260,13 @@ export async function mutateCompetition(
       ensure(receipt.data()?.digest === digest, 'operation_conflict');
       return receipt.data()!.result;
     }
+    // People are chosen by name (uid as hidden value) or, for someone not yet
+    // known, by their short invite code — resolved here, before any write.
+    if (body.recipientCode !== undefined && body.recipientUid === undefined) {
+      const recipientUid = await resolveInviteCode(tx, db, body.recipientCode);
+      ensure(recipientUid, 'invite_code_unknown', 404);
+      body = { ...body, recipientUid };
+    }
     if (
       ['team-create', 'event-save', 'league-create'].includes(action) &&
       !body.eventId
@@ -272,11 +283,7 @@ export async function mutateCompetition(
       db,
       `leaderboards/all-time/entries/${uid}`,
     );
-    const name =
-      publicIdentity?.hidden !== true &&
-      isValidAlias(publicIdentity?.displayName)
-        ? String(publicIdentity!.displayName).slice(0, 40)
-        : defaultAlias(displayName || user?.displayName) || 'Participant';
+    const { name, avatar } = publicPerson(publicIdentity, user, displayName);
     let result: Record<string, unknown> = { ok: true };
     switch (action) {
       case 'team-create': {
@@ -483,6 +490,7 @@ export async function mutateCompetition(
           tx.set(db.doc(`teams/${teamId}/requests/${uid}`), {
             uid,
             publicName: name,
+            publicAvatar: avatar,
             status: 'pending',
             createdAt: now,
           });
@@ -1026,7 +1034,7 @@ export async function mutateCompetition(
           'event_full',
         );
         const profiles: DocumentData[] = [];
-        const publicNames: string[] = [];
+        const publicPeople: PublicPerson[] = [];
         for (const member of entry.starters) {
           const claim = await data(tx, db, `entryClaims/${e.id}_${member}`);
           ensure(!claim, 'conflicting_entry');
@@ -1044,11 +1052,7 @@ export async function mutateCompetition(
             db,
             `leaderboards/all-time/entries/${member}`,
           );
-          publicNames.push(
-            alias?.hidden !== true && isValidAlias(alias?.displayName)
-              ? String(alias!.displayName).slice(0, 40)
-              : defaultAlias(profile.displayName) || 'Participant',
-          );
+          publicPeople.push(publicPerson(alias, profile));
         }
         ensure(
           !e.tournamentId || engine?.state === 'scheduled',
@@ -1067,12 +1071,14 @@ export async function mutateCompetition(
             lockedAt: now,
           });
           if (engine && e.tournamentId) {
-            const memberName = publicNames[i];
+            const { name: memberName, avatar: memberAvatar } =
+              publicPeople[i];
             tx.create(
               db.doc(`userTournaments/${e.tournamentId}/roster/${member}`),
               {
                 uid: member,
                 displayName: memberName,
+                avatar: memberAvatar,
                 school: e.schoolKey,
                 grade: null,
                 seed: engine.playerCount + i + 1,
@@ -1081,7 +1087,10 @@ export async function mutateCompetition(
             );
             tx.create(
               db.doc(`userTournaments/${e.tournamentId}/players/${member}`),
-              emptyPlayer(member, memberName, e.schoolKey, null),
+              {
+                ...emptyPlayer(member, memberName, e.schoolKey, null),
+                avatar: memberAvatar,
+              },
             );
             tx.set(db.doc(`users/${member}/myTournaments/${e.tournamentId}`), {
               tid: e.tournamentId,

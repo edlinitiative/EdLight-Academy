@@ -124,3 +124,20 @@
   display: grid;
   gap: 14px;
 }
+/* People: face + public name, never an account identifier. */
+.cw-panel li.cw-person {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  list-style: none;
+  padding: 4px 0;
+}
+.cw-face {
+  display: inline-flex;
+  flex: none;
+  line-height: 0;
+}
+.cw-task summary .cw-face {
+  margin-right: 10px;
+  vertical-align: middle;
+}
