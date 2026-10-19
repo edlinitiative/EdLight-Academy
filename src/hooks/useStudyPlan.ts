@@ -25,6 +25,13 @@ import {
 } from '../services/studyPlanService';
 import { listRecentExamResults } from '../services/userActivity';
 import { TRACK_COEFFICIENTS } from '../config/trackConfig';
+import {
+  dedupePlanTasks,
+  schedulePlanTasks,
+  cleanPlanTitle,
+  cleanPlanText,
+  PLAN_SCHEDULE_VERSION,
+} from '../../shared/studyPlanTasks';
 
 const PLAN_KEY = 'study-plan-active';
 
@@ -111,29 +118,44 @@ export function useStudyPlan() {
           const matches = scheduleMap.get(key);
           if (matches?.length) {
             const entry = matches.shift();
-            task.aiRationale = entry.rationale || '';
-            task.aiFocusArea = entry.focusArea || '';
+            task.aiRationale = cleanPlanText(entry.rationale);
+            task.aiFocusArea = cleanPlanTitle(entry.focusArea);
             task.scheduledWeek = entry.week;
             task.scheduledDay = entry.day;
           }
         }
       }
 
-      tasks = sortTasksByPriority(tasks);
+      const dailyTargetMinutes = aiPlan?.dailyTargetMinutes || 90;
+      const weeklyGoals = aiPlan?.weeklyGoals || 8;
+      // One row per exam/chapter/lesson, each untouched task on its own day
+      // within the daily budget. Every task used to be due the instant the
+      // plan was made: the whole backlog "today", all of it late tomorrow.
+      tasks = schedulePlanTasks(dedupePlanTasks(sortTasksByPriority(tasks)), {
+        dailyMinutes: dailyTargetMinutes,
+        weeks: weeklyGoals,
+      });
 
       const planData = {
         track: track || 'SVT',
-        title: aiPlan?.title || `Plan d'étude, ${track || 'SVT'}`,
-        description: aiPlan?.description || '',
-        tips: aiPlan?.tips || [],
-        dailyTargetMinutes: aiPlan?.dailyTargetMinutes || 90,
-        weeklyGoals: aiPlan?.weeklyGoals || 8,
+        title: cleanPlanTitle(aiPlan?.title) || `Plan d'étude · ${track || 'SVT'}`,
+        description: cleanPlanText(aiPlan?.description),
+        tips: (aiPlan?.tips || []).map(cleanPlanText).filter(Boolean),
+        dailyTargetMinutes,
+        weeklyGoals,
+        scheduleVersion: PLAN_SCHEDULE_VERSION,
         tasks,
         taskCount: tasks.length,
         masteredCount: tasks.filter((t) => t.status === 'mastered').length,
       };
 
-      return createStudyPlan(uid, planData);
+      const newId = await createStudyPlan(uid, planData);
+      // Régénérer replaces the plan: archive the old one so it stops lingering
+      // as a second 'active' document.
+      if (plan?.id && plan.id !== newId) {
+        updateStudyPlan(uid, plan.id, { status: 'archived' }).catch(() => {});
+      }
+      return newId;
     },
     onSuccess: invalidate,
   });

@@ -119,8 +119,10 @@ export default function NativeTabNavigator() {
       <Tab.Screen
         name="Exams"
         component={quizPrimary ? QuizNavigator : ExamsNavigator}
-        listeners={quizPrimary ? undefined : ({ navigation }) => ({
-          tabPress: popToRootOnTabPress(navigation, 'Exams', 'ExamLanding'),
+        listeners={({ navigation }) => ({
+          // Quiz-primary grades: the stack also hosts exam screens now, so a
+          // tab press pops back to the quiz picker like the other tabs do.
+          tabPress: popToRootOnTabPress(navigation, 'Exams', quizPrimary ? 'Quizzes' : 'ExamLanding'),
         })}
         options={{
           tabBarLabel: quizPrimary ? t('Quiz', 'Quiz') : t('Examens', 'Egzamen'),

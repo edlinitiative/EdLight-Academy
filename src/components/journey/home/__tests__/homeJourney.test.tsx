@@ -270,7 +270,8 @@ describe('LearnWorkspace sections', () => {
       </QueryClientProvider>,
     );
     const card = screen.getByRole('link', { name: /Chimie.*Prochaine étape/ });
-    expect(card).toHaveAttribute('href', '/courses/chem-ns1');
+    // The card opens on the next lesson it names, not the course's top.
+    expect(card).toHaveAttribute('href', '/courses/chem-ns1?lesson=CHEM-NSI-U1-L2');
     expect(card.querySelector('.sf')).not.toBeNull();
     expect(within(card).getByText('Grandeurs et mesures')).toBeInTheDocument();
     expect(within(card).getByText('1 terminée sur 3')).toBeInTheDocument();

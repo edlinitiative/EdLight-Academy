@@ -26,7 +26,7 @@ import {
 } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { useTheme, touch } from '../theme/theme';
-import { gradeProfile } from '../config/trackConfig';
+import { EXAM_LEVEL_SLUG } from '../../../shared/studyPlanTasks';
 import {
   getSearchIndex, rankResults, rowContext, typeTag, indexHealth, suggestFor, itemKey,
   type SearchItem, type SearchItemType, type RankedRow,
@@ -78,7 +78,6 @@ function Thumb({ uris }: { uris: string[] }) {
 
 export default function SearchScreen({ onClose, navigation }: { onClose?: () => void; navigation: any }) {
   const language = useStore((s) => s.language);
-  const grade = useStore((s) => s.grade);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const { colors, typeScale, fonts, cardSurface, featureSurface, elevation, isDark, radius } = useTheme();
@@ -207,7 +206,7 @@ export default function SearchScreen({ onClose, navigation }: { onClose?: () => 
       case 'course':
         navigation.navigate('Main', {
           screen: 'Courses',
-          params: { screen: 'CourseDetail', params: { courseId: nav.courseId, courseName: nav.courseName } },
+          params: { screen: 'CourseDetail', params: { courseId: nav.courseId, courseName: nav.courseName }, initial: false },
         });
         break;
       case 'lesson':
@@ -216,23 +215,20 @@ export default function SearchScreen({ onClose, navigation }: { onClose?: () => 
           params: {
             screen: 'CourseDetail',
             params: { courseId: nav.courseId, courseName: nav.courseName, lessonId: nav.lessonId },
+            initial: false,
           },
         });
         break;
       case 'exam': {
-        // Younger grades' "Exams" tab hosts the QuizNavigator (no exam
-        // routes) — send them to the tab root instead of a crashing deep link.
-        if (gradeProfile(grade).primaryTab === 'Quiz') {
-          navigation.navigate('Main', { screen: 'Exams' });
-        } else {
-          // The index stores the raw catalog level; the Exams stack routes on
-          // slugs — map it so back-navigation lands on a working browser.
-          const slug = ({ baccalaureat: 'terminale', universite: 'university', '9eme_af': '9e' } as Record<string, string>)[nav.level] || nav.level;
-          navigation.navigate('Main', {
-            screen: 'Exams',
-            params: { screen: 'ExamOverview', params: { level: slug, examId: nav.examId } },
-          });
-        }
+        // Every grade's "Exams" tab carries ExamOverview (QuizNavigator
+        // registers the exam screens too), so the result opens THAT paper;
+        // it used to drop 7e–NS3 students on the quiz picker. The index
+        // stores the raw catalog level; the stacks route on slugs.
+        const slug = EXAM_LEVEL_SLUG[nav.level] || nav.level;
+        navigation.navigate('Main', {
+          screen: 'Exams',
+          params: { screen: 'ExamOverview', params: { level: slug, examId: nav.examId }, initial: false },
+        });
         break;
       }
       case 'games':

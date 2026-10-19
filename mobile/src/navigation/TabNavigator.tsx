@@ -253,7 +253,7 @@ function JsTabNavigator() {
       <Tab.Screen
         name="Exams"
         component={quizPrimary ? QuizNavigator : ExamsNavigator}
-        listeners={quizPrimary ? undefined : ({ navigation }) => ({
+        listeners={({ navigation }) => ({
           // Tapping "Examens" should land on the exam home (the level/subject
           // picker) — not resume whatever the nested stack retained (a specific
           // exam list, or the in-progress ExamTake the user just left). Because
@@ -261,7 +261,9 @@ function JsTabNavigator() {
           // tapping the tab, so the retained top is a stale exam context. Reset
           // the stack to ExamLanding whenever it isn't already there.
           // (In-progress answers aren't lost — the "Reprendre" banner resumes.)
-          tabPress: popToRootOnTabPress(navigation, 'Exams', 'ExamLanding'),
+          // Quiz-primary grades land on the quiz picker, which now shares its
+          // stack with the exam screens a deep link may have pushed.
+          tabPress: popToRootOnTabPress(navigation, 'Exams', quizPrimary ? 'Quizzes' : 'ExamLanding'),
         })}
         options={{
           tabBarAccessibilityLabel: quizPrimary ? t('Quiz', 'Quiz') : t('Examens', 'Egzamen'),

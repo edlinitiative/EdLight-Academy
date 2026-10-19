@@ -51,3 +51,14 @@ export function resetTabToRoot(
   // a no-op when the tab is already focused.
   navigation.navigate(tabName);
 }
+
+/**
+ * The root of whichever stack hosts the exam screens: `ExamLanding` in
+ * ExamsNavigator, `Quizzes` in QuizNavigator (quiz-primary grades, which mount
+ * the exam screens without a landing page). Exam screens that reset "home"
+ * must ask, or the reset names a route the stack doesn't have.
+ */
+export function examStackRoot(navigation: any): 'ExamLanding' | 'Quizzes' {
+  const names: string[] = navigation?.getState?.()?.routeNames ?? [];
+  return names.includes('ExamLanding') || !names.includes('Quizzes') ? 'ExamLanding' : 'Quizzes';
+}

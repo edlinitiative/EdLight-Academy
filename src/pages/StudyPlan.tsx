@@ -28,7 +28,17 @@ import { TRACK_COEFFICIENTS, TRACK_BY_CODE, TRACK_LEVEL } from '../config/trackC
 import { currentPlanSeason } from '../config/examSchedule';
 import { normalizeExamCatalog } from '../utils/examCatalog';
 import { buildPlanIcs, taskTitle } from '../utils/planIcs';
-import { normalizeSubject, subjectColor } from '../utils/examUtils';
+import { normalizeSubject, subjectColor, displayStoredExamTitle } from '../utils/examUtils';
+import {
+  selectExamsForPlan,
+  planTaskRoute,
+  planTaskWebPath,
+  planTaskLabels,
+  planTaskKey,
+  isTaskOverdue,
+  cleanPlanTitle,
+} from '../../shared/studyPlanTasks';
+import { findCourse } from '../components/journey/practice/practiceScope';
 import { auth, authedFetch } from '../services/firebase';
 import { Skeleton } from '../components/Skeleton';
 
@@ -53,7 +63,7 @@ function useExamCatalog() {
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function formatDate(ms, isCreole) {
-  if (!ms) return '—';
+  if (!ms) return '';
   const d = new Date(ms);
   if (isCreole) {
     const months = ['jan','fev','mas','avr','me','jen','jiy','out','sep','okt','nov','des'];
@@ -75,12 +85,6 @@ function difficultyColor(d) {
   const colors = { 1: '#10b981', 2: '#34d399', 3: '#f59e0b', 4: '#f97316', 5: '#ef4444' };
   return colors[d] || '#f59e0b';
 }
-
-const URL_LEVEL_MAP = {
-  baccalaureat: 'terminale',
-  '9eme_af': '9e',
-  universite: 'university',
-};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -113,7 +117,31 @@ export default function StudyPlan() {
   const { recordActivity: recordStreakActivity } = useStreak();
 
   const quizBankIndex = appData?.quizBank || null;
-  const courses = appData?.courses || [];
+  const courses = useMemo(() => appData?.courses || [], [appData]);
+
+  // Course pages are keyed by course.id; older video tasks stored the code.
+  const resolveCourseId = useCallback(
+    (codeOrId: string) => findCourse(courses, codeOrId)?.id as string | undefined,
+    [courses],
+  );
+  // Each task opens ITSELF (the exam's overview, the chapter, the lesson);
+  // a task without the id it needs is not a link at all.
+  const openTask = useCallback(
+    (task) => {
+      const path = planTaskWebPath(planTaskRoute(task, { resolveCourseId }));
+      if (path) navigate(path);
+      else if (task?.type === 'video' && task.videoUrl) window.open(task.videoUrl, '_blank', 'noopener');
+    },
+    [navigate, resolveCourseId],
+  );
+  // Same-titled papers ("SVT · 2021" three times) get a topic or "Sujet n".
+  const taskLabels = useMemo(
+    () => planTaskLabels(plan?.tasks || [], (tk) => taskBaseTitle(tk, isCreole), {
+      subjectWord: isCreole ? 'Sijè' : 'Sujet',
+    }),
+    [plan, isCreole],
+  );
+  const labelOf = (task) => taskLabels.get(planTaskKey(task)) || taskBaseTitle(task, isCreole);
 
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState('');
@@ -196,7 +224,7 @@ export default function StudyPlan() {
 
       // Select a manageable subset of exams (up to 40), prioritising
       // high-coefficient subjects and varying difficulties
-      const selected = selectExamsForPlan(trackExams, coefficients, 40);
+      const selected = selectExamsForPlan(trackExams, coefficients, 40, track);
 
       await generatePlan({
         exams: selected,
@@ -212,8 +240,8 @@ export default function StudyPlan() {
       // written, so pressing the button again is the whole fix.
       setGenError(
         isCreole
-          ? 'Nou pa rive kreye plan an. Pa gen anyen ki anrejistre — eseye ankò.'
-          : 'Nous n’avons pas pu créer le plan. Rien n’a été enregistré — réessayez.',
+          ? 'Nou pa rive kreye plan an. Pa gen anyen ki anrejistre. Eseye ankò.'
+          : 'Nous n’avons pas pu créer le plan. Rien n’a été enregistré. Réessayez.',
       );
     } finally {
       setGenerating(false);
@@ -290,8 +318,8 @@ export default function StudyPlan() {
           <p>
             {prefacSeason
               ? (isCreole
-                  ? 'Bak la fini — konsantre sou konkou admisyon inivèsite yo. Ou ka toujou chwazi yon filyè Bak.'
-                  : 'Le Bac est passé — préparez les concours d\'admission à l\'université. Vous pouvez aussi choisir une filière du Bac.')
+                  ? 'Bak la fini. Konsantre sou konkou admisyon inivèsite yo. Ou ka toujou chwazi yon filyè Bak.'
+                  : 'Le Bac est passé : préparez les concours d\'admission à l\'université. Vous pouvez aussi choisir une filière du Bac.')
               : (isCreole
                   ? 'Chwazi filyè Bak ou, oswa prepare konkou admisyon yo.'
                   : 'Choisissez votre filière du Bac, ou préparez les concours d\'admission.')}
@@ -357,8 +385,8 @@ export default function StudyPlan() {
           <h1 className="sp-state__title">{isCreole ? 'Pa gen plan etid ankò' : 'Pas encore de plan d\'étude'}</h1>
           <p style={{ maxWidth: '52ch' }}>
             {isCreole
-              ? 'Yon plan se yon lis travay — egzamen, egzèsis ak videyo — ki soti nan filyè ou ak rezilta egzamen ou yo. Ou menm ki mande l, epi ou ka chanje l oswa efase l nenpòt lè.'
-              : 'Un plan est une liste de tâches — examens, exercices et vidéos — construite à partir de votre filière et de vos résultats d\'examens. C\'est vous qui le demandez, et vous pouvez le régénérer ou le supprimer à tout moment.'}
+              ? 'Yon plan se yon lis travay (egzamen, egzèsis ak videyo) ki soti nan filyè ou ak rezilta egzamen ou yo. Ou menm ki mande l, epi ou ka chanje l oswa efase l nenpòt lè.'
+              : 'Un plan est une liste de tâches (examens, exercices et vidéos) construite à partir de votre filière et de vos résultats d\'examens. C\'est vous qui le demandez, et vous pouvez le régénérer ou le supprimer à tout moment.'}
           </p>
           {/* Purpose · expected time · timed? · saved? — §6.4, on the one
               entry point this page has. The 90 min is `dailyTargetMinutes`,
@@ -414,7 +442,7 @@ export default function StudyPlan() {
       <header className="sp-topbar">
         <div className="sp-topbar__left">
           <h1 className="sp-topbar__title">
-            {plan.title || (isCreole ? 'Plan Etid' : 'Plan d\'Étude')}
+            {cleanPlanTitle(plan.title) || (isCreole ? 'Plan Etid' : 'Plan d\'Étude')}
           </h1>
           {trackInfo && (
             <span className="sp-topbar__badge" style={{ backgroundColor: trackInfo.color }}>
@@ -473,17 +501,17 @@ export default function StudyPlan() {
           {heroTask ? (
             <div
               className="sp-hero"
-              onClick={() => navigateToTask(heroTask, navigate)}
+              onClick={() => openTask(heroTask)}
               role="button"
               tabIndex={0}
-              onKeyDown={(e) => e.key === 'Enter' && navigateToTask(heroTask, navigate)}
+              onKeyDown={(e) => e.key === 'Enter' && openTask(heroTask)}
             >
               <div className="sp-hero__content">
                 <span className="sp-hero__eyebrow">
                   <Flame size={14} /> {isCreole ? 'Pwochen travay' : 'Prochaine tâche'}
                 </span>
                 <h2 className="sp-hero__title">
-                  {taskTitle(heroTask)}
+                  {labelOf(heroTask)}
                 </h2>
                 <div className="sp-hero__meta">
                   <HeroTypeBadge task={heroTask} isCreole={isCreole} />
@@ -537,7 +565,8 @@ export default function StudyPlan() {
                     task={task}
                     isCreole={isCreole}
                     compact={activeTab === 'week'}
-                    onNavigate={() => navigateToTask(task, navigate)}
+                    title={labelOf(task)}
+                    onNavigate={() => openTask(task)}
                   />
                 ))}
               </div>
@@ -673,30 +702,14 @@ export default function StudyPlan() {
 
 // ─── Sub-components ─────────────────────────────────────────────────────────
 
-/** Route to the correct page based on task type */
-function navigateToTask(task, navigate) {
-  const type = task.type || 'exam';
-  if (type === 'practice') {
-    // Navigate to quiz practice page with subject code pre-filled
-    const code = task.subjectCode || '';
-    const unitId = task.unitId || '';
-    const params = new URLSearchParams();
-    if (code) params.set('course', code);
-    if (unitId) params.set('unit', unitId);
-    navigate(`/quizzes?${params.toString()}`);
-  } else if (type === 'video') {
-    // Navigate to course detail or open video directly
-    const courseCode = task.courseCode || '';
-    if (courseCode) {
-      navigate(`/courses/${courseCode}`);
-    } else if (task.videoUrl) {
-      window.open(task.videoUrl, '_blank', 'noopener');
-    }
-  } else {
-    // Default: exam
-    const urlLevel = URL_LEVEL_MAP[task.level] || 'terminale';
-    navigate(`/exams/${urlLevel}/${task.examId}`);
-  }
+/** A task's own name, before same-named tasks are told apart (planTaskLabels). */
+function taskBaseTitle(task, isCreole) {
+  const type = task?.type || 'exam';
+  if (type === 'practice') return task.unitTitle || `${task.subjectCode || task.subject}`;
+  if (type === 'video') return task.videoTitle || task.courseTitle || (isCreole ? 'Videyo' : 'Vidéo');
+  const fallback = [task.subject, task.year].filter(Boolean).join(' · ') || taskTitle(task);
+  // Older plans stored the ministry letterhead; re-derive those.
+  return displayStoredExamTitle(task.examTitle, undefined, fallback);
 }
 
 /** Icon components per task type */
@@ -736,7 +749,7 @@ function HeroTypeBadge({ task, isCreole }) {
   );
 }
 
-function TaskCard({ task, isCreole, compact, onNavigate }) {
+function TaskCard({ task, title, isCreole, compact, onNavigate }) {
   /*
    * Late means BEFORE TODAY, not before this instant.
    *
@@ -746,22 +759,14 @@ function TaskCard({ task, isCreole, compact, onNavigate }) {
    * plan opened with every item already scolding the student. A task due today
    * is due today.
    */
-  const startOfToday = new Date().setHours(0, 0, 0, 0);
-  const overdue = !!task.nextReviewMs && task.nextReviewMs < startOfToday;
+  const overdue = isTaskOverdue(task);
   const lastScore =
     task.history?.length > 0 ? task.history[task.history.length - 1].scorePct : null;
   const taskType = task.type || 'exam';
   const meta = TASK_TYPE_META[taskType] || TASK_TYPE_META.exam;
   const TypeIcon = meta.Icon;
 
-  let displayTitle;
-  if (taskType === 'practice') {
-    displayTitle = task.unitTitle || `${task.subjectCode || task.subject}`;
-  } else if (taskType === 'video') {
-    displayTitle = task.videoTitle || task.courseTitle || (isCreole ? 'Videyo' : 'Vidéo');
-  } else {
-    displayTitle = taskTitle(task);
-  }
+  const displayTitle = title || taskBaseTitle(task, isCreole);
 
   // Secondary info line
   let secondaryInfo = '';
@@ -827,52 +832,6 @@ function MasteryRow({ subject, data, coefficient }) {
       </div>
     </div>
   );
-}
-
-// ─── Exam selection for plan generation ─────────────────────────────────────
-
-/**
- * Select a balanced subset of exams for the plan, weighted by coefficient.
- */
-function selectExamsForPlan(exams, coefficients, maxCount = 40) {
-  // Group by subject
-  const bySubject: Record<string, any[]> = {};
-  for (const e of exams) {
-    const s = normalizeSubject(e.subject);
-    if (!bySubject[s]) bySubject[s] = [];
-    bySubject[s].push(e);
-  }
-
-  // Allocate slots proportional to coefficient
-  const totalCoeff: number = Number(Object.values(coefficients).reduce((s: number, v) => s + Number(v), 0)) || 1;
-  const selected = [];
-
-  for (const [subj, pool] of Object.entries(bySubject)) {
-    const coeff = Number(coefficients[subj] || 1);
-    const slots = Math.max(1, Math.round((coeff / totalCoeff) * maxCount));
-
-    // Sort pool: mix difficulties (1,3,5,2,4 pattern for variety)
-    const sorted = [...pool].sort((a, b) => {
-      const da = a.difficulty || 3;
-      const db = b.difficulty || 3;
-      // Zigzag: easy-medium-hard interleaved
-      return da - db;
-    });
-
-    selected.push(...sorted.slice(0, slots));
-  }
-
-  // If over budget, trim lowest-priority items
-  if (selected.length > maxCount) {
-    selected.sort(
-      (a, b) =>
-        (coefficients[normalizeSubject(b.subject)] || 1) -
-        (coefficients[normalizeSubject(a.subject)] || 1),
-    );
-    return selected.slice(0, maxCount);
-  }
-
-  return selected;
 }
 
 /**

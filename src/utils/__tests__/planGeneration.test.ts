@@ -75,7 +75,7 @@ describe('buildFallbackPlan', () => {
   it('builds a French fallback plan from the request (empty schedule, 5 tips)', () => {
     const plan = buildFallbackPlan(makeRequest({ track: 'SMP', weeks: 6, dailyMinutes: 60 }));
 
-    expect(plan.title).toBe("Plan d'étude — SMP");
+    expect(plan.title).toBe("Plan d'étude · SMP");
     expect(plan.description).toContain('SMP');
     expect(plan.description).toContain('6 semaines');
     expect(plan.weeklyGoals).toBe(6);
@@ -87,7 +87,7 @@ describe('buildFallbackPlan', () => {
 
   it('sanitizes the track before interpolating it', () => {
     const plan = buildFallbackPlan(makeRequest({ track: 'SVT<script>{}' }));
-    expect(plan.title).toBe("Plan d'étude — SVTscript");
+    expect(plan.title).toBe("Plan d'étude · SVTscript");
   });
 });
 
