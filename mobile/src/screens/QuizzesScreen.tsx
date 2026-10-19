@@ -27,6 +27,7 @@ import useStore from '../contexts/store';
 import { ListSkeleton, ErrorState, EmptyState } from '../components/StateViews';
 import { useColors, useTheme, typeScale, fonts } from '../theme/theme';
 import PageTitle from '../components/ui/PageTitle';
+import OfflinePacksEntry from '../components/OfflinePacksEntry';
 import Segmented from '../components/ui/Segmented';
 import StatNumeral from '../components/ui/StatNumeral';
 import Button from '../components/ui/Button';
@@ -732,6 +733,12 @@ export default function QuizzesScreen() {
                   <ChevronRight color={colors.faint} size={20} />
                 </PressableScale>
               ) : null}
+
+              {/* Hors ligne: keep this bank's questions on the phone. The Exams
+                  tab holds the OfflinePacks route on every grade's stack. */}
+              <View style={{ marginTop: 18 }}>
+                <OfflinePacksEntry kind="practice" onPress={() => navigation.navigate('Exams', { screen: 'OfflinePacks', params: { kind: 'practice' }, initial: false })} />
+              </View>
             </View>
           </>
         )}

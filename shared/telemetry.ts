@@ -31,6 +31,13 @@ const DETAIL_KEYS = new Set([
   // `occurrence` (n-th time this session) and `previousSession` (a fatal
   // breadcrumb persisted before the app died, delivered on the next launch).
   'signature', 'errorKind', 'topFrame', 'screen', 'boundary', 'occurrence', 'previousSession',
+  // Offline revision packs (shared/offlinePacks.ts), added deliberately for
+  // the item-4 success metric: `pack` (a public content id such as
+  // "exam-bac-svt-1", never a user value), `sizeKb` (pack size), `offline`
+  // (opened or answered without a connection) and `waitedMs` (how long a
+  // queued result waited before it synced). Events: offline_pack_downloaded,
+  // offline_pack_removed, offline_pack_opened, offline_result_synced.
+  'pack', 'sizeKb', 'offline', 'waitedMs',
 ]);
 const CONTEXT_KEYS = new Set([
   'platform', 'appVersion', 'buildNumber', 'runtimeVersion', 'updateId',

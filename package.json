@@ -67,7 +67,7 @@
   },
   "scripts": {
     "start": "webpack serve --mode development",
-    "prebuild": "node scripts/split_exam_catalog.mjs && node scripts/check_exam_bundles.mjs",
+    "prebuild": "node scripts/split_exam_catalog.mjs && node scripts/check_exam_bundles.mjs && node scripts/build_offline_packs.mjs",
     "build": "webpack --mode production",
     "postbuild": "webpack --config webpack.prerender.config.js; node scripts/prerender_routes.mjs",
     "split:exams": "node scripts/split_exam_catalog.mjs",

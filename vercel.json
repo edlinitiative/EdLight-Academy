@@ -104,7 +104,7 @@
       "destination": "/exams/index.html"
     },
     {
-      "source": "/((?!js/|css/|assets/|fonts/|\\.well-known/).*)",
+      "source": "/((?!js/|css/|assets/|fonts/|packs/|\\.well-known/).*)",
       "destination": "/index.html"
     }
   ],
@@ -180,6 +180,24 @@
         {
           "key": "Cache-Control",
           "value": "public, max-age=86400, stale-while-revalidate=604800"
+        }
+      ]
+    },
+    {
+      "source": "/packs/manifest.json",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300, stale-while-revalidate=3600"
+        }
+      ]
+    },
+    {
+      "source": "/packs/exam-(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800"
         }
       ]
     },

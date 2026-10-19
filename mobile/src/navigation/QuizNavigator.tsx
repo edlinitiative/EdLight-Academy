@@ -6,6 +6,7 @@ import ExamOverviewScreen from '../screens/ExamOverviewScreen';
 import ExamTakeScreen from '../screens/ExamTakeScreen';
 import ExamResultsScreen from '../screens/ExamResultsScreen';
 import ExamHistoryScreen from '../screens/ExamHistoryScreen';
+import OfflinePacksScreen from '../screens/OfflinePacksScreen';
 import type { PracticeHandoff } from '../utils/learningJourney';
 import type { ExamsParamList } from './ExamsNavigator';
 
@@ -47,6 +48,7 @@ export default function QuizNavigator() {
       <Stack.Screen name="ExamTake" component={ExamTakeScreen} />
       <Stack.Screen name="ExamResults" component={ExamResultsScreen} />
       <Stack.Screen name="ExamHistory" component={ExamHistoryScreen} />
+      <Stack.Screen name="OfflinePacks" component={OfflinePacksScreen} />
     </Stack.Navigator>
   );
 }

@@ -5,6 +5,7 @@ import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CheckCircle2, XCircle, Trophy, RefreshCw, ChevronLeft, ChevronDown, ChevronUp, Share2, Circle, HelpCircle } from 'lucide-react-native';
 import { loadExamResult } from '../services/examResults';
+import { queuedExamSubmission, subscribeExamSynced } from '../services/writeOutbox';
 import { shareScore } from '../services/scoreShare';
 import { fetchSingleExam } from '../utils/examCatalog';
 import { flattenQuestions, normalizeLevel, normalizeSubject } from '../utils/examUtils';
@@ -317,6 +318,14 @@ export default function ExamResultsScreen() {
     });
   }, [gradingKey]);
 
+  // The queued paper reached the account: reload the stored copy.
+  useEffect(() => {
+    if (!user?.uid) return undefined;
+    return subscribeExamSynced((e) => {
+      if (e.uid === user.uid && e.examId === examId) setReloadKey((k) => k + 1);
+    });
+  }, [user?.uid, examId]);
+
   useEffect(() => {
     incrementGuestInteraction();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -325,8 +334,16 @@ export default function ExamResultsScreen() {
     let alive = true;
     setLoading(true);
     setLoadError(false);
+    // A paper submitted offline waits in this account's outbox: show it from
+    // there (graded on the phone) until the sync lands, never a blank or 0 %.
+    const loadResult = async () => {
+      if (!user?.uid) return null;
+      const queued = await queuedExamSubmission(user.uid, examId).catch(() => null);
+      if (queued) return { ...queued.payload.result, _queued: true };
+      return loadExamResult(user.uid, examId);
+    };
     const promises: Promise<any>[] = [
-      user?.uid ? loadExamResult(user.uid, examId) : Promise.resolve(null),
+      loadResult(),
       fetchSingleExam(examId),
     ];
     Promise.all(promises)
@@ -491,6 +508,19 @@ export default function ExamResultsScreen() {
           />
         </View>
 
+        {/* Submitted offline: graded on the phone, waiting for the account. */}
+        {result?._queued ? (
+          <View style={[cardSurface, { marginHorizontal: 20, marginTop: 16, padding: 18, gap: 8 }]} accessibilityLiveRegion="polite">
+            <Text style={[typeScale.cardTitle, { color: colors.ink }]}>{t('En attente d’envoi', 'Ap tann pou voye')}</Text>
+            <Text style={[typeScale.body, { color: colors.muted }]}>
+              {t(
+                'Corrigé sur ce téléphone. Ton résultat sera envoyé à ton compte dès que tu seras connecté. C’est un entraînement : il ne compte ni pour l’Arène ni pour les classements.',
+                'Korije sou telefòn sa a. Rezilta ou ap voye sou kont ou depi ou konekte. Se yon pratik : li pa konte pou Arèn nan ni pou klasman yo.',
+              )}
+            </Text>
+          </View>
+        ) : null}
+
         {/* Written answers not graded yet: "Correction provisoire", never a 0. */}
         {regradableCount > 0 || grading ? (
           <View style={[cardSurface, { marginHorizontal: 20, marginTop: 16, padding: 18, gap: 12 }]} accessibilityLiveRegion="polite">
@@ -503,7 +533,7 @@ export default function ExamResultsScreen() {
                   : t(`${regradableCount} réponses rédigées ne sont pas encore corrigées : elles ne comptent pas encore dans ton score.`, `${regradableCount} repons ekri poko korije : yo poko konte nan nòt ou.`)}
             </Text>
             {gradeMessage && !grading ? <Text style={[typeScale.bodyMd, { color: colors.ink }]}>{gradeMessage}</Text> : null}
-            {user?.uid && !grading ? (
+            {user?.uid && !grading && !result?._queued ? (
               <Button
                 onPress={gradeNow}
                 variant="secondary"

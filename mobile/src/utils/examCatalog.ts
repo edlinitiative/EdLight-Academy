@@ -107,6 +107,18 @@ export async function fetchSingleExam(examIdParam: string | number): Promise<any
 
   if (examMemo.has(id)) return examMemo.get(id);
 
+  // A downloaded revision pack holds this paper: open it from the phone, with
+  // or without a connection (no data spent). A corrected paper reaches the
+  // pack as "Mise à jour disponible" on the Hors ligne screen.
+  try {
+    const { findPackedExam } = require('../services/offlinePacks') as typeof import('../services/offlinePacks');
+    const packed = await findPackedExam(id);
+    if (packed) {
+      examMemo.set(id, packed);
+      return packed;
+    }
+  } catch { /* packs unavailable: the network path below */ }
+
   try {
     const res = await fetchWithTimeout(`${BASE_URL}/exams/${encodeURIComponent(id)}.json`);
     if (res.ok) {
