@@ -12,6 +12,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { onAuthStateChange } from './src/services/firebase';
 import useStore, { waitForStoreHydration } from './src/contexts/store';
 import AppNavigator, { navigationRef, navigateToTab } from './src/navigation/AppNavigator';
+import { competitionNotificationTarget } from './src/navigation/competitionContinuity';
 import {
   areNotificationsEnabled,
   scheduleEngagementReminders,
@@ -235,6 +236,13 @@ function App() {
       } else if (type === 'achievement') {
         // Badge unlocked → Profile, where achievements live.
         navigateToTab('Profile');
+      } else if (type === 'competition') {
+        // Invitation, cancellation, result… → the workspace page for that typed
+        // target, which re-checks access itself. An unusable reference opens
+        // the competitions home rather than an arbitrary URL.
+        const target = competitionNotificationTarget(data);
+        if (navigationRef.isReady())
+          (navigationRef.navigate as any)('CompetitionWorkspace', target ? target.params : { kind: 'home' });
       } else if (typeof data?.tab === 'string') {
         navigateToTab(TAB_ALIASES[data.tab.toLowerCase()] ?? 'Dashboard');
       } else if (typeof data?.url === 'string') {
