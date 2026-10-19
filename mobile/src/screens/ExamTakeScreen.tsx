@@ -41,6 +41,8 @@ import ExamOverview, { ExamSectionSummary } from '../components/ExamOverview';
 import ExamSectionContext from '../components/ExamSectionContext';
 import ExamQuestionGrid from '../components/ExamQuestionGrid';
 import { MultiSelectAnswer, MatchingAnswer, hasStructuredMatching } from '../components/ExamChoiceInputs';
+import ProofAnswer from '../components/ProofAnswer';
+import { isProofQuestion } from '../../../shared/proofQuestion';
 import { isAnswerFilled } from '../utils/answerFilled';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
 import { compileQuestion, isSerializable, responseToStored, storedToResponse } from '../utils/question';
@@ -1021,17 +1023,29 @@ export default function ExamTakeScreen() {
   // scaffold rows or one box under the text.
   const regexBlanks = qType === 'fill_blank' && !inlineBlanks && !hasConditions && countBlanks(rawQuestionText) > 0;
   const scaffolded = !inlineBlanks && !regexBlanks && usesScaffold(q, questionSubject);
+  // The web's order after blanks and scaffold: proof steps, then a question
+  // authored as several labeled parts (a "ladder") — even when its declared
+  // type is a native one — then the native inputs. Essays are the exception:
+  // their ladder labels are model answers (91 print the answer outright) and
+  // a ladder would grade an essay as one-line fuzzy matches, so an essay
+  // stays an essay, graded by the essay grader.
+  const proof = !inlineBlanks && !regexBlanks && !scaffolded && !hasConditions && isProofQuestion(q, questionSubject);
+  const ladder = !proof && !inlineBlanks && !regexBlanks && !scaffolded && !hasConditions && qType !== 'essay'
+    && !!compiled && isSerializable(compiled)
+    && Object.keys(compiled.widgets).length > 1
+    && Object.keys(compiled.widgets).every((id) => /^step\d+$/.test(id));
   // Multiple-select and clean matching get their own inputs, as on the web.
-  const multiSelect = qType === 'multiple_select' && normalizeOptions(q?.options).length > 0;
-  const structuredMatching = qType === 'matching' && hasStructuredMatching(q);
-  const usesEngine = !!compiled
+  const multiSelect = !ladder && qType === 'multiple_select' && normalizeOptions(q?.options).length > 0;
+  const structuredMatching = !ladder && qType === 'matching' && hasStructuredMatching(q);
+  const usesEngine = ladder || (!!compiled
     && !hasConditions
     && !regexBlanks
+    && !proof
     && !multiSelect
     && !structuredMatching
     && !['mcq', 'multiple_choice', 'qcm', 'true_false', 'essay'].includes(qType)
     && !scaffolded
-    && isSerializable(compiled);
+    && isSerializable(compiled));
 
   // Derived from the stored answer on every render, so there is one source of
   // truth and no second copy of the answer to keep in step.
@@ -1177,6 +1191,20 @@ export default function ExamTakeScreen() {
               question={q}
               value={typeof answers[safeIdx] === 'string' ? (answers[safeIdx] as string) : ''}
               onChange={(v) => setAnswer(safeIdx, v)}
+            />
+          ) : proof ? (
+            <ProofAnswer
+              questionText={rawQuestionText}
+              value={typeof answers[safeIdx] === 'string' ? (answers[safeIdx] as string) : ''}
+              onChange={(v) => setAnswer(safeIdx, v)}
+            />
+          ) : ladder && compiled ? (
+            <QuestionView
+              header={questionHeader}
+              question={compiled}
+              response={response}
+              onChange={setWidgetValue}
+              mathy={MATH_SUBJECTS.has(questionSubject)}
             />
           ) : ['mcq', 'multiple_choice', 'qcm'].includes(qType) ? (
             <MCQQuestion

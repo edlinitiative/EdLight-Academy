@@ -33,6 +33,8 @@ import { compileQuestion, isSerializable, responseToStored, storedToResponse } f
 import { Skeleton } from '../components/Skeleton';
 import './ExamTake.css';
 import { balanceMathAcrossBlanks } from '../utils/mathBlanks';
+import { scaffoldRevealsAnswer } from '../../shared/scaffoldReveal';
+import { detectProofSubtype, isProofQuestion, JUSTIFICATION_OPTIONS } from '../../shared/proofQuestion';
 import { ChevronLeft, ChevronRight, Clock, X, Check, Lock, Lightbulb } from '../components/icons';
 import './examPremium.css';
 import './examTakePremium.css';
@@ -113,117 +115,6 @@ function asMath(text) {
 /** True when any option needs math rendering (a native <select> can't do KaTeX). */
 function optionsNeedMath(options) {
   return Array.isArray(options) && options.some((o) => /[\\^_{}]|\$/.test(String(o)));
-}
-
-/** Proof sub-type scaffolds — detected from question text */
-const PROOF_SUBTYPES = [
-  {
-    key: 'simplify',
-    re: /\b(simplifier|réduire|écrire.*sous.*forme|mettre.*sous.*forme)\b/i,
-    label: 'Simplification',
-    icon: '',
-    scaffoldSteps: [
-      { hint: 'Identifiez et simplifiez chaque terme séparément' },
-      { hint: 'Combinez les termes semblables' },
-      { hint: 'Écrivez le résultat sous la forme demandée' },
-    ],
-    askFinalAnswer: true,
-    finalLabel: 'Résultat simplifié',
-  },
-  {
-    key: 'factor',
-    re: /\b(factoriser)\b/i,
-    label: 'Factorisation',
-    icon: '',
-    scaffoldSteps: [
-      { hint: 'Identifiez le facteur commun ou l\'identité remarquable' },
-      { hint: 'Mettez en facteur' },
-      { hint: 'Vérifiez en développant' },
-    ],
-    askFinalAnswer: true,
-    finalLabel: 'Forme factorisée',
-  },
-  {
-    key: 'solve',
-    re: /\b(résoudre|trouver.*solution|déterminer.*valeur|trouver.*valeur)\b/i,
-    label: 'Résolution',
-    icon: '',
-    scaffoldSteps: [
-      { hint: 'Posez l\'équation ou identifiez les données' },
-      { hint: 'Isolez l\'inconnue étape par étape' },
-      { hint: 'Vérifiez la / les solution(s)' },
-    ],
-    askFinalAnswer: true,
-    finalLabel: 'Solution(s)',
-  },
-  {
-    key: 'calculate',
-    re: /\b(calculer|évaluer|déterminer)\b/i,
-    label: 'Calcul',
-    icon: '',
-    scaffoldSteps: [
-      { hint: 'Posez le calcul avec les données' },
-      { hint: 'Effectuez les opérations' },
-    ],
-    askFinalAnswer: true,
-    finalLabel: 'Résultat',
-  },
-  {
-    key: 'prove',
-    re: /\b(montrer\s+que|démontrer|prouver\s+que|déduire\s+que|vérifier\s+que|justifier\s+que|en\s+déduire)\b/i,
-    label: 'Démonstration',
-    icon: '',
-    scaffoldSteps: [
-      { hint: 'Partez de l\'hypothèse ou de l\'expression de départ' },
-      { hint: 'Développez le raisonnement' },
-      { hint: 'Concluez en retrouvant le résultat demandé' },
-    ],
-    askFinalAnswer: false,
-    finalLabel: '',
-  },
-  {
-    key: 'develop',
-    re: /\b(développer|développer\s+et\s+réduire)\b/i,
-    label: 'Développement',
-    icon: '',
-    scaffoldSteps: [
-      { hint: 'Appliquez la distributivité ou l\'identité remarquable' },
-      { hint: 'Réduisez les termes semblables' },
-    ],
-    askFinalAnswer: true,
-    finalLabel: 'Forme développée',
-  },
-];
-
-/** Default scaffold for unrecognized proof types */
-const DEFAULT_SCAFFOLD = {
-  key: 'generic', label: 'Raisonnement', icon: '',
-  scaffoldSteps: [
-    { hint: 'Première étape de votre raisonnement' },
-    { hint: 'Continuez…' },
-  ],
-  askFinalAnswer: true, finalLabel: 'Résultat final',
-};
-
-function detectProofSubtype(text) {
-  for (const st of PROOF_SUBTYPES) {
-    if (st.re.test(text)) return st;
-  }
-  return DEFAULT_SCAFFOLD;
-}
-
-/** Detect proof / demonstration questions by their phrasing */
-const PROOF_RE = /\b(montrer\s+que|démontrer|prouver\s+que|déduire\s+que|vérifier\s+que|justifier\s+que|en\s+déduire|simplifier|factoriser|développer\s+et\s+réduire|calculer\s+et\s+simplifier|résoudre\s+(dans|l['']équation)|déterminer)\b/i;
-
-function isProofQuestion(question, subject) {
-  const text = question._displayText || question.question || '';
-  const type = question.type || '';
-  // Only activate for open-ended math types — never for essays
-  if (!['calculation', 'short_answer'].includes(type)) return false;
-  // Never activate for non-math subjects (culture, history, languages, etc.)
-  if (subject && !MATH_SUBJECTS.has(subject)) return false;
-  // Must contain a proof/demonstration keyword
-  return PROOF_RE.test(text);
 }
 
 /** Regex that matches blank placeholders: 4+ underscores OR 4+ dots */
@@ -2676,6 +2567,9 @@ function usesScaffold(q, subject) {
   if (q.type === 'essay') return false;
   if (NATIVE_INPUT_TYPES.has(q.type)) return false;
   if (!q.scaffold_text || !q.scaffold_blanks) return false;
+  // A scaffold whose text states its own answer would hand it to the student
+  // (477 non-math scaffolds) — keep the question's plain input instead.
+  if (scaffoldRevealsAnswer(q)) return false;
   if (typeof q.scaffold_ready === 'boolean') return q.scaffold_ready;
   if (q.type === 'short_answer') return false;
   return !q.correct || MATH_SUBJECTS.has(subject);
@@ -3790,12 +3684,7 @@ function ConditionBuilderInput({ question, index, value, onChange, disabled }) {
 
 // ── Proof / Demonstration Step-by-Step Input (Khan Academy style) ─────────
 
-const JUSTIFICATION_OPTIONS = [
-  '', 'Par définition', 'Par hypothèse', 'Par simplification', 'Par factorisation',
-  'Par substitution', 'Par identité remarquable', 'Par calcul', 'Par développement',
-  'Par récurrence', 'Par l\'absurde', 'Par contraposée', 'D\'après le théorème',
-  'En utilisant la propriété', 'On en déduit que', 'Autre',
-];
+
 
 /** Encouraging micro-feedback messages */
 const ENCOURAGEMENTS = [

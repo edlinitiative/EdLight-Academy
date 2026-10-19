@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { scaffoldRevealsAnswer } from '../../../shared/scaffoldReveal';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { ChevronDown, ChevronUp } from 'lucide-react-native';
 import MathText from './MathText';
@@ -51,13 +52,12 @@ export function usesScaffold(q: any, subject: string): boolean {
   if (!q) return false;
   if (q.type === 'essay') return false;
   if (NATIVE_INPUT_TYPES.has(q.type)) return false;
-  // The "Complète la démarche" fill-in-the-steps scaffold only makes sense for
-  // math-like subjects (equations solved step by step). For languages / others,
-  // `scaffold_text`/`answer_parts` is really the worked solution or model answer
-  // — it must NOT become the answer input; it's surfaced as a hint instead, and
-  // the question uses its natural input (fill_blank text, short_answer, etc.).
-  if (!MATH_SUBJECTS.has(subject)) return false;
+  // Any subject, as on the web — EXCEPT a scaffold whose text states the
+  // answer its blanks ask for (477 non-math scaffolds do: "…se metonimi.
+  // Figi estil : {{0}}"). That one would hand the student the answer, so the
+  // question keeps its natural input. Shared with the web (shared/scaffoldReveal).
   if (!q.scaffold_text || !q.scaffold_blanks) return false;
+  if (scaffoldRevealsAnswer(q)) return false;
   if (!scaffoldDataOk(q)) return false;
   if (typeof q.scaffold_ready === 'boolean') return q.scaffold_ready;
   if (q.type === 'short_answer') return false;
