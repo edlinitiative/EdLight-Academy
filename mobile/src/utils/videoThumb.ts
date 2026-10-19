@@ -123,7 +123,15 @@ export function lessonVideoThumbs(videoUrl: string | null | undefined, fallback?
  * The privacy-respecting embed URL the lesson player must use. The app's rule
  * (and the web's CSP) is youtube-nocookie.com/embed/{id}, never youtube.com.
  */
-export function youTubeEmbedUrl(id: string, opts: { autoplay?: boolean } = {}): string {
-  const q = `playsinline=1&rel=0&modestbranding=1${opts.autoplay ? '&autoplay=1' : ''}`;
+export function youTubeEmbedUrl(
+  id: string,
+  opts: { autoplay?: boolean; start?: number; jsapiOrigin?: string } = {},
+): string {
+  let q = `playsinline=1&rel=0&modestbranding=1${opts.autoplay ? '&autoplay=1' : ''}`;
+  // Resume (CON-02): whole seconds only, and only a meaningful position.
+  const start = Math.floor(Number(opts.start) || 0);
+  if (start > 0) q += `&start=${start}`;
+  // The widget postMessage protocol (position reports for resume).
+  if (opts.jsapiOrigin) q += `&enablejsapi=1&origin=${encodeURIComponent(opts.jsapiOrigin)}`;
   return `https://www.youtube-nocookie.com/embed/${id}?${q}`;
 }

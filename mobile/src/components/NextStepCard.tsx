@@ -198,7 +198,7 @@ export default function NextStepCard({
             ? `${examProgress.done}/${examProgress.total} ${t('réponses enregistrées', 'repons anrejistre')}`
             : `${examProgress.done} ${t('réponses enregistrées', 'repons anrejistre')}`)
         : (step.resume.subtitle ?? null);
-      cta = t("Continuer l'examen", 'Kontinye egzamen an');
+      cta = t("Reprendre l'examen", 'Kontinye egzamen an');
       onPress = () => {
         trackJourney('learning_next_action_selected', { kind: 'resume-exam' });
         resumeActivity(step.resume);

@@ -10,6 +10,8 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+// A ceiling on every catalog/exam request: RN fetch never times out on its own.
+import { fetchWithTimeout } from '../../../shared/fetchWithTimeout';
 
 const BASE_URL = 'https://edlight-academy.web.app';
 const INDEX_CACHE_KEY = 'edlight:examIndex:v1';
@@ -37,7 +39,7 @@ let inflightIndexRefresh: Promise<any[]> | null = null;
 function refreshCatalogIndex(): Promise<any[]> {
   if (!inflightIndexRefresh) {
     inflightIndexRefresh = (async () => {
-      const res = await fetch(`${BASE_URL}/exam_catalog_index.json`);
+      const res = await fetchWithTimeout(`${BASE_URL}/exam_catalog_index.json`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = normalizeExamCatalog(await res.json());
       if (data.length > 0) {
@@ -106,7 +108,7 @@ export async function fetchSingleExam(examIdParam: string | number): Promise<any
   if (examMemo.has(id)) return examMemo.get(id);
 
   try {
-    const res = await fetch(`${BASE_URL}/exams/${encodeURIComponent(id)}.json`);
+    const res = await fetchWithTimeout(`${BASE_URL}/exams/${encodeURIComponent(id)}.json`);
     if (res.ok) {
       // Firebase Hosting SPA redirect returns HTML with status 200 when the
       // file doesn't exist — check content-type before attempting JSON parse.

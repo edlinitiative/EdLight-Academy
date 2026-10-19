@@ -63,7 +63,7 @@ test('enrolled: progress card with the evidence triple and authored outcomes', (
   expect(screen.getByText('2/5')).toBeInTheDocument();
   expect(screen.getAllByText('2 terminées · 1 pratiquée').length).toBeGreaterThan(0);
   expect(screen.getByText('Calculer une masse volumique')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /Continuer : Leçon 1.3/ })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Reprendre : Leçon 1.3/ })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /En cours/ })).toHaveAttribute('aria-current', 'step');
 });
 

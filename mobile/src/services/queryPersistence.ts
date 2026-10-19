@@ -77,6 +77,10 @@ export async function hydrateQueryCache(queryClient: QueryClient): Promise<void>
     for (const e of entries) {
       if (!e || !Array.isArray(e.key) || !shouldPersist(e.key, uid)) continue;
       if (now - (e.updatedAt || 0) > MAX_AGE_MS) continue;
+      // The launch no longer always waits for this read (App.tsx caps it), so
+      // a screen may already have fetched fresher data: never overwrite it.
+      const live = queryClient.getQueryState(e.key);
+      if (live?.dataUpdatedAt && live.dataUpdatedAt >= (e.updatedAt || 0)) continue;
       queryClient.setQueryData(e.key, e.data, { updatedAt: e.updatedAt });
     }
   } catch {

@@ -8,6 +8,7 @@ import { useTrivia } from '../../hooks/useTrivia';
 import InstructionRenderer from '../InstructionRenderer';
 import { EXPLAIN_DISCLOSURE, type QuestionContext } from '../../../shared/explainContext';
 import { newOperationId } from '../../../shared/outbox';
+import { readDraft, readTranscript, writeDraft, writeTranscript } from './sandraTranscript';
 
 /** sessionStorage key holding the active conversation id — a new browser
  *  session (or a full conversation) starts a fresh one. */
@@ -55,8 +56,10 @@ export default function SandraPanel({ open, onClose }: SandraPanelProps) {
   const { level: triviaLevel } = useTrivia();
   const location = useLocation();
 
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState('');
+  // A reload keeps the conversation id (sessionStorage), so it also keeps what
+  // was said and the half-typed question (CON-04; see sandraTranscript.ts).
+  const [messages, setMessages] = useState<ChatMessage[]>(() => readTranscript(user?.uid, readConvId()));
+  const [input, setInput] = useState(() => readDraft(user?.uid));
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<ChatError | null>(null);
 
@@ -75,6 +78,14 @@ export default function SandraPanel({ open, onClose }: SandraPanelProps) {
     explainRef.current = ctx;
     setExplainCtx(ctx);
   };
+
+  // Mirror the main chat (never an Explique-moi thread) and the draft.
+  useEffect(() => {
+    writeTranscript(explainCtx ? null : user?.uid, readConvId(), messages);
+  }, [messages, explainCtx, user?.uid]);
+  useEffect(() => {
+    writeDraft(user?.uid, input);
+  }, [input, user?.uid]);
 
   // Keep the newest message (or the typing indicator) in view.
   useEffect(() => {

@@ -156,8 +156,22 @@ function bootstrapFirebaseAuth() {
     })
     .catch((error) => {
       console.error('Failed to initialize Firebase auth:', error);
+      // The Firebase chunk could not load (offline PWA with an uncached chunk,
+      // stale deploy). Without this, a persisted signed-in student sat on "/"
+      // behind HomeRoute's spinner forever. The persisted user drives the UI;
+      // pages that need the network show their own offline/error states.
+      useStore.getState().setAuthConfirmed();
     });
+  // Bounded wait: if Firebase has not answered at all after AUTH_CONFIRM_MAX_MS
+  // (a hung chunk request on "lie-fi"), stop holding the UI. A later answer
+  // still applies (sign-out included) through the listener above.
+  setTimeout(() => {
+    if (!useStore.getState().authConfirmed) useStore.getState().setAuthConfirmed();
+  }, AUTH_CONFIRM_MAX_MS);
 }
+
+/** Longest the signed-in "/" waits on Firebase before rendering from the persisted session. */
+const AUTH_CONFIRM_MAX_MS = 8000;
 
 // Defer to browser idle time (with a safety timeout) so the SDK downloads
 // without competing with the first meaningful paint.

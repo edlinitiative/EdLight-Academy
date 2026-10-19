@@ -7,6 +7,7 @@ import AdminRoute from './components/AdminRoute';
 import ScrollToTop from './components/ScrollToTop';
 import HomeRoute from './components/HomeRoute';
 import { lazyWithRetry } from './utils/lazyWithRetry';
+import { webQueryDefaults } from './utils/queryDefaults';
 import useStore from './contexts/store';
 import { captureRefFromUrl } from './services/referralService';
 
@@ -84,14 +85,8 @@ const TournoisJoin = lazyWithRetry(() => import('./pages/tournois/TournoisJoin')
 const TournoisRoom = lazyWithRetry(() => import('./pages/tournois/TournoisRoom'));
 
 // Create a client
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 30 * 60 * 1000, // 30 minutes
-    },
-  },
-});
+// Offline-first + no retries while offline: see utils/queryDefaults.ts.
+const queryClient = new QueryClient({ defaultOptions: webQueryDefaults });
 
 export default function App() {
   const accountUid = useStore((s) => s.user?.uid);

@@ -357,7 +357,7 @@ const ExamLanding = () => {
             )}
             <div className="xp-resume__foot">
               <button type="button" className="xp-btn" onClick={() => resumeGo(lead.href)}>
-                {L('Continuer', 'Kontinye')} <ArrowRight size={18} aria-hidden="true" />
+                {L('Reprendre', 'Kontinye')} <ArrowRight size={18} aria-hidden="true" />
               </button>
             </div>
             {moreDrafts.length > 0 && (

@@ -13,7 +13,7 @@ import { useFocusMode } from '../hooks/useFocusMode';
 import useStore, { FREE_VIDEO_LIMIT } from '../contexts/store';
 import { chapterTestLessonMap, lessonMastery, masteryNextStep, summarize } from '../../shared/mastery';
 import { useCourseMastery } from '../hooks/useMastery';
-import { clearVideoPosition, resumeSecondsFor, saveVideoPosition } from '../utils/videoPositions';
+import { CLOUD_WRITE_EVERY_S, clearVideoPosition, cloudResumeSeconds, resumeSecondsFor, saveVideoPosition } from '../utils/videoPositions';
 import MasteryBadge from '../components/MasteryBadge';
 import ChapterTestCard from '../components/ChapterTestCard';
 import { useAskSandra, SandraFocusPanel } from '../components/SandraWidget';
@@ -628,14 +628,20 @@ export default function CourseDetail() {
   // Per-lesson key for saving/restoring the video position.
   const positionKey = courseId && activeLessonData?.id ? `${courseId}:${activeLessonData.id}` : '';
   const lastSavedRef = useRef({ key: '', t: -100 });
+  const lastCloudRef = useRef({ key: '', t: -100, done: false });
 
   // Where to resume this lesson's video (0 if none / completed). Recomputed when
   // the lesson changes; the player remounts per video via its key.
+  // This device's position wins; otherwise the position saved to the
+  // student's progress doc on another device (cross-device resume, CON-02).
+  const cloudWatch = activeLessonData?.id ? progress?.watchedVideos?.[activeLessonData.id] : null;
   const resumeSeconds = useMemo(() => {
     if (!positionKey || isLessonCompleted) return 0;
-    return resumeSecondsFor(user?.uid, positionKey);
+    const local = resumeSecondsFor(user?.uid, positionKey);
+    if (local) return local;
+    return cloudResumeSeconds(cloudWatch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [positionKey, youtubeVideoId, isLessonCompleted, user?.uid]);
+  }, [positionKey, youtubeVideoId, isLessonCompleted, user?.uid, cloudWatch?.watchDuration]);
 
   // "Recommencer" — a resume the learner didn't want. Forgetting the stored
   // second and remounting the player (the token is part of its key) is the
@@ -663,8 +669,18 @@ export default function CourseDetail() {
 
     if (!user?.uid || !isEnrolled || !activeLessonData) return;
 
-    // Track video progress when user watches 10+ seconds
-    if (currentTime >= 10) {
+    // Track video progress when user watches 10+ seconds. Throttled: the
+    // player reports every second and each write is a read + write of the
+    // progress doc — it used to run every second of playback (and of pause).
+    // Now: at most every CLOUD_WRITE_EVERY_S of playback, plus the first time
+    // the 90% "completed" mark is crossed.
+    const done = currentTime >= duration * 0.9;
+    const cloud = lastCloudRef.current;
+    const due = cloud.key !== positionKey
+      || Math.abs(currentTime - cloud.t) >= CLOUD_WRITE_EVERY_S
+      || (done && !cloud.done);
+    if (currentTime >= 10 && due) {
+      lastCloudRef.current = { key: positionKey, t: currentTime, done: done || cloud.done };
       trackVideoProgress(user.uid, courseId, activeLessonData.id, {
         watchDuration: currentTime,
         totalDuration: duration,

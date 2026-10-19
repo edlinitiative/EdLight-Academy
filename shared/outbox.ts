@@ -82,6 +82,11 @@ export function createOutbox(storage: OutboxStorage, opts: OutboxOptions) {
   const keyFor = (uid: string) => `${opts.prefix}:${uid}`;
 
   const locks = new Map<string, Promise<unknown>>();
+  /** Told the new queue length whenever an account's list is written. */
+  const listeners = new Set<(uid: string, pending: number) => void>();
+  function notify(uid: string, pending: number) {
+    listeners.forEach((fn) => { try { fn(uid, pending); } catch { /* a listener's problem */ } });
+  }
   const drains = new Map<string, Promise<{ done: number; remaining: number }>>();
 
   /** Serialize async work on one key. */
@@ -123,6 +128,7 @@ export function createOutbox(storage: OutboxStorage, opts: OutboxOptions) {
     } catch {
       /* storage full / unavailable: the write path still tried the server */
     }
+    notify(uid, ops.length);
   }
 
   async function list(uid: string): Promise<OutboxOp[]> {
@@ -200,7 +206,21 @@ export function createOutbox(storage: OutboxStorage, opts: OutboxOptions) {
     return p;
   }
 
-  return { enqueue, list, remove, drain, clear };
+  /** How many operations this account still has waiting for the server. */
+  async function pendingCount(uid: string): Promise<number> {
+    return (await list(uid)).length;
+  }
+
+  /**
+   * Hear about queue changes (enqueue, confirmed removal, retry bookkeeping),
+   * for a "N en attente de synchronisation" indicator. Returns unsubscribe.
+   */
+  function subscribe(fn: (uid: string, pending: number) => void): () => void {
+    listeners.add(fn);
+    return () => { listeners.delete(fn); };
+  }
+
+  return { enqueue, list, remove, drain, clear, pendingCount, subscribe };
 }
 
 export type Outbox = ReturnType<typeof createOutbox>;

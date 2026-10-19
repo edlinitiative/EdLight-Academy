@@ -65,6 +65,10 @@ function forgetLastDestination() {
 
 /** Never leave a user staring at a splash because auth never resolved. */
 const SPLASH_MAX_MS = 4000;
+/** Longest the JS loading screen waits on a silent Firebase Auth before rendering from the persisted store. */
+const AUTH_CONFIRM_MAX_MS = 8000;
+/** Longest the first frame waits for the persisted query cache. */
+const CACHE_HYDRATE_MAX_MS = 2500;
 
 /**
  * Resolves who is signed in and shows the app — never waiting on Firestore.
@@ -163,8 +167,16 @@ function AuthGate() {
         useStore.getState().setAuthConfirmed();
       });
     });
+    // Bounded splash: if Firebase Auth never answers at all (it normally does
+    // offline too, from its persisted session), leave the loading screen after
+    // AUTH_CONFIRM_MAX_MS. The persisted store drives the UI; a later answer
+    // still runs `handle` (sign-out included). Startup budget: release §8.
+    const authFallback = setTimeout(() => {
+      if (!useStore.getState().authConfirmed) useStore.getState().setAuthConfirmed();
+    }, AUTH_CONFIRM_MAX_MS);
     return () => {
       active = false;
+      clearTimeout(authFallback);
       unsubscribe();
     };
   }, []);
@@ -205,7 +217,13 @@ function App() {
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
     let cancelled = false;
-    hydrateQueryCache(queryClient).finally(() => {
+    const hydration = hydrateQueryCache(queryClient);
+    // The first frame waits for the cache at most CACHE_HYDRATE_MAX_MS (a slow
+    // or huge AsyncStorage read must not hold the launch screen — startup
+    // budget, release §8). Screens that mount first simply fetch.
+    const ceiling = setTimeout(() => { if (!cancelled) setCacheHydrated(true); }, CACHE_HYDRATE_MAX_MS);
+    hydration.finally(() => {
+      clearTimeout(ceiling);
       if (cancelled) return;
       setCacheHydrated(true);
       // Only start persisting after hydration so a partial startup snapshot
@@ -214,6 +232,7 @@ function App() {
     });
     return () => {
       cancelled = true;
+      clearTimeout(ceiling);
       unsubscribe?.();
     };
   }, []);

@@ -47,7 +47,13 @@ export function useCourseProgress(courseId) {
       setLoading(false);
     };
 
-    loadProgress();
+    // A rejected chunk import or read must end in `failed` (Réessayer), never
+    // an endless `loading` (roadmap §4: no indefinite spinners).
+    loadProgress().catch(() => {
+      if (!alive) return;
+      setFailed(true);
+      setLoading(false);
+    });
     return () => { alive = false; };
   }, [user?.uid, courseId, round]);
 
@@ -94,7 +100,13 @@ export function useAllProgress() {
       setLoading(false);
     };
 
-    loadProgress();
+    // A rejected chunk import or read must end in `failed` (Réessayer), never
+    // an endless `loading` (roadmap §4: no indefinite spinners).
+    loadProgress().catch(() => {
+      if (!alive) return;
+      setFailed(true);
+      setLoading(false);
+    });
     return () => { alive = false; };
   }, [user?.uid, round]);
 

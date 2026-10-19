@@ -1,0 +1,22 @@
+{
+  "$comment": "Gzip bytes of dist/ assets. Regenerate with `npm run perf:budget -- --update` only after an intended change; see docs/design/release-readiness/performance-budget.md.",
+  "tolerancePct": 10,
+  "measuredAt": "2026-10-19",
+  "metrics": {
+    "initialJsGz": 267748,
+    "initialCssGz": 73586,
+    "totalJsGz": 1872985,
+    "totalCssGz": 256181,
+    "largestAsyncJsGz": 184529,
+    "named:duel-bank.js": 124236,
+    "named:firebase.js": 143364,
+    "named:home.js": 10775,
+    "named:i18n.js": 15770,
+    "named:main.js": 61185,
+    "named:markdown.js": 47003,
+    "named:react.js": 71135,
+    "named:runtime.js": 5025,
+    "named:home.css": 9493,
+    "named:main.css": 64093
+  }
+}

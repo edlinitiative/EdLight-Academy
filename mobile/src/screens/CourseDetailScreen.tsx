@@ -563,6 +563,8 @@ export default function CourseDetailScreen() {
               offline={offline}
               durationLabel={dur}
               autoStart={autoStartId === activeLesson.id}
+              positionKey={courseId && activeLesson.id ? `${courseId}:${activeLesson.id}` : undefined}
+              uid={uid}
             />
           ) : (
             <View style={{ width: '100%', aspectRatio: 16 / 9, borderRadius: 20, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 }}>

@@ -34,6 +34,38 @@ import { useReduceMotion } from '../utils/motion';
 import { resolveAppPath, stateForTarget, type ArenaHubSection } from './arenaLinks';
 import { setCurrentRouteProvider } from '../services/telemetry';
 import { shouldReplayInitialTarget } from './initialLink';
+import {
+  LEARNING_STATE_KEY,
+  isPristineLaunch,
+  learningStateToNavState,
+  readLearningState,
+  snapshotLearningState,
+} from './learningContinuity';
+import { gradeProfile } from '../config/trackConfig';
+import { queryClient } from '../lifecycle/queryClient';
+
+/** false = the course is known to be gone from the catalog; undefined = unknown. */
+function courseInCatalog(courseId: string): boolean | undefined {
+  const data = queryClient.getQueryData<any[]>(['coursesData']);
+  if (!Array.isArray(data) || data.length === 0) return undefined;
+  return data.some((c) => c && String(c.id) === courseId);
+}
+
+/**
+ * Reopen the learning place saved before the app was killed (CON-02/CON-10),
+ * only into an untouched launch. See learningContinuity.ts for the rules.
+ */
+async function restoreLearningPlace(uid: string | null): Promise<boolean> {
+  const raw = await AsyncStorage.getItem(LEARNING_STATE_KEY);
+  if (!raw || !navigationRef.isReady()) return false;
+  const examsRoot = gradeProfile(useStore.getState().grade as any).primaryTab === 'Quiz' ? 'Quizzes' : 'ExamLanding';
+  const rec = readLearningState(raw, { uid, now: Date.now(), examsRoot, courseExists: courseInCatalog });
+  if (!rec) return false;
+  const state = learningStateToNavState(rec, { examsRoot });
+  if (!state || !isPristineLaunch(navigationRef.getRootState())) return false;
+  navigationRef.resetRoot(state);
+  return true;
+}
 
 export type RootParamList = {
   Loading: undefined;
@@ -319,8 +351,17 @@ export default function AppNavigator() {
           (navigationRef.navigate as any)(target!.screen, target!.params);
         return;
       }
-      if (!raw) return;
-      try { const target = restoreCompetitionTarget(JSON.parse(raw), useStore.getState().user?.uid ?? null); if (target && navigationRef.isReady()) (navigationRef.navigate as any)(target.screen, target.params); } catch { /* ignore invalid local navigation */ }
+      if (raw) {
+        try {
+          const target = restoreCompetitionTarget(JSON.parse(raw), useStore.getState().user?.uid ?? null);
+          if (target && navigationRef.isReady()) {
+            (navigationRef.navigate as any)(target.screen, target.params);
+            return;
+          }
+        } catch { /* ignore invalid local navigation */ }
+      }
+      // No link and no competition place: reopen the learning place, if any.
+      return restoreLearningPlace(useStore.getState().user?.uid ?? null).then(() => undefined);
     }).catch(() => undefined).finally(() => { if(valid)restorationComplete.current=true; });
     return () => { valid = false; };
   }, [authConfirmed, ready]);
@@ -329,6 +370,10 @@ export default function AppNavigator() {
     const target = savedCompetitionTarget(navigationRef.getCurrentRoute());
     if (target) void AsyncStorage.setItem('competition:last-destination', JSON.stringify({ uid, target })).catch(() => undefined);
     else if (navigationRef.getCurrentRoute()?.name === 'Main') void AsyncStorage.removeItem('competition:last-destination').catch(() => undefined);
+    // The learning place (tab + validated stack). A root modal (Sandra,
+    // Search, Arena…) returns null and keeps the place underneath it.
+    const learning = snapshotLearningState(navigationRef.getRootState(), uid, Date.now());
+    if (learning) void AsyncStorage.setItem(LEARNING_STATE_KEY, JSON.stringify(learning)).catch(() => undefined);
   };
 
   return (

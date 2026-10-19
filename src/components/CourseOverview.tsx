@@ -151,7 +151,7 @@ export default function CourseOverview({
     ? L('Revoir le cours', 'Revize kou a')
     : resumeLessonTitle
       ? (hasProgress
-          ? L(`Continuer : ${resumeLessonTitle}`, `Kontinye : ${resumeLessonTitle}`)
+          ? L(`Reprendre : ${resumeLessonTitle}`, `Kontinye : ${resumeLessonTitle}`)
           : L(`Commencer : ${resumeLessonTitle}`, `Kòmanse : ${resumeLessonTitle}`))
       : (hasProgress ? L('Continuer', 'Kontinye') : L('Commencer', 'Kòmanse'));
 
