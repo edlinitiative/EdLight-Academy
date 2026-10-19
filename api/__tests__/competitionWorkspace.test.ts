@@ -379,3 +379,42 @@ describe("payloads chosen by name", () => {
     ).toEqual([{ entryId: "team1", score: 80 }]);
   });
 });
+
+describe("closed creation never advertises what can't be done", () => {
+  const home = (overrides: Record<string, unknown>) =>
+    workspacePage(
+      { kind: "home", id: "" },
+      { events: [], schools: [] },
+      { ...mine, creationEnabled: false, ...overrides },
+      0,
+    );
+  const titles = (page: WorkspacePage) => page.panels.map((p) => p.title[0]);
+  const text = (page: WorkspacePage) => JSON.stringify(page);
+
+  it("drops the Organiser panel for a student with nothing to organise", () => {
+    const page = home({ admin: false, roles: [], teams: [], inbox: [] });
+    expect(titles(page)).not.toContain("Organiser");
+    expect(text(page)).not.toContain("limités à 60 joueurs");
+  });
+
+  it("keeps host review tasks but not the new-event promise", () => {
+    const page = home({});
+    const organiser = page.panels.find((p) => p.title[0] === "Organiser")!;
+    expect(organiser.paragraphs).toEqual([]);
+    expect(organiser.tasks!.map((t) => t.action)).not.toContain("event-save");
+    expect(organiser.tasks!.length).toBeGreaterThan(0);
+  });
+
+  it("shows the invite code only when someone could still use it", () => {
+    expect(text(home({ teams: [], inbox: [] }))).not.toContain("Mon code d’invitation");
+    expect(text(home({}))).toContain("Mon code d’invitation");
+    expect(
+      text(
+        home({
+          teams: [],
+          inbox: [{ id: "invite_1", targetKind: "invite", targetId: "1", action: "invited", title: "Les Colibris" }],
+        }),
+      ),
+    ).toContain("Mon code d’invitation");
+  });
+});

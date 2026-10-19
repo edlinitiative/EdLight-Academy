@@ -68,6 +68,8 @@ Full file paths, implementation files, flag behavior and the pending evidence fo
 | ADV-08 | Minor | The unused `/download?from=defi` variant says duels launch only from the app, but the web launches them. | **Hide the copy:** delete or reword the variant. |
 | ADV-13 | Minor | The invite code is advertised while no new team can be created (flag off). | **Hide the copy** when creation is off and the user has no team or invitation. |
 
+**Resolved on October 19, 2026:** ADV-05 (arena copy follows `ARENA_WEB_PLAY`), ADV-08 (duels copy), ADV-13 (invite code shown only when usable) and ADV-17 (Organiser copy/panel hidden while creation is closed). ADV-27 is partly addressed: the AASA now lists the competition and `/tournois` paths; hosting `assetlinks.json` and installed-binary verification remain. Open: ADV-10, ADV-23, ADV-27, ADV-28, ADV-33.
+
 ### Flag-gated capabilities checked and consistent
 
 - **Team creation (ADV-14):** while creation is off, the task is hidden and the server refuses it with `pilot_not_enabled`.

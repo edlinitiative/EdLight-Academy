@@ -10,7 +10,15 @@
           "/arena/",
           "/arena/championnat*",
           "/arena/demo*",
-          "/arena/jouer*"
+          "/arena/jouer*",
+          "/tournois",
+          "/tournois/*",
+          "/arena/competitions*",
+          "/arena/evenements/*",
+          "/arena/equipes/*",
+          "/arena/invitations/*",
+          "/arena/ligues/*",
+          "/arena/ecoles/*"
         ]
       }
     ]

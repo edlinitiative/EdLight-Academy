@@ -2351,11 +2351,11 @@
         {
           "source": "src/pages/Download.tsx",
           "match": "Le championnat se joue dans l’application",
-          "line": 44
+          "line": 60
         },
         {
           "source": "src/components/RouteMeta.tsx",
-          "match": "puis affrontez les autres établissements d’Haïti dans l’application",
+          "match": "puis affrontez les autres établissements d’Haïti sur le site ou dans l’application",
           "line": 33
         }
       ],
@@ -2379,9 +2379,10 @@
       ],
       "mismatch": {
         "severity": "major",
-        "status": "Open",
+        "status": "Resolved",
         "finding": "ARENA_WEB_PLAY is true and /arena/jouer is a working web play room, but /download?from=arena (linked from Arena.tsx and ArenaPlay.tsx as \"Jouer dans l’application\") says the day-J questions are played in the app, and the /arena route description (FR/HT/EN) says to compete in the app.",
-        "recommendation": "Hide/correct copy: make the Download \"arena\" variant and the RouteMeta arena description conditional on ARENA_WEB_PLAY (browser or app, same account). If web play is not in the frozen scope, set ARENA_WEB_PLAY=false instead. No engine change."
+        "recommendation": "Hide/correct copy: make the Download \"arena\" variant and the RouteMeta arena description conditional on ARENA_WEB_PLAY (browser or app, same account). If web play is not in the frozen scope, set ARENA_WEB_PLAY=false instead. No engine change.",
+        "resolution": "Resolved 2026-10-19: Download \"arena\" variant and /arena meta description now follow ARENA_WEB_PLAY (site or app)."
       },
       "notes": "",
       "owner": null,
@@ -2520,8 +2521,8 @@
         },
         {
           "source": "src/pages/Download.tsx",
-          "match": "Les défis se lancent depuis l’application",
-          "line": 59
+          "match": "Les défis marchent partout",
+          "line": 75
         }
       ],
       "requirementIds": [
@@ -2559,9 +2560,10 @@
       ],
       "mismatch": {
         "severity": "minor",
-        "status": "Open",
+        "status": "Resolved",
         "finding": "The /download?from=defi variant says duels can only be launched from the app, but the web launches duels from /arena (LobbyLanes \"Lancer un défi\"). No in-repo link reaches that variant; it is reachable by URL only.",
-        "recommendation": "Hide copy: delete the unused \"defi\" Download variant or reword it to \"the link opens everywhere\". No engine change."
+        "recommendation": "Hide copy: delete the unused \"defi\" Download variant or reword it to \"the link opens everywhere\". No engine change.",
+        "resolution": "Resolved 2026-10-19: the \"defi\" Download variant now says duels launch on the site or in the app."
       },
       "notes": "",
       "owner": null,
@@ -2780,12 +2782,12 @@
         {
           "source": "shared/competition/workspace.ts",
           "match": "Découvrir une compétition",
-          "line": 406
+          "line": 414
         },
         {
           "source": "shared/competition/workspace.ts",
           "match": "Aucun événement disponible dans cette page",
-          "line": 438
+          "line": 446
         }
       ],
       "requirementIds": [
@@ -2844,7 +2846,7 @@
         {
           "source": "shared/competition/workspace.ts",
           "match": "Mon code d’invitation",
-          "line": 199
+          "line": 207
         }
       ],
       "requirementIds": [
@@ -2874,9 +2876,10 @@
       ],
       "mismatch": {
         "severity": "minor",
-        "status": "Open",
+        "status": "Resolved",
         "finding": "The code is advertised (\"give it to the captain who wants to invite you\") to every signed-in user even while COMPETITION_CREATION_ENABLED=false, when no new team (and so no new captain) can exist; only pre-existing teams can use it.",
-        "recommendation": "Hide copy when creation is disabled and the user has no team, pending invitation or recruitment request; keep it once the pilot is enabled."
+        "recommendation": "Hide copy when creation is disabled and the user has no team, pending invitation or recruitment request; keep it once the pilot is enabled.",
+        "resolution": "Resolved 2026-10-19: the invite code is shown only when creation is open or the user has a team or a pending team/invite item (api/__tests__/competitionWorkspace.test.ts)."
       },
       "notes": "",
       "owner": null,
@@ -2896,7 +2899,7 @@
         {
           "source": "shared/competition/workspace.ts",
           "match": "label: c('Créer une équipe', 'Kreye yon ekip')",
-          "line": 249
+          "line": 257
         }
       ],
       "requirementIds": [
@@ -2948,12 +2951,12 @@
         {
           "source": "shared/competition/workspace.ts",
           "match": "Invitation d’équipe",
-          "line": 567
+          "line": 584
         },
         {
           "source": "shared/competition/notifications.ts",
           "match": "Tu es invité·e à rejoindre cette équipe.",
-          "line": 72
+          "line": 75
         }
       ],
       "requirementIds": [
@@ -3007,17 +3010,17 @@
         {
           "source": "shared/competition/workspace.ts",
           "match": "Vérifier une affiliation scolaire",
-          "line": 319
+          "line": 327
         },
         {
           "source": "shared/competition/workspace.ts",
           "match": "Autoriser un organisateur scolaire",
-          "line": 383
+          "line": 391
         },
         {
           "source": "shared/competition/notifications.ts",
           "match": "Tu peux organiser pour ton école.",
-          "line": 104
+          "line": 107
         }
       ],
       "requirementIds": [
@@ -3068,12 +3071,12 @@
         {
           "source": "shared/competition/workspace.ts",
           "match": "Les nouveaux événements sont limités à 60 joueurs",
-          "line": 302
+          "line": 310
         },
         {
           "source": "shared/competition/workspace.ts",
           "match": "Préparer un événement",
-          "line": 310
+          "line": 318
         }
       ],
       "requirementIds": [
@@ -3105,9 +3108,10 @@
       ],
       "mismatch": {
         "severity": "major",
-        "status": "Open",
+        "status": "Resolved",
         "finding": "With COMPETITION_CREATION_ENABLED=false (the default) the event-save task is filtered out (workspace.ts creationEnabled filter), but the \"Organiser\" panel and its paragraph describing new events (60 players, three starters) still render for every signed-in user. A non-host sees a capability with no action; a host sees only membership review under that promise.",
-        "recommendation": "Hide copy: drop the paragraph (and the panel when it has no remaining tasks) while creation is disabled, or replace it with an explicit \"not open yet\" line. No engine change."
+        "recommendation": "Hide copy: drop the paragraph (and the panel when it has no remaining tasks) while creation is disabled, or replace it with an explicit \"not open yet\" line. No engine change.",
+        "resolution": "Resolved 2026-10-19: while creation is closed the Organiser paragraph is removed and the panel is dropped when no host task remains (api/__tests__/competitionWorkspace.test.ts)."
       },
       "notes": "",
       "owner": null,
@@ -3127,7 +3131,7 @@
         {
           "source": "shared/competition/workspace.ts",
           "match": "Suivre sans s’inscrire",
-          "line": 1071
+          "line": 1088
         },
         {
           "source": "mobile/src/screens/arena/TournoisScreen.tsx",
@@ -3137,7 +3141,7 @@
         {
           "source": "shared/competition/notifications.ts",
           "match": "Tous les titulaires ont confirmé : termine l’inscription.",
-          "line": 127
+          "line": 130
         }
       ],
       "requirementIds": [
@@ -3192,12 +3196,12 @@
         {
           "source": "shared/competition/workspace.ts",
           "match": "Console organisateur",
-          "line": 1510
+          "line": 1527
         },
         {
           "source": "shared/competition/workspace.ts",
           "match": "Contester un résultat",
-          "line": 1248
+          "line": 1265
         }
       ],
       "requirementIds": [
@@ -3249,12 +3253,12 @@
         {
           "source": "shared/competition/workspace.ts",
           "match": "Accueil des inscrits",
-          "line": 1269
+          "line": 1286
         },
         {
           "source": "shared/competition/workspace.ts",
           "match": "Ouvrir l’écran public sans commandes privées",
-          "line": 1520
+          "line": 1537
         }
       ],
       "requirementIds": [
@@ -3305,12 +3309,12 @@
         {
           "source": "shared/competition/workspace.ts",
           "match": "Activité avec résultat déclaré",
-          "line": 881
+          "line": 898
         },
         {
           "source": "shared/competition/workspace.ts",
           "match": "Prix externe facultatif",
-          "line": 911
+          "line": 928
         }
       ],
       "requirementIds": [
@@ -3363,12 +3367,12 @@
         {
           "source": "shared/competition/workspace.ts",
           "match": "Créer une saison pilote",
-          "line": 339
+          "line": 347
         },
         {
           "source": "shared/competition/workspace.ts",
           "match": "Règles de la division",
-          "line": 1636
+          "line": 1653
         }
       ],
       "requirementIds": [
@@ -3419,7 +3423,7 @@
         {
           "source": "shared/competition/workspace.ts",
           "match": "Signaler un problème",
-          "line": 925
+          "line": 942
         }
       ],
       "requirementIds": [
@@ -3465,7 +3469,7 @@
         {
           "source": "shared/competition/notifications.ts",
           "match": "export const INBOX_ACTIONS",
-          "line": 64
+          "line": 67
         },
         {
           "source": "src/components/NotificationCenter.tsx",
@@ -3571,7 +3575,7 @@
         {
           "source": "shared/competition/workspace.ts",
           "match": "Tout marquer comme lu",
-          "line": 227
+          "line": 235
         }
       ],
       "requirementIds": [
@@ -3653,7 +3657,8 @@
         "severity": "major",
         "status": "Open",
         "finding": "Android intent filters (mobile/app.json) and the in-app parser handle /tournois and /arena/competitions|evenements|equipes|invitations|ligues|ecoles, but the iOS AASA served from public_original/.well-known lists only /defi/*, /arena, /arena/, /arena/championnat*, /arena/demo*, /arena/jouer*. On iOS, invitation, event, team, league and tournament links open the website. No assetlinks.json is in the repo for Android autoVerify (it may be hosted elsewhere; unverified).",
-        "recommendation": "Implement: add the competition paths to the AASA, confirm assetlinks.json hosting with the release signing fingerprint, and verify with the exact binaries (implementation record, enablement step 3)."
+        "recommendation": "Implement: add the competition paths to the AASA, confirm assetlinks.json hosting with the release signing fingerprint, and verify with the exact binaries (implementation record, enablement step 3).",
+        "progress": "2026-10-19: competition and /tournois paths added to the AASA (public_original/.well-known). Still open: host assetlinks.json with the release signing fingerprint (https://academy.edlight.org/.well-known/assetlinks.json returns 404) and verify both on installed binaries."
       },
       "notes": "",
       "owner": null,
@@ -3727,7 +3732,7 @@
         {
           "source": "shared/competition/notifications.ts",
           "match": "ownership_received: {",
-          "line": 155
+          "line": 158
         }
       ],
       "requirementIds": [

@@ -8,6 +8,7 @@ import {
 } from '../utils/platform';
 import useStore from '../contexts/store';
 import RouteMeta from '../components/RouteMeta';
+import { ARENA_WEB_PLAY } from '../../shared/arena/webPlay';
 import { trackOutbound, trackThenLeave } from '../utils/analytics';
 
 /**
@@ -39,7 +40,22 @@ const ORIGINS: Record<string, {
   backTo: string;
   backLabel: [string, string];
 }> = {
-  arena: {
+  // Web play (ARENA_WEB_PLAY) decides the truth here: with it on, the app is a
+  // convenience, not the only door to the day-J questions.
+  arena: ARENA_WEB_PLAY
+    ? {
+        title: [
+          'Le championnat se joue aussi dans l’application',
+          'Chanpyona a jwe nan aplikasyon an tou',
+        ],
+        body: [
+          'Les questions du jour J se jouent sur le site ou dans l’application, avec le même compte. L’application vous prévient et garde votre place si la connexion coupe.',
+          'Kesyon jou a jwe sou sit la oswa nan aplikasyon an, ak menm kont lan. Aplikasyon an avèti w epi li kenbe plas ou si koneksyon an koupe.',
+        ],
+        backTo: '/arena',
+        backLabel: ['Retour au championnat', 'Tounen nan chanpyona a'],
+      }
+    : {
     title: [
       'Le championnat se joue dans l’application',
       'Chanpyona a jwe nan aplikasyon an',
@@ -56,12 +72,12 @@ const ORIGINS: Record<string, {
   },
   defi: {
     title: [
-      'Les défis se lancent depuis l’application',
-      'Defi yo pati depi nan aplikasyon an',
+      'Les défis marchent partout',
+      'Defi yo mache tout kote',
     ],
     body: [
-      'Un défi part d’une partie que vous venez de finir : votre ami reçoit exactement les mêmes questions et n’a qu’un seul essai. Cette partie se joue dans l’application — mais le lien que vous envoyez s’ouvre partout.',
-      'Yon defi soti nan yon pati ou fèk fini : zanmi ou resevwa egzakteman menm kesyon yo epi li gen yon sèl tantativ. Pati sa a jwe nan aplikasyon an — men lyen ou voye a ouvè tout kote.',
+      'Un défi part d’une partie que vous venez de finir : votre ami reçoit exactement les mêmes questions et n’a qu’un seul essai. Lancez-le sur le site ou dans l’application — le lien que vous envoyez s’ouvre partout.',
+      'Yon defi soti nan yon pati ou fèk fini : zanmi ou resevwa egzakteman menm kesyon yo epi li gen yon sèl tantativ. Lanse l sou sit la oswa nan aplikasyon an — lyen ou voye a ouvè tout kote.',
     ],
     backTo: '/jeux',
     backLabel: ['Retour aux jeux', 'Tounen nan jwèt yo'],
