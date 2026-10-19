@@ -295,16 +295,17 @@ export default function ArenaStoryScreen() {
                 ].filter(Boolean).join('. ')}
                 style={{
                   flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 72, padding: 14, borderRadius: 20,
-                  backgroundColor: current ? C.surfaceRaised : C.surface, opacity: open ? 1 : 0.6,
+                  // Locked rows stay OPAQUE (the venue art must not show through); the lock icon and muted title carry the state.
+                  backgroundColor: current ? C.surfaceRaised : open ? C.surface : C.surfaceAlt,
                 }}
               >
-                <View style={{ width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: cleared ? C.successSoft : C.surfaceAlt }}>
+                <View style={{ width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: cleared ? C.successSoft : open ? C.surfaceAlt : C.surface }}>
                   {boss
                     ? <Avatar seed={chapter.boss.name} size={44} still />
                     : cleared ? <Check color={C.success} size={20} /> : open ? <Text style={[arenaType.num, { color: C.ink }]}>{i + 1}</Text> : <Lock color={C.muted} size={16} />}
                 </View>
                 <View style={{ flex: 1, gap: 2 }}>
-                  <Text style={[arenaType.name, { color: C.ink }]}>{name}</Text>
+                  <Text style={[arenaType.name, { color: open ? C.ink : C.muted }]}>{name}</Text>
                   <Text style={[arenaType.status, { color: C.muted }]}>{detail}</Text>
                   <Text style={[arenaType.status, { color: C.faint }]}>
                     {st.count} {t('questions', 'kesyon')} · {t(`${st.pass} pour passer`, `${st.pass} pou pase`)}
