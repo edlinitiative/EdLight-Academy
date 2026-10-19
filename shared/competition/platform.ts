@@ -9,6 +9,8 @@ export interface Team {
   visibility: 'private' | 'school';
   revision: number;
   createdAt: number;
+  /** Set when the last member deleted their account but locked records still name the team. */
+  inactive?: boolean;
 }
 export interface CompetitionEvent {
   id: string;

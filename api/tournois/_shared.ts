@@ -102,6 +102,8 @@ export interface PlayerDoc {
   answered: number;
   totalMs: number;
   rounds: Record<string, RoundScore & { answered: number }>;
+  /** Sanitized chosen avatar, copied at registration for competition events. */
+  avatar?: string | null;
 }
 
 export const tRef = (db: Firestore, tid: string) => db.doc(`${COLLECTION}/${tid}`);
@@ -215,8 +217,10 @@ export async function recomputeStandings(db: Firestore, tid: string, now: number
   if (!tSnap.exists) return;
   const t = tSnap.data() as TournamentDoc;
   const snap = await tx.get(subCol(db, tid, 'players'));
+  const avatars = new Map<string, string>();
   const rows: PlayerRow[] = snap.docs.map((d) => {
     const p = d.data() as PlayerDoc;
+    if (typeof p.avatar === 'string') avatars.set(p.uid, p.avatar);
     return {
       uid: p.uid,
       displayName: p.displayName,
@@ -237,6 +241,7 @@ export async function recomputeStandings(db: Firestore, tid: string, now: number
     correct: r.correct,
     answered: r.answered,
     rank: r.rank,
+    ...(avatars.has(r.uid) ? { avatar: avatars.get(r.uid) } : {}),
   }));
   const teams = rankTournamentTeams(t.teamRule, t.teamSize, rows).slice(0, 50).map((s) => ({
     key: s.key,

@@ -1,4 +1,32 @@
 import { resolveAppPath, type LinkTarget } from './arenaLinks';
+import {
+  inboxPath,
+  isInboxTargetKind,
+} from '../../../shared/competition/notifications';
+/**
+ * Where a competition push opens. The destination is rebuilt from the typed
+ * (targetKind, targetId) reference; `path` is only a fallback and must be an
+ * internal /arena/… path that resolves to the workspace. Anything else is
+ * ignored rather than opened — the screen re-resolves permissions itself.
+ */
+export function competitionNotificationTarget(
+  data: Record<string, unknown> | undefined,
+): Extract<LinkTarget, { screen: 'CompetitionWorkspace' }> | null {
+  if (!data || data.type !== 'competition') return null;
+  const workspace = (target: LinkTarget | null) =>
+    target?.screen === 'CompetitionWorkspace' && target.params.kind !== 'home'
+      ? target
+      : null;
+  if (isInboxTargetKind(data.targetKind) && typeof data.targetId === 'string') {
+    const typed = workspace(
+      resolveAppPath(inboxPath(data.targetKind, data.targetId)),
+    );
+    if (typed) return typed;
+  }
+  return typeof data.path === 'string' && /^\/arena\/[^/]/.test(data.path)
+    ? workspace(resolveAppPath(data.path))
+    : null;
+}
 /** Only minimal typed destinations; no tokens, answers or private form text. */
 export function savedCompetitionTarget(
   route: { name: string; params?: any } | undefined,

@@ -57,6 +57,8 @@ export interface StandingRow {
   correct: number;
   answered: number;
   rank: number;
+  /** Chosen avatar wire string when known; absent → the seeded face. */
+  avatar?: string | null;
 }
 
 export interface TeamRow {

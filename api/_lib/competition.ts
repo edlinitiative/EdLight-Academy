@@ -20,7 +20,11 @@ import {
   type BankQuestion,
 } from '../../shared/tournois/questions';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../../src/data/triviaData';
-import { defaultAlias, isValidAlias } from '../../shared/alias';
+import {
+  publicPerson,
+  resolveInviteCode,
+  type PublicPerson,
+} from './competitionPeople';
 import {
   seedSchoolByKey,
   schoolFromDoc,
@@ -28,6 +32,14 @@ import {
 } from '../../shared/schools';
 import { emptyPlayer } from '../tournois/_shared';
 import { poolPlan, splitPools } from '../tournois/create';
+import {
+  shouldPush,
+  type InboxAction,
+} from '../../shared/competition/notifications';
+import {
+  deliverCompetitionNotices,
+  type CompetitionNotice,
+} from './competitionNotify';
 
 export class CompetitionError extends Error {
   constructor(
@@ -89,6 +101,7 @@ const hash = (value: string) =>
 const eventRef = (db: Firestore, eventId: string) =>
   db.doc(`competitionEvents/${eventId}`);
 const teamRef = (db: Firestore, teamId: string) => db.doc(`teams/${teamId}`);
+/** Records the latest typed change per target; the actor's own records start read. */
 function inbox(
   tx: Transaction,
   db: Firestore,
@@ -98,15 +111,32 @@ function inbox(
   targetId: string,
   title: string,
   now: number,
+  action: InboxAction,
+  read: boolean,
 ) {
   tx.set(db.doc(`users/${uid}/competitionInbox/${key}`), {
     id: key,
     kind,
+    targetKind: kind === 'entry' ? 'event' : kind,
     targetId,
+    action,
     title,
+    read,
     updatedAt: now,
   });
 }
+/** Inbox writer bound to one mutation attempt; also queues the push-worthy subset. */
+type Note = (
+  uid: string,
+  key: string,
+  kind: 'entry' | 'event' | 'team' | 'invite' | 'league' | 'school',
+  targetId: string,
+  title: string,
+  action: InboxAction,
+) => void;
+/** School keys contain spaces, so their inbox document id is a digest. */
+const schoolInboxKey = (schoolKey: string) =>
+  `school_${hash(schoolKey).slice(0, 24)}`;
 async function data(
   tx: Transaction,
   db: Firestore,
@@ -139,6 +169,20 @@ async function schoolMember(
     `schoolMemberships/${schoolKey}_${uid}`,
   );
   return membership?.status === 'approved';
+}
+async function canFollow(
+  tx: Transaction,
+  db: Firestore,
+  e: CompetitionEvent,
+  uid: string,
+) {
+  if (e.audience === 'public' || e.ownerUid === uid) return true;
+  if (await data(tx, db, `entryClaims/${e.id}_${uid}`)) return true;
+  return (
+    e.audience === 'school' &&
+    !!e.schoolKey &&
+    (await schoolMember(tx, db, uid, e.schoolKey))
+  );
 }
 function manage(e: CompetitionEvent, uid: string, admin: boolean) {
   ensure(
@@ -191,6 +235,7 @@ async function prepareLeagueInvalidation(
   db: Firestore,
   eventId: string,
   now: number,
+  note: Note,
   startsAt?: number,
 ) {
   const source = await data(tx, db, `fixtureSources/${eventId}`);
@@ -223,15 +268,13 @@ async function prepareLeagueInvalidation(
       db.doc(`leagues/${league.id}/audit/source_${eventId}_${league.revision}`),
       { action: 'source_changed', eventId, fixture: { ...fixture }, at: now },
     );
-    inbox(
-      tx,
-      db,
+    note(
       league.ownerUid,
       `league_${league.id}`,
       'league',
       league.id,
       league.title,
-      now,
+      'source_changed',
     );
   };
 }
@@ -250,11 +293,34 @@ export async function mutateCompetition(
     `competitionMutations/${hash(`${uid}:${operationId}`)}`,
   );
   const generatedId = db.collection('competitionEvents').doc().id;
-  return db.runTransaction(async (tx) => {
+  // Pushes go out only for the attempt that actually committed here — never for a replayed receipt.
+  let notices: CompetitionNotice[] = [];
+  let executed = false;
+  const output = await db.runTransaction(async (tx) => {
+    notices = [];
+    executed = false;
+    const note: Note = (to, key, kind, targetId, title, change) => {
+      inbox(tx, db, to, key, kind, targetId, title, now, change, to === uid);
+      if (to !== uid && shouldPush(change))
+        notices.push({
+          uid: to,
+          action: change,
+          targetKind: kind === 'entry' ? 'event' : kind,
+          targetId,
+          title,
+        });
+    };
     const receipt = await tx.get(receiptRef);
     if (receipt.exists) {
       ensure(receipt.data()?.digest === digest, 'operation_conflict');
       return receipt.data()!.result;
+    }
+    // People are chosen by name (uid as hidden value) or, for someone not yet
+    // known, by their short invite code — resolved here, before any write.
+    if (body.recipientCode !== undefined && body.recipientUid === undefined) {
+      const recipientUid = await resolveInviteCode(tx, db, body.recipientCode);
+      ensure(recipientUid, 'invite_code_unknown', 404);
+      body = { ...body, recipientUid };
     }
     if (
       ['team-create', 'event-save', 'league-create'].includes(action) &&
@@ -272,11 +338,7 @@ export async function mutateCompetition(
       db,
       `leaderboards/all-time/entries/${uid}`,
     );
-    const name =
-      publicIdentity?.hidden !== true &&
-      isValidAlias(publicIdentity?.displayName)
-        ? String(publicIdentity!.displayName).slice(0, 40)
-        : defaultAlias(displayName || user?.displayName) || 'Participant';
+    const { name, avatar } = publicPerson(publicIdentity, user, displayName);
     let result: Record<string, unknown> = { ok: true };
     switch (action) {
       case 'team-create': {
@@ -308,7 +370,7 @@ export async function mutateCompetition(
           createdAt: now,
         };
         tx.create(teamRef(db, team.id), team);
-        inbox(tx, db, uid, `team_${team.id}`, 'team', team.id, team.name, now);
+        note(uid, `team_${team.id}`, 'team', team.id, team.name, 'created');
         result = { ok: true, teamId: team.id };
         break;
       }
@@ -344,15 +406,13 @@ export async function mutateCompetition(
           createdAt: now,
         };
         tx.create(db.doc(`teamInvites/${invite.id}`), invite);
-        inbox(
-          tx,
-          db,
+        note(
           recipientUid,
           `invite_${invite.id}`,
           'invite',
           invite.id,
           team.name,
-          now,
+          'invited',
         );
         result = { ok: true, inviteId: invite.id };
         break;
@@ -388,17 +448,32 @@ export async function mutateCompetition(
             members: [...new Set([...team.members, uid])],
             revision: team.revision + 1,
           });
-          inbox(
-            tx,
-            db,
-            uid,
+          note(uid, `team_${team.id}`, 'team', team.id, team.name, 'joined');
+        }
+        // The other party learns the outcome; the invitation record itself shows it too.
+        const outcome: InboxAction =
+          action === 'invite-revoke'
+            ? 'invite_revoked'
+            : accept
+              ? 'invite_accepted'
+              : 'invite_declined';
+        note(
+          invite.recipientUid,
+          `invite_${invite.id}`,
+          'invite',
+          invite.id,
+          team.name,
+          outcome,
+        );
+        if (action === 'invite-respond')
+          note(
+            invite.senderUid,
             `team_${team.id}`,
             'team',
             team.id,
             team.name,
-            now,
+            outcome,
           );
-        }
         tx.update(db.doc(`teamInvites/${invite.id}`), {
           status:
             action === 'invite-revoke'
@@ -432,6 +507,14 @@ export async function mutateCompetition(
             captainUid: next,
             revision: team.revision + 1,
           });
+          note(
+            next,
+            `team_${team.id}`,
+            'team',
+            team.id,
+            team.name,
+            'captain_transferred',
+          );
         } else {
           ensure(team.captainUid !== uid, 'transfer_captain_first');
           tx.update(teamRef(db, team.id), {
@@ -439,6 +522,14 @@ export async function mutateCompetition(
             revision: team.revision + 1,
           });
           tx.delete(db.doc(`users/${uid}/competitionInbox/team_${team.id}`));
+          note(
+            team.captainUid,
+            `team_${team.id}`,
+            'team',
+            team.id,
+            team.name,
+            'member_left',
+          );
         }
         break;
       }
@@ -483,18 +574,17 @@ export async function mutateCompetition(
           tx.set(db.doc(`teams/${teamId}/requests/${uid}`), {
             uid,
             publicName: name,
+            publicAvatar: avatar,
             status: 'pending',
             createdAt: now,
           });
-          inbox(
-            tx,
-            db,
+          note(
             team.captainUid,
             `team_${teamId}`,
             'team',
             teamId,
             team.name,
-            now,
+            'recruitment_requested',
           );
           break;
         }
@@ -521,17 +611,15 @@ export async function mutateCompetition(
             members: [...new Set([...team.members, subjectUid])],
             revision: team.revision + 1,
           });
-          inbox(
-            tx,
-            db,
-            subjectUid,
-            `team_${teamId}`,
-            'team',
-            teamId,
-            team.name,
-            now,
-          );
         }
+        note(
+          subjectUid,
+          `team_${teamId}`,
+          'team',
+          teamId,
+          team.name,
+          body.approve === true ? 'recruitment_accepted' : 'recruitment_declined',
+        );
         tx.update(db.doc(`teams/${teamId}/requests/${subjectUid}`), {
           status: body.approve === true ? 'accepted' : 'declined',
           reviewedAt: now,
@@ -545,53 +633,59 @@ export async function mutateCompetition(
           `competitionEvents/${id(body.eventId)}`,
         )) as CompetitionEvent | null;
         ensure(e, 'not_found', 404);
-        const claim = await data(tx, db, `entryClaims/${e.id}_${uid}`);
-        const member = e.schoolKey
-          ? await schoolMember(tx, db, uid, e.schoolKey)
-          : false;
-        ensure(
-          e.state !== 'draft' &&
-            (e.audience === 'public' ||
-              e.ownerUid === uid ||
-              claim ||
-              (e.audience === 'school' && member)),
-          'forbidden',
-          403,
-        );
+        // Unfollowing never needs access; only a new follow re-checks visibility.
+        if (body.follow === true)
+          ensure(
+            e.state !== 'draft' && (await canFollow(tx, db, e, uid)),
+            'forbidden',
+            403,
+          );
         const ref = db.doc(`users/${uid}/competitionFollows/${e.id}`);
+        // Server-only reverse index so announce/postpone/cancel can reach followers without a collection-group scan.
+        const follower = db.doc(`competitionEvents/${e.id}/followers/${uid}`);
         if (body.follow === true) {
           tx.set(ref, { eventId: e.id, createdAt: now });
-          inbox(
-            tx,
-            db,
-            uid,
-            `follow_${e.id}`,
-            'event',
-            e.id,
-            `Suivi / Swivi : ${e.title}`,
-            now,
-          );
+          tx.set(follower, { uid, createdAt: now });
+          note(uid, `follow_${e.id}`, 'event', e.id, e.title, 'following');
         } else {
           tx.delete(ref);
+          tx.delete(follower);
           tx.delete(db.doc(`users/${uid}/competitionInbox/follow_${e.id}`));
         }
         break;
       }
       case 'membership-request': {
         const schoolKey = schoolIdentifier(body.schoolKey);
-        await canonicalSchool(tx, db, schoolKey);
+        const school = await canonicalSchool(tx, db, schoolKey);
         const previous = await data(
           tx,
           db,
           `schoolMemberships/${schoolKey}_${uid}`,
         );
         ensure(previous?.status !== 'approved', 'already_approved');
+        const hosts = await tx.get(
+          db
+            .collection('schoolRoles')
+            .where('schoolKey', '==', schoolKey)
+            .where('status', '==', 'approved')
+            .limit(20),
+        );
         tx.set(db.doc(`schoolMemberships/${schoolKey}_${uid}`), {
           uid,
           schoolKey,
           status: 'pending',
           requestedAt: now,
         });
+        for (const host of hosts.docs)
+          if (host.data().role === 'host')
+            note(
+              String(host.data().uid),
+              schoolInboxKey(schoolKey),
+              'school',
+              schoolKey,
+              school.name,
+              'membership_requested',
+            );
         break;
       }
       case 'membership-review':
@@ -605,7 +699,7 @@ export async function mutateCompetition(
           'forbidden',
           403,
         );
-        await canonicalSchool(tx, db, schoolKey);
+        const school = await canonicalSchool(tx, db, schoolKey);
         tx.set(
           db.doc(
             `${action === 'school-host-review' ? 'schoolRoles' : 'schoolMemberships'}/${schoolKey}_${subjectUid}`,
@@ -618,6 +712,20 @@ export async function mutateCompetition(
             reviewedBy: uid,
             reviewedAt: now,
           },
+        );
+        note(
+          subjectUid,
+          schoolInboxKey(schoolKey),
+          'school',
+          schoolKey,
+          school.name,
+          action === 'school-host-review'
+            ? body.approve === true
+              ? 'host_approved'
+              : 'host_revoked'
+            : body.approve === true
+              ? 'membership_approved'
+              : 'membership_revoked',
         );
         break;
       }
@@ -747,7 +855,7 @@ export async function mutateCompetition(
           updatedAt: now,
         };
         tx.set(eventRef(db, e.id), e);
-        inbox(tx, db, uid, `event_${e.id}`, 'event', e.id, e.title, now);
+        note(uid, `event_${e.id}`, 'event', e.id, e.title, 'draft_saved');
         result = { ok: true, eventId: e.id, revision: e.revision };
         break;
       }
@@ -845,6 +953,7 @@ export async function mutateCompetition(
         };
         tx.set(eventRef(db, e.id), updated);
         publishProjection(tx, db, updated);
+        note(e.ownerUid, `event_${e.id}`, 'event', e.id, e.title, 'published');
         result = { ok: true, eventId: e.id };
         break;
       }
@@ -893,27 +1002,18 @@ export async function mutateCompetition(
           lockedAt: null,
         };
         tx.set(db.doc(`competitionEvents/${e.id}/entries/${entryId}`), entry);
-        inbox(
-          tx,
-          db,
-          uid,
-          `entry_${e.id}_${entryId}`,
-          'entry',
-          e.id,
-          e.title,
-          now,
-        );
+        note(uid, `entry_${e.id}_${entryId}`, 'entry', e.id, e.title, 'roster_saved');
+        // Only newly listed starters are asked to confirm; a re-save does not re-ping the rest.
         for (const member of starters)
-          inbox(
-            tx,
-            db,
-            member,
-            `entry_${e.id}_${entryId}`,
-            'entry',
-            e.id,
-            e.title,
-            now,
-          );
+          if (member !== uid)
+            note(
+              member,
+              `entry_${e.id}_${entryId}`,
+              'entry',
+              e.id,
+              e.title,
+              old?.starters.includes(member) ? 'roster_saved' : 'confirm_requested',
+            );
         result = { ok: true, entryId };
         break;
       }
@@ -941,9 +1041,18 @@ export async function mutateCompetition(
             'forbidden',
             403,
           );
-          tx.update(ref, {
-            confirmed: [...new Set([...entry.confirmed, uid])],
-          });
+          const confirmed = [...new Set([...entry.confirmed, uid])];
+          tx.update(ref, { confirmed });
+          note(
+            entry.captainUid,
+            `entry_${e.id}_${entry.id}`,
+            'entry',
+            e.id,
+            e.title,
+            entry.starters.every((m) => confirmed.includes(m))
+              ? 'roster_ready'
+              : 'starter_confirmed',
+          );
           break;
         }
         if (action === 'entry-approve') {
@@ -954,6 +1063,14 @@ export async function mutateCompetition(
             approvedBy: uid,
             approvedAt: now,
           });
+          note(
+            entry.captainUid,
+            `entry_${e.id}_${entry.id}`,
+            'entry',
+            e.id,
+            e.title,
+            body.approve === true ? 'entry_approved' : 'entry_refused',
+          );
           break;
         }
         ensure(entry.captainUid === uid, 'captain_required', 403);
@@ -984,6 +1101,15 @@ export async function mutateCompetition(
                 engine.playerCount - entry.starters.length,
               ),
             });
+          for (const member of entry.starters)
+            note(
+              member,
+              `entry_${e.id}_${entry.id}`,
+              'entry',
+              e.id,
+              e.title,
+              'withdrawn',
+            );
           break;
         }
         if (entry.state === 'registered') {
@@ -1026,7 +1152,7 @@ export async function mutateCompetition(
           'event_full',
         );
         const profiles: DocumentData[] = [];
-        const publicNames: string[] = [];
+        const publicPeople: PublicPerson[] = [];
         for (const member of entry.starters) {
           const claim = await data(tx, db, `entryClaims/${e.id}_${member}`);
           ensure(!claim, 'conflicting_entry');
@@ -1044,11 +1170,7 @@ export async function mutateCompetition(
             db,
             `leaderboards/all-time/entries/${member}`,
           );
-          publicNames.push(
-            alias?.hidden !== true && isValidAlias(alias?.displayName)
-              ? String(alias!.displayName).slice(0, 40)
-              : defaultAlias(profile.displayName) || 'Participant',
-          );
+          publicPeople.push(publicPerson(alias, profile));
         }
         ensure(
           !e.tournamentId || engine?.state === 'scheduled',
@@ -1067,12 +1189,14 @@ export async function mutateCompetition(
             lockedAt: now,
           });
           if (engine && e.tournamentId) {
-            const memberName = publicNames[i];
+            const { name: memberName, avatar: memberAvatar } =
+              publicPeople[i];
             tx.create(
               db.doc(`userTournaments/${e.tournamentId}/roster/${member}`),
               {
                 uid: member,
                 displayName: memberName,
+                avatar: memberAvatar,
                 school: e.schoolKey,
                 grade: null,
                 seed: engine.playerCount + i + 1,
@@ -1081,7 +1205,10 @@ export async function mutateCompetition(
             );
             tx.create(
               db.doc(`userTournaments/${e.tournamentId}/players/${member}`),
-              emptyPlayer(member, memberName, e.schoolKey, null),
+              {
+                ...emptyPlayer(member, memberName, e.schoolKey, null),
+                avatar: memberAvatar,
+              },
             );
             tx.set(db.doc(`users/${member}/myTournaments/${e.tournamentId}`), {
               tid: e.tournamentId,
@@ -1102,6 +1229,15 @@ export async function mutateCompetition(
           tx.update(db.doc(`userTournaments/${e.tournamentId}`), {
             playerCount: engine.playerCount + entry.starters.length,
           });
+        for (const member of entry.starters)
+          note(
+            member,
+            `entry_${e.id}_${entry.id}`,
+            'entry',
+            e.id,
+            e.title,
+            'registered',
+          );
         result = { ok: true, entryId: entry.id };
         break;
       }
@@ -1136,6 +1272,31 @@ export async function mutateCompetition(
             .where('state', '==', 'open')
             .limit(1),
         );
+        // Bounded so participants + followers stay well inside one transaction's write limit.
+        const followers = [
+          'event-cancel',
+          'event-no-contest',
+          'event-postpone',
+          'event-announce',
+        ].includes(action)
+          ? await tx.get(
+              db.collection(`competitionEvents/${e.id}/followers`).limit(100),
+            )
+          : null;
+        // Access can lapse after following (membership revoked, audience narrowed): re-check before fan-out and prune stale follows.
+        const followerAccess = new Map<string, boolean>();
+        for (const row of followers?.docs ?? [])
+          followerAccess.set(row.id, await canFollow(tx, db, e, row.id));
+        const cohostTarget =
+          action === 'event-cohost' && body.role !== 'remove'
+            ? id(body.recipientUid)
+            : null;
+        const cohostRecipient = cohostTarget
+          ? await data(tx, db, `users/${cohostTarget}`)
+          : null;
+        const cohostBlocked = cohostTarget
+          ? await data(tx, db, `competitionBlocks/${cohostTarget}_${uid}`)
+          : null;
         const invalidate = [
           'event-cancel',
           'event-no-contest',
@@ -1146,6 +1307,7 @@ export async function mutateCompetition(
               db,
               e.id,
               now,
+              note,
               action === 'event-postpone' ? Number(body.startsAt) : undefined,
             )
           : () => undefined;
@@ -1157,6 +1319,7 @@ export async function mutateCompetition(
             Object.keys(e.cohosts).length < 8 || e.cohosts[recipientUid],
             'cohost_limit',
           );
+          const previousRole = e.cohosts[recipientUid];
           if (body.role === 'remove') delete updated.cohosts[recipientUid];
           else {
             ensure(
@@ -1164,8 +1327,25 @@ export async function mutateCompetition(
               'invalid_role',
               400,
             );
+            ensure(
+              recipientUid !== e.ownerUid && cohostRecipient,
+              'recipient_not_found',
+              404,
+            );
+            // Same block parity as team invitations: a blocked organizer cannot grant roles (or push) to the blocker.
+            ensure(!cohostBlocked, 'invitation_unavailable', 403);
             updated.cohosts[recipientUid] = body.role;
           }
+          // Only real changes notify, so grant/remove toggles cannot be used to spam pushes.
+          if (previousRole !== updated.cohosts[recipientUid])
+            note(
+              recipientUid,
+              `event_${e.id}`,
+              'event',
+              e.id,
+              e.title,
+              body.role === 'remove' ? 'cohost_removed' : 'cohost_granted',
+            );
         } else if (action === 'event-announce') {
           const message = text(body.message, 1000);
           ensure(message, 'message_required', 400);
@@ -1203,15 +1383,13 @@ export async function mutateCompetition(
             });
             for (const member of entry.starters) {
               tx.delete(db.doc(`entryClaims/${e.id}_${member}`));
-              inbox(
-                tx,
-                db,
+              note(
                 member,
                 `entry_${e.id}_${entry.id}`,
                 'entry',
                 e.id,
                 e.title,
-                now,
+                'reconfirm_needed',
               );
               if (e.tournamentId) {
                 tx.delete(
@@ -1282,19 +1460,41 @@ export async function mutateCompetition(
           revision: updated.revision,
           at: now,
         });
-        if (action !== 'event-postpone')
+        // Co-host changes reach the co-host alone (above); everything else reaches every listed starter.
+        const change: InboxAction | null =
+          action === 'event-cancel'
+            ? 'cancelled'
+            : action === 'event-no-contest'
+              ? 'no_contest'
+              : action === 'event-close'
+                ? 'closed'
+                : action === 'event-announce'
+                  ? 'announcement'
+                  : null;
+        if (change)
           for (const row of entries.docs)
             for (const member of (row.data() as EventEntry).starters)
-              inbox(
-                tx,
-                db,
+              note(
                 member,
                 `entry_${e.id}_${row.id}`,
                 'entry',
                 e.id,
                 e.title,
-                now,
+                change,
               );
+        for (const row of followers?.docs ?? [])
+          if (!followerAccess.get(row.id)) {
+            tx.delete(row.ref);
+            tx.delete(db.doc(`users/${row.id}/competitionFollows/${e.id}`));
+          } else
+            note(
+            row.id,
+            `follow_${e.id}`,
+            'event',
+            e.id,
+            e.title,
+            action === 'event-postpone' ? 'postponed' : change!,
+          );
         break;
       }
       case 'checkin': {
@@ -1391,7 +1591,7 @@ export async function mutateCompetition(
         }
         const invalidate =
           action === 'event-report-result'
-            ? await prepareLeagueInvalidation(tx, db, e.id, now)
+            ? await prepareLeagueInvalidation(tx, db, e.id, now, note)
             : () => undefined;
         const resultRows =
           action === 'event-report-result'
@@ -1412,6 +1612,20 @@ export async function mutateCompetition(
           resultRows,
           at: now,
         });
+        // Only that a result exists — scores stay behind the event page's own permission check.
+        for (const row of entries.docs)
+          if (accepted.has(row.id))
+            for (const member of (row.data() as EventEntry).starters)
+              note(
+                member,
+                `entry_${e.id}_${row.id}`,
+                'entry',
+                e.id,
+                e.title,
+                action === 'event-report-result'
+                  ? 'result_released'
+                  : 'result_confirmed',
+              );
         break;
       }
       case 'event-dispute': {
@@ -1425,8 +1639,13 @@ export async function mutateCompetition(
         ensure(claim, 'participant_required', 403);
         const reason = text(body.reason, 1000);
         ensure(reason.length >= 5, 'reason_required', 400);
-        const invalidate = await prepareLeagueInvalidation(tx, db, e.id, now);
+        const invalidate = await prepareLeagueInvalidation(tx, db, e.id, now, note);
         invalidate();
+        for (const organizer of [
+          e.ownerUid,
+          ...Object.keys(e.cohosts).filter((k) => e.cohosts[k] === 'manage'),
+        ])
+          note(organizer, `event_${e.id}`, 'event', e.id, e.title, 'dispute_opened');
         tx.create(db.doc(`competitionEvents/${e.id}/disputes/${generatedId}`), {
           id: generatedId,
           uid,
@@ -1464,6 +1683,14 @@ export async function mutateCompetition(
           resolvedBy: uid,
           resolvedAt: now,
         });
+        note(
+          String(dispute.uid),
+          `event_${e.id}`,
+          'event',
+          e.id,
+          e.title,
+          'dispute_resolved',
+        );
         break;
       }
       case 'reward-update': {
@@ -1541,16 +1768,7 @@ export async function mutateCompetition(
           createdAt: now,
         };
         tx.create(db.doc(`leagues/${league.id}`), league);
-        inbox(
-          tx,
-          db,
-          uid,
-          `league_${league.id}`,
-          'league',
-          league.id,
-          league.title,
-          now,
-        );
+        note(uid, `league_${league.id}`, 'league', league.id, league.title, 'created');
         result = { ok: true, leagueId: league.id };
         break;
       }
@@ -1604,15 +1822,13 @@ export async function mutateCompetition(
             'already_enrolled',
           );
           league.entrants.push({ id: team.id, label: team.name });
-          inbox(
-            tx,
-            db,
+          note(
             team.captainUid,
             `league_${league.id}`,
             'league',
             league.id,
             league.title,
-            now,
+            'league_enrolled',
           );
         } else if (action === 'fixture-link') {
           ensure(league.state === 'active', 'league_closed');
@@ -1664,6 +1880,20 @@ export async function mutateCompetition(
           );
           ensure(league.fixtures[0].startsAt > now, 'invalid_schedule', 400);
           league.state = 'active';
+          const captains: string[] = [];
+          for (const entrant of league.entrants) {
+            const team = (await data(tx, db, `teams/${entrant.id}`)) as Team | null;
+            if (team) captains.push(team.captainUid);
+          }
+          for (const captain of captains)
+            note(
+              captain,
+              `league_${league.id}`,
+              'league',
+              league.id,
+              league.title,
+              'fixtures_scheduled',
+            );
         } else if (action === 'league-reopen') {
           ensure(league.state === 'closed', 'already_active');
           const reason = text(body.reason, 1000);
@@ -1688,6 +1918,13 @@ export async function mutateCompetition(
           ensure(league.state === 'active', 'league_closed');
           const fixture = league.fixtures.find((f) => f.id === body.fixtureId);
           ensure(fixture, 'fixture_not_found', 404);
+          const sides: string[] = [];
+          for (const side of [fixture.home, fixture.away]) {
+            const team = side
+              ? ((await data(tx, db, `teams/${side}`)) as Team | null)
+              : null;
+            if (team) sides.push(team.captainUid);
+          }
           ensure(
             [
               'postponed',
@@ -1794,6 +2031,15 @@ export async function mutateCompetition(
             reason,
             at: now,
           });
+          for (const captain of sides)
+            note(
+              captain,
+              `league_${league.id}`,
+              'league',
+              league.id,
+              league.title,
+              'fixture_updated',
+            );
         }
         league.revision++;
         const table = leagueTable(league.entrants, league.fixtures);
@@ -1832,15 +2078,13 @@ export async function mutateCompetition(
           captainUid: team.captainUid,
           createdAt: now,
         });
-        inbox(
-          tx,
-          db,
+        note(
           team.captainUid,
           `league_${leagueId}`,
           'league',
           leagueId,
           league.title,
-          now,
+          'league_invited',
         );
         break;
       }
@@ -1872,6 +2116,14 @@ export async function mutateCompetition(
           leagueId,
           at: now,
         });
+        note(
+          league.ownerUid,
+          `league_${leagueId}`,
+          'league',
+          leagueId,
+          league.title,
+          'league_consent',
+        );
         break;
       }
       case 'report-content': {
@@ -1933,10 +2185,28 @@ export async function mutateCompetition(
         });
         break;
       }
+      case 'inbox-read': {
+        // Only the caller's own records, only the read flag; unknown ids are ignored.
+        const ids = body.ids;
+        ensure(
+          Array.isArray(ids) && ids.length > 0 && ids.length <= 60,
+          'invalid_ids',
+          400,
+        );
+        const rows = [];
+        for (const key of new Set(ids.map(id)))
+          rows.push(await tx.get(db.doc(`users/${uid}/competitionInbox/${key}`)));
+        for (const row of rows) if (row.exists) tx.update(row.ref, { read: true });
+        break;
+      }
       default:
         throw new CompetitionError('invalid_action', 400);
     }
     tx.create(receiptRef, { uid, action, digest, result, createdAt: now });
+    executed = true;
     return result;
   });
+  if (executed && notices.length)
+    await deliverCompetitionNotices(db, notices, uid).catch(() => undefined);
+  return output;
 }

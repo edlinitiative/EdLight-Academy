@@ -24,6 +24,21 @@ export class FakeDb {
     return new FakeQuery(this, path, [], null, null);
   }
 
+  /** Every collection named `id`, at any depth. */
+  collectionGroup(id: string) {
+    return new FakeQuery(this, id, [], null, null, true);
+  }
+
+  /** The doc and everything stored beneath it. */
+  async recursiveDelete(ref: FakeDocRef) {
+    for (const p of [...this.store.keys()])
+      if (p === ref.path || p.startsWith(`${ref.path}/`)) this.store.delete(p);
+  }
+
+  async getAll(...refs: FakeDocRef[]) {
+    return Promise.all(refs.map((r) => r.get()));
+  }
+
   batch() {
     const ops: Array<() => void> = [];
     return {
@@ -111,18 +126,26 @@ export class FakeQuery {
     private filters: Filter[],
     private order: { field: string; dir: 'asc' | 'desc' } | null,
     private max: number | null,
+    private group = false,
   ) {}
   doc(id?: string) { return new FakeDocRef(this.db, `${this.path}/${id || this.db.nextId()}`); }
   where(field: string, op: '==' | '<=' | 'in' | 'array-contains', value: any) {
-    return new FakeQuery(this.db, this.path, [...this.filters, { field, op, value }], this.order, this.max);
+    return new FakeQuery(this.db, this.path, [...this.filters, { field, op, value }], this.order, this.max, this.group);
   }
   orderBy(field: string, dir: 'asc' | 'desc' = 'asc') {
-    return new FakeQuery(this.db, this.path, this.filters, { field, dir }, this.max);
+    return new FakeQuery(this.db, this.path, this.filters, { field, dir }, this.max, this.group);
   }
-  limit(n: number) { return new FakeQuery(this.db, this.path, this.filters, this.order, n); }
+  limit(n: number) { return new FakeQuery(this.db, this.path, this.filters, this.order, n, this.group); }
   private rows() {
-    let rows = this.db.childrenOf(this.path).filter(([, d]) => this.filters.every((f) => {
-      const v = d[f.field];
+    const docs = this.group
+      ? [...this.db.store.entries()].filter(([p]) => {
+          const s = p.split('/');
+          return s.length % 2 === 0 && s[s.length - 2] === this.path;
+        })
+      : this.db.childrenOf(this.path);
+    let rows = docs.filter(([, d]) => this.filters.every((f) => {
+      // Dotted paths reach into maps, as Firestore field paths do.
+      const v = f.field.split('.').reduce<any>((o, k) => (o == null ? o : o[k]), d);
       if (f.op === '==') return v === f.value;
       if (f.op === 'in') return Array.isArray(f.value) && f.value.includes(v);
       if (f.op === 'array-contains') return Array.isArray(v) && v.includes(f.value);
