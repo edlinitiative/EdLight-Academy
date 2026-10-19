@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { isOtherAccountDraft } from '../../shared/examDraft';
 import { useQuery } from '@tanstack/react-query';
 import {
   ArrowRight, ChevronRight, CheckCircle2, Eye, PlayCircle, RotateCcw, Save, LogIn,
@@ -49,10 +50,12 @@ function useExamCatalog() {
 }
 
 /** Local draft sniff (synchronous mirror written by ExamTake). */
-function readLocalDraft(examId: string): any | null {
+function readLocalDraft(examId: string, uid?: string | null): any | null {
   try {
     const raw = localStorage.getItem(`edlight-exam-draft-${examId}`);
-    return raw ? JSON.parse(raw) : null;
+    const d = raw ? JSON.parse(raw) : null;
+    // Another account's paper on this shared device is not "yours, en cours".
+    return isOtherAccountDraft(d, uid) ? null : d;
   } catch {
     return null;
   }
@@ -94,9 +97,9 @@ export default function ExamOverview() {
   const attempt = attempts[examKey];
 
   // Resume state: synchronous local mirror first, then the Firestore draft.
-  const [draft, setDraft] = useState<any | null>(() => readLocalDraft(examKey));
+  const [draft, setDraft] = useState<any | null>(() => readLocalDraft(examKey, userId));
   useEffect(() => {
-    setDraft(readLocalDraft(examKey));
+    setDraft(readLocalDraft(examKey, userId));
     if (!userId || !examKey) return;
     let alive = true;
     loadExamAttemptDraft(userId, examKey).then((remote: any) => {

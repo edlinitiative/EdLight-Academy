@@ -30,7 +30,10 @@ export async function saveExamResult(userId: string, examId: string, data: any) 
     ...data,
     created_at: serverTimestamp(),
     created_at_ms: Date.now(),
-  }), { merge: true });
+  }));
+  // Full replace, not {merge:true}: a retake must not inherit the previous
+  // attempt's answers / preGradedResults (the web results page re-grades
+  // from them cross-device, so stale keys changed the score — P0 validation).
 }
 
 export async function loadExamResult(userId: string, examId: string) {

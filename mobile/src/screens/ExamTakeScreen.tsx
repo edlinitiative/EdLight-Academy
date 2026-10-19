@@ -11,8 +11,8 @@ import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-na
 import { ChevronLeft, ChevronRight, Send, Lightbulb, Check } from 'lucide-react-native';
 import { fetchSingleExam } from '../utils/examCatalog';
 import { flattenQuestions, gradeExam, normalizeSubject, normalizeExamTitle, normalizeYear, stripExamHallBoilerplate, subjectFromText } from '../utils/examUtils';
-import { loadExamAttemptDraft, saveExamAttemptDraft, markExamAttemptSubmitted } from '../services/examAttempts';
-import { saveExamResult } from '../services/examResults';
+import { loadExamAttemptDraft, saveExamAttemptDraft, commitExamSubmission } from '../services/examAttempts';
+import { examDraftKey, readLocalExamDraft, pickResumeDraft, draftPosition, settleWithin } from '../../../shared/examDraft';
 import { recordReview } from '../services/reviewService';
 import useStore from '../contexts/store';
 import { useColors, useTheme, typeScale, fonts } from '../theme/theme';
@@ -425,7 +425,7 @@ export default function ExamTakeScreen() {
     }, [setFocusMode, examReady]),
   );
 
-  const localDraftKey = `edlight-exam-draft-${examId}`;
+  const localDraftKey = examDraftKey(examId);
 
   // Save the current draft immediately (used by the 10s timer, the final flush
   // on unmount/blur, and the AppState background handler). No-op after submit or
@@ -436,6 +436,9 @@ export default function ExamTakeScreen() {
   const flushDraft = useCallback(() => {
     if (!user?.uid || submittedRef.current || phaseRef.current !== 'questions') return;
     const payload = {
+      // Owner of this mirror: on a shared phone it is only ever restored into
+      // this account, never into the next student's (P0 validation).
+      uid: user.uid,
       answers: answersRef.current,
       currentIdx: currentIdxRef.current,
       // Stored so a resume surface can say "4/10" without refetching the paper
@@ -448,7 +451,12 @@ export default function ExamTakeScreen() {
     saveExamAttemptDraft(user.uid, examId, {
       answers: answersRef.current,
       currentIdx: currentIdxRef.current,
+      // Same index under the web's field name (cross-device resume position).
+      currentQ: currentIdxRef.current,
       questionCount: questionCountRef.current,
+      // The web's immediate-mode grades belong to the answers it graded; the
+      // answers just changed here, so they must not be reused at submit.
+      questionResults: {},
     }).catch(() => {});
   }, [user?.uid, examId, localDraftKey]);
 
@@ -496,16 +504,12 @@ export default function ExamTakeScreen() {
             // Prefer the local mirror when it's newer — a background/app-kill can
             // lose the debounced Firestore write, but the AsyncStorage mirror is
             // written on every flush and holds the true latest state.
+            // Only THIS account's mirror is considered (shared phones).
+            let local: any = null;
             try {
-              const raw = await AsyncStorage.getItem(localDraftKey);
-              if (raw) {
-                const local = JSON.parse(raw);
-                if (local && local.status === 'in_progress' &&
-                    (!draft || (local.updated_at_ms || 0) > (draft.updated_at_ms || 0))) {
-                  draft = local;
-                }
-              }
-            } catch { /* ignore corrupt mirror */ }
+              local = readLocalExamDraft(await AsyncStorage.getItem(localDraftKey), user.uid);
+            } catch { /* storage unavailable */ }
+            draft = pickResumeDraft(draft, local);
             if (!active) return;
             // Restore only into a pristine session: the overview phase, or an
             // autostarted question phase where nothing has been touched yet.
@@ -513,18 +517,20 @@ export default function ExamTakeScreen() {
             const pristine = phaseRef.current === 'overview'
               || (Object.keys(answersRef.current).length === 0 && currentIdxRef.current === 0);
             if (!pristine) return;
-            if (draft && draft.status !== 'submitted') {
+            if (draft) {
               const answerCount = draft.answers ? Object.keys(draft.answers).length : 0;
-              if (answerCount > 0) { setAnswers(draft.answers); setHasDraft(true); }
+              if (answerCount > 0) { setAnswers(draft.answers as any); setHasDraft(true); }
               // Restore the saved position even with no answers yet (e.g. read
               // ahead on essay questions), so Reprendre lands on the right one.
-              if (Number.isFinite(draft.currentIdx) && draft.currentIdx > 0) {
-                draftIdxRef.current = draft.currentIdx;
+              // draftPosition also reads the web's `currentQ`.
+              const pos = draftPosition(draft);
+              if (pos != null && pos > 0) {
+                draftIdxRef.current = pos;
                 setHasDraft(true);
                 // With autostart we're already past handleStart (which normally
                 // applies the saved position) — jump there directly.
-                if (phaseRef.current === 'questions' && draft.currentIdx < qs.length) {
-                  setCurrentIdx(draft.currentIdx);
+                if (phaseRef.current === 'questions' && pos < qs.length) {
+                  setCurrentIdx(pos);
                 }
               }
             }
@@ -624,14 +630,26 @@ export default function ExamTakeScreen() {
   }
 
   async function doSubmit() {
+    // One submission at a time (double tap / Alert + button).
+    if (submittedRef.current) return;
     setSubmitting(true);
     // Block any pending / final autosave from reverting the doc to in_progress.
     submittedRef.current = true;
     if (draftTimer.current) clearTimeout(draftTimer.current);
-    // Drop the local mirror + clear the dashboard "Reprendre" banner so a
-    // finished exam isn't offered as resumable.
-    AsyncStorage.removeItem(localDraftKey).catch(() => {});
-    clearActivity();
+    // Make sure the local mirror holds the final answers. It is NOT removed
+    // until the account acknowledges the result: this app's Firestore cache is
+    // memory-only, so a submission queued offline dies with the process, and
+    // deleting the mirror first lost the whole finished paper (P0 validation).
+    if (user?.uid) {
+      AsyncStorage.setItem(localDraftKey, JSON.stringify({
+        uid: user.uid,
+        answers: answersRef.current,
+        currentIdx: currentIdxRef.current,
+        questionCount: questionCountRef.current,
+        status: 'in_progress',
+        updated_at_ms: Date.now(),
+      })).catch(() => {});
+    }
     try {
       // Pass the raw answers map (index-keyed) straight to the grader — it reads
       // `answers[i]` directly, so wrapping in `{ given }` broke every match.
@@ -648,8 +666,11 @@ export default function ExamTakeScreen() {
       }));
 
       if (user?.uid) {
-        await markExamAttemptSubmitted(user.uid, examId, { answers });
-        await saveExamResult(user.uid, examId, {
+        // Result + attempt `submitted` mark in ONE atomic batch (they were two
+        // awaits, attempt first: a failure between them left a "submitted"
+        // attempt with no result). Bounded wait: offline the commit never
+        // settles, which used to spin forever.
+        const commit = commitExamSubmission(user.uid, examId, {
           exam_id: examId,
           level,
           // Save the cleaned short title, not the raw ministry boilerplate.
@@ -658,7 +679,29 @@ export default function ExamTakeScreen() {
           summary: graded.summary,
           results: gradedResults,
           answers,
-        });
+        }, { answers });
+        const outcome = await settleWithin(commit, 12000);
+        if (outcome.status !== 'confirmed' || !outcome.value) {
+          // Not on the account yet. Keep everything on this device and let the
+          // student retry; the same doc ids make a retry idempotent.
+          submittedRef.current = false;
+          Alert.alert(
+            t('Pas encore envoyé', 'Poko voye'),
+            outcome.status === 'pending'
+              ? t(
+                'La connexion est lente ou absente. Vos réponses sont gardées sur ce téléphone. Réessayez quand vous serez connecté.',
+                'Koneksyon an lan oswa li pa la. Repons ou yo rete sou telefòn sa a. Eseye ankò lè ou konekte.',
+              )
+              : t(
+                'Le résultat n’a pas pu être enregistré. Vos réponses sont gardées sur ce téléphone. Réessayez.',
+                'Nou pa t ka anrejistre rezilta a. Repons ou yo rete sou telefòn sa a. Eseye ankò.',
+              ),
+          );
+          return;
+        }
+        // Acknowledged: now the mirror and the Home "Reprendre" card can go.
+        AsyncStorage.removeItem(localDraftKey).catch(() => {});
+        clearActivity();
         // Fold this graded round into the spaced-repetition schedule for its
         // subject (Adaptive Engine, Slice 2). Fire-and-forget: a failed schedule
         // write must never block submission or lose the result.
@@ -668,10 +711,13 @@ export default function ExamTakeScreen() {
             percentage: graded.summary?.percentage ?? 0,
           }).catch(() => {});
         }
+      } else {
+        clearActivity();
       }
 
       navigation.replace('ExamResults', { level, examId });
     } catch (e) {
+      submittedRef.current = false; // let the student retry
       Alert.alert(t('Erreur', 'Erè'), t('Impossible de soumettre. Réessayez.', 'Nou pa ka soumèt. Eseye ankò.'));
     } finally {
       setSubmitting(false);
