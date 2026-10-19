@@ -62,6 +62,8 @@ const AdminExams = lazyWithRetry(() => import('./pages/admin/AdminExams'));
 const AdminTrivia = lazyWithRetry(() => import('./pages/admin/AdminTrivia'));
 const AdminArena = lazyWithRetry(() => import('./pages/admin/AdminArena'));
 const AdminArenaQuestions = lazyWithRetry(() => import('./pages/admin/AdminArenaQuestions'));
+const AdminExplanations = lazyWithRetry(() => import('./pages/admin/AdminExplanations'));
+const AdminEssayCalibration = lazyWithRetry(() => import('./pages/admin/AdminEssayCalibration'));
 const ExamLanding = lazyWithRetry(() => import('./pages/ExamLanding'));
 const ExamOverview = lazyWithRetry(() => import('./pages/ExamOverview'));
 const ExamSubject = lazyWithRetry(() => import('./pages/ExamSubject'));
@@ -227,6 +229,8 @@ export default function App() {
                 <Route path="content/arena/questions" element={<AdminArenaQuestions />} />
                 <Route path="content/arena" element={<AdminArena />} />
                 <Route path="content/verify" element={<AnswerVerification />} />
+                <Route path="content/explanations" element={<AdminExplanations />} />
+                <Route path="content/essay-calibration" element={<AdminEssayCalibration />} />
                 {/* Users */}
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="users/moderation" element={<AdminModeration />} />

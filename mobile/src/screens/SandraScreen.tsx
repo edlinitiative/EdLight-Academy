@@ -32,6 +32,7 @@ import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import PressableScale from '../components/ui/PressableScale';
 import Button from '../components/ui/Button';
 import SandraFace from '../components/sandra/SandraFace';
+import ExplanationFeedback from '../components/sandra/ExplanationFeedback';
 import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
 import {
@@ -49,6 +50,8 @@ interface ChatMessage {
   id: string;
   role: 'user' | 'sandra';
   text: string;
+  /** An admin-reviewed explanation: show "Utile / Pas utile" under it. */
+  explanationId?: string;
 }
 
 type Notice =
@@ -429,7 +432,8 @@ export default function SandraScreen({
       setSending(false);
 
       if (result.kind === 'reply') {
-        setMessages((prev) => [...prev, { id: nextId(), role: 'sandra', text: result.reply }]);
+        const explanationId = result.explanationId;
+        setMessages((prev) => [...prev, { id: nextId(), role: 'sandra', text: result.reply, ...(explanationId ? { explanationId } : {}) }]);
       } else if (result.kind === 'limit') {
         setNotice({
           kind: 'limit',
@@ -610,15 +614,17 @@ export default function SandraScreen({
               m.role === 'user' ? (
                 <UserBubble key={m.id} text={m.text} accessibilityLabel={`${t('Toi', 'Ou')} : ${m.text}`} />
               ) : (
-                <SandraBubble
-                  key={m.id}
-                  text={m.text}
-                  onLinkPress={handleLinkPress}
-                  accessibilityLabel={`Sandra : ${m.text}`}
-                  // Announce only the newest reply so VoiceOver reads it aloud
-                  // as it lands, without re-announcing the whole transcript.
-                  live={i === messages.length - 1}
-                />
+                <React.Fragment key={m.id}>
+                  <SandraBubble
+                    text={m.text}
+                    onLinkPress={handleLinkPress}
+                    accessibilityLabel={`Sandra : ${m.text}`}
+                    // Announce only the newest reply so VoiceOver reads it aloud
+                    // as it lands, without re-announcing the whole transcript.
+                    live={i === messages.length - 1}
+                  />
+                  {m.explanationId ? <ExplanationFeedback id={m.explanationId} lang={isCreole ? 'ht' : 'fr'} /> : null}
+                </React.Fragment>
               ),
             )
           )}

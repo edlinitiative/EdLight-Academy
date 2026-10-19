@@ -72,6 +72,13 @@ Where a proposal needs a new event, it names exactly one, following the PRD sect
 
 **Recommendation: do next.**
 
+| Stage | Status (October 19, 2026) |
+| --- | --- |
+| MVP: button on results rows, `questionContext`, server gate | Built: `shared/explainContext.ts`, `api/_lib/explainGate.ts`, web `ExplainWithSandra`, mobile `ExplainButton` / `ExplainSheet` |
+| Later: reviewed explanation cache | **Implemented, unverified in production.** Needs the rules deploy (`explanations`, `explanationVotes` deny blocks) and a Firestore TTL policy on `explanationVotes.expiresAt`. Optional env `EXPLANATION_VOTE_SECRET` |
+
+**Reviewed explanation cache (how it works).** Only a request the gate *verified* (an exam question with a submitted attempt for the caller, or a quiz-bank question, and no live competition round) touches the cache; hint-only, unverifiable and downgraded requests never read or write it. The first verified request for a question × language writes a canonical worked explanation to `explanations/{source}_{id}_{lang}` as `pending`, generated in parallel with the student's own reply from the server's copy of the question, key and authored explanation (never the student's answer, so one student's work is never shown to another). Admin → Contenu → **Explications** lists candidates by number of requests, with question, key and explanation rendered with math, and filters by status, language and subject; the admin approves, edits then approves, or rejects (`/api/explanations`, admin role only, audit fields `reviewedBy`, `reviewedAt`, `reviewHistory`, `originalText` on edit). An approved text answers the first Explique-moi turn with no LLM call, and follow-up turns go to Sandra with that text in the history. Pending and rejected texts are never served. Under an approved reply the student sees "Utile / Pas utile"; votes are two counters on the doc, deduped once per explanation per UTC day by `explanationVotes/{sha256(secret, uid, id, day)}`, which holds no uid and expires.
+
 **Student need.** The PRD's core question 4 is "What was wrong, and how can I improve?" (LJ-08). The exam catalog carries an `explanation` on most questions: about 9,400 keys, of which about 900 are null. These explanations are usually one sentence of the form "the answer is correct because…". They are not a worked method, and on maths and physics a student who missed the step cannot rebuild it from them. Sandra already explains concepts and is deliberately disabled during a live exam paper (`SandraWidget` restriction `exam`), but **results pages and quiz corrections have no entry into Sandra at all**. The owner's earlier feedback sessions repeatedly fixed correction display (raw LaTeX, multi-blank inputs), which is evidence that corrections are the most-viewed learning surface after video.
 
 **Proposal.** An "Explique-moi" action on each incorrect or partial item in exam results, quiz results and Revizyon. It opens Sandra with a structured context: question text, the authored explanation, the expected answer, the student's own answer, subject, level, and the exam/question id. Sandra answers step by step in the student's language. A follow-up chip offers "Un exercice similaire", which routes to existing practice for the mapped lesson when the mapping exists.
@@ -100,6 +107,22 @@ Where a proposal needs a new event, it names exactly one, following the PRD sect
 ## 2. Essay grading on mobile, calibrated for French dissertation
 
 **Recommendation: do next.**
+
+| Stage | Status (October 19, 2026) |
+| --- | --- |
+| MVP: mobile calls `/api/grade-essay`, "non corrigé" on failure, retry | Built: `shared/essayRegrade.ts`, `shared/essayGradeCore.ts`, `mobile/src/services/essayGrading.ts` |
+| Dissertation rubric profile | Built: `selectRubricProfile` / `DISSERTATION_CRITERIA` in `api/_lib/essayGrading.ts` |
+| Calibration harness | **Implemented, unverified in production.** Admin → Contenu → « Calibration des dissertations ». Needs the rules deploy (`essayCalibration` deny block) and 20–30 teacher-graded copies |
+
+**Calibration target.** On the teacher-graded set, the AI grader passes when **quadratic-weighted kappa ≥ 0.6** on the integer 0–20 scale **and** **|AI − teacher| ≤ 2/20 on at least 80% of copies**. This is stricter than the "±2/20 on ≥ 70%" quality line below, which stays the minimum for keeping the "indicatif" grade on. Also read, not gated: MAE (aim ≤ 1.5/20), bias (mean AI − teacher, aim within ±1, positive means lenient), Pearson r, exact and adjacent (±1 point) agreement, and per-criterion QWK on the 0/1/2 levels (aim ≥ 0.4 per dissertation criterion). Under 20 copies the numbers are shown but should not decide anything.
+
+**Calibration usage.**
+
+1. Collect copies with teachers (the class-spaces pilot, item 3). Anonymize first: a reference such as `copie-014`, never a name, class or school. Copies stay server-only and can be deleted from the page.
+2. Fill the template ([`essay-calibration-sample.csv`](essay-calibration-sample.csv), also downloadable from the page; invented texts only). One row per copy: `ref`, then either `examId` + `questionIndex` (0-based index in the flattened paper, as the results pages use) or a free `prompt`, optional `subject` and `level` (a catalog exam supplies its own), `studentText`, `teacherScore`, `maxScore` (default 20), and optional teacher criterion levels as `crit:<criterion label>` columns with 0, 1 or 2 (labels as the grader names them, for example `crit:Plan`). CSV with `,` or `;`, or a JSON array of the same fields; up to 300 rows.
+3. Upload and start. The server grades each copy with **the same grader students get** (`api/_lib/essayGrader.ts`, shared with `/api/grade-essay`), 4 copies per step, rate-limited to 120 steps per admin per hour (fails closed). Runs are resumable: pause or close the tab and "Reprendre" continues; uploading the same file under the same name reopens the same run, and a copy already graded is never graded or counted twice. Transient grader failures retry up to 3 times, then the copy is marked failed and excluded from the metrics.
+4. Read the result panel (target met or not), the per-criterion confusion matrices (rows: teacher level, columns: AI level), and the worst disagreements; export the CSV (scores and criterion levels only, no student text) to discuss the outliers with the teachers.
+5. After changing the rubric or prompt, upload the same set under a new name (the run id hashes the name with the rows: same name and rows reopen the old run, a new name grades again) and compare the two runs.
 
 **Student need.** The exam catalog contains **814 essay questions**, and the Bac's French, philosophy and social-science papers are essay-led. On the web, `ExamTake` calls `/api/grade-essay`, an analytic rubric grader whose score is computed deterministically from per-criterion judgements. **The mobile app never calls it.** `ExamTakeScreen` passes an empty pre-graded map to `gradeExam`, so every mobile essay lands as `status: 'manual'` with 0 points awarded, and no human review queue exists. The September TestFlight batch already caught the related false claim "3 questions corrigées automatiquement" on a 3-essay paper. Most students use the phone, so the platform's largest Bac-relevant question type is effectively ungraded where students actually are.
 

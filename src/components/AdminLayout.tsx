@@ -3,6 +3,7 @@ import { Outlet, NavLink, Link } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, Video, Target, ClipboardList, CheckSquare, Gamepad2,
   Users, ShieldAlert, MessageCircle, Database, BarChart3, ArrowLeft, GraduationCap, Menu, X, Swords, AlertTriangle, Trophy,
+  Lightbulb, Scale,
 } from './icons';
 import useStore from '../contexts/store';
 import { getFirstName } from '../utils/shared';
@@ -28,6 +29,8 @@ const NAV: Array<{ section?: string; items: Array<{ to: string; end?: boolean; I
       { to: '/admin/content/trivia', Icon: Gamepad2, label: 'Trivia' },
       { to: '/admin/content/arena', Icon: Swords, label: 'Arena' },
       { to: '/admin/content/verify', Icon: CheckSquare, label: 'Vérification' },
+      { to: '/admin/content/explanations', Icon: Lightbulb, label: 'Explications' },
+      { to: '/admin/content/essay-calibration', Icon: Scale, label: 'Calibration des dissertations' },
     ],
   },
   {

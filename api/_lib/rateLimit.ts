@@ -35,6 +35,10 @@ const LIMITS: Record<string, Limit> = {
   'generate-quiz':  { max: 10, windowSec: 3600 },
   'chat':           { max: 30, windowSec: 3600 },
   'email-plan':     { max: 3,  windowSec: 86400 },
+  // Admin essay-grader calibration (api/essay-calibration): one bucket per
+  // admin, counted per STEP call. A step grades at most 4 copies, so this caps
+  // a run at ~480 grader calls an hour. Paid (LLM): fails closed.
+  'essay-calibration': { max: 120, windowSec: 3600 },
   // Server-authoritative leaderboard XP awards (api/leaderboard/award). Not a
   // paid endpoint, so it fails OPEN on a Firestore blip (never in COST_ENDPOINTS)
   // — a rate-limiter outage must not break legit XP accrual. The cap is generous
@@ -106,6 +110,7 @@ const COST_ENDPOINTS = new Set<string>([
   'generate-quiz',
   'chat',
   'email-plan',
+  'essay-calibration',
 ]);
 
 export interface RateLimitResult {
