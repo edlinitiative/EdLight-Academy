@@ -696,37 +696,54 @@ async function tournaments(ctx: Ctx, tids: Set<string>) {
     // Team modes: one answer per team (submitter uid), the frozen control
     // record (holder, deputy, slots, presence, transfer log) and team attempts
     // (who answered each position, relay leg owners). Points stay untouched.
-    for (const d of (
-      await db.collection(`${base}/teamAnswers`).where('uid', '==', uid).limit(PAGE).get()
-    ).docs)
-      w.update(d.ref, { uid: tomb });
-    const sw = (v: unknown) => (v === uid ? tomb : v);
-    for (const d of (await db.collection(`${base}/teamControl`).limit(PAGE).get()).docs) {
-      const c = d.data();
-      if (!(c.starters || []).includes(uid) && c.captainUid !== uid) continue;
-      const lastSeen = { ...(c.lastSeen || {}) };
-      if (uid in lastSeen) {
-        lastSeen[tomb] = lastSeen[uid];
-        delete lastSeen[uid];
+    // Control and attempt records are keyed by entry id, so they are read
+    // directly from the user's own entries — never found by a bounded scan.
+    if (t.gameMode === 'shared' || t.gameMode === 'relay') {
+      const answers = await db
+        .collection(`${base}/teamAnswers`)
+        .where('uid', '==', uid)
+        .limit(PAGE)
+        .get();
+      // One answer per question at most (≤ 99): reaching PAGE means something is wrong.
+      if (answers.size >= PAGE) ctx.warnings.push('competition_team_answers_bound');
+      answers.docs.forEach((d) => w.update(d.ref, { uid: tomb }));
+      const entryIds = new Set<string>();
+      if (t.competitionEventId)
+        for (const member of [uid, tomb])
+          for (const d of (
+            await db
+              .collection(`competitionEvents/${t.competitionEventId}/entries`)
+              .where('starters', 'array-contains', member)
+              .get()
+          ).docs)
+            entryIds.add(d.id);
+      const sw = (v: unknown) => (v === uid ? tomb : v);
+      for (const entryId of entryIds) {
+        const c = await get(db, `${base}/teamControl/${entryId}`);
+        if (c) {
+          const lastSeen = { ...(c.lastSeen || {}) };
+          if (uid in lastSeen) {
+            lastSeen[tomb] = lastSeen[uid];
+            delete lastSeen[uid];
+          }
+          w.update(db.doc(`${base}/teamControl/${entryId}`), {
+            captainUid: sw(c.captainUid),
+            starters: swap(c.starters || [], uid, tomb),
+            slots: swap(c.slots || [], uid, tomb),
+            holderUid: sw(c.holderUid),
+            deputyUid: sw(c.deputyUid),
+            lastSeen,
+            transfers: (c.transfers || []).map((x: DocumentData) => ({ ...x, from: sw(x.from), to: sw(x.to) })),
+          });
+        }
+        // Team modes run on live/window only: the single window round is 0.
+        const a = await get(db, `${base}/teamAttempts/0_${entryId}`);
+        if (a)
+          w.update(db.doc(`${base}/teamAttempts/0_${entryId}`), {
+            answeredBy: (a.answeredBy || []).map(sw),
+            ...(a.legs ? { legs: a.legs.map((l: DocumentData) => ({ ...l, owner: sw(l.owner) })) } : {}),
+          });
       }
-      w.update(d.ref, {
-        captainUid: sw(c.captainUid),
-        starters: swap(c.starters || [], uid, tomb),
-        slots: swap(c.slots || [], uid, tomb),
-        holderUid: sw(c.holderUid),
-        deputyUid: sw(c.deputyUid),
-        lastSeen,
-        transfers: (c.transfers || []).map((x: DocumentData) => ({ ...x, from: sw(x.from), to: sw(x.to) })),
-      });
-    }
-    for (const d of (await db.collection(`${base}/teamAttempts`).limit(PAGE).get()).docs) {
-      const a = d.data();
-      const touched = (a.answeredBy || []).includes(uid) || (a.legs || []).some((l: DocumentData) => l.owner === uid);
-      if (!touched) continue;
-      w.update(d.ref, {
-        answeredBy: (a.answeredBy || []).map(sw),
-        ...(a.legs ? { legs: a.legs.map((l: DocumentData) => ({ ...l, owner: sw(l.owner) })) } : {}),
-      });
     }
     if (!bracket)
       for (const col of ['attempts', 'answers'])

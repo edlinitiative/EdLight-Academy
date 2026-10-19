@@ -379,6 +379,14 @@ describe('account deletion', () => {
     const { eventId, teamId, startsAt } = await setup('shared', 'live');
     await mutate('a', 'team-roles', { eventId, entryId: teamId, submitter: 'b', deputy: 'c' });
     await mutate('b', 'team-roles-confirm', { eventId, entryId: teamId, rolesVersion: 1 });
+    // More records than any single scan page, stored ahead of this team's own.
+    for (let i = 0; i < 450; i += 1) {
+      mockDb.store.set(`userTournaments/${eventId}/teamControl/filler${i}`, { starters: ['x', 'y', 'z'], holderUid: 'x' });
+      mockDb.store.set(`userTournaments/${eventId}/teamAttempts/0_filler${i}`, { answeredBy: ['x'] });
+    }
+    mockDb.store.set(`userTournaments/${eventId}/teamAttempts/0_${teamId}`, {
+      uid: teamId, answeredBy: ['b', null], legs: [{ owner: 'b', start: 0, end: 1 }],
+    });
     clock = startsAt + 500;
     await call(tickHandler, { tid: eventId });
     await play('b', { action: 'team-live-answer', index: 0, choice: key(eventId, 0), version: 1 }, eventId);
@@ -390,8 +398,10 @@ describe('account deletion', () => {
       `competitionEvents/${eventId}/entries/${teamId}`,
       `userTournaments/${eventId}/teamControl/${teamId}`,
       `userTournaments/${eventId}/teamAnswers/0_${teamId}`,
+      `userTournaments/${eventId}/teamAttempts/0_${teamId}`,
     ])
       expect(JSON.stringify(doc(p))).not.toMatch(/"b"/);
+    expect(doc(`userTournaments/${eventId}/teamControl/filler449`).holderUid).toBe('x');
     expect(doc(`userTournaments/${eventId}/teamAnswers/0_${teamId}`).points).toBe(points);
     expect(doc(`userTournaments/${eventId}/teamControl/${teamId}`).holderUid).toBe('c');
     expect(doc(`competitionEvents/${eventId}/entries/${teamId}`).roles.submitter).toMatch(/^deleted_/);
