@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { isOtherAccountDraft } from '../../shared/examDraft';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronRight, Search } from '../components/icons';
 import useStore from '../contexts/store';
@@ -72,7 +73,7 @@ function useExamCatalog() {
 /** examId → answers saved so far, from ExamTake's local draft mirror.
  *  Read-only: the rows still open the overview, which owns the resume action.
  *  Submitted / empty drafts are ignored so "en cours" is never a lie. */
-function localDraftProgress(): Record<string, number> {
+function localDraftProgress(uid?: string | null): Record<string, number> {
   const out: Record<string, number> = {};
   const PREFIX = 'edlight-exam-draft-';
   try {
@@ -82,7 +83,7 @@ function localDraftProgress(): Record<string, number> {
       const raw = localStorage.getItem(k);
       if (!raw) continue;
       const d = JSON.parse(raw);
-      if (d?.status === 'submitted') continue;
+      if (d?.status === 'submitted' || isOtherAccountDraft(d, uid)) continue;
       const answered = d?.answers ? Object.keys(d.answers).length : 0;
       if (answered === 0 && !(d?.currentQ > 0)) continue;
       out[k.slice(PREFIX.length)] = answered;
@@ -109,7 +110,7 @@ export default function ExamSubject() {
   // In-progress drafts, read once from the synchronous localStorage mirror
   // ExamTake writes. Signed-out students have no draft at all (ExamTake's save
   // effect needs a uid), so an absent key honestly means "not started here".
-  const drafts = useMemo(() => localDraftProgress(), []);
+  const drafts = useMemo(() => localDraftProgress(userId), [userId]);
 
   const exams = useMemo(() => {
     if (!allExams) return [];

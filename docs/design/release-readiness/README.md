@@ -8,4 +8,6 @@ Use the source inventory as the start of MAP-01/MAP-02, then add role-specific a
 
 `Implemented/unverified` means relevant pilot code exists, not that a release gate passed. To set `Verified`, attach owner, exact commit/build/environment, platform/device/network, scenario, expected/observed behavior, dated evidence and the required sign-off. Never copy an automated test result into installed-device or production evidence.
 
+[p0-code-validation.md](p0-code-validation.md) is the P0 code-level validation of the core student journeys (sign-in/onboarding, lesson→mastery, exams, duels, Sandra, study plan, offline): defects fixed, open items, and the journey × interruption table that serves as the French step-by-step script for the real-device run. Its "OK/Fixed" results are code evidence only — never copy them into `Verified`.
+
 Run `npm run release:check` for structural coverage; run `npm run release:gate` for the blocking evidence decision. A valid JSON ledger is not a green release.

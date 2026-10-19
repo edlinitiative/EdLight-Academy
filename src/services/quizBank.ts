@@ -1,4 +1,5 @@
 import { loadCSV } from '../utils/csvParser';
+import { resolveCorrectIndex } from '../../shared/quizKey';
 
 const BANK_CANDIDATES = [
   '/data/edlight_unified_quiz_database_expanded_with_chapters.csv',
@@ -230,7 +231,11 @@ export function toDirectItemFromRow(row) {
   // Options extraction
   let labels = [];
   const optionsJson = pick(row, ['options', 'choices'], '');
-  if (optionsJson) {
+  if (Array.isArray(optionsJson)) {
+    // Some docs store a real array; JSON.parse(array) threw and the question
+    // silently became a short answer whose "answer" was the letter key.
+    labels = optionsJson.map((v) => String(v));
+  } else if (optionsJson) {
     try {
       const arr = JSON.parse(optionsJson);
       if (Array.isArray(arr)) labels = arr.map((v) => String(v));
@@ -265,16 +270,10 @@ export function toDirectItemFromRow(row) {
   };
 
   const asMcq = () => {
-    // Determine correct index from A/B/C/D, 1-based numbers, or by matching content
-    let correctIndex = -1;
-    if (/^[A-D]$/i.test(correctRaw)) {
-      correctIndex = correctRaw.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
-    } else if (/^[1-9]$/.test(correctRaw)) {
-      correctIndex = parseInt(correctRaw, 10) - 1;
-    } else if (correctRaw) {
-      const idx = labels.findIndex((l) => l.trim().toLowerCase() === correctRaw.trim().toLowerCase());
-      if (idx !== -1) correctIndex = idx;
-    }
+    // Text first, then letter, then 1-based number, bounds-checked — the one
+    // resolver shared with the app (shared/quizKey.ts). Letter-first misgraded
+    // text keys that look like a letter/number (P0 validation).
+    const correctIndex = resolveCorrectIndex(correctRaw, labels);
     if (labels.length >= 2 && correctIndex >= 0) {
       const correctLabel = labels[correctIndex];
       return { ...meta, kind: 'mcq', stem, context, options: labels, correctIndex, correctLabel, hints, good, wrong };

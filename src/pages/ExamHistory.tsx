@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { isOtherAccountDraft } from '../../shared/examDraft';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronRight, Target } from '../components/icons';
 import useStore from '../contexts/store';
@@ -79,7 +80,7 @@ const draftHasProgress = (d: any): boolean =>
  * All resumable drafts this device has mirrored, newest first. Read once on
  * mount (localStorage is synchronous and does not change under us here).
  */
-function readLocalDrafts(): Array<{ examKey: string; answered: number; updatedAtMs: number | null }> {
+function readLocalDrafts(uid?: string | null): Array<{ examKey: string; answered: number; updatedAtMs: number | null }> {
   const out: Array<{ examKey: string; answered: number; updatedAtMs: number | null }> = [];
   try {
     for (let i = 0; i < localStorage.length; i++) {
@@ -88,7 +89,7 @@ function readLocalDrafts(): Array<{ examKey: string; answered: number; updatedAt
       const raw = localStorage.getItem(key);
       if (!raw) continue;
       const draft = JSON.parse(raw);
-      if (!draft || draft.status === 'submitted' || !draftHasProgress(draft)) continue;
+      if (!draft || draft.status === 'submitted' || !draftHasProgress(draft) || isOtherAccountDraft(draft, uid)) continue;
       out.push({
         examKey: key.slice(DRAFT_PREFIX.length),
         answered: draft.answers ? Object.keys(draft.answers).length : 0,
@@ -130,7 +131,7 @@ export default function ExamHistory() {
     queryFn: () => loadDueReviewIds(userId!),
     enabled: !!userId,
   });
-  const [localDrafts] = useState(readLocalDrafts);
+  const [localDrafts] = useState(() => readLocalDrafts(userId));
 
   /*
    * THE DRAFTS THAT ARE NOT ON THIS DEVICE.

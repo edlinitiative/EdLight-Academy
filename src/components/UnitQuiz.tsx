@@ -101,6 +101,11 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
   // completion effect ever ran twice for the same sitting (a change in `items`
   // is enough) the student would skip a level. One write per finished run.
   const chapterTestWrittenRef = useRef(false);
+  // ONE completion write per finished run, for the account that played it.
+  // The effect below re-runs on any dep change (items/lessonId/uid); without
+  // this a sign-out → sign-in on a shared computer re-wrote the finished
+  // score into the NEXT student's progress/mastery (P0 validation).
+  const completionWrittenRef = useRef<string | null>(null);
 
   useEffect(() => {
     setIdx(0);
@@ -110,6 +115,7 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
     startedAtRef.current = Date.now();
     outcomesRef.current = {};
     chapterTestWrittenRef.current = false;
+    completionWrittenRef.current = null;
   }, [subjectCode, unitId]);
 
   // Reset per-question status whenever the active question changes.
@@ -122,11 +128,13 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
   // Track quiz completion
   useEffect(() => {
     if (finished && user?.uid && courseId && items.length > 0) {
+      if (completionWrittenRef.current) return; // already written for this run
+      completionWrittenRef.current = user.uid;
       const quizId = `${subjectCode}-U${chapterNumber}${subchapterNumber ? `-L${subchapterNumber}` : ''}`;
       const percentage = (score / items.length) * 100;
       const timeSpent = Math.max(0, Math.round((Date.now() - startedAtRef.current) / 1000));
       
-      trackQuizAttempt(user.uid, courseId, quizId, {
+      const attempt = trackQuizAttempt(user.uid, courseId, quizId, {
         score,
         totalQuestions: items.length,
         percentage,
@@ -135,9 +143,13 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
         console.error('[UnitQuiz] Error tracking quiz attempt:', err);
       });
 
-      // Mark lesson as complete if score is 60% or better and lessonId is provided
+      // Mark lesson as complete if score is 60% or better and lessonId is provided.
+      // AFTER the attempt write: that write creates the progress doc, and
+      // markLessonComplete silently does nothing when the doc doesn't exist yet
+      // — so the first quiz in a course never completed its lesson.
       if (percentage >= 60 && lessonId) {
-        markLessonComplete(user.uid, courseId, lessonId).catch(err => {
+        const uid = user.uid;
+        attempt.then(() => markLessonComplete(uid, courseId, lessonId)).catch(err => {
           console.error('[UnitQuiz] Error marking lesson complete:', err);
         });
       }
@@ -148,7 +160,12 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
       // could read. Records the exact percentage, not the 60% pass/fail, and
       // only improves a lesson (the rules live in /shared/mastery.ts).
       if (lessonId) {
-        recordLessonExercise(user.uid, courseId, lessonId, percentage).catch(err => {
+        // First-try correctness, like the chapter test: `score` also counts a
+        // right answer found after wrong attempts, which let a student
+        // brute-force 4-option questions to `proficient` (P0 validation).
+        const firstTry = Object.values(outcomesRef.current).filter((v) => v === true).length;
+        const masteryPct = (firstTry / items.length) * 100;
+        recordLessonExercise(user.uid, courseId, lessonId, masteryPct).catch(err => {
           console.error('[UnitQuiz] Error recording mastery:', err);
         });
       }
@@ -235,6 +252,7 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
             setFinished(false);
             outcomesRef.current = {};
             chapterTestWrittenRef.current = false;
+    completionWrittenRef.current = null;
             startedAtRef.current = Date.now();
           }}>{t('quizzes.retry', 'Recommencer')}</button>
           {onClose && (

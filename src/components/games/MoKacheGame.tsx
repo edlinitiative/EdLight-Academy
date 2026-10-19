@@ -10,10 +10,13 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { CalendarCheck, Shuffle, Lightbulb, Share2, Check } from '../icons';
 import { MO_KACHE_WORDS, WORD_LENGTH, isPlayableWordShape } from '../../data/moKacheWords';
 import { todayStr } from '../../services/streakService';
+import useStore from '../../contexts/store';
 
 const MAX_GUESSES = 6;
 const KEY_ROWS = ['AZERTYUIOP', 'QSDFGHJKLM', '↵WXCVBN⌫'];
-const storageKey = (date) => `edlight_mokache_${date}`;
+// Per ACCOUNT and day: a device-wide key let sibling A's finished grid lock
+// sibling B out of today's word (and its XP) on a shared phone (P0 validation).
+export const storageKey = (date, uid?: string | null) => (uid ? `edlight_mokache_${uid}_${date}` : `edlight_mokache_${date}`);
 
 function dailyWordIndex(dateStr) {
   // Simple deterministic hash of YYYY-MM-DD → stable index for everyone.
@@ -39,6 +42,7 @@ function evaluateGuess(guess, target) {
 
 export default function MoKacheGame({ isCreole, onExit, onRecord }) {
   const today = todayStr();
+  const uid = useStore((s) => s.user?.uid ?? null);
   const [mode, setMode] = useState('daily'); // 'daily' | 'practice'
   const [practiceNonce, setPracticeNonce] = useState(0);
 
@@ -61,7 +65,7 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }) {
   useEffect(() => {
     if (mode !== 'daily') { setGuesses([]); setCurrent(''); setState('playing'); setReward(null); setShowHint(false); return; }
     try {
-      const saved = JSON.parse(localStorage.getItem(storageKey(today)) || 'null');
+      const saved = JSON.parse(localStorage.getItem(storageKey(today, uid)) || 'null');
       if (saved && Array.isArray(saved.guesses)) {
         setGuesses(saved.guesses);
         setState(saved.state || 'playing');
@@ -70,12 +74,12 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }) {
       }
     } catch { setGuesses([]); setState('playing'); }
     setCurrent(''); setReward(null); setShowHint(false);
-  }, [mode, today, practiceNonce]);
+  }, [mode, today, practiceNonce, uid]);
 
   const persistDaily = (nextGuesses, nextState) => {
     if (mode !== 'daily') return;
     try {
-      localStorage.setItem(storageKey(today), JSON.stringify({ guesses: nextGuesses, state: nextState }));
+      localStorage.setItem(storageKey(today, uid), JSON.stringify({ guesses: nextGuesses, state: nextState }));
     } catch {}
   };
 

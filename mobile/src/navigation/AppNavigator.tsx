@@ -33,6 +33,7 @@ import * as ExpoLinking from 'expo-linking';
 import { useReduceMotion } from '../utils/motion';
 import { resolveAppPath, stateForTarget, type ArenaHubSection } from './arenaLinks';
 import { setCurrentRouteProvider } from '../services/telemetry';
+import { shouldReplayInitialTarget } from './initialLink';
 
 export type RootParamList = {
   Loading: undefined;
@@ -312,8 +313,10 @@ export default function AppNavigator() {
         // Linking may have resolved while only Loading was registered.
         // Reapply the typed destination after authentication readiness.
         const target = resolveAppPath(url);
-        if (target && ['Tournois', 'CompetitionWorkspace'].includes(target.screen) && navigationRef.isReady())
-          (navigationRef.navigate as any)(target.screen, target.params);
+        // Any target, not only competitions: duel invites and Arène links
+        // that cold-started the app were dropped on Home (P0 validation).
+        if (navigationRef.isReady() && shouldReplayInitialTarget(target, navigationRef.getCurrentRoute()?.name))
+          (navigationRef.navigate as any)(target!.screen, target!.params);
         return;
       }
       if (!raw) return;

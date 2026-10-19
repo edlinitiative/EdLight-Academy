@@ -74,6 +74,10 @@ export async function sendToSandra(
   const convId = await readConvId();
   if (convId) body.conversationId = convId;
 
+  // 90 s ceiling (P0 validation): a fetch on a half-dead network may never
+  // settle, leaving the screen "sending" and ignoring every later message.
+  const ctrl = new AbortController();
+  const abortId = setTimeout(() => ctrl.abort(), 90_000);
   try {
     const res = await fetch(CHAT_URL, {
       method: 'POST',
@@ -82,6 +86,7 @@ export async function sendToSandra(
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(body),
+      signal: ctrl.signal,
     });
 
     if (res.status === 401) return { kind: 'auth' };
@@ -111,5 +116,7 @@ export async function sendToSandra(
     return { kind: 'reply', reply, remaining: data?.remaining };
   } catch {
     return { kind: 'error' };
+  } finally {
+    clearTimeout(abortId);
   }
 }

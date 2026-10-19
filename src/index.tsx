@@ -119,12 +119,13 @@ function bootstrapFirebaseAuth() {
       onAuthStateChange(async (user) => {
         const { setUser, setAuthConfirmed, logout } = useStore.getState();
         if (user) {
-          // Update last_seen in Firestore on session restore
-          try {
-            await upsertUserDocument(user, false);
-          } catch (error) {
+          // Update last_seen in Firestore on session restore. NOT awaited: a
+          // Firestore write only resolves on server ack, so offline (installed
+          // PWA opened without signal) the await never returned, setUser /
+          // setAuthConfirmed never ran and "/" spun forever (P0 validation).
+          upsertUserDocument(user, false).catch((error) => {
             console.error('Failed to update user document:', error);
-          }
+          });
 
           setUser({
             uid: user.uid,

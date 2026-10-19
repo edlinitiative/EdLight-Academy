@@ -20,6 +20,7 @@ import { fetchCatalogIndex } from '../utils/examCatalog';
 import { normalizeSubject, normalizeLevel, normalizeYear, normalizeExamTitle, subjectDisplayName } from '../utils/examUtils';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
 import type { LastActivity } from '../contexts/store';
+import { isOtherAccountDraft } from '../../../shared/examDraft';
 
 type Nav = NativeStackNavigationProp<ExamsParamList, 'ExamLanding'>;
 
@@ -111,6 +112,7 @@ function relativeWhen(ms: number, isCreole: boolean): string {
 async function findResumableExam(
   fallbackLevel: string,
   lastActivity: LastActivity | null,
+  uid?: string | null,
 ): Promise<ResumableExam | null> {
   let keys: readonly string[] = [];
   try {
@@ -129,6 +131,8 @@ async function findResumableExam(
       try { draft = JSON.parse(raw); } catch { continue; }
       // Only `in_progress` counts; a submitted exam belongs on the results screen.
       if (!draft || draft.status !== 'in_progress') continue;
+      // Another account's paper on this shared phone is not this student's.
+      if (isOtherAccountDraft(draft, uid)) continue;
       const examId = key.slice(EXAM_DRAFT_PREFIX.length);
       if (!examId) continue;
       const updatedAt = Number(draft.updated_at_ms) || 0;
@@ -212,6 +216,7 @@ export default function ExamLandingScreen() {
   const scrollRef = React.useRef<any>(null);
   useScrollToTop(scrollRef);
   const { language, track, grade, lastActivity, setTrack, setOnboardingCompleted } = useStore();
+  const uid = useStore((s) => s.user?.uid ?? null);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -284,11 +289,11 @@ export default function ExamLandingScreen() {
   useFocusEffect(
     React.useCallback(() => {
       let active = true;
-      findResumableExam(myLevelId ?? 'terminale', lastActivity)
+      findResumableExam(myLevelId ?? 'terminale', lastActivity, uid)
         .then((r) => { if (active) setResume(r); })
         .catch(() => { /* keep whatever is on screen */ });
       return () => { active = false; };
-    }, [myLevelId, lastActivity]),
+    }, [myLevelId, lastActivity, uid]),
   );
 
   function continueExam(target: ResumableExam) {

@@ -98,7 +98,7 @@ export default function SandraPanel({ open, onClose }: SandraPanelProps) {
 
   const send = async (
     text: string,
-    opts: { isRetry?: boolean; wasFullRetry?: boolean } = {},
+    opts: { isRetry?: boolean; wasFullRetry?: boolean; convReset?: boolean } = {},
   ) => {
     const message = text.trim().slice(0, MAX_CHARS);
     if (!message || sending) return;
@@ -122,7 +122,18 @@ export default function SandraPanel({ open, onClose }: SandraPanelProps) {
       const convId = readConvId();
       if (convId) body.conversationId = convId;
 
-      const res = await authedFetch('/api/chat', body);
+      // 90 s ceiling (P0 validation): without it a stalled request kept
+      // `sending` true and Sandra ignored every later message until reload.
+      const res = await authedFetch('/api/chat', body, { timeoutMs: 90_000 });
+
+      // 403 with a conversation id = that thread isn't this account's (an
+      // older tab session). Drop it and send once into a fresh conversation.
+      if (res.status === 403 && convId && !opts.convReset) {
+        writeConvId(null);
+        setSending(false);
+        await send(message, { ...opts, isRetry: true, convReset: true });
+        return;
+      }
 
       if (res.status === 401) {
         setError({ kind: 'auth' });

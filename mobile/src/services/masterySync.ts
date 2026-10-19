@@ -53,6 +53,52 @@ export async function fetchRemoteMastery(uid: string): Promise<ProgressMap> {
   }
 }
 
+/** The server's copy, or null when the read FAILED (unlike fetchRemoteMastery). */
+async function fetchRemoteMasteryOrNull(uid: string): Promise<ProgressMap | null> {
+  try {
+    const snap = await getDoc(masteryDoc(uid));
+    if (!snap.exists()) return {};
+    const lessons = snap.data()?.lessons;
+    return lessons && typeof lessons === 'object' ? (lessons as ProgressMap) : {};
+  } catch (error) {
+    console.warn('[Mastery] fetch failed:', error);
+    return null;
+  }
+}
+
+/** The lessons whose record differs from the last pushed snapshot. */
+function changedSince(prev: ProgressMap | null, next: ProgressMap): ProgressMap {
+  if (!prev) return next;
+  const out: ProgressMap = {};
+  for (const [id, rec] of Object.entries(next)) {
+    if (!sameProgress({ [id]: (prev as any)[id] } as ProgressMap, { [id]: rec } as ProgressMap)) out[id] = rec;
+  }
+  return out;
+}
+
+/**
+ * The background push. `{merge:true}` merges FIELD BY FIELD, so writing a map
+ * this device last synced days ago put `lessons.X.bestPct: 40` over the 100
+ * the student earned on the web since (P0 validation). Join with the server
+ * copy first, write the join, and fold the server's progress back in. When
+ * the read fails (offline), write only the lessons this device just changed.
+ */
+async function pushMergedMastery(uid: string, local: ProgressMap, prevPushed: ProgressMap | null): Promise<void> {
+  const remote = await fetchRemoteMasteryOrNull(uid);
+  if (!isSameAccount(uid, useStore.getState())) return;
+  if (remote == null) {
+    const delta = changedSince(prevPushed, local);
+    if (Object.keys(delta).length > 0) await pushMastery(uid, delta);
+    return;
+  }
+  const merged = mergeProgress(local, remote);
+  // Mark the join as pushed first, so folding it into the store doesn't
+  // schedule a redundant push of the same map.
+  lastPushed = merged;
+  if (!sameProgress(local, merged)) useStore.getState().mergeRemoteProgress(merged);
+  if (!sameProgress(remote, merged)) await pushMastery(uid, merged);
+}
+
 /** Overwrite the server's copy with `progress` (already merged by the caller). */
 export async function pushMastery(uid: string, progress: ProgressMap): Promise<void> {
   try {
@@ -120,6 +166,9 @@ export async function syncMasteryOnLogin(uid: string): Promise<void> {
   const merged = mergeProgress(local, remote);
 
   if (!sameProgress(local, merged)) useStore.getState().mergeRemoteProgress(merged);
+  // Device and server now agree on `merged`: the baseline an offline push
+  // diffs against (pushMergedMastery writes only what changed after it).
+  lastPushed = merged;
   // Only write when the device is genuinely ahead — a fresh install with
   // nothing local must not clear the server.
   if (!sameProgress(remote, merged)) await pushMastery(uid, merged);
@@ -163,11 +212,7 @@ export function startMasterySync(): () => void {
       if (pushTimer) clearTimeout(pushTimer);
       pushTimer = setTimeout(() => {
         pushTimer = null;
-        const s = useStore.getState();
-        const currentUid = s.user?.uid;
-        if (!currentUid || !s.isAuthenticated) return;
-        lastPushed = s.progress as ProgressMap;
-        pushMastery(currentUid, lastPushed);
+        runMasteryPush();
       }, PUSH_DEBOUNCE_MS);
     }
 
@@ -188,6 +233,39 @@ export function startMasterySync(): () => void {
   });
 
   return unsubscribe;
+}
+
+function runMasteryPush(): Promise<void> {
+  const s = useStore.getState();
+  const currentUid = s.user?.uid;
+  if (!currentUid || !s.isAuthenticated) return Promise.resolve();
+  const prev = lastPushed;
+  lastPushed = s.progress as ProgressMap;
+  return pushMergedMastery(currentUid, lastPushed, prev).catch((e) => {
+    console.warn('[Mastery] push failed:', e);
+  });
+}
+
+/**
+ * Sign-out (explicit logout, NOT an account switch): push what the debounce
+ * is still holding BEFORE logout() clears the local map. Stopping the timers
+ * used to drop the last ~4 s of work — the result of the very exercise set the
+ * student just finished (P0 validation). Callers bound the wait.
+ */
+export async function flushMasterySync(uid: string): Promise<void> {
+  if (!uid || !isSameAccount(uid, useStore.getState())) return;
+  const tasks: Promise<void>[] = [];
+  if (pushTimer) {
+    clearTimeout(pushTimer); pushTimer = null;
+    tasks.push(runMasteryPush());
+  }
+  if (reviewPushTimer) {
+    clearTimeout(reviewPushTimer); reviewPushTimer = null;
+    const review = useStore.getState().review as ReviewMap;
+    lastPushedReview = review;
+    tasks.push(pushReview(uid, review));
+  }
+  await Promise.all(tasks);
 }
 
 /**

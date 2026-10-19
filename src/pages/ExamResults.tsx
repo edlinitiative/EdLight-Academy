@@ -587,6 +587,22 @@ const ExamResults = () => {
         </p>
       )}
 
+      {/* Set by ExamTake when the account copy wasn't acknowledged in time
+          (offline) or was refused. Never claim it is in the history yet. */}
+      {(stored?.syncState === 'pending' || stored?.syncState === 'failed') && (
+        <p className="exam-results__caveat exam-results__caveat--warn" role="status">
+          {stored.syncState === 'pending'
+            ? t(
+              'Pas encore enregistré sur votre compte : la connexion est lente ou absente. Gardez l’application ouverte, le résultat sera envoyé dès le retour du réseau.',
+              'Poko anrejistre sou kont ou : koneksyon an lan oswa li pa la. Kite aplikasyon an louvri, rezilta a ap voye depi rezo a tounen.',
+            )
+            : t(
+              'Ce résultat n’a pas pu être enregistré sur votre compte. Vos réponses restent sur cet appareil : rouvrez l’examen pour le remettre à nouveau.',
+              'Nou pa t ka anrejistre rezilta sa a sou kont ou. Repons ou yo rete sou aparèy sa a : relouvri egzamen an pou remèt li ankò.',
+            )}
+        </p>
+      )}
+
       {/* Score overview */}
       <div className="exam-results__overview" aria-label={`${t('Score', 'Nòt')}: ${pct}%`}>
         <div className="exam-results__summary">

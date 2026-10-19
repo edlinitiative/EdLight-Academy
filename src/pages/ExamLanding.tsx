@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { isOtherAccountDraft } from '../../shared/examDraft';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { History, ChevronRight, Search, ArrowRight } from '../components/icons';
@@ -39,7 +40,7 @@ interface DraftRow {
 /** Every local in-progress exam draft (ExamTake's synchronous mirror keys),
  *  newest first. Works signed-out; Firestore drafts are merged in by the
  *  caller for signed-in, cross-device coverage. */
-function localDrafts(): DraftRow[] {
+function localDrafts(uid?: string | null): DraftRow[] {
   const rows: DraftRow[] = [];
   try {
     for (let i = 0; i < localStorage.length; i++) {
@@ -50,7 +51,7 @@ function localDrafts(): DraftRow[] {
       const draft = JSON.parse(raw);
       const answered = draft?.answers ? Object.keys(draft.answers).length : 0;
       const hasProgress = answered > 0 || (draft?.currentQ ?? 0) > 0;
-      if (!hasProgress || draft?.status === 'submitted') continue;
+      if (!hasProgress || draft?.status === 'submitted' || isOtherAccountDraft(draft, uid)) continue;
       rows.push({
         examId: k.slice('edlight-exam-draft-'.length),
         level: draft?.level || '',
@@ -112,7 +113,7 @@ const ExamLanding = () => {
   useEffect(() => {
     let alive = true;
     const merged = new Map<string, DraftRow>();
-    for (const d of localDrafts()) merged.set(d.examId, d);
+    for (const d of localDrafts(userId)) merged.set(d.examId, d);
     const publish = () => { if (alive) setDrafts([...merged.values()].sort((a, b) => b.updatedAtMs - a.updatedAtMs).slice(0, 3)); };
     if (!userId) { publish(); return () => { alive = false; }; }
     listRecentExamAttempts(userId, 10).then((remote: any[]) => {

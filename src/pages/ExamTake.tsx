@@ -8,9 +8,9 @@ import FigureRenderer from '../components/FigureRenderer';
 import InstructionRenderer from '../components/InstructionRenderer';
 import MathKeyboard from '../components/MathKeyboard';
 import { useKatex, renderWithKatex } from '../utils/shared';
-import { loadExamAttemptDraft, saveExamAttemptDraft, markExamAttemptSubmitted } from '../services/examAttempts';
+import { loadExamAttemptDraft, saveExamAttemptDraft, commitExamSubmission } from '../services/examAttempts';
+import { examDraftKey, readLocalExamDraft, pickResumeDraft, draftPosition, settleWithin } from '../../shared/examDraft';
 import { authedFetch, auth } from '../services/firebase';
-import { saveExamResult } from '../services/examResults';
 import { track } from '../utils/analytics';
 import { recordTaskResult, loadActiveStudyPlan } from '../services/studyPlanService';
 import {
@@ -486,13 +486,16 @@ const ExamTake = () => {
 
   // A synchronous localStorage mirror of the draft — survives PWA backgrounding
   // / app kill, when the debounced Firestore write can't complete.
-  const localDraftKey = examKey ? `edlight-exam-draft-${examKey}` : null;
+  const localDraftKey = examKey ? examDraftKey(examKey) : null;
+  // The mirror carries the owner's uid: on a shared device it is only ever
+  // restored into that account (readLocalExamDraft), never into the next
+  // student who opens the same paper.
   const persistLocal = useCallback((payload) => {
-    if (!localDraftKey || typeof localStorage === 'undefined') return;
+    if (!localDraftKey || !userId || typeof localStorage === 'undefined') return;
     try {
-      localStorage.setItem(localDraftKey, JSON.stringify({ ...payload, status: 'in_progress', updated_at_ms: Date.now() }));
+      localStorage.setItem(localDraftKey, JSON.stringify({ ...payload, uid: userId, status: 'in_progress', updated_at_ms: Date.now() }));
     } catch { /* quota / unavailable */ }
-  }, [localDraftKey]);
+  }, [localDraftKey, userId]);
   const clearLocalDraft = useCallback(() => {
     if (!localDraftKey || typeof localStorage === 'undefined') return;
     try { localStorage.removeItem(localDraftKey); } catch { /* ignore */ }
@@ -550,26 +553,24 @@ const ExamTake = () => {
       // Prefer the local mirror when it's newer than Firestore — a background /
       // app-kill can lose the debounced Firestore write, but localStorage is
       // written synchronously, so it holds the true latest position/answers.
+      // Only this account's mirror is considered (shared devices).
+      let local = null;
       try {
         if (localDraftKey && typeof localStorage !== 'undefined') {
-          const raw = localStorage.getItem(localDraftKey);
-          if (raw) {
-            const local = JSON.parse(raw);
-            if (local && local.status === 'in_progress' &&
-                (!draft || (local.updated_at_ms || 0) > (draft.updated_at_ms || 0))) {
-              draft = local;
-            }
-          }
+          local = readLocalExamDraft(localStorage.getItem(localDraftKey), userId);
         }
-      } catch { /* ignore corrupt mirror */ }
+      } catch { /* storage unavailable */ }
+      draft = pickResumeDraft(draft, local);
 
       resumeCheckedRef.current = true;
       setDraftChecked(true); // unblock the save effect (even when there's no draft)
-      if (!draft || draft.status !== 'in_progress') return;
+      if (!draft) return;
       const hasAnswers = draft.answers && Object.keys(draft.answers).length > 0;
       // Also resume when they'd navigated past Q1 without answering yet — position
       // alone is worth restoring (essay/proof questions are often read first).
-      const hasPosition = Number.isFinite(draft.currentQ) && draft.currentQ > 0;
+      // draftPosition also reads the mobile app's `currentIdx`.
+      const pos = draftPosition(draft);
+      const hasPosition = pos != null && pos > 0;
       if (!hasAnswers && !hasPosition) return;
       startedAtMsRef.current = draft.started_at_ms || Date.now();
       setResumeDraft(draft);
@@ -588,13 +589,14 @@ const ExamTake = () => {
     setAnswers(resumeDraft.answers || {});
     setQuestionResults(resumeDraft.questionResults || {});
     if (resumeDraft.feedbackMode) setFeedbackMode(resumeDraft.feedbackMode);
-    if (Number.isFinite(resumeDraft.currentQ)) setCurrentQ(resumeDraft.currentQ);
+    const pos = draftPosition(resumeDraft);
+    if (pos != null && pos < questions.length) setCurrentQ(pos);
     if (typeof resumeDraft.secondsLeft === 'number' && resumeDraft.secondsLeft >= 0) {
       setSecondsLeft(resumeDraft.secondsLeft);
     }
     setShowResumePrompt(false);
     setViewState('active');
-  }, [resumeDraft]);
+  }, [resumeDraft, questions.length]);
 
   useEffect(() => {
     if (resumeIntent && showResumePrompt && resumeDraft) handleResume();
@@ -743,6 +745,9 @@ const ExamTake = () => {
       duration_minutes: durationMin || 0,
       feedbackMode,
       currentQ,
+      // Same index under the mobile app's field name, so a paper started here
+      // resumes at the right question on the phone.
+      currentIdx: currentQ,
       secondsLeft,
       answers,
       // Only persist compacted pre-graded results (optional, mainly for immediate mode)
@@ -1083,13 +1088,18 @@ const ExamTake = () => {
   const trackInfo = userTrack ? TRACK_BY_CODE[userTrack] : null;
 
   // ── Submit ─────────────────────────────────────────────────────────────────
+  // One submission at a time: the timer's auto-submit at 0:00 and a tap on
+  // "Remettre" (or a double tap) used to run two full gradings — two rounds
+  // of AI essay calls and two result writes.
+  const submitInFlightRef = useRef(false);
   const handleSubmit = useCallback(async () => {
+    if (submitInFlightRef.current || submittedRef.current) return;
+    submitInFlightRef.current = true;
     clearInterval(timerRef.current);
-    // Stop the draft machinery: cancel any pending debounced write, drop the
-    // local mirror, and clear the Home "Reprendre" banner so a finished exam
-    // isn't offered as resumable (which would dead-end at a submitted attempt).
+    // Stop the debounced draft write and clear the Home "Reprendre" banner.
+    // The local mirror is NOT dropped here any more: it is the only copy of
+    // the answers until the account acknowledges the submission (below).
     if (saveDraftTimerRef.current) clearTimeout(saveDraftTimerRef.current);
-    clearLocalDraft();
     clearActivity();
     setSubmitting(true);
 
@@ -1155,6 +1165,7 @@ const ExamTake = () => {
     }
 
     setSubmitted(true);
+    submittedRef.current = true; // block the unmount/pagehide draft flush now, not after a render
     setSubmitting(false);
 
     // Grading and the hand-off to the results page are the two steps that can
@@ -1191,13 +1202,21 @@ const ExamTake = () => {
       console.error('[ExamTake] Submission failed while grading/storing:', e);
       setShowConfirm(false);
       setSubmitError(e instanceof Error ? e.message : String(e));
+      // Let "Réessayer" run again; the answers are still in state + mirror.
+      submitInFlightRef.current = false;
+      submittedRef.current = false;
+      setSubmitted(false);
       return;
     }
 
-    // Persist to Firestore for cross-device results/resume (best-effort)
+    // Persist to Firestore for cross-device results/history. Result + the
+    // attempt's `submitted` mark are one atomic batch. setDoc/commit only
+    // resolve on SERVER acknowledgement, so offline the old `await` never
+    // returned and the paper sat on "Envoi…" with no results. Wait a bounded
+    // time: the write stays queued in Firestore's persistent cache and commits
+    // on reconnect; the results page says the account copy is still pending.
     if (userId && examKey) {
-      try {
-        await saveExamResult(userId, examKey, {
+      const commit = commitExamSubmission(userId, examKey, {
           exam_id: examKey,
           level: normalizeLevel(exam.level),
           subject: examSubject,
@@ -1214,26 +1233,40 @@ const ExamTake = () => {
             }])
           ),
           submitted_at_ms: Date.now(),
-        });
-        await markExamAttemptSubmitted(userId, examKey, {
+        }, {
           last_result_at_ms: Date.now(),
         });
-      } catch (e) {
-        console.warn('[ExamResult] Failed to persist result:', e);
-      }
-
-      // Update study plan SRS if exam is in the active plan (best-effort)
+      // Drop the local mirror only once the account holds the result; until
+      // then it is what lets the student resume and resubmit if the queued
+      // write is lost (e.g. storage without IndexedDB persistence).
+      commit.then((written) => { if (written) clearLocalDraft(); }, (e) => console.warn('[ExamResult] Failed to persist result:', e));
+      const outcome = await settleWithin(commit, 8000);
+      // `false` = Firebase Auth held no user, so nothing was written.
+      const syncState = outcome.status === 'confirmed'
+        ? (outcome.value ? 'saved' : 'failed')
+        : outcome.status;
       try {
-        const activePlan = await loadActiveStudyPlan(userId);
-        if (activePlan?.tasks?.some((t) => t.examId === examKey)) {
-          await recordTaskResult(userId, activePlan.id, examKey, {
-            scorePct: result.summary.percentage ?? 0,
-            answeredAt: Date.now(),
-          });
+        const key = `exam-result-${examKey}`;
+        const raw = sessionStorage.getItem(key);
+        if (raw) sessionStorage.setItem(key, JSON.stringify({ ...JSON.parse(raw), syncState }));
+      } catch { /* the results page simply shows no sync note */ }
+
+      // Update study plan SRS if exam is in the active plan (best-effort).
+      // Not awaited: its write also only resolves on server ack, and offline
+      // it held the student on the exam instead of showing the results.
+      (async () => {
+        try {
+          const activePlan = await loadActiveStudyPlan(userId);
+          if (activePlan?.tasks?.some((t) => t.examId === examKey)) {
+            await recordTaskResult(userId, activePlan.id, examKey, {
+              scorePct: result.summary.percentage ?? 0,
+              answeredAt: Date.now(),
+            });
+          }
+        } catch (e) {
+          console.warn('[StudyPlan] Failed to record task result:', e);
         }
-      } catch (e) {
-        console.warn('[StudyPlan] Failed to record task result:', e);
-      }
+      })();
     }
 
     // Grading succeeded (a failure returns above) and, for signed-in students,
