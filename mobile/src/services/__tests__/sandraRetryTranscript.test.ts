@@ -20,7 +20,7 @@ it('sends the caller\'s clientMessageId, and keeps it on the conversation-full r
   fetchMock
     .mockResolvedValueOnce({ status: 200, ok: true, json: async () => ({ conversationFull: true }) })
     .mockResolvedValueOnce({ status: 200, ok: true, json: async () => ({ reply: 'ok', conversationId: 'c2' }) });
-  const r = await sendToSandra('Q', 'fr', undefined, undefined, false, 'cid-12345678');
+  const r = await sendToSandra('Q', 'fr', undefined, undefined, false, { clientMessageId: 'cid-12345678' });
   expect(r).toMatchObject({ kind: 'reply', reply: 'ok' });
   const ids = fetchMock.mock.calls.map((c) => JSON.parse(c[1].body).clientMessageId);
   expect(ids).toEqual(['cid-12345678', 'cid-12345678']);
