@@ -23,6 +23,7 @@ import {
   type Visibility,
 } from '../../../shared/tournois/config';
 import { buildSchedule } from '../../../shared/tournois/schedule';
+import { CREATION_STEP_FIELDS, creationPayload } from '../../../shared/tournois/creationInput';
 import { createTournament, errorMessage } from '../../services/tournoisService';
 import { formatWhen, useLang } from './parts';
 import ArenaPageHead from '../../components/arena/ArenaPageHead';
@@ -82,24 +83,18 @@ export default function TournoisCreate() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const input = useMemo(() => ({
-    title, description, format, teamRule: format === 'bracket' ? 'solo' : teamRule, teamSize, visibility, categories,
+  // The same body the app sends (shared/tournois/creationInput.ts).
+  const input = useMemo(() => creationPayload({
+    title, description, format, teamRule, teamSize, visibility, categories,
     questionCount, secondsPerQuestion, startsAt: new Date(start).getTime(),
-    windowHours, roundCount, roundHours: format === 'bracket' ? Math.min(roundHours, LIMITS.bracketRoundHours.max) : roundHours,
-    maxPlayers: format === 'bracket' ? maxPlayers : undefined, creatorPlays,
+    windowHours, roundCount, roundHours, maxPlayers, creatorPlays,
   }), [title, description, format, teamRule, teamSize, visibility, categories, questionCount, secondsPerQuestion, start, windowHours, roundCount, roundHours, maxPlayers, creatorPlays]);
 
   const check = useMemo(() => validateTournamentInput(input, Date.now(), ALLOWED), [input]);
   const bad = new Set(check.ok === false ? check.errors : []);
   const schedule = check.ok === true ? buildSchedule(check.config) : null;
 
-  const STEP_FIELDS: string[][] = [
-    ['title', 'format'],
-    ['categories', 'questionCount', 'secondsPerQuestion'],
-    ['startsAt', 'windowHours', 'roundCount', 'roundHours', 'maxPlayers'],
-    ['visibility'],
-  ];
-  const stepOk = STEP_FIELDS[step].every((f) => !bad.has(f));
+  const stepOk = CREATION_STEP_FIELDS[step].every((f) => !bad.has(f));
 
   if (!user?.uid) {
     return (

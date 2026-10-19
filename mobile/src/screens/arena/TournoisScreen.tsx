@@ -19,7 +19,11 @@ import {
 import { arenaColors as C, arenaType } from '../../theme/arenaTheme';
 import * as service from '../../services/tournoisService';
 import type { Match } from '../../../../shared/tournois/bracket';
-import { TRIVIA_CATEGORIES } from '../../data/triviaData';
+import TournoisCreateForm, {
+  TournoisPinCard,
+} from '../../components/arena/TournoisCreateForm';
+import type { TournamentDraft } from '../../../../shared/tournois/creationInput';
+import { useTrivia } from '../../hooks/useTrivia';
 import {
   POINTS,
   TOURNAMENT_STATE,
@@ -61,14 +65,19 @@ export default function TournoisScreen() {
     [accepted, setAccepted] = useState(false);
   const [now, setNow] = useState(Date.now()),
     [offset, setOffset] = useState(0);
-  const [title, setTitle] = useState(''),
-    [creating, setCreating] = useState(false);
-  const [format, setFormat] = useState<
-    'live' | 'window' | 'rounds' | 'bracket'
-  >('window');
+  const [creating, setCreating] = useState(false);
+  const [createFields, setCreateFields] = useState<string[]>([]);
+  /** The room just created here: its PIN is shown once the room opens. */
+  const [created, setCreated] = useState<{
+    tid: string;
+    pin: string;
+    title: string;
+    visibility: TournamentDraft['visibility'];
+    joinError?: string;
+  } | null>(null);
+  const { profile } = useTrivia();
   const lock = useRef(false),
     generation = useRef(0);
-  const pendingCreation = useRef<Record<string, unknown> | null>(null);
   const shownAt = useRef(Date.now());
   const activeTarget = useRef({ uid, tid });
   activeTarget.current = { uid, tid };
@@ -241,6 +250,30 @@ export default function TournoisScreen() {
       navigation.setParams({ tournamentId: out.tid, pin: undefined });
       await synchronize();
     });
+  const submitCreation = async (draft: TournamentDraft) => {
+    let done = false;
+    await run(async () => {
+      const res = await service.createFromDraft(draft, {
+        displayName:
+          (profile as any)?.leaderboard?.displayName || user?.displayName,
+        school: (profile as any)?.leaderboard?.school || null,
+        grade: useStore.getState().grade,
+      });
+      setCreateFields(res.ok ? [] : res.fields || []);
+      const out = check(res);
+      done = true;
+      setCreated({
+        tid: out.tid,
+        pin: out.pin,
+        title: draft.title,
+        visibility: draft.visibility,
+        joinError: out.joinError,
+      });
+      setCreating(false);
+      setTid(out.tid);
+    });
+    return done;
+  };
   if (viewUid !== uid)
     return (
       <ArenaScreen world={false}>
@@ -336,74 +369,20 @@ export default function TournoisScreen() {
             </ArenaPanel>
             <ArenaButton
               variant="secondary"
+              selected={creating}
               label={t(
-                'Créer un tournoi individuel',
-                'Kreye yon tounwa endividyèl',
+                'Créer un tournoi ou une salle privée',
+                'Kreye yon tounwa oswa yon sal prive',
               )}
               onPress={() => (uid ? setCreating(!creating) : signIn())}
             />
             {creating ? (
-              <ArenaPanel>
-                <TextInput
-                  accessibilityLabel={t('Nom du tournoi', 'Non tounwa a')}
-                  placeholder={t('Nom du tournoi', 'Non tounwa a')}
-                  placeholderTextColor={C.muted}
-                  value={title}
-                  onChangeText={(value) => {
-                    pendingCreation.current = null;
-                    setTitle(value);
-                  }}
-                  maxLength={60}
-                  style={inputStyle}
-                />
-                {(['live', 'window', 'rounds', 'bracket'] as const).map(
-                  (value) => (
-                    <ArenaButton
-                      key={value}
-                      variant={format === value ? 'primary' : 'secondary'}
-                      selected={format === value}
-                      label={service.formatLabel(value, ht)}
-                      onPress={() => {
-                        pendingCreation.current = null;
-                        setFormat(value);
-                      }}
-                    />
-                  ),
-                )}
-                {label(
-                  'Début dans 10 minutes · 10 questions · 20 secondes · fenêtre/manche de 24 h · 2 manches · public · 30 places. Questions de culture générale, sans prix.',
-                  'Kòmanse nan 10 minit · 10 kesyon · 20 segonn · fenèt/manch 24 è · 2 manch · piblik · 30 plas. Kesyon kilti jeneral, san pri.',
-                )}
-                <ArenaButton
-                  label={t('Créer', 'Kreye')}
-                  busy={busy}
-                  onPress={() =>
-                    run(async () => {
-                      const out = check(
-                        await service.createTournament(
-                          (pendingCreation.current ??= {
-                            title,
-                            format,
-                            visibility: 'public',
-                            teamRule: 'solo',
-                            categories: [TRIVIA_CATEGORIES[0].id],
-                            questionCount: 10,
-                            secondsPerQuestion: 20,
-                            startsAt: Date.now() + 600000,
-                            windowHours: 24,
-                            roundHours: 24,
-                            roundCount: 2,
-                            maxPlayers: 30,
-                          }),
-                        ),
-                      );
-                      pendingCreation.current = null;
-                      setTid(out.tid);
-                      setCreating(false);
-                    })
-                  }
-                />
-              </ArenaPanel>
+              <TournoisCreateForm
+                ht={ht}
+                busy={busy}
+                serverFields={createFields}
+                onSubmit={submitCreation}
+              />
             ) : null}
             {mine.length ? (
               <Text
@@ -447,6 +426,29 @@ export default function TournoisScreen() {
             {!tournament && !error
               ? label('Chargement du tournoi…', 'Ap chaje tounwa a…')
               : null}
+            {created && created.tid === tid && created.visibility !== 'public' ? (
+              <TournoisPinCard
+                tid={created.tid}
+                pin={created.pin}
+                title={created.title}
+                visibility={created.visibility}
+                ht={ht}
+              />
+            ) : null}
+            {created && created.tid === tid && created.joinError ? (
+              <ArenaPanel tone="warn">
+                <Text
+                  accessibilityRole="alert"
+                  style={[arenaType.status, { color: C.ink }]}
+                >
+                  {t(
+                    'Tournoi créé, mais votre inscription comme joueur a échoué :',
+                    'Tounwa a kreye, men enskripsyon ou kòm jwè pa pase :',
+                  )}{' '}
+                  {service.errorMessage(created.joinError, ht)}
+                </Text>
+              </ArenaPanel>
+            ) : null}
             {tournament ? (
               <ArenaPanel>
                 {label(

@@ -42,7 +42,15 @@ async function authedFetch(url: string, body: unknown) {
     body: JSON.stringify(body),
   });
 }
-import type { TournamentConfig } from '../../../shared/tournois/config';
+import {
+  validateTournamentInput,
+  type TournamentConfig,
+} from '../../../shared/tournois/config';
+import {
+  creationPayload,
+  type TournamentDraft,
+} from '../../../shared/tournois/creationInput';
+import { TRIVIA_CATEGORIES } from '../data/triviaData';
 import type { PublicQuestion } from '../../../shared/tournois/questions';
 import type { Match } from '../../../shared/tournois/bracket';
 
@@ -250,6 +258,48 @@ export async function createTournament(input: Record<string, unknown>) {
   }>('/api/tournois/create', { ...input, operationId: op });
   if (result.ok) creationOperations.delete(key);
   return result;
+}
+
+/** Every trivia deck a tournament may draw from (the API accepts the same ids). */
+export const TOURNAMENT_CATEGORY_IDS: readonly string[] = TRIVIA_CATEGORIES.map(
+  (c) => c.id,
+);
+
+/** Client-side check with the server's own validator (shared/tournois/config). */
+export function checkCreation(draft: TournamentDraft, now = Date.now()) {
+  return validateTournamentInput(
+    creationPayload(draft),
+    now,
+    TOURNAMENT_CATEGORY_IDS,
+  );
+}
+
+export interface CreatedTournament {
+  tid: string;
+  pin: string;
+  creatorJoined: boolean;
+  joinError?: string;
+}
+
+/**
+ * Create from a form draft: the same body as the web wizard
+ * (creationPayload), refused locally — no request — when the shared
+ * validator rejects it, with the same `invalid` + `fields` the API returns.
+ */
+export async function createFromDraft(
+  draft: TournamentDraft,
+  who: Identity,
+  now = Date.now(),
+): Promise<ApiResult<CreatedTournament>> {
+  const verdict = checkCreation(draft, now);
+  if (!verdict.ok)
+    return { ok: false, error: 'invalid', fields: verdict.errors };
+  return createTournament({
+    ...creationPayload(draft),
+    displayName: who.displayName || undefined,
+    school: who.school || undefined,
+    grade: who.grade || undefined,
+  });
 }
 
 export const cancelTournament = (tid: string) =>
