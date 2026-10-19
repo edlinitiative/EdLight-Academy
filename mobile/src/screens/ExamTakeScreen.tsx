@@ -8,9 +8,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
-import { ChevronLeft, ChevronRight, Send, Lightbulb, Check } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Lightbulb, Check, Clock, LayoutGrid } from 'lucide-react-native';
 import { fetchSingleExam } from '../utils/examCatalog';
-import { flattenQuestions, normalizeLevel, normalizeSubject, normalizeExamTitle, normalizeYear, stripExamHallBoilerplate, subjectFromText } from '../utils/examUtils';
+import { flattenQuestions, normalizeLevel, normalizeSubject, normalizeExamTitle, normalizeYear, stripExamHallBoilerplate, subjectFromText, parseConsignes } from '../utils/examUtils';
 import { gradeExamPendingEssays } from '../../../shared/essayRegrade';
 import { startEssayGrading } from '../services/essayGrading';
 import { loadExamAttemptDraft, saveExamAttemptDraft, commitExamSubmission } from '../services/examAttempts';
@@ -34,11 +34,14 @@ import MathText from '../components/MathText';
 import ExamFigure from '../components/ExamFigure';
 import ExamAnswerInput, { WordCountAnswer, looksMathy } from '../components/ExamAnswerInput';
 import ScaffoldAnswer, { usesScaffold, scaffoldNeedsMath, MATH_SUBJECTS } from '../components/ScaffoldAnswer';
-import FillBlankAnswer, { countBlanks, numberBlanks } from '../components/FillBlankAnswer';
+import FillBlankAnswer, { InlineFillBlank, countBlanks, numberBlanks } from '../components/FillBlankAnswer';
 import ConditionBuilder from '../components/ConditionBuilder';
 import QuestionView from '../components/question/QuestionView';
 import ExamOverview, { ExamSectionSummary } from '../components/ExamOverview';
 import ExamSectionContext from '../components/ExamSectionContext';
+import ExamQuestionGrid from '../components/ExamQuestionGrid';
+import { MultiSelectAnswer, MatchingAnswer, hasStructuredMatching } from '../components/ExamChoiceInputs';
+import { isAnswerFilled } from '../utils/answerFilled';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
 import { compileQuestion, isSerializable, responseToStored, storedToResponse } from '../utils/question';
 
@@ -118,7 +121,7 @@ function QuestionNav({ current, total, answers, sections, onGoto }: {
         />,
       );
     }
-    const answered = answers[i] != null && answers[i] !== '';
+    const answered = isAnswerFilled(answers[i]);
     const active = i === current;
     items.push(
       <PressableScale
@@ -162,6 +165,33 @@ function QuestionNav({ current, total, answers, sections, onGoto }: {
   );
 }
 
+
+/**
+ * A section's instructions minus the exam-hall rules, the web's way
+ * (parseConsignes line by line). Whole-field stripping threw away the task in
+ * "1. calculatrice interdite… 2. téléphone… Recopier et compléter judicieusement
+ * les phrases suivantes :", so the student never saw what to do.
+ */
+function sectionTask(raw: string): string {
+  if (!raw) return '';
+  const { rules, cleanedText } = parseConsignes(raw) as { rules: string[]; cleanedText: string };
+  return rules.length ? String(cleanedText ?? '').trim() : stripExamHallBoilerplate(raw);
+}
+
+/** h:mm:ss / m:ss, as the web's exam timer prints it. */
+export function formatTime(total: number): string {
+  const s = Math.max(0, Math.floor(total));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}` : `${m}:${String(sec).padStart(2, '0')}`;
+}
+
+/** 14:05 — the wall-clock time of the last save. */
+function clock(ms: number): string {
+  const d = new Date(ms);
+  return `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
 
 function MCQQuestion({ question, answer, onAnswer, isCreole }: {
   question: any;
@@ -397,6 +427,15 @@ export default function ExamTakeScreen() {
     route.params?.autostart ? 'questions' : 'overview',
   );
   const [hasDraft, setHasDraft] = useState(false);
+  const [gridOpen, setGridOpen] = useState(false);
+  // The countdown, as on the web (ExamTake `secondsLeft`): it starts at the
+  // paper's duration, travels with the draft so a resume (on either device)
+  // continues it, and submits the paper at 0:00. Null = untimed paper.
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+  const secondsLeftRef = useRef<number | null>(null);
+  secondsLeftRef.current = secondsLeft;
+  // Last autosave outcome, shown under the title like the web's save chip.
+  const [saveState, setSaveState] = useState<{ kind: 'saved'; at: number } | { kind: 'failed' } | null>(null);
   const draftIdxRef = useRef<number | null>(null);
   const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const phaseRef = useRef(phase);
@@ -451,6 +490,7 @@ export default function ExamTakeScreen() {
       // Stored so a resume surface can say "4/10" without refetching the paper
       // (the Home "Examen en cours" card reads this).
       questionCount: questionCountRef.current,
+      ...(secondsLeftRef.current != null ? { secondsLeft: secondsLeftRef.current } : {}),
       status: 'in_progress',
       updated_at_ms: Date.now(),
     };
@@ -461,10 +501,14 @@ export default function ExamTakeScreen() {
       // Same index under the web's field name (cross-device resume position).
       currentQ: currentIdxRef.current,
       questionCount: questionCountRef.current,
+      // Same field name as the web, so the clock resumes on either device.
+      ...(secondsLeftRef.current != null ? { secondsLeft: secondsLeftRef.current } : {}),
       // The web's immediate-mode grades belong to the answers it graded; the
       // answers just changed here, so they must not be reused at submit.
       questionResults: {},
-    }).catch(() => {});
+    })
+      .then(() => setSaveState({ kind: 'saved', at: Date.now() }))
+      .catch(() => setSaveState({ kind: 'failed' }));
   }, [user?.uid, examId, localDraftKey]);
 
   // Flush when the app is backgrounded/inactivated (iOS/Android): unmount only
@@ -486,6 +530,8 @@ export default function ExamTakeScreen() {
         hasPackedExam(examId).then((v) => { fromPackRef.current = v; }, () => {});
         const qs = flattenQuestions(e) as any[];
         setQuestions(qs);
+        const durationMin = Number(e?.duration_minutes) || 0;
+        setSecondsLeft(durationMin > 0 ? durationMin * 60 : null);
         // Show the overview NOW — the draft (a Firestore read, slow on cold
         // start) loads in the background and must not hold the spinner.
         setLoading(false);
@@ -531,6 +577,9 @@ export default function ExamTakeScreen() {
               // Restore the saved position even with no answers yet (e.g. read
               // ahead on essay questions), so Reprendre lands on the right one.
               // draftPosition also reads the web's `currentQ`.
+              if (typeof draft.secondsLeft === 'number' && draft.secondsLeft >= 0 && Number(e?.duration_minutes) > 0) {
+                setSecondsLeft(draft.secondsLeft);
+              }
               const pos = draftPosition(draft);
               if (pos != null && pos > 0) {
                 draftIdxRef.current = pos;
@@ -562,6 +611,26 @@ export default function ExamTakeScreen() {
     draftTimer.current = setTimeout(flushDraft, 10000);
     return () => { if (draftTimer.current) clearTimeout(draftTimer.current); };
   }, [answers, currentIdx, user?.uid, examId, questions.length, phase, flushDraft]);
+
+  // The clock runs only while the questions are on screen.
+  const timed = secondsLeft != null;
+  useEffect(() => {
+    if (phase !== 'questions' || !timed) return;
+    const id = setInterval(() => {
+      setSecondsLeft((s) => (s == null ? s : Math.max(0, s - 1)));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [phase, timed]);
+
+  // Time is up: hand the paper in as it stands, like the web at 0:00 (no
+  // "N unanswered" prompt — there is no time left to act on it).
+  const doSubmitRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    if (phase === 'questions' && secondsLeft === 0 && !submittedRef.current) {
+      Alert.alert(t('Temps écoulé', 'Tan an fini'), t('Ta copie est remise automatiquement.', 'Kopi ou remèt otomatikman.'));
+      doSubmitRef.current();
+    }
+  }, [secondsLeft, phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Final flush on unmount/blur: the 10s debounce is cleared when leaving, so
   // edits made within 10s of exiting would otherwise be lost.
@@ -617,7 +686,7 @@ export default function ExamTakeScreen() {
   }
 
   async function handleSubmit() {
-    const answeredCount = Object.keys(answers).length;
+    const answeredCount = questions.filter((_, i) => isAnswerFilled(answers[i])).length;
     const unanswered = questions.length - answeredCount;
 
     if (unanswered > 0) {
@@ -789,6 +858,8 @@ export default function ExamTakeScreen() {
     }
   }
 
+  doSubmitRef.current = doSubmit;
+
   // Normalized subject drives the scaffold / math-input routing (PWA parity).
   const subject = useMemo(() => normalizeSubject(exam?.subject ?? ''), [exam?.subject]);
 
@@ -812,7 +883,7 @@ export default function ExamTakeScreen() {
       if (count === 0) return;
       metas.push({
         title: String(sec?.section_title || sec?.title || sec?.name || `Section ${i + 1}`).trim(),
-        instructions: stripExamHallBoilerplate(typeof sec?.instructions === 'string' ? sec.instructions.trim() : ''),
+        instructions: sectionTask(typeof sec?.instructions === 'string' ? sec.instructions.trim() : ''),
         passage: stripExamHallBoilerplate(typeof sec?.passage === 'string' ? sec.passage.trim() : ''),
         start: cursor,
         end: cursor + count - 1,
@@ -844,7 +915,7 @@ export default function ExamTakeScreen() {
   if (error || !exam) return withChrome(<ErrorState onRetry={retryLoad} secondaryLabel={t('Retour', 'Retounen')} onSecondary={() => navigation.goBack()} />);
   if (questions.length === 0) return withChrome(<ErrorState message={t("Cet examen n'a pas de questions.", 'Egzamen sa a pa gen kesyon.')} onRetry={retryLoad} secondaryLabel={t('Retour', 'Retounen')} onSecondary={() => navigation.goBack()} />);
 
-  const answeredCount = Object.keys(answers).length;
+  const answeredCount = questions.filter((_, i) => isAnswerFilled(answers[i])).length;
 
   // ── Overview / intro step (before the first question) ──────────────────────
   if (phase === 'overview') {
@@ -900,7 +971,7 @@ export default function ExamTakeScreen() {
   // (which knows about `passage`); fall back to what flattenQuestions attached.
   const section = sectionMeta.find((s) => safeIdx >= s.start && safeIdx <= s.end) ?? null;
   const sectionTitle = section?.title ?? String(q?.sectionTitle ?? '').trim();
-  const sectionInstructions = section?.instructions ?? stripExamHallBoilerplate(String(q?.sectionInstructions ?? '').trim());
+  const sectionInstructions = section?.instructions ?? sectionTask(String(q?.sectionInstructions ?? '').trim());
   const sectionPassage = section?.passage ?? '';
   const isSectionStart = section ? safeIdx === section.start : safeIdx === 0;
 
@@ -936,10 +1007,30 @@ export default function ExamTakeScreen() {
   // well-tested inputs and their own stored formats; the engine takes the rest,
   // and only when the answers survive a round trip through a stored string.
   const hasConditions = Array.isArray(q?.conditions) && q.conditions.length > 0;
+  // A fill_blank whose blanks sit IN the sentence is answered in the sentence,
+  // before any scaffold — the web's order (ExamTake FillBlankText runs ahead of
+  // ScaffoldedAnswer). 815 such questions used to get the numbered ①② step
+  // rows on the phone while the web showed the blanks inline.
+  const inlineBlanks = qType === 'fill_blank'
+    && !!compiled
+    && !hasConditions
+    && compiled.prompt.some((b) => b.type === 'widget')
+    && isSerializable(compiled);
+  // The rest of the fill_blanks with authored blanks ("____", "....") still
+  // get them in the sentence, split exactly as the web does — never the ①②
+  // scaffold rows or one box under the text.
+  const regexBlanks = qType === 'fill_blank' && !inlineBlanks && !hasConditions && countBlanks(rawQuestionText) > 0;
+  const scaffolded = !inlineBlanks && !regexBlanks && usesScaffold(q, questionSubject);
+  // Multiple-select and clean matching get their own inputs, as on the web.
+  const multiSelect = qType === 'multiple_select' && normalizeOptions(q?.options).length > 0;
+  const structuredMatching = qType === 'matching' && hasStructuredMatching(q);
   const usesEngine = !!compiled
     && !hasConditions
+    && !regexBlanks
+    && !multiSelect
+    && !structuredMatching
     && !['mcq', 'multiple_choice', 'qcm', 'true_false', 'essay'].includes(qType)
-    && !usesScaffold(q, questionSubject)
+    && !scaffolded
     && isSerializable(compiled);
 
   // Derived from the stored answer on every render, so there is one source of
@@ -950,6 +1041,20 @@ export default function ExamTakeScreen() {
     setAnswer(safeIdx, responseToStored(compiled, { ...response, [id]: value }));
   };
 
+  const questionHeader = (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      <Text style={{ flex: 1, fontFamily: fonts.headingBold, fontSize: 17, color: colors.ink }}>
+        {t(`Question ${safeIdx + 1}`, `Kesyon ${safeIdx + 1}`)}
+        <Text style={[typeScale.meta, { color: colors.muted }]}> / {questions.length}</Text>
+      </Text>
+      {points > 0 ? (
+        <View style={{ backgroundColor: colors.surfaceAlt, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
+          <Text style={{ fontFamily: fonts.headingBold, fontSize: 13, lineHeight: 18, color: colors.muted }}>{points} pt{points > 1 ? 's' : ''}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
       {/* Header */}
@@ -957,16 +1062,43 @@ export default function ExamTakeScreen() {
         <TouchableOpacity onPress={handleBack} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel={t('Retour', 'Retounen')}>
           <ChevronLeft color={colors.ink} size={26} />
         </TouchableOpacity>
-        <View style={{ flex: 1 }}>
+        <TouchableOpacity
+          style={{ flex: 1 }}
+          onPress={() => setGridOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel={t('Voir toutes les questions', 'Wè tout kesyon yo')}
+        >
           <Text style={{ fontFamily: fonts.headingBold, fontSize: 16, lineHeight: 21, color: colors.ink }} numberOfLines={1}>{normalizeExamTitle(exam)}</Text>
-          <Text style={[typeScale.meta, { color: colors.muted }]}>{answeredCount}/{questions.length} {t('réponses', 'repons')}</Text>
-        </View>
+          <Text style={[typeScale.meta, { color: saveState?.kind === 'failed' ? colors.warnInk : colors.muted }]} numberOfLines={1}>
+            {answeredCount}/{questions.length} {t('réponses', 'repons')}
+            {user?.uid && saveState
+              ? ` · ${saveState.kind === 'saved'
+                ? t(`enregistré ${clock(saveState.at)}`, `anrejistre ${clock(saveState.at)}`)
+                : t('non enregistré', 'pa anrejistre')}`
+              : ''}
+          </Text>
+        </TouchableOpacity>
+        {secondsLeft != null ? (
+          <View
+            accessible
+            accessibilityLabel={`${t('Temps restant', 'Tan ki rete')} : ${formatTime(secondsLeft)}`}
+            accessibilityLiveRegion={secondsLeft < 300 ? 'polite' : 'none'}
+            style={{
+              flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, height: 34, borderRadius: 999,
+              backgroundColor: secondsLeft < 300 ? colors.warnSoft : colors.ink,
+            }}
+          >
+            <Clock color={secondsLeft < 300 ? colors.warnInk : colors.bg} size={14} />
+            <Text style={{ fontFamily: fonts.headingBold, fontSize: 14, color: secondsLeft < 300 ? colors.warnInk : colors.bg, fontVariant: ['tabular-nums'] }}>
+              {formatTime(secondsLeft)}
+            </Text>
+          </View>
+        ) : null}
         <Button
           onPress={() => { tapMedium(); handleSubmit(); }}
           loading={submitting}
           size="sm"
           variant="secondary"
-          icon={<Send color={colors.azureInk} size={15} />}
           accessibilityLabel={t('Soumettre', 'Soumèt')}
           label={t('Soumettre', 'Soumèt')}
         />
@@ -975,12 +1107,35 @@ export default function ExamTakeScreen() {
       {/* Progress */}
       <ProgressStrip progress={progress} />
 
-      {/* Question nav */}
-      <QuestionNav
-        current={safeIdx}
-        total={questions.length}
-        answers={answers}
+      {/* Question nav — on the header's surface with a hairline under it, so
+          content scrolls BEHIND a clear edge instead of looking clipped. */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bg, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+        <View style={{ flex: 1 }}>
+          <QuestionNav
+            current={safeIdx}
+            total={questions.length}
+            answers={answers}
+            sections={sectionMeta}
+            onGoto={setCurrentIdx}
+          />
+        </View>
+        <TouchableOpacity
+          onPress={() => setGridOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel={t('Voir toutes les questions', 'Wè tout kesyon yo')}
+          style={{ width: 44, height: 44, marginRight: 12, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceAlt }}
+        >
+          <LayoutGrid color={colors.ink} size={18} />
+        </TouchableOpacity>
+      </View>
+
+      <ExamQuestionGrid
+        visible={gridOpen}
+        onClose={() => setGridOpen(false)}
         sections={sectionMeta}
+        total={questions.length}
+        current={safeIdx}
+        filled={(i) => isAnswerFilled(answers[i])}
         onGoto={setCurrentIdx}
       />
 
@@ -1001,27 +1156,18 @@ export default function ExamTakeScreen() {
             isSectionStart={isSectionStart}
           />
 
-          {/* Question label */}
-          <View style={{ marginBottom: 16 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
-              <Text style={[typeScale.meta, { color: colors.muted }]}>
-                {t(`Question ${safeIdx + 1} sur ${questions.length}`, `Kesyon ${safeIdx + 1} sou ${questions.length}`)}
-              </Text>
-              {points > 0 ? (
-                <View style={{ backgroundColor: colors.surfaceAlt, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
-                  <Text style={{ fontFamily: fonts.headingBold, fontSize: 14, lineHeight: 18, color: colors.ink }}>{points} pt{points > 1 ? 's' : ''}</Text>
-                </View>
+          {/* Question card: header row + stem in one card (the web's
+              exam-take__question-card). Engine questions draw the same card
+              themselves, with their blanks inside the sentence. */}
+          {usesEngine || regexBlanks ? null : (
+            <View style={{ ...cardSurface, padding: 20, gap: 14, marginBottom: 16 }}>
+              {questionHeader}
+              <MathText text={questionText} style={{ fontSize: 18, color: colors.ink, lineHeight: 27 }} />
+              {q?.has_figure && q?.figure_description ? (
+                <ExamFigure description={String(q.figure_description)} />
               ) : null}
             </View>
-            {usesEngine ? null : (
-              <View style={{ ...cardSurface, padding: 20 }}>
-                <MathText text={questionText} style={{ fontSize: 18, color: colors.ink, lineHeight: 27 }} />
-                {q?.has_figure && q?.figure_description ? (
-                  <ExamFigure description={String(q.figure_description)} />
-                ) : null}
-              </View>
-            )}
-          </View>
+          )}
 
           {/* Answer area */}
           {Array.isArray(q?.conditions) && q.conditions.length > 0 ? (
@@ -1039,13 +1185,35 @@ export default function ExamTakeScreen() {
               onAnswer={(a) => setAnswer(safeIdx, a)}
               isCreole={isCreole}
             />
+          ) : regexBlanks ? (
+            <View style={{ gap: 12 }}>
+              <InlineFillBlank
+                header={questionHeader}
+                text={rawQuestionText}
+                value={answerText}
+                onChange={(v) => setAnswer(safeIdx, v)}
+              />
+              {q?.has_figure && q?.figure_description ? <ExamFigure description={String(q.figure_description)} /> : null}
+            </View>
+          ) : multiSelect ? (
+            <MultiSelectAnswer
+              question={q}
+              value={typeof answers[safeIdx] === 'string' ? (answers[safeIdx] as string) : ''}
+              onChange={(v) => setAnswer(safeIdx, v)}
+            />
+          ) : structuredMatching ? (
+            <MatchingAnswer
+              question={q}
+              value={typeof answers[safeIdx] === 'string' ? (answers[safeIdx] as string) : ''}
+              onChange={(v) => setAnswer(safeIdx, v)}
+            />
           ) : qType === 'true_false' ? (
             <TrueFalseQuestion
               answer={answers[safeIdx] ?? null}
               onAnswer={(a) => setAnswer(safeIdx, a)}
               isCreole={isCreole}
             />
-          ) : usesScaffold(q, questionSubject) ? (
+          ) : scaffolded ? (
             // Step-by-step scaffold (PWA parity): authored solution text with
             // numbered blanks; persists {scaffold:[…]} through the same
             // answers/autosave/submit flow.
@@ -1069,6 +1237,7 @@ export default function ExamTakeScreen() {
             // blank mid-sentence is answered in the sentence, and a numeric
             // answer gets a number pad rather than the full keyboard.
             <QuestionView
+              header={questionHeader}
               question={compiled}
               response={response}
               onChange={setWidgetValue}

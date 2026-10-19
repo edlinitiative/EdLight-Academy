@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { fonts, useColors } from '../theme/theme';
 import { KATEX_CSS, KATEX_JS } from './katexAssets';
@@ -133,7 +133,7 @@ export function MathText({ text, display = false, style }: MathTextProps) {
       // formula in dark mode (near-white ink on white). `opaque={false}` makes
       // the Android surface genuinely transparent; it's a no-op on iOS.
       opaque={false}
-      style={{ height, backgroundColor: 'transparent', ...style }}
+      style={{ height, backgroundColor: 'transparent', ...StyleSheet.flatten(style) }}
       onMessage={(e) => {
         const h = Number(e.nativeEvent?.data);
         if (Number.isFinite(h) && h > 0) setHeight(Math.min(Math.max(h, 24), 800));
