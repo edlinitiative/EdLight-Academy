@@ -40,7 +40,7 @@ export function cabinetAction(key: CabinetKey, primary: ArenaHubPrimary | null |
     }
     case 'story': return { kind: 'navigate', screen: 'ArenaStory' };
     case 'duel': return { kind: 'duel' };
-    case 'quick': return { kind: 'practice' };
+    case 'quick': return { kind: 'navigate', screen: 'ArenaQuick' };
     case 'room': return { kind: 'navigate', screen: 'Tournois' };
     case 'mini': return { kind: 'mini' };
     case 'board': return { kind: 'navigate', screen: 'Leaderboard' };

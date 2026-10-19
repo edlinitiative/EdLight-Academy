@@ -146,7 +146,7 @@ function prepareDailyQuestions(count = 10): PreparedQuestion[] {
 }
 
 /** A mixed round: `count` questions drawn at random across every theme. */
-function prepareMixedQuestions(count = 10): PreparedQuestion[] {
+export function prepareMixedQuestions(count = 10): PreparedQuestion[] {
   const banks = TRIVIA_QUESTIONS as Record<string, any[]>;
   const all: any[] = [];
   for (const id of Object.keys(banks)) for (const q of banks[id] ?? []) all.push(q);

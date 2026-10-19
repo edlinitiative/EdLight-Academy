@@ -30,6 +30,7 @@ import TournoisScreen from '../screens/arena/TournoisScreen';
 import ArenaHubScreen from '../screens/arena/ArenaHubScreen';
 import ArenaWatchScreen from '../screens/arena/ArenaWatchScreen';
 import ArenaStoryScreen from '../screens/arena/ArenaStoryScreen';
+import ArenaQuickScreen from '../screens/arena/ArenaQuickScreen';
 import AvatarEditorScreen, { type AvatarSection } from '../screens/AvatarEditorScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { savedCompetitionTarget, restoreCompetitionTarget } from './competitionContinuity';
@@ -101,6 +102,8 @@ export type RootParamList = {
   ArenaWatch: { tournamentId?: string } | undefined;
   /** Mode Histoire — « Le tour d'Ayiti » (web /arena/histoire). */
   ArenaStory: undefined;
+  /** Partie rapide — a mixed round played inside the Arena (not the Trivia tab). */
+  ArenaQuick: undefined;
   ArenaLobby: { tournamentId: string };
   ArenaDoors: { tournamentId: string };
   ArenaLive: { tournamentId: string };
@@ -440,6 +443,11 @@ export default function AppNavigator() {
               <Stack.Screen
                 name="ArenaStory"
                 component={ArenaStoryScreen}
+                options={tx('slide_from_right')}
+              />
+              <Stack.Screen
+                name="ArenaQuick"
+                component={ArenaQuickScreen}
                 options={tx('slide_from_right')}
               />
               <Stack.Screen

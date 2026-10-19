@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { useColors } from '../theme/theme';
+import { fonts, useColors } from '../theme/theme';
 import { KATEX_CSS, KATEX_JS } from './katexAssets';
 import { needsKatex } from '../utils/mathRouting';
 import { mathToText } from '../utils/mathText';
+import { proseSegments, stripProseMarks } from '../utils/proseMarks';
 
 /**
  * Render mixed prose + LaTeX. The whole string is NOT LaTeX — only the
@@ -95,12 +96,15 @@ interface MathTextProps {
 
 export function MathText({ text, display = false, style }: MathTextProps) {
   const colors = useColors();
-  const safeText = String(text ?? '');
+  const rawText = String(text ?? '');
   // KaTeX only typesets DELIMITED segments. Undelimited LaTeX — which exam
   // content ships constantly ("36\sqrt{\frac{2}{7}}") — used to reach the
   // WebView, match no delimiters, and leave raw source on screen. Route it
   // through mathToText instead, which renders readable Unicode.
-  const useKatex = needsKatex(safeText);
+  const useKatex = needsKatex(rawText);
+  // KaTeX gets the prose marks stripped (it would print the asterisks); the
+  // plain path renders them as real bullets and bold runs below.
+  const safeText = useKatex ? stripProseMarks(rawText) : rawText;
   const [height, setHeight] = useState(display ? 44 : 28);
   const html = useMemo(() => KATEX_HTML(safeText, display, colors.ink), [safeText, display, colors.ink]);
 
@@ -108,7 +112,18 @@ export function MathText({ text, display = false, style }: MathTextProps) {
   // Themed ink is the default text color so plain prose is legible in dark mode
   // too; callers can still override via `style`. mathToText is a no-op on text
   // that carries no math at all.
-  if (!useKatex) return <Text style={[{ color: colors.ink }, style]}>{mathToText(safeText)}</Text>;
+  if (!useKatex) {
+    const runs = proseSegments(safeText);
+    return (
+      <Text style={[{ color: colors.ink }, style]}>
+        {runs.length === 1 && !runs[0].bold
+          ? mathToText(runs[0].text)
+          : runs.map((r, i) => (r.bold
+            ? <Text key={i} style={{ fontFamily: fonts.bold }}>{mathToText(r.text)}</Text>
+            : mathToText(r.text)))}
+      </Text>
+    );
+  }
 
   return (
     <WebView
