@@ -2,27 +2,29 @@ import React from 'react';
 import { Linking, ScrollView, Text, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as WebBrowser from 'expo-web-browser';
-import { ChevronLeft, ExternalLink, MonitorPlay } from 'lucide-react-native';
+import { ChevronLeft, ExternalLink, MonitorPlay, Trophy } from 'lucide-react-native';
 import useStore from '../../contexts/store';
 import PressableScale from '../../components/ui/PressableScale';
 import { ArenaScreen, ArenaButton } from '../../components/arena/ArenaKit';
-import ArenaHubPanel from '../../components/arena/ArenaHubPanel';
+import ArenaArcade from '../../components/arena/ArenaArcade';
 import { ARENA_DEMO_URL } from '../../navigation/arenaLinks';
 import { arenaColors as C, arenaType } from '../../theme/arenaTheme';
+import { TEAM_SIZE } from '../../../../shared/leaderboardAgg';
 import type { TriviaIntent } from '../../utils/triviaIntent';
 
 /**
  * The Arena hub as a root route — where /arena deep links, "Retour à l'Arène"
  * actions and every unsupported Arena destination land (see
  * navigation/arenaLinks.ts). Same content as the Jeux tab's Arène segment:
- * one component, two hosts, so they can never disagree.
+ * one component (ArenaArcade), two hosts, so they can never disagree.
  *
- * No hero band: a back button and a title row, then the content.
+ * A back button and a title row, then the Arène city — the one place the
+ * no-hero-band rule allows a scene (Ted asked for the city).
  */
 export default function ArenaHubScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const showDemo = route?.params?.section === 'demo';
+  const section = route?.params?.section;
   const isCreole = useStore((s) => s.language) === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -39,7 +41,7 @@ export default function ArenaHubScreen() {
   const back = () => (navigation.canGoBack() ? navigation.goBack() : toJeux());
 
   return (
-    <ArenaScreen>
+    <ArenaScreen world={false}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 8 }}>
         <PressableScale
           onPress={back}
@@ -57,19 +59,45 @@ export default function ArenaHubScreen() {
           {t('L’Arène', 'Arèn nan')}
         </Text>
       </View>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48 }} showsVerticalScrollIndicator={false}>
-        {showDemo ? (
-          <View accessible={false} style={{ padding: 20, gap: 10, marginBottom: 14, borderRadius: 24, backgroundColor: C.surface }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <MonitorPlay color={C.signal} size={20} />
-              <Text style={[arenaType.name, { color: C.ink, flex: 1 }]}>{t('La démo du championnat', 'Demo chanpyona a')}</Text>
-            </View>
-            <Text style={[arenaType.body, { color: C.muted }]}>
-              {t(
-                'C’est une simulation sur le web, avec des écoles fictives. Elle ne montre pas un vrai championnat.',
-                'Se yon similasyon sou entènèt, ak lekòl ki pa egziste. Li pa montre yon vre chanpyona.',
-              )}
-            </Text>
+      <ScrollView contentContainerStyle={{ paddingBottom: 48 }} showsVerticalScrollIndicator={false}>
+        {section === 'demo' || section === 'championnat' ? (
+          <View accessible={false} style={{ margin: 16, marginBottom: 0, padding: 20, gap: 10, borderRadius: 24, backgroundColor: C.surface }}>
+            {section === 'demo' ? (
+              <>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <MonitorPlay color={C.signal} size={20} />
+                  <Text style={[arenaType.name, { color: C.ink, flex: 1 }]}>{t('La démo du championnat', 'Demo chanpyona a')}</Text>
+                </View>
+                <Text style={[arenaType.body, { color: C.muted }]}>
+                  {t(
+                    'C’est une simulation sur le web, avec des écoles fictives. Elle ne montre pas un vrai championnat.',
+                    'Se yon similasyon sou entènèt, ak lekòl ki pa egziste. Li pa montre yon vre chanpyona.',
+                  )}
+                </Text>
+              </>
+            ) : (
+              <>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Trophy color={C.coral} size={20} />
+                  <Text accessibilityRole="header" style={[arenaType.name, { color: C.ink, flex: 1 }]}>{t('Le championnat inter-écoles', 'Chanpyona ant lekòl yo')}</Text>
+                </View>
+                <Text style={[arenaType.body, { color: C.inkSoft }]}>
+                  {t(
+                    'Une soirée par mois, toutes les écoles en direct, ici dans l’application. Les mêmes questions pour tout le monde, au même moment.',
+                    'Yon swa chak mwa, tout lekòl yo an dirèk, isit la nan aplikasyon an. Menm kesyon pou tout moun, an menm tan.',
+                  )}
+                </Text>
+                <Text style={[arenaType.body, { color: C.muted }]}>
+                  {t(
+                    `Une école est classée quand ${TEAM_SIZE} de ses élèves sont présents. Les inscriptions ouvrent quand la date est annoncée.`,
+                    `Yon lekòl klase lè ${TEAM_SIZE} nan elèv li yo prezan. Enskripsyon ouvri lè yo anonse dat la.`,
+                  )}
+                </Text>
+                <Text style={[arenaType.body, { color: C.muted }]}>
+                  {t('Pour voir à quoi ça ressemble, regarde la démo (écoles fictives) :', 'Pou wè kijan sa ye, gade demo a (lekòl fiktif) :')}
+                </Text>
+              </>
+            )}
             <ArenaButton
               variant="secondary"
               label={t('Ouvrir la démo sur le web', 'Louvri demo a sou entènèt')}
@@ -80,7 +108,13 @@ export default function ArenaHubScreen() {
             />
           </View>
         ) : null}
-        <ArenaHubPanel onPractice={() => toTrivia('practice')} onDuel={() => toTrivia('challenge')} />
+        <View style={{ marginTop: section ? 16 : 0 }}>
+          <ArenaArcade
+            onPractice={() => toTrivia('practice')}
+            onDuel={() => toTrivia('challenge')}
+            onMiniGames={toJeux}
+          />
+        </View>
       </ScrollView>
     </ArenaScreen>
   );

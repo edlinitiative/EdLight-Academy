@@ -11,8 +11,10 @@
  * Citadelle in the Nord, the 1804 proclamation in Gonaïves, Jacmel's carnival,
  * Jérémie's poets). Bosses are fictional characters, named as such.
  *
- * PURE: no React, no storage, no network. The web page persists progress;
- * the phone app can import this file unchanged later.
+ * PURE: no React, no storage, no network. Both apps import it unchanged: the
+ * web page (src/pages/arena/ArenaStory) and the phone screen
+ * (mobile/src/screens/arena/ArenaStoryScreen) each persist progress on the
+ * device, per account, under the same key shape.
  */
 
 export type StageKind = 'stage' | 'boss';
@@ -182,4 +184,60 @@ export function parseProgress(raw: unknown): StoryProgress {
     if (Array.isArray(r)) out[ch.id] = row({ [ch.id]: r }, ch.id);
   }
   return out;
+}
+
+/** One question of a stage draw: which bank, and the index in that bank. */
+export interface StoryPick {
+  theme: string;
+  idx: number;
+}
+
+/**
+ * A stage's round: `stage.count` questions spread evenly over its themes
+ * (ceil(count / themes) from each, never repeating an index), shuffled.
+ * The web draws through its rotation bag instead; the phone uses this. A
+ * theme missing from `banks` contributes nothing — the round is then shorter,
+ * never padded with another theme's questions.
+ */
+export function storyDraw(
+  stage: StoryStage,
+  banks: Record<string, readonly unknown[] | undefined>,
+  rand: () => number = Math.random,
+): StoryPick[] {
+  const per = Math.ceil(stage.count / Math.max(1, stage.themes.length));
+  const shuffle = <T,>(arr: T[]): T[] => {
+    for (let i = arr.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(rand() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  };
+  const pool: StoryPick[] = [];
+  for (const theme of stage.themes) {
+    const n = banks[theme]?.length || 0;
+    const idxs = shuffle(Array.from({ length: n }, (_, i) => i)).slice(0, per);
+    for (const idx of idxs) pool.push({ theme, idx });
+  }
+  return shuffle(pool).slice(0, stage.count);
+}
+
+/** The first open stage of a chapter without stars — what its big button plays. */
+export function chapterGoStage(progress: StoryProgress, chapterIdx: number): number | null {
+  const ch = STORY_CHAPTERS[chapterIdx];
+  if (!ch) return null;
+  const r = row(progress, ch.id);
+  for (let i = 0; i < STAGES_PER_CHAPTER; i += 1) if (isUnlocked(progress, chapterIdx, i) && !r[i]) return i;
+  return null;
+}
+
+/** Stars per stage of one chapter (always four entries, each 0–3). */
+export function chapterRow(progress: StoryProgress, chapterIdx: number): number[] {
+  const ch = STORY_CHAPTERS[chapterIdx];
+  return ch ? row(progress, ch.id) : [0, 0, 0, 0];
+}
+
+export function stageOf(chapterIdx: number, stageIdx: number): StoryStage | null {
+  const ch = STORY_CHAPTERS[chapterIdx];
+  if (!ch) return null;
+  return stageIdx === STAGES_PER_CHAPTER - 1 ? ch.bossStage : ch.stages[stageIdx] || null;
 }

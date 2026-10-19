@@ -15,7 +15,8 @@
  * /arena/jouer/:tid            → ArenaLobby(tid)   (valid id shape only)
  * /arena/demo                  → ArenaHub(section demo): explains the web
  *                                simulation and opens it in a browser
- * /arena/histoire, /arena/studio and every other reserved word
+ * /arena/histoire             → ArenaStory (Mode Histoire, ported Oct 2026)
+ * /arena/studio and every other reserved word
  *                              → ArenaHub (web-only pages; never a tournament)
  * /arena/:tid (app scheme)     → ArenaLobby(tid)   (valid id shape only)
  * /arena/<anything else>       → ArenaHub
@@ -83,6 +84,7 @@ export type LinkTarget =
   | { screen: 'ArenaHub'; params?: { section?: ArenaHubSection } }
   | { screen: 'ArenaLobby'; params: { tournamentId: string } }
   | { screen: 'ArenaWatch'; params?: { tournamentId?: string } }
+  | { screen: 'ArenaStory'; params?: undefined }
   | { screen: 'Main'; params: { screen: 'Trivia' } };
 
 const HOSTS = ['academy.edlight.org', 'www.academy.edlight.org'];
@@ -153,6 +155,7 @@ export function resolveAppPath(input: string): LinkTarget | null {
     const tid = segs[2];
     return isValidTournamentId(tid) ? { screen: 'ArenaLobby', params: { tournamentId: tid } } : { screen: 'ArenaHub' };
   }
+  if (subLower === 'histoire') return { screen: 'ArenaStory' };
   if (isReservedArenaSegment(subLower)) return { screen: 'ArenaHub' };
 
   // /arena/:tid — only when the segment can actually be a tournament id, and

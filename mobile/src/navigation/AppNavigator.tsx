@@ -29,6 +29,7 @@ import CompetitionWorkspaceScreen from '../screens/arena/CompetitionWorkspaceScr
 import TournoisScreen from '../screens/arena/TournoisScreen';
 import ArenaHubScreen from '../screens/arena/ArenaHubScreen';
 import ArenaWatchScreen from '../screens/arena/ArenaWatchScreen';
+import ArenaStoryScreen from '../screens/arena/ArenaStoryScreen';
 import AvatarEditorScreen, { type AvatarSection } from '../screens/AvatarEditorScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { savedCompetitionTarget, restoreCompetitionTarget } from './competitionContinuity';
@@ -98,6 +99,8 @@ export type RootParamList = {
   ArenaHub: { section?: ArenaHubSection } | undefined;
   /** Portrait spectator view; with no id it watches whatever is live. */
   ArenaWatch: { tournamentId?: string } | undefined;
+  /** Mode Histoire — « Le tour d'Ayiti » (web /arena/histoire). */
+  ArenaStory: undefined;
   ArenaLobby: { tournamentId: string };
   ArenaDoors: { tournamentId: string };
   ArenaLive: { tournamentId: string };
@@ -219,6 +222,7 @@ const linking = {
       AvatarEditor: 'profile/avatar',
       ArenaHub: 'arena',
       ArenaWatch: 'arena/demo',
+      ArenaStory: 'arena/histoire',
       ArenaLobby: 'arena/jouer/:tournamentId',
     },
   },
@@ -431,6 +435,11 @@ export default function AppNavigator() {
               <Stack.Screen
                 name="ArenaWatch"
                 component={ArenaWatchScreen}
+                options={tx('slide_from_right')}
+              />
+              <Stack.Screen
+                name="ArenaStory"
+                component={ArenaStoryScreen}
                 options={tx('slide_from_right')}
               />
               <Stack.Screen

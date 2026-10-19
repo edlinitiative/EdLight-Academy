@@ -11,7 +11,8 @@
  *    as 64px round console buttons in 3 columns (Ted's chosen shape; the
  *    rainbow fills are gone — every button is the same night tone), then the
  *    duel / invite / rank rows.
- *  - Arène: ArenaHubPanel (real school, real rank, real events only).
+ *  - Arène: ArenaArcade — the night city, lobby, cabinets and podium (real
+ *    schools, real ranks, real events only; the native port of web /arena).
  *  - Records: community best per game + your own best.
  *  - Classement: the school race + the shared board in tone="night".
  */
@@ -37,7 +38,7 @@ import { tapLight } from '../../utils/haptics';
 import ShareCardCapture, { type ShareCardCaptureHandle } from '../share/ShareCardCapture';
 import InviteSheet from '../InviteSheet';
 import { shareScore } from '../../services/scoreShare';
-import ArenaHubPanel from '../arena/ArenaHubPanel';
+import ArenaArcade from '../arena/ArenaArcade';
 import { ArenaButton } from '../arena/ArenaKit';
 import { Avatar } from '../arena/art';
 import { useMyAvatar } from '../../hooks/useMyAvatar';
@@ -408,8 +409,13 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily, onR
 
       {/* ── Arène — the competition world ── */}
       {tab === 'arene' && (
-        <ScrollView contentContainerStyle={scrollPad} showsVerticalScrollIndicator={false}>
-          <ArenaHubPanel onPractice={() => onStartTrivia('practice')} onDuel={() => onStartTrivia('challenge')} />
+        // Full-bleed: the Arène city runs edge to edge, the arcade pads itself.
+        <ScrollView contentContainerStyle={{ ...scrollPad, paddingHorizontal: 0, paddingTop: 12 }} showsVerticalScrollIndicator={false}>
+          <ArenaArcade
+            onPractice={() => onStartTrivia('practice')}
+            onDuel={() => onStartTrivia('challenge')}
+            onMiniGames={() => setTab('jouer')}
+          />
         </ScrollView>
       )}
 

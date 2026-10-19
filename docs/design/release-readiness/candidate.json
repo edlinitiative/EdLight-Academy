@@ -1785,7 +1785,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 391,
+      "line": 395,
       "kind": "native-screen",
       "destination": "Loading",
       "owner": null,
@@ -1795,7 +1795,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 394,
+      "line": 398,
       "kind": "native-screen",
       "destination": "Main",
       "owner": null,
@@ -1805,7 +1805,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 395,
+      "line": 399,
       "kind": "native-screen",
       "destination": "Tournois",
       "owner": null,
@@ -1815,7 +1815,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 396,
+      "line": 400,
       "kind": "native-screen",
       "destination": "CompetitionWorkspace",
       "owner": null,
@@ -1825,7 +1825,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 397,
+      "line": 401,
       "kind": "native-screen",
       "destination": "Search",
       "owner": null,
@@ -1835,7 +1835,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 402,
+      "line": 406,
       "kind": "native-screen",
       "destination": "Sandra",
       "owner": null,
@@ -1845,7 +1845,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 411,
+      "line": 415,
       "kind": "native-screen",
       "destination": "StudyPlan",
       "owner": null,
@@ -1855,7 +1855,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 416,
+      "line": 420,
       "kind": "native-screen",
       "destination": "Leaderboard",
       "owner": null,
@@ -1865,7 +1865,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 421,
+      "line": 425,
       "kind": "native-screen",
       "destination": "ArenaLobby",
       "owner": null,
@@ -1875,7 +1875,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 426,
+      "line": 430,
       "kind": "native-screen",
       "destination": "ArenaHub",
       "owner": null,
@@ -1885,7 +1885,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 431,
+      "line": 435,
       "kind": "native-screen",
       "destination": "ArenaWatch",
       "owner": null,
@@ -1895,7 +1895,17 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 436,
+      "line": 440,
+      "kind": "native-screen",
+      "destination": "ArenaStory",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/AppNavigator.tsx",
+      "line": 445,
       "kind": "native-screen",
       "destination": "ArenaDoors",
       "owner": null,
@@ -1905,7 +1915,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 441,
+      "line": 450,
       "kind": "native-screen",
       "destination": "ArenaResult",
       "owner": null,
@@ -1915,7 +1925,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 446,
+      "line": 455,
       "kind": "native-screen",
       "destination": "ArenaLive",
       "owner": null,
@@ -1925,7 +1935,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 457,
+      "line": 466,
       "kind": "native-screen",
       "destination": "Teach",
       "owner": null,
@@ -1935,7 +1945,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 462,
+      "line": 471,
       "kind": "native-screen",
       "destination": "Classes",
       "owner": null,
@@ -1945,7 +1955,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 463,
+      "line": 472,
       "kind": "native-screen",
       "destination": "ProgressShare",
       "owner": null,
@@ -1955,7 +1965,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 464,
+      "line": 473,
       "kind": "native-screen",
       "destination": "Ambassador",
       "owner": null,
@@ -1965,7 +1975,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 465,
+      "line": 474,
       "kind": "native-screen",
       "destination": "AvatarEditor",
       "owner": null,
@@ -1975,7 +1985,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 470,
+      "line": 479,
       "kind": "native-screen",
       "destination": "Defi",
       "owner": null,
@@ -2281,7 +2291,7 @@
         {
           "source": "mobile/src/components/arena/ArenaHubPanel.tsx",
           "match": "Chaque partie fait monter ton école",
-          "line": 123
+          "line": 131
         },
         {
           "source": "mobile/store/app-store-metadata.md",
@@ -2593,7 +2603,7 @@
         {
           "source": "mobile/src/screens/arena/ArenaHubScreen.tsx",
           "match": "La démo du championnat",
-          "line": 65
+          "line": 69
         }
       ],
       "requirementIds": [
@@ -2643,12 +2653,12 @@
         {
           "source": "mobile/src/components/arena/ArenaHubPanel.tsx",
           "match": "label={t('Défier un ami'",
-          "line": 137
+          "line": 145
         },
         {
           "source": "mobile/src/components/games/JeuxHub.tsx",
           "match": "Défier un ami",
-          "line": 335
+          "line": 336
         },
         {
           "source": "src/pages/Download.tsx",
@@ -2712,7 +2722,7 @@
         {
           "source": "src/pages/arena/ArenaArcade.tsx",
           "match": "Le tour d’Ayiti",
-          "line": 333
+          "line": 303
         }
       ],
       "requirementIds": [
@@ -2753,7 +2763,7 @@
         {
           "source": "src/pages/arena/ArenaArcade.tsx",
           "match": "Crée une salle, partage le code, jouez ensemble — en direct ou sur plusieurs jours.",
-          "line": 356
+          "line": 326
         },
         {
           "source": "src/pages/tournois/TournoisCreate.tsx",
@@ -2825,7 +2835,7 @@
         {
           "source": "src/pages/arena/ArenaArcade.tsx",
           "match": "Rejoindre avec un code",
-          "line": 359
+          "line": 329
         },
         {
           "source": "src/pages/TriviaGames.tsx",
@@ -2909,12 +2919,12 @@
         {
           "source": "src/pages/arena/ArenaArcade.tsx",
           "match": "Mon activité · Équipes et compétitions",
-          "line": 201
+          "line": 171
         },
         {
           "source": "mobile/src/components/arena/ArenaHubPanel.tsx",
           "match": "Mon activité · Équipes et compétitions",
-          "line": 149
+          "line": 157
         },
         {
           "source": "shared/competition/workspace.ts",
@@ -4051,7 +4061,7 @@
         {
           "source": "mobile/src/components/arena/ArenaHubPanel.tsx",
           "match": "On te prévient dès qu’un championnat est annoncé.",
-          "line": 287
+          "line": 297
         },
         {
           "source": "mobile/src/settings/notificationPermission.ts",

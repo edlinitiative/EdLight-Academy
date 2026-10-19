@@ -10,6 +10,7 @@ import { useStoryProgress } from '../../hooks/useStoryProgress';
 import { normalizeName, rankTeams, teamStandingFor, TEAM_SIZE, type TeamStanding } from '../../../shared/leaderboardAgg';
 import { STORY_CHAPTERS, MAX_STARS, nextStage, totalStars, chapterCleared, isUnlocked } from '../../../shared/arenaStory';
 import { DEMO_SCHOOLS } from '../../../shared/arena/demo';
+import { cityLineup, farSkyline, MORNES_PATH, towerTag } from '../../../shared/arena/arcadeCity';
 import { departmentPath, departmentCentroid, MAPPED_DEPARTMENTS, MAP_WIDTH, MAP_HEIGHT } from '../../data/haitiMapGeometry';
 import SchoolBuilding from '../../components/arena/SchoolBuilding';
 import SchoolCrest from '../../arena-art/crest/SchoolCrest';
@@ -47,29 +48,6 @@ import './ArenaHome.css';
  * board that has no data (local dev); it is labelled as a demo on screen.
  */
 
-function floorsFor(teamXp: number, maxXp: number) {
-  if (!maxXp) return 2;
-  return 2 + Math.round((teamXp / maxXp) * 4); // 2–6 floors
-}
-
-// A far skyline, deterministic so it never reshuffles between renders.
-function farSkyline(seed = 7) {
-  let s = seed;
-  const rnd = () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
-  const blocks: { x: number; w: number; h: number; lit: { x: number; y: number }[] }[] = [];
-  let x = 0;
-  while (x < 1600) {
-    const w = 26 + Math.round(rnd() * 50);
-    const h = 40 + Math.round(rnd() * 120);
-    const lit: { x: number; y: number }[] = [];
-    for (let wy = 8; wy < h - 8; wy += 12) {
-      for (let wx = 6; wx < w - 6; wx += 10) if (rnd() < 0.16) lit.push({ x: x + wx, y: 220 - h + wy });
-    }
-    blocks.push({ x, w, h, lit });
-    x += w + Math.round(rnd() * 6);
-  }
-  return blocks;
-}
 const FAR = farSkyline();
 /** Weekly entries the lobby reads (the rival rule needs to know the page size). */
 const BOARD_PAGE = 50;
@@ -127,15 +105,7 @@ export default function ArenaArcade() {
 
   // The skyline: the top schools by team score, tallest in the middle so the
   // city reads as a podium. Your school joins it even when it is not top 7.
-  const skyline = useMemo(() => {
-    const top = standings.slice(0, 7);
-    if (myTeam && !top.some((s) => s.key === myTeam.key)) top.push(myTeam);
-    const maxXp = Math.max(1, ...top.map((s) => s.teamXp || 0));
-    const sorted = [...top].sort((a, b) => (b.teamXp || 0) - (a.teamXp || 0));
-    const podium: typeof sorted = [];
-    sorted.forEach((s, i) => (i % 2 === 0 ? podium.push(s) : podium.unshift(s)));
-    return podium.map((s) => ({ ...s, floors: floorsFor(s.teamXp || 0, maxXp) }));
-  }, [standings, myTeam]);
+  const skyline = useMemo(() => cityLineup(standings, myTeam), [standings, myTeam]);
 
   // The join card stays until the school's team counts on the board.
   const teamIncomplete = !mySchool || !myTeam?.qualified;
@@ -218,7 +188,7 @@ export default function ArenaArcade() {
           {FAR.flatMap((b) => b.lit).map((w, i) => <rect key={`w${i}`} className="ah-far__lit" x={w.x} y={w.y} width="4" height="5" />)}
         </svg>
         <svg className="ah-mornes" viewBox="0 0 1600 200" preserveAspectRatio="none" aria-hidden="true">
-          <path d="M0 200 L0 120 C120 70 210 60 320 104 C420 140 470 64 600 52 C720 40 790 120 900 112 C1010 104 1060 34 1190 40 C1310 46 1370 118 1480 100 C1540 92 1580 80 1600 84 L1600 200 Z" />
+          <path d={MORNES_PATH} />
         </svg>
 
         <div className="container ah-hero__inner lb-hero">
@@ -255,7 +225,7 @@ export default function ArenaArcade() {
             {skyline.map((s, i) => (
               <div key={s.key} role="listitem" className={`ah-tower${myTeam?.key === s.key ? ' is-mine' : ''}`} style={{ '--i': i } as React.CSSProperties}>
                 <span className="ah-tower__tag">
-                  <strong>{s.qualified ? `#${s.rank}` : `${Math.min(s.members, TEAM_SIZE)}/${TEAM_SIZE}`}</strong>
+                  <strong>{towerTag(s, TEAM_SIZE)}</strong>
                   <span>{s.label}</span>
                 </span>
                 <SchoolBuilding name={s.label} floors={s.floors} night cell={6} />

@@ -98,7 +98,7 @@ function shuffle<T>(arr: T[]): T[] {
  */
 /** Map a raw bank question to its playable form (options re-shuffled).
  *  FR and HT option arrays get the SAME permutation so they stay paired. */
-function toPrepared(q: any, idx?: number): PreparedQuestion {
+export function toPrepared(q: any, idx?: number): PreparedQuestion {
   const { primary: options, aligned: optionsHt } = shuffleAligned<string>(
     q.options,
     Array.isArray(q.optionsHt) ? q.optionsHt : null,
