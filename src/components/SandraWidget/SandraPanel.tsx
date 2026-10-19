@@ -6,6 +6,7 @@ import { authedFetch } from '../../services/firebase';
 import useStore from '../../contexts/store';
 import { useTrivia } from '../../hooks/useTrivia';
 import InstructionRenderer from '../InstructionRenderer';
+import { newOperationId } from '../../../shared/outbox';
 
 /** sessionStorage key holding the active conversation id — a new browser
  *  session (or a full conversation) starts a fresh one. */
@@ -15,7 +16,7 @@ const MAX_CHARS = 2000;
 type ChatMessage = { role: 'user' | 'assistant'; text: string };
 
 type ChatError =
-  | { kind: 'generic'; retryText: string } // network / 5xx — offer retry
+  | { kind: 'generic'; retryText: string; retryCid?: string } // network / 5xx — offer retry
   | { kind: 'limit'; message: string }     // 429 — show the server's message
   | { kind: 'auth' };                      // 401 — stale/absent token
 
@@ -98,10 +99,14 @@ export default function SandraPanel({ open, onClose }: SandraPanelProps) {
 
   const send = async (
     text: string,
-    opts: { isRetry?: boolean; wasFullRetry?: boolean; convReset?: boolean } = {},
+    opts: { isRetry?: boolean; wasFullRetry?: boolean; convReset?: boolean; cid?: string } = {},
   ) => {
     const message = text.trim().slice(0, MAX_CHARS);
     if (!message || sending) return;
+    // Retry key (S-2): a retry resends the same id, so if the first attempt's
+    // reply was saved but the response lost, the server returns that reply
+    // instead of answering (and storing) the question twice.
+    const cid = opts.cid || newOperationId();
 
     setError(null);
     // A retry re-sends a message whose bubble is already displayed.
@@ -121,6 +126,7 @@ export default function SandraPanel({ open, onClose }: SandraPanelProps) {
       };
       const convId = readConvId();
       if (convId) body.conversationId = convId;
+      body.clientMessageId = cid;
 
       // 90 s ceiling (P0 validation): without it a stalled request kept
       // `sending` true and Sandra ignored every later message until reload.
@@ -131,7 +137,7 @@ export default function SandraPanel({ open, onClose }: SandraPanelProps) {
       if (res.status === 403 && convId && !opts.convReset) {
         writeConvId(null);
         setSending(false);
-        await send(message, { ...opts, isRetry: true, convReset: true });
+        await send(message, { ...opts, isRetry: true, convReset: true, cid });
         return;
       }
 
@@ -151,7 +157,7 @@ export default function SandraPanel({ open, onClose }: SandraPanelProps) {
         return;
       }
       if (!res.ok) {
-        setError({ kind: 'generic', retryText: message });
+        setError({ kind: 'generic', retryText: message, retryCid: cid });
         return;
       }
 
@@ -166,7 +172,7 @@ export default function SandraPanel({ open, onClose }: SandraPanelProps) {
           // The capped turn wasn't answered; transparently re-send it once
           // into the new conversation.
           setSending(false);
-          await send(message, { isRetry: true, wasFullRetry: true });
+          await send(message, { isRetry: true, wasFullRetry: true, cid });
           return;
         }
       } else if (typeof data?.conversationId === 'string' && data.conversationId) {
@@ -174,12 +180,12 @@ export default function SandraPanel({ open, onClose }: SandraPanelProps) {
       }
 
       if (!reply) {
-        setError({ kind: 'generic', retryText: message });
+        setError({ kind: 'generic', retryText: message, retryCid: cid });
         return;
       }
       setMessages((prev) => [...prev, { role: 'assistant', text: reply }]);
     } catch {
-      setError({ kind: 'generic', retryText: message });
+      setError({ kind: 'generic', retryText: message, retryCid: cid });
     } finally {
       setSending(false);
     }
@@ -334,7 +340,7 @@ export default function SandraPanel({ open, onClose }: SandraPanelProps) {
             <button
               type="button"
               className="sandra-error__retry"
-              onClick={() => send(error.retryText, { isRetry: true })}
+              onClick={() => send(error.retryText, { isRetry: true, cid: error.retryCid })}
             >
               {t('sandra.retry')}
             </button>

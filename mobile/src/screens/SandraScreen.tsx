@@ -34,7 +34,9 @@ import Button from '../components/ui/Button';
 import SandraFace from '../components/sandra/SandraFace';
 import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
-import { sendToSandra, writeConvId, MAX_CHARS } from '../services/sandraService';
+import {
+  sendToSandra, writeConvId, MAX_CHARS, newClientMessageId, readTranscript, writeTranscript,
+} from '../services/sandraService';
 import { tapLight, tapMedium } from '../utils/haptics';
 import { useReduceMotion } from '../utils/motion';
 import { useTheme, fonts, typeScale, touch, type Palette } from '../theme/theme';
@@ -50,7 +52,7 @@ interface ChatMessage {
 type Notice =
   | { kind: 'limit'; message: string }
   | { kind: 'auth' }
-  | { kind: 'error'; failedText: string };
+  | { kind: 'error'; failedText: string; failedCid: string };
 
 let msgSeq = 0;
 const nextId = () => `msg-${Date.now()}-${msgSeq++}`;
@@ -388,11 +390,16 @@ export default function SandraScreen({
     [onNavigate],
   );
 
-  /** Core send. `appendUser` is false when retrying a turn whose bubble is already shown. */
+  /**
+   * Core send. `appendUser` is false when retrying a turn whose bubble is
+   * already shown; a retry passes the failed turn's `cid` so the server can
+   * answer it from what it already stored (S-2).
+   */
   const deliver = useCallback(
-    async (raw: string, appendUser: boolean) => {
+    async (raw: string, appendUser: boolean, retryCid?: string) => {
       const text = raw.trim();
       if (!text || sending) return;
+      const cid = retryCid || newClientMessageId();
 
       setNotice(null);
       if (appendUser) {
@@ -401,7 +408,7 @@ export default function SandraScreen({
       setSending(true);
       scrollToEnd();
 
-      const result = await sendToSandra(text, lang, { path: '/mobile' }, studentContext);
+      const result = await sendToSandra(text, lang, { path: '/mobile' }, studentContext, false, cid);
       setSending(false);
 
       if (result.kind === 'reply') {
@@ -417,7 +424,7 @@ export default function SandraScreen({
         setNotice({ kind: 'auth' });
       } else {
         // Keep the user's bubble on screen and offer a retry of the same text.
-        setNotice({ kind: 'error', failedText: text });
+        setNotice({ kind: 'error', failedText: text, failedCid: cid });
       }
       scrollToEnd();
     },
@@ -433,12 +440,32 @@ export default function SandraScreen({
     deliver(text, true);
   };
 
+  const uid = user?.uid ?? null;
   const handleReset = () => {
     setMessages([]);
     setInput('');
     setNotice(null);
     writeConvId(null);
+    void writeTranscript(uid, []);
   };
+
+  // S-5: reopening the screen shows the open conversation again. Restored
+  // only for this account and only while its conversation id is the one kept.
+  const restoredFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!uid || restoredFor.current === uid) return;
+    restoredFor.current = uid;
+    let live = true;
+    readTranscript(uid).then((saved) => {
+      if (live && saved.length) setMessages((prev) => (prev.length ? prev : saved));
+    }).catch(() => {});
+    return () => { live = false; };
+  }, [uid]);
+  // Mirror the transcript after each change (bounded in writeTranscript).
+  useEffect(() => {
+    if (!uid || restoredFor.current !== uid || !messages.length) return;
+    void writeTranscript(uid, messages);
+  }, [uid, messages]);
 
   // Search handoff: consume the query once on mount. Guests see it parked in
   // the composer behind the sign-in gate instead of losing it.
@@ -605,7 +632,7 @@ export default function SandraScreen({
                 variant="outline"
                 label={t('Réessayer', 'Eseye ankò')}
                 disabled={sending}
-                onPress={() => deliver(notice.failedText, false)}
+                onPress={() => deliver(notice.failedText, false, notice.failedCid)}
                 style={{ alignSelf: 'flex-start' }}
               />
             </View>

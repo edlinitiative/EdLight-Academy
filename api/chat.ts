@@ -26,7 +26,15 @@ import { getDb } from './_lib/firebaseAdmin';
  *   message: string,                  // non-empty, ≤ SANDRA_LIMITS.maxMessageChars
  *   lang?: 'fr' | 'ht',               // UI language (default 'fr')
  *   page?: { path?, courseId?, lessonId? },
+ *   clientMessageId?: string,         // retry key (S-2), [A-Za-z0-9_-]{8,64}
  * }
+ *
+ * Retries (S-2): a client that lost the response resends the same
+ * `clientMessageId`. If that message was already answered, the stored reply is
+ * returned (`duplicate: true`) and the LLM is not called again, so a retry never
+ * duplicates the exchange. For a FIRST message the conversation id is derived
+ * from (uid, clientMessageId), so a retry that never learned the id still finds
+ * the conversation the first attempt created instead of starting an orphan.
  *
  * 200 → { reply, conversationId, remaining }
  * 200 → { conversationFull: true, conversationId, remaining }   (cap reached, LLM not called)
@@ -39,6 +47,7 @@ interface ChatBody {
   lang?: string;
   page?: { path?: string; courseId?: string; lessonId?: string };
   studentContext?: { grade?: unknown; track?: unknown; level?: unknown };
+  clientMessageId?: unknown;
 }
 
 interface StoredMessage {
@@ -57,6 +66,23 @@ interface StoredMessage {
   kbHits?: number;
   /** Set only when retrieval threw — the KB index or embedding key is broken. */
   kbError?: true;
+  /** The client's retry key, on user messages (S-2). */
+  cid?: string;
+}
+
+const CLIENT_MESSAGE_ID_RE = /^[A-Za-z0-9_-]{8,64}$/;
+
+/**
+ * The stored reply to the user message carrying `cid`, if that exchange was
+ * already persisted (both turns are written by one update, user then assistant).
+ */
+export function findAnsweredExchange(history: StoredMessage[], cid: string): string | null {
+  for (let i = 0; i < history.length - 1; i += 1) {
+    if (history[i]?.role === 'user' && history[i]?.cid === cid && history[i + 1]?.role === 'assistant') {
+      return history[i + 1].text;
+    }
+  }
+  return null;
 }
 
 const CHAT_LIMIT_MAX = 30; // mirrors LIMITS['chat'] in _lib/rateLimit.ts
@@ -189,6 +215,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
   const lang: 'fr' | 'ht' = body.lang === 'ht' ? 'ht' : 'fr';
+  const clientMessageId =
+    typeof body.clientMessageId === 'string' && CLIENT_MESSAGE_ID_RE.test(body.clientMessageId)
+      ? body.clientMessageId
+      : null;
   const page = sanitizePage(body.page);
   const student = sanitizeStudent(body.studentContext);
 
@@ -218,6 +248,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         messageCount = typeof data.messageCount === 'number' ? data.messageCount : history.length;
       }
       // Unknown id (e.g. stale sessionStorage) — fall through and start fresh.
+    }
+
+    // A first message with a retry key: its conversation id is derived, so a
+    // retry that never received the id finds the conversation the first
+    // attempt created (no orphan, no second LLM call).
+    if (!convRef && clientMessageId) {
+      const ref = conversations.doc(`${uid}_${clientMessageId}`);
+      const snap = await ref.get();
+      if (snap.exists && (snap.data() || {}).uid === uid) {
+        const data = snap.data() || {};
+        convRef = ref;
+        history = Array.isArray(data.messages) ? (data.messages as StoredMessage[]) : [];
+        messageCount = typeof data.messageCount === 'number' ? data.messageCount : history.length;
+      }
+    }
+
+    // Retry of an exchange already answered: return the stored reply.
+    if (convRef && clientMessageId) {
+      const stored = findAnsweredExchange(history, clientMessageId);
+      if (stored !== null) {
+        res.status(200).json({ reply: stored, conversationId: convRef.id, remaining, duplicate: true });
+        return;
+      }
     }
 
     // Conversation cap reached: tell the widget to start a new one. No LLM call.
@@ -281,7 +334,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         console.warn('chat: could not read users doc for', uid, error instanceof Error ? error.message : error);
       }
 
-      convRef = conversations.doc();
+      convRef = clientMessageId ? conversations.doc(`${uid}_${clientMessageId}`) : conversations.doc();
       await convRef.set({
         uid,
         studentName,
@@ -297,7 +350,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
     // ── Persist both turns atomically (one update) ──────────────────────────
     const now = Date.now();
-    const userMsg: StoredMessage = { role: 'user', text: message, ts: now };
+    const userMsg: StoredMessage = { role: 'user', text: message, ts: now, ...(clientMessageId ? { cid: clientMessageId } : {}) };
     const assistantMsg: StoredMessage = {
       role: 'assistant',
       text: reply,
