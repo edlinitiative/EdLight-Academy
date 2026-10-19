@@ -22,12 +22,18 @@ import {
   where,
 } from 'firebase/firestore';
 import { auth, db } from './firebase';
+import { createObservedFetch } from '../../../shared/observedFetch';
+import { createTournamentDiagnostics } from '../../../shared/tournois/diagnostics';
+import { trackEvent } from './telemetry';
+// Technical outcomes only — see shared/tournois/diagnostics.ts.
+const observedFetch = createObservedFetch(trackEvent, 'tournois');
+const observe = createTournamentDiagnostics(trackEvent);
 const getIdToken = () =>
   auth.currentUser?.getIdToken() ?? Promise.resolve(null);
 const apiUrl = (url: string) => `https://academy.edlight.org${url}`;
 async function authedFetch(url: string, body: unknown) {
   const token = await getIdToken();
-  return fetch(apiUrl(url), {
+  return observedFetch(apiUrl(url), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -247,16 +253,20 @@ export async function createTournament(input: Record<string, unknown>) {
 }
 
 export const cancelTournament = (tid: string) =>
-  post('/api/tournois/create', { action: 'cancel', tid });
+  observe('cancel', () =>
+    post('/api/tournois/create', { action: 'cancel', tid }),
+  );
 
 export const joinTournament = (
   target: { tid?: string; pin?: string },
   who: Identity,
 ) =>
-  post<{ tid: string; already: boolean }>('/api/tournois/join', {
-    ...target,
-    ...who,
-  });
+  observe('join', () =>
+    post<{ tid: string; already: boolean }>('/api/tournois/join', {
+      ...target,
+      ...who,
+    }),
+  );
 
 export const liveAnswer = (
   tid: string,
@@ -264,13 +274,15 @@ export const liveAnswer = (
   choice: number,
   clientShownAt: number,
 ) =>
-  post('/api/tournois/play', {
-    action: 'live-answer',
-    tid,
-    index,
-    choice,
-    clientShownAt,
-  });
+  observe('live_answer', () =>
+    post('/api/tournois/play', {
+      action: 'live-answer',
+      tid,
+      index,
+      choice,
+      clientShownAt,
+    }),
+  );
 
 export interface RoundStep {
   round: number;
@@ -284,7 +296,9 @@ export interface RoundStep {
 }
 
 export const startRound = (tid: string) =>
-  post<RoundStep>('/api/tournois/play', { action: 'start', tid });
+  observe('start', () =>
+    post<RoundStep>('/api/tournois/play', { action: 'start', tid }),
+  );
 
 export const answerRound = (
   tid: string,
@@ -292,13 +306,18 @@ export const answerRound = (
   pos: number,
   choice: number,
 ) =>
-  post<RoundStep>('/api/tournois/play', {
-    action: 'answer',
-    tid,
+  observe(
+    'answer',
+    () =>
+      post<RoundStep>('/api/tournois/play', {
+        action: 'answer',
+        tid,
+        round,
+        pos,
+        choice,
+      }),
     round,
-    pos,
-    choice,
-  });
+  );
 
 export interface ReviewItem extends PublicQuestion {
   answer: number;
@@ -309,11 +328,16 @@ export interface ReviewItem extends PublicQuestion {
 }
 
 export const reviewAnswers = (tid: string, round?: number) =>
-  post<{ items: ReviewItem[] }>('/api/tournois/play', {
-    action: 'review',
-    tid,
+  observe(
+    'review',
+    () =>
+      post<{ items: ReviewItem[] }>('/api/tournois/play', {
+        action: 'review',
+        tid,
+        round,
+      }),
     round,
-  });
+  );
 
 /** Ask the server to catch up. Works signed out (spectators). Returns the server clock. */
 export async function tick(tid: string): Promise<number | null> {
@@ -323,7 +347,7 @@ export async function tick(tid: string): Promise<number | null> {
       'Content-Type': 'application/json',
     };
     if (token) headers.Authorization = `Bearer ${token}`;
-    const r = await fetch(apiUrl('/api/tournois/tick'), {
+    const r = await observedFetch(apiUrl('/api/tournois/tick'), {
       method: 'POST',
       headers,
       body: JSON.stringify({ tid }),
