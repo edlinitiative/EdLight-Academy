@@ -39,10 +39,9 @@ import ArenaDemoLoop from '../../components/arena/ArenaDemoLoop';
  * typographic flourish: it is the one element on this screen that is looked at
  * continuously, and proportional digits make it shuffle sideways every second.
  *
- * The invite is framed around the SCHOOL, never the sender — see
- * `buildArenaInviteMessage`. "Il manque 2 joueurs à CODOSA pour se qualifier"
- * is a fact about something the reader already belongs to; "viens jouer avec
- * moi" is a favour, and gets the response a favour gets.
+ * The invite is one short sentence plus the link (see
+ * `buildArenaInviteMessage`): the referral-code line when there is a code,
+ * otherwise the school's shortfall.
  */
 export default function ArenaLobbyScreen() {
   const route = useRoute<any>();
@@ -170,7 +169,7 @@ export default function ArenaLobbyScreen() {
     arenaHaptics.commit();
     logInviteSent('champion');
     await shareArenaInvite({
-      schoolName: schoolName || t('ton école', 'lekòl ou'),
+      schoolName: schoolName || '',
       qualification,
       lang: isCreole ? 'ht' : 'fr',
       url: 'https://academy.edlight.org/arena',

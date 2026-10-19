@@ -116,41 +116,59 @@ describe('the invite', () => {
     expect(inviteCase(qual({ registered: 5, present: 3, doorsOpen: true }))).toBe('doors-short');
   });
 
-  it('is framed around the SCHOOL, not the sender', () => {
-    // "Viens jouer avec moi" asks for a favour. This states a fact about
-    // something the reader already belongs to — it is the whole mechanic.
-    const msg = build(qual({ registered: 3 }));
-    expect(msg).toContain('Il manque 2 joueurs à CODOSA');
-    expect(msg).not.toMatch(/\bmoi\b/);
-    expect(msg).toContain('https://academy.edlight.org/arena');
+  it('is one short sentence plus the link: no emoji, no em-dash', () => {
+    for (const q of [qual({ registered: 3 }), qual({ registered: 5 }), qual({ registered: 5, present: 3, doorsOpen: true })]) {
+      for (const lang of ['fr', 'ht'] as const) {
+        for (const code of [undefined, 'TED42']) {
+          const msg = build(q, lang, code);
+          expect(msg).not.toMatch(/[—–]/);
+          expect(msg).not.toMatch(/\p{Extended_Pictographic}/u);
+          expect(msg.endsWith(' : https://academy.edlight.org/arena')).toBe(true);
+          // One sentence: no full stop before the link.
+          expect(msg.replace(/ : https:.*$/, '')).not.toMatch(/[.!?]/);
+          expect(msg.length).toBeLessThan(140);
+        }
+      }
+    }
   });
 
-  it('agrees the noun with the shortfall', () => {
+  it('is the owner\'s line when a referral code exists', () => {
+    expect(build(qual({ registered: 3 }), 'fr', 'QYN5SR'))
+      .toBe("Rejoins-moi dans l'Arène EdLight avec mon code QYN5SR : https://academy.edlight.org/arena");
+    expect(build(qual({ registered: 3 }), 'ht', 'QYN5SR')).toContain('kòd mwen QYN5SR');
+  });
+
+  it('states the school shortfall when there is no code, agreeing the noun', () => {
+    expect(build(qual({ registered: 3 }))).toContain('Il manque 2 joueurs à CODOSA');
     expect(build(qual({ registered: 4 }))).toContain('1 joueur à CODOSA');
     expect(build(qual({ registered: 4 }))).not.toContain('1 joueurs');
+    expect(build(qual({ registered: 3 }), 'fr')).not.toContain('code');
   });
 
-  it('shifts from "register" to "come now" once doors open', () => {
+  it('never sends "ton école" to someone else when the school is unknown', () => {
+    const msg = buildArenaInviteMessage({
+      schoolName: '', qualification: qual({ registered: 3 }), lang: 'fr', url: 'https://x', referralCode: null,
+    });
+    expect(msg).not.toContain('ton école');
+    expect(msg).toContain('notre école');
+  });
+
+  it('shifts to "come now" once doors open', () => {
     const msg = build(qual({ registered: 5, present: 3, doorsOpen: true }));
-    expect(msg).toContain('La salle est ouverte');
+    expect(msg).toContain('est ouverte');
     expect(msg).toContain('2 joueurs');
-    expect(msg).not.toContain('se qualifier');
   });
 
   it('celebrates rather than begs once the school is qualified', () => {
-    const msg = build(qual({ registered: 5 }));
-    expect(msg).toContain('CODOSA EST QUALIFIÉ');
+    const msg = build(qual({ registered: 5 }), 'fr', 'TED42');
+    expect(msg).toContain('CODOSA a sa place');
+    expect(msg).toContain('TED42');
     expect(msg).not.toContain('Il manque');
-  });
-
-  it('carries the referral code when the growth rails minted one', () => {
-    expect(build(qual({ registered: 3 }), 'fr', 'TED42')).toContain('TED42');
-    expect(build(qual({ registered: 3 }), 'fr')).not.toContain('code');
   });
 
   it('speaks Kreyòl without pluralising the noun', () => {
     const msg = build(qual({ registered: 3 }), 'ht');
-    expect(msg).toContain('2 jwè nan CODOSA');
+    expect(msg).toContain('CODOSA manke 2 jwè');
     expect(msg).not.toContain('joueurs');
   });
 });

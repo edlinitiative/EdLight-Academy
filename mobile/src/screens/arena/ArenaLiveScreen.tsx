@@ -307,12 +307,8 @@ export default function ArenaLiveScreen() {
                 </View>
               ) : (
                 <View style={{ borderRadius: 24, padding: 22, gap: 10, backgroundColor: C.surfaceRaised }}>
-                  {question.category ? (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.coral }} />
-                      <Text numberOfLines={1} style={[arenaType.status, { color: C.muted }]}>{question.category}</Text>
-                    </View>
-                  ) : null}
+                  {/* The category already sits under "Question n / N" in the
+                      head, so the card carries the prompt alone. */}
                   <Text accessibilityRole="header" style={{ fontFamily: fonts.heading, fontSize: 22, lineHeight: 30, letterSpacing: -0.3, color: C.ink }}>{prompt}</Text>
                 </View>
               )}

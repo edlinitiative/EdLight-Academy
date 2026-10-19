@@ -31,14 +31,11 @@ async function buildMessage(opts: ScoreShareOpts): Promise<string> {
     : opts.total != null
       ? `${opts.score}/${opts.total}`
       : `${opts.score}`;
-  const codeLine = ref
-    ? opts.lang === 'ht'
-      ? ` Sèvi ak kòd mwen ${ref.code}, nou chak ap genyen yon bonus.`
-      : ` Utilise mon code ${ref.code}, on gagne chacun un bonus.`
-    : '';
+  // One sentence + the link, no emoji (owner feedback on long share texts).
+  const code = ref?.code ? (opts.lang === 'ht' ? ` (kòd ${ref.code})` : ` (code ${ref.code})`) : '';
   return opts.lang === 'ht'
-    ? `🎯 Mwen fè ${scoreStr} nan ${opts.title} sou EdLight Academy ! Èske ou ka bat mwen ?${codeLine} ${link}`
-    : `🎯 J'ai fait ${scoreStr} en ${opts.title} sur EdLight Academy ! Tu peux me battre ?${codeLine} ${link}`;
+    ? `Mwen fè ${scoreStr} nan ${opts.title} sou EdLight, bat mwen${code} : ${link}`
+    : `J'ai fait ${scoreStr} en ${opts.title} sur EdLight, bats-moi${code} : ${link}`;
 }
 
 /** Open the native share sheet (WhatsApp, Messages, etc.) with the score brag. */

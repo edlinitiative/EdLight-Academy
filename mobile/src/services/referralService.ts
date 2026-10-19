@@ -103,14 +103,15 @@ export async function redeemReferral(code: string): Promise<RedeemResult> {
 }
 
 /**
- * Bilingual share copy. Includes the CODE visibly, the reward hook, and the
- * link — used identically by the WhatsApp deep-link and the native share sheet.
+ * Bilingual share copy: one short sentence with the CODE visible, then the
+ * link (no emoji, no em-dash: owner feedback on the long invite, build 61).
+ * Used identically by the WhatsApp deep-link and the native share sheet.
  */
 export function inviteMessage(code: string, link: string, lang: 'fr' | 'ht'): string {
   if (lang === 'ht') {
-    return `📚 Vin jwenn mwen sou EdLight Academy pou n revize Bak la ! Sèvi ak kòd mwen ${code} lè w enskri, nou chak ap genyen yon bonus. ${link}`;
+    return `Vin revize Bak la avè m sou EdLight Academy ak kòd mwen ${code} : ${link}`;
   }
-  return `📚 Rejoins-moi sur EdLight Academy pour réviser le Bac ! Utilise mon code ${code} à l'inscription — on gagne chacun un bonus. ${link}`;
+  return `Rejoins-moi sur EdLight Academy pour réviser le Bac avec mon code ${code} : ${link}`;
 }
 
 

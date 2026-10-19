@@ -9,6 +9,7 @@
 
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Zap, Snowflake } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import Button from './ui/Button';
@@ -33,6 +34,7 @@ export default function WeeklyGoalSheet({
   onStartQuiz: () => void;
   onSeeLeaderboard: () => void;
 }) {
+  const insets = useSafeAreaInsets();
   const { colors, typeScale: ts } = useTheme();
   const reduce = useReduceMotion();
   const language = useStore((s) => s.language);
@@ -56,7 +58,7 @@ export default function WeeklyGoalSheet({
           borderTopLeftRadius: radius.hero,
           borderTopRightRadius: radius.hero,
           padding: 20,
-          paddingBottom: 34,
+          paddingBottom: Math.max(34, insets.bottom + 12),
         }}
       >
         {/* Header */}

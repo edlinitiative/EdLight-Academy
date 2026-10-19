@@ -207,14 +207,12 @@ export async function buildChallengeShareMessage(opts: {
   lang: 'fr' | 'ht';
 }): Promise<string> {
   const ref = await getReferralCode().catch(() => null);
-  const codeLine = ref
-    ? opts.lang === 'ht'
-      ? ` Sèvi ak kòd mwen ${ref.code} lè w enskri, nou chak ap genyen yon bonus.`
-      : ` Utilise mon code ${ref.code} en t'inscrivant — on gagne chacun un bonus.`
-    : '';
+  // One sentence + the link, no emoji, no em-dash (owner feedback, build 61).
+  // The referral code rides along only as "(code X)" so it stays one line.
+  const code = ref?.code ? (opts.lang === 'ht' ? ` (kòd ${ref.code})` : ` (code ${ref.code})`) : '';
   return opts.lang === 'ht'
-    ? `⚔️ M ap defye w sou EdLight Academy ! Mwen fè ${opts.score}/${opts.total} nan ${opts.categoryLabel}. Menm ${opts.total} kesyon yo, yon sèl tantativ, èske w ka bat mwen ?${codeLine} ${opts.url}`
-    : `⚔️ Je te défie sur EdLight Academy ! J'ai fait ${opts.score}/${opts.total} en ${opts.categoryLabel}. Les mêmes ${opts.total} questions, une seule tentative — tu peux me battre ?${codeLine} ${opts.url}`;
+    ? `Mwen fè ${opts.score}/${opts.total} nan ${opts.categoryLabel} sou EdLight, bat mwen sou menm kesyon yo${code} : ${opts.url}`
+    : `J'ai fait ${opts.score}/${opts.total} en ${opts.categoryLabel} sur EdLight, bats-moi sur les mêmes questions${code} : ${opts.url}`;
 }
 
 /** Open the native share sheet with the duel message. */

@@ -41,6 +41,7 @@ import { useThumbCandidates } from '../hooks/useCourseThumb';
 import { lessonVideoThumbs, courseVideoThumbs } from '../utils/videoThumb';
 import { courseCover } from '../utils/courseCovers';
 import { displayCourseName, displayLevel } from '../utils/courseName';
+import { SUBJECT_META, courseSubjectCode } from '../utils/subjectMeta';
 
 const GUTTER = 20;
 
@@ -301,7 +302,11 @@ export default function SearchScreen({ onClose, navigation }: { onClose?: () => 
   };
 
   const resultRow = (item: SearchItem, key?: string) => {
-    const Icon = TYPE_ICONS[item.type];
+    // Courses and exams carry their subject in the title ("Chimie NS1",
+    // "Physique · NS IV 2024"): show that subject's glyph, not one generic
+    // book/clipboard for every row. The type glyph stays the fallback.
+    const subjectCode = item.type === 'course' || item.type === 'exam' ? courseSubjectCode({ name: item.title }) : null;
+    const Icon = subjectCode ? SUBJECT_META[subjectCode].Icon : TYPE_ICONS[item.type];
     const m = mediaFor(item);
     const meta = metaFor(item);
     const tag = typeTag(item.type, isCreole);

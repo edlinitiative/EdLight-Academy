@@ -169,6 +169,7 @@ describe('TournoisPinCard', () => {
     press(tree, 'Copier ou partager le PIN');
     expect(share).toHaveBeenLastCalledWith({ message: '482913' });
     press(tree, 'Partager le lien d’invitation');
-    expect(share).toHaveBeenLastCalledWith({ message: `Salle NS3 — PIN 482 913\n${link}` });
+    // One sentence + the link, no em-dash (owner feedback on share texts).
+    expect(share).toHaveBeenLastCalledWith({ message: `Rejoins mon tournoi « Salle NS3 » avec le PIN 482 913 : ${link}` });
   });
 });

@@ -14,6 +14,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Modal, View, Text, TouchableOpacity, Share, Linking, ActivityIndicator,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Share2, Copy, MessageCircle, RefreshCw } from 'lucide-react-native';
 import { useTheme } from '../theme/theme';
 import Button from './ui/Button';
@@ -28,6 +29,7 @@ interface InviteSheetProps {
 }
 
 export default function InviteSheet({ visible, onClose, lang }: InviteSheetProps) {
+  const insets = useSafeAreaInsets();
   const { colors, radius, shadow, typeScale, cardSurface, featureSurface, isDark } = useTheme();
   const reduce = useReduceMotion();
   const t = (fr: string, ht: string) => (lang === 'ht' ? ht : fr);
@@ -91,7 +93,7 @@ export default function InviteSheet({ visible, onClose, lang }: InviteSheetProps
             borderTopRightRadius: radius.hero,
             paddingHorizontal: 20,
             paddingTop: 12,
-            paddingBottom: 34,
+            paddingBottom: Math.max(34, insets.bottom + 12),
             ...shadow.lg,
           }}
         >
