@@ -801,8 +801,18 @@ export async function mutateCompetition(
         );
         // Shared-answer / relay: named teams, live or window, app-run only. An
         // unknown mode is refused, never stored as independent.
-        const gameMode = parseGameMode(body.gameMode);
+        // A form without the choice (older client, flag off) keeps the draft's mode.
+        const gameMode = parseGameMode(
+          body.gameMode === undefined ? old?.gameMode : body.gameMode,
+        );
         ensure(gameMode, 'unsupported_mode', 400);
+        // Slice E is outside the A–D pilot: its modes need their own switch.
+        ensure(
+          gameMode === 'independent' ||
+            process.env.COMPETITION_TEAM_MODES_ENABLED === 'true',
+          'team_modes_not_enabled',
+          403,
+        );
         ensure(
           gameMode === 'independent' || entryMode === 'named_team',
           'team_mode_requires_teams',

@@ -268,6 +268,15 @@ describe("French and Kreyòl", () => {
     );
     const sharedRoles = shared.panels.flatMap((p) => p.tasks || []).find((t) => t.id === "roles-team1")!;
     expect(sharedRoles.fields!.map((f) => f.key)).toEqual(["submitter", "deputy"]);
+    // The mode choice appears in the creation form only while its switch is on.
+    const homeData = { events: [], summaries: [], schools: [] };
+    const createFields = (m: any) =>
+      workspacePage({ kind: "home" }, homeData, m, 0)
+        .panels.flatMap((p) => p.tasks || [])
+        .find((t) => t.id === "event-create")
+        ?.fields?.map((f) => f.key) ?? [];
+    expect(createFields({ ...mine, creationEnabled: true })).not.toContain("gameMode");
+    expect(createFields({ ...mine, creationEnabled: true, teamModesEnabled: true })).toContain("gameMode");
     // After the start the roles are frozen: no role task is offered.
     const late = workspacePage({ kind: "event", id: "ev1" }, relay, mine, 2_000_000_000_001);
     expect(late.panels.flatMap((p) => p.tasks || []).some((t) => t.action.startsWith("team-roles"))).toBe(false);

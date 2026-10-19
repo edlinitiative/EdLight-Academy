@@ -370,6 +370,10 @@ export const COMPETITION_ERROR_MESSAGES: Record<string, Pair> = {
   ],
 
   // ── Shared-answer and relay team play ─────────────────────────────────
+  team_modes_not_enabled: [
+    "La réponse commune et le relais ne sont pas encore ouverts.",
+    "Repons komen ak relè poko louvri.",
+  ],
   team_mode_requires_teams: [
     "La réponse commune et le relais demandent des équipes de trois.",
     "Repons komen ak relè mande ekip twa moun.",

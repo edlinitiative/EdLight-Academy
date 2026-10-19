@@ -307,17 +307,22 @@ export function workspacePage(
       panels.push({
         title: c('Organiser', 'Òganize'),
         paragraphs: [
-          c(
-            'Les nouveaux événements sont limités à 60 joueurs. Les équipes répondent indépendamment avec trois titulaires. Internet est nécessaire.',
-            'Nouvo evènman yo limite a 60 jwè. Ekip yo reponn endepandamman ak twa titilè. Entènèt nesesè.',
-          ),
+          mine.teamModesEnabled === true
+            ? c(
+                'Les nouveaux événements sont limités à 60 joueurs. Les équipes de trois titulaires répondent indépendamment, d’une réponse commune ou en relais. Internet est nécessaire.',
+                'Nouvo evènman yo limite a 60 jwè. Ekip twa titilè yo reponn endepandamman, ak yon repons komen oswa an relè. Entènèt nesesè.',
+              )
+            : c(
+                'Les nouveaux événements sont limités à 60 joueurs. Les équipes répondent indépendamment avec trois titulaires. Internet est nécessaire.',
+                'Nouvo evènman yo limite a 60 jwè. Ekip yo reponn endepandamman ak twa titilè. Entènèt nesesè.',
+              ),
         ],
         tasks: [
           {
             id: 'event-create',
             action: 'event-save',
             label: c('Préparer un événement', 'Prepare yon evènman'),
-            fields: eventFields(host, now),
+            fields: eventFields(host, now, mine.teamModesEnabled === true),
           },
           ...(host
             ? [
@@ -795,7 +800,7 @@ export function workspacePage(
   if (target.kind === 'league') return leaguePage(target.id, data);
   return eventPage(target.id, data, mine, now, people);
 }
-function eventFields(host: boolean, now: number): Field[] {
+function eventFields(host: boolean, now: number, teamModes = false): Field[] {
   return [
     field('title', 'Nom de l’événement', 'Non evènman an'),
     {
@@ -813,7 +818,8 @@ function eventFields(host: boolean, now: number): Field[] {
     ),
     // Shared-answer and relay need named teams and a live or window format;
     // the server refuses any other combination with a translated reason.
-    select(
+    // Offered only while their own switch is on (Slice E, not the A–D pilot).
+    ...(teamModes ? [select(
       'gameMode',
       c(
         'Jeu des équipes (équipes de trois, direct ou fenêtre)',
@@ -821,7 +827,7 @@ function eventFields(host: boolean, now: number): Field[] {
       ),
       Object.entries(GAME_MODE).map(([v, [fr, ht]]) => [v, fr, ht]),
       'independent',
-    ),
+    )] : []),
     select(
       'format',
       c('Format', 'Fòma'),
@@ -1422,7 +1428,13 @@ function organizerPanels(
       action: 'event-save',
       label: c('Modifier le brouillon', 'Modifye bouyon an'),
       values: { eventId, revision: e.revision },
-      fields: eventFields(e.hostKind === 'school', Date.now()).map((f) => ({
+      fields: eventFields(
+        e.hostKind === 'school',
+        Date.now(),
+        data.teamModesEnabled === true ||
+          e.gameMode === 'shared' ||
+          e.gameMode === 'relay',
+      ).map((f) => ({
         ...f,
         value:
           f.type === 'date'

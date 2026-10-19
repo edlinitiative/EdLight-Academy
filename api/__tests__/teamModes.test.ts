@@ -101,10 +101,12 @@ beforeEach(() => {
   mockExpoPush.mockClear();
   clock = T0;
   process.env.COMPETITION_CREATION_ENABLED = 'true';
+  process.env.COMPETITION_TEAM_MODES_ENABLED = 'true';
   for (const uid of ['a', 'b', 'c', 'd', 'host']) mockDb.store.set(`users/${uid}`, { displayName: uid });
 });
 afterAll(() => {
   delete process.env.COMPETITION_CREATION_ENABLED;
+  delete process.env.COMPETITION_TEAM_MODES_ENABLED;
 });
 
 describe('creation and capability gating', () => {
@@ -126,9 +128,17 @@ describe('creation and capability gating', () => {
       .rejects.toMatchObject({ code: 'unsupported_mode' });
     await expect(mutate('host', 'event-save', { ...base(), config: { ...base().config, format: 'rounds', roundHours: 1, roundCount: 2 }, gameMode: 'relay' }))
       .rejects.toMatchObject({ code: 'unsupported_mode' });
+    process.env.COMPETITION_TEAM_MODES_ENABLED = 'false';
+    await expect(mutate('host', 'event-save', { ...base(), gameMode: 'shared' }))
+      .rejects.toMatchObject({ code: 'team_modes_not_enabled' });
     process.env.COMPETITION_CREATION_ENABLED = 'false';
     await expect(mutate('host', 'event-save', { ...base(), gameMode: 'shared' }))
       .rejects.toMatchObject({ code: 'pilot_not_enabled' });
+  });
+  it('an edit that omits the choice keeps the draft’s mode instead of reverting to independent', async () => {
+    const out = await mutate('host', 'event-save', { ...base(), gameMode: 'relay' });
+    await mutate('host', 'event-save', { ...base(), eventId: out.eventId, revision: 1 });
+    expect(doc(`competitionEvents/${out.eventId}`).gameMode).toBe('relay');
   });
   it('leaves independent events and their engine docs exactly as before', async () => {
     const out = await mutate('host', 'event-save', base());
