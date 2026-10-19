@@ -446,6 +446,7 @@ export default function Revision() {
         canAdvance={canAdvance}
         isLast={idx + 1 >= items.length}
         onClose={undefined}
+        explainSurface="revision"
       />
     </div>,
   );

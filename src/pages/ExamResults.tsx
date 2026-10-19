@@ -18,6 +18,11 @@ import { TRACK_BY_CODE } from '../config/trackConfig';
 import { isNumericId, fetchSingleExam } from '../utils/examCatalog';
 import { loadExamResult } from '../services/examResults';
 import { loadDueReviewIds } from '../services/reviewService';
+import { gradeEssaysNow } from '../services/essayRegrade';
+import { needsEssayGrade, type EssayGradingOutcome } from '../../shared/essayRegrade';
+import { classifyEssayResponse } from '../../shared/essayGradeCore';
+import { examQuestionContext } from '../../shared/explainContext';
+import { ExplainWithSandra } from '../components/SandraWidget';
 import {
   flattenQuestions,
   gradeExam,
@@ -53,7 +58,10 @@ const MASTERED = new Set(['correct', 'scaffold-complete']);
  *                       The filière coefficient for this subject
  *                       (config/trackConfig) applied to the same points.
  *   results[i].status   One verdict per question: correct | partial |
- *                       incorrect | unanswered | manual | scaffold-complete.
+ *                       incorrect | unanswered | manual | scaffold-complete |
+ *                       ungraded (an AI-gradable answer whose grading has
+ *                       not succeeded: left OUT of totalPoints, offered
+ *                       "Corriger maintenant", never shown as 0).
  *   results[i].result.awarded / .maxPoints
  *                       Per-question points, which is what the per-group
  *                       percentages below are built from.
@@ -143,6 +151,8 @@ const SUBJECT_TO_COURSE_CODE = {
 function computeGroupScores(results, keyFn) {
   const groups = new Map();
   for (const r of results) {
+    // Not graded yet: it is out of the score, so it is out of the groups too.
+    if (r?.status === 'ungraded') continue;
     const key = keyFn(r) || '—';
     const g = groups.get(key) || { key, earned: 0, total: 0, count: 0, review: 0 };
     g.earned += r.result?.awarded || 0;
@@ -292,6 +302,28 @@ const ExamResults = () => {
   const [reviewFilter, setReviewFilter] = useState('all');
   // Practice-your-mistakes session modal
   const [practiceOpen, setPracticeOpen] = useState(false);
+  // "Corriger maintenant": AI grading of essays that were not graded at submit.
+  const [regrade, setRegrade] = useState<{ running: boolean; outcome: EssayGradingOutcome | null }>({ running: false, outcome: null });
+
+  const runRegrade = async () => {
+    if (!userId || !examKey || !exam || regrade.running) return;
+    setRegrade({ running: true, outcome: null });
+    const outcome = await gradeEssaysNow(userId, examKey, flattenQuestions(exam), {
+      subject: normalizeSubject(exam.subject),
+      level: normalizeLevel(exam.level),
+    });
+    setRegrade({ running: false, outcome });
+    if (outcome.status === 'graded' || outcome.status === 'nothing' || outcome.status === 'stale') {
+      // The account copy changed (or this tab's copy was older than it):
+      // drop the tab copy and reload the regraded document.
+      for (const key of [`exam-result-${examId}`, `exam-result-${examKey}`, `exam-result-${idx}`]) {
+        try { sessionStorage.removeItem(key); } catch { /* storage unavailable */ }
+      }
+      setStored(null);
+      setRemoteLoading(true);
+      setReloadKey((k) => k + 1);
+    }
+  };
 
   // Prefer sessionStorage (fast), fallback to Firestore (cross-device)
   useEffect(() => {
@@ -332,7 +364,19 @@ const ExamResults = () => {
 
         const questions = flattenQuestions(exam);
         const answers = docData.answers || {};
-        const pre = docData.preGradedResults || {};
+        const pre = { ...(docData.preGradedResults || {}) };
+        // A paper submitted from the APP stores lean per-item verdicts in
+        // `results` and no preGradedResults. Its AI-graded (or still pending)
+        // essays live only there, so take those; everything else re-grades
+        // locally exactly as before.
+        if (!docData.preGradedResults && Array.isArray(docData.results)) {
+          docData.results.forEach((r, i) => {
+            const q = questions[i];
+            if (!r || !q || (q.type !== 'essay' && q.type !== 'short_answer')) return;
+            if (r.status !== 'ungraded' && !r.essayFeedback) return;
+            pre[i] = { status: r.status, result: { awarded: r.awarded ?? 0, maxPoints: r.maxPoints ?? (q.points || 1) }, essayFeedback: r.essayFeedback };
+          });
+        }
 
         const track = docData.track || '';
         const subject = normalizeSubject(exam.subject);
@@ -547,13 +591,42 @@ const ExamResults = () => {
   // that queue is a better next action than another fresh drill.
   const offerDueReview = reviewCount === 0 && dueCount > 0;
 
+  // Written answers the AI grader can still mark: `ungraded` (failed or
+  // pending), old `manual` essays from the app, and old web essays whose
+  // failed call was stored as 0. They never wait for a human, so they are
+  // not part of the "correction humaine" sentence below.
+  const regradable = results.filter((r) => r?.question && needsEssayGrade(r.question, r.userAnswer, r));
+  const regradableCount = regradable.length;
+  const regradablePending = regradable.filter((r) => r.status === 'ungraded' || r.status === 'manual').length;
+  const humanPending = Math.max(0, tally.pending - regradablePending);
+  const pendingPoints = Number(summary.pendingPoints) || 0;
+
   /** The one caveat that can move the score, as a sentence rather than a figure. */
-  const pendingNote = tally.pending > 0
+  const pendingNote = humanPending > 0
     ? t(
-        `${tally.pending} question${tally.pending !== 1 ? 's' : ''} attend${tally.pending !== 1 ? 'ent' : ''} une correction humaine : votre score peut encore changer.`,
-        `${tally.pending} kesyon ap tann yon koreksyon moun fè : nòt ou a ka chanje toujou.`,
+        `${humanPending} question${humanPending !== 1 ? 's' : ''} attend${humanPending !== 1 ? 'ent' : ''} une correction humaine : votre score peut encore changer.`,
+        `${humanPending} kesyon ap tann yon koreksyon moun fè : nòt ou a ka chanje toujou.`,
       )
     : null;
+
+  const regradeMessage = (() => {
+    const o = regrade.outcome;
+    if (!o) return null;
+    if (o.status === 'missing') {
+      return t(
+        'Votre copie n’est pas encore enregistrée sur votre compte. Réessayez une fois la connexion revenue.',
+        'Kopi ou poko anrejistre sou kont ou. Eseye ankò lè koneksyon an tounen.',
+      );
+    }
+    if (o.status !== 'failed') return null;
+    if (o.rateLimited) {
+      return t('Trop de corrections demandées pour l’instant. Réessayez dans une heure.', 'Twòp koreksyon mande pou kounye a. Eseye ankò nan inèdtan.');
+    }
+    if (o.offline) {
+      return t('La correction n’a pas pu être lancée : vérifiez votre connexion et réessayez.', 'Koreksyon an pa t ka fèt : verifye koneksyon ou epi eseye ankò.');
+    }
+    return t('La correction automatique n’a pas abouti. Réessayez dans un moment.', 'Koreksyon otomatik la pa t mache. Eseye ankò talè.');
+  })();
 
   return (
     <section className="section exam-results xp xp-res">
@@ -571,14 +644,45 @@ const ExamResults = () => {
             {[subject, storedLevel].filter(Boolean).join(' · ')}
           </p>
           <h1 className="exam-results__title">{examTitle || t('Examen', 'Egzamen')}</h1>
-          <p className={`exam-results__status${tally.pending > 0 || aiGradeFailures > 0 ? ' exam-results__status--provisional' : ''}`}>
-            {tally.pending > 0 || aiGradeFailures > 0
+          <p className={`exam-results__status${tally.pending > 0 || aiGradeFailures > 0 || regradableCount > 0 ? ' exam-results__status--provisional' : ''}`}>
+            {tally.pending > 0 || aiGradeFailures > 0 || regradableCount > 0
               ? t('Correction provisoire', 'Koreksyon pwovizwa')
               : t('Correction terminée', 'Koreksyon fini')}
           </p>
         </header>
 
-      {aiGradeFailures > 0 && (
+      {regradableCount > 0 && (
+        <div className="exam-results__caveat exam-results__caveat--warn exam-results__regrade" role="status">
+          <p>
+            {regradableCount === 1
+              ? t(
+                'Une réponse rédigée n’est pas encore corrigée : elle ne compte pas encore dans votre score.',
+                'Yon repons ekri poko korije : li poko konte nan nòt ou.',
+              )
+              : t(
+                `${regradableCount} réponses rédigées ne sont pas encore corrigées : elles ne comptent pas encore dans votre score.`,
+                `${regradableCount} repons ekri poko korije : yo poko konte nan nòt ou.`,
+              )}
+          </p>
+          {userId ? (
+            <button
+              type="button"
+              className="xp-btn xp-btn--tonal exam-results__regrade-btn"
+              onClick={runRegrade}
+              disabled={regrade.running}
+              aria-busy={regrade.running}
+            >
+              <RefreshCw size={16} aria-hidden />{' '}
+              {regrade.running ? t('Correction en cours…', 'N ap korije…') : t('Corriger maintenant', 'Korije kounye a')}
+            </button>
+          ) : (
+            <p>{t('Connectez-vous pour lancer la correction.', 'Konekte pou lanse koreksyon an.')}</p>
+          )}
+          {regradeMessage && <p className="exam-results__regrade-msg">{regradeMessage}</p>}
+        </div>
+      )}
+
+      {aiGradeFailures > 0 && regradableCount === 0 && (
         <p className="exam-results__caveat exam-results__caveat--warn" role="status">
           {t(
             'Certaines réponses libres n’ont pas pu être corrigées automatiquement. Votre score peut être incomplet.',
@@ -612,6 +716,9 @@ const ExamResults = () => {
           </p>
           <p className="exam-results__points-label">
             {t(`points obtenus sur cette épreuve · ${pct} %`, `pwen ou genyen nan eprèv sa a · ${pct} %`)}
+            {pendingPoints > 0 && (
+              <> · {t(`${pendingPoints} pts en attente de correction`, `${pendingPoints} pwen ap tann koreksyon`)}</>
+            )}
           </p>
           <div className="xp-bar xp-bar--8 exam-results__bar" aria-hidden="true"><span style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} /></div>
 
@@ -898,7 +1005,7 @@ const ExamResults = () => {
                   <Icon name={meta.icon} size={14} /> {meta.label}
                 </span>
                 <StatusBadge status={r.status} />
-                {r.result.maxPoints > 0 && (
+                {r.result.maxPoints > 0 && r.status !== 'ungraded' && (
                   <span className="exam-results__item-points">
                     {r.result.awarded}/{r.result.maxPoints} pt{r.result.maxPoints !== 1 ? 's' : ''}
                   </span>
@@ -986,6 +1093,24 @@ const ExamResults = () => {
                   <Lightbulb size={14} /> <InstructionRenderer text={r.question.explanation} inline />
                 </div>
               )}
+
+              {/* AI grade of a written answer: an estimate, labelled as one */}
+              {r.essayFeedback && classifyEssayResponse(r.essayFeedback) !== 'failed' && (
+                <EssayFeedbackNote feedback={r.essayFeedback} />
+              )}
+
+              {/* Explique-moi: Sandra works through the missed question */}
+              {(r.status === 'incorrect' || r.status === 'partial') && (() => {
+                const ctx = examQuestionContext({
+                  question: r.question,
+                  answer: r.userAnswer,
+                  status: r.status,
+                  subject,
+                  level: storedLevel,
+                  examId: examKey || undefined,
+                });
+                return ctx ? <ExplainWithSandra context={ctx} /> : null;
+              })()}
             </div>
           );
         })}
@@ -1123,6 +1248,35 @@ function ProofOrPlainAnswer({ answer, correctAnswer }) {
   );
 }
 
+/** The AI grade of a written answer, labelled as an estimate (never an official mark). */
+function EssayFeedbackNote({ feedback }) {
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
+  const t = (fr, ht) => (isCreole ? ht : fr);
+  const strengths = Array.isArray(feedback?.strengths) ? feedback.strengths : [];
+  const improvements = Array.isArray(feedback?.improvements) ? feedback.improvements : [];
+  return (
+    <div className="exam-results__essay">
+      <p className="exam-results__essay-score">
+        <strong>{t('Note IA (indicative) :', 'Nòt IA (endikatif) :')}</strong> {feedback.score}
+      </p>
+      {feedback.feedback && <p className="exam-results__essay-text">{feedback.feedback}</p>}
+      {strengths.length > 0 && (
+        <div className="exam-results__essay-list">
+          <strong>{t('Points forts', 'Pwen fò')}</strong>
+          <ul>{strengths.map((x, i) => <li key={i}>{x}</li>)}</ul>
+        </div>
+      )}
+      {improvements.length > 0 && (
+        <div className="exam-results__essay-list">
+          <strong>{t('Pour progresser', 'Pou pwogrese')}</strong>
+          <ul>{improvements.map((x, i) => <li key={i}>{x}</li>)}</ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function StatusBadge({ status }) {
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
@@ -1132,6 +1286,7 @@ function StatusBadge({ status }) {
     incorrect:          { label: <><X size={12} /> {t('Incorrect', 'Pa kòrèk')}</>, cls: 'exam-results__badge--incorrect' },
     partial:            { label: t('◐ Partiel', '◐ Pasyèl'), cls: 'exam-results__badge--partial' },
     manual:             { label: <><Eye size={12} /> {t('Révision', 'Revizyon')}</>, cls: 'exam-results__badge--manual' },
+    ungraded:           { label: <><Eye size={12} /> {t('Pas encore corrigée', 'Poko korije')}</>, cls: 'exam-results__badge--manual' },
     unanswered:         { label: t('— Vide', '— Vid'), cls: 'exam-results__badge--unanswered' },
     'scaffold-complete': { label: <><PenLine size={12} /> {t('Complété', 'Fini')}</>, cls: 'exam-results__badge--correct' },
   };

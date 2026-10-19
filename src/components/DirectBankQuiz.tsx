@@ -7,6 +7,8 @@ import { recordReviewOutcome } from '../services/reviewService';
 import useStore from '../contexts/store';
 import AnswerStatus from './journey/practice/AnswerStatus';
 import { isGradable } from './journey/practice/practiceScope';
+import { ExplainWithSandra } from './SandraWidget';
+import type { ExplainSurface } from '../../shared/explainContext';
 import './journey/practice/practice.css';
 
 export const MAX_ATTEMPTS = 3;
@@ -19,6 +21,21 @@ export default function DirectBankQuiz({
   canAdvance = false,
   isLast = false,
   onClose,
+  explainSurface = undefined,
+}: {
+  item: any;
+  onScore: any;
+  hideHeader?: boolean;
+  onNext: any;
+  canAdvance?: boolean;
+  isLast?: boolean;
+  onClose: any;
+  /**
+   * Where this card sits, when a missed answer may open "Explique-moi".
+   * Omitted (no button) inside a scored quiz and a chapter test: the
+   * explanation is offered in the end-of-quiz corrections instead.
+   */
+  explainSurface?: ExplainSurface;
 }) {
   const { t, i18n } = useTranslation();
   // New lines are written inline FR/HT (as on the quiz page): a brand-new
@@ -329,6 +346,20 @@ export default function DirectBankQuiz({
                     : tx('Pas encore d’explication rédigée pour cette question. Relis la bonne réponse et ta leçon.', 'Poko gen eksplikasyon ekri pou kesyon sa a. Relize bon repons lan ak leson ou.')}
                 </p>
               ) : null}
+              {kind === 'incorrect' && explainSurface && (
+                <ExplainWithSandra
+                  context={{
+                    surface: explainSurface,
+                    question: String(item?.stem || ''),
+                    studentAnswer: finalAnswer ? String(finalAnswer) : undefined,
+                    expectedAnswer: correctAnswerDisplay ? String(correctAnswerDisplay) : undefined,
+                    explanation: why ? String(why) : undefined,
+                    questionType: typeof item?.kind === 'string' ? item.kind : undefined,
+                    status: 'incorrect',
+                    questionId: item?.id ? String(item.id) : undefined,
+                  }}
+                />
+              )}
             </div>
           );
         })()}

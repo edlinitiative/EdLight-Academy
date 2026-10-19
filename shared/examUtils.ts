@@ -8,6 +8,7 @@
 import { checkWithCAS } from './mathCAS';
 import { getCoefficient } from './trackConfig';
 import { isPlaceholderKey } from './question/compile';
+import { classifyEssayResponse, parseEssayScoreRatio } from './essayGradeCore';
 
 /**
  * True when the only answer this question offers is a note that the source
@@ -18,7 +19,7 @@ import { isPlaceholderKey } from './question/compile';
  * goes to review. Questions that also carry answer_parts are untouched: the
  * real key is there and the placeholder is only a stand-in in `correct`.
  */
-function hasOnlyPlaceholderKey(question: any): boolean {
+export function hasOnlyPlaceholderKey(question: any): boolean {
   if (Array.isArray(question?.answer_parts) && question.answer_parts.length > 0) return false;
   if (question?.scaffold_blanks) return false;
   const keys = [question?.correct, question?.final_answer].filter(
@@ -1634,7 +1635,8 @@ export function gradeMatchingAnswer(question: any, userAnswer: any) {
  *
  * `preGradedEssay` is an optional object { isCorrect, feedback, score } from
  * the /api/grade-essay endpoint.  When provided for an essay question the
- * function uses it instead of returning 'manual'.
+ * function uses it instead of returning 'manual'. A response that is not a
+ * grade (see shared/essayGradeCore.ts) yields status 'ungraded', never 0.
  */
 // Operator synonyms for the guided condition builder — normalize spellings.
 const CONDITION_OPERATORS: Record<string, string> = {
@@ -1779,12 +1781,31 @@ export function gradeSingleQuestion(question: any, userAnswer: any, preGradedEss
     };
   }
 
-  // Essay or short_answer with AI grade already available
+  // Essay or short_answer with an AI grader response available
   if ((question.type === 'essay' || question.type === 'short_answer') && preGradedEssay) {
-    const scoreParts = (preGradedEssay.score || '').split('/');
-    const num = parseFloat(scoreParts[0]);
-    const den = parseFloat(scoreParts[1]) || 10;
-    const ratio = !isNaN(num) ? num / den : 0;
+    const outcome = classifyEssayResponse(preGradedEssay);
+    // A failed call is NOT a zero (P0 E-11): the item is `ungraded`, left out
+    // of the percentage, and the results page offers "Corriger maintenant".
+    if (outcome === 'failed') {
+      return {
+        question,
+        userAnswer,
+        status: 'ungraded',
+        result: { awarded: 0, maxPoints: pts },
+        essayFeedback: preGradedEssay,
+      };
+    }
+    // Too short to assess: the grader's verdict, final, with its message.
+    if (outcome === 'too_short') {
+      return {
+        question,
+        userAnswer,
+        status: 'incorrect',
+        result: { awarded: 0, maxPoints: pts },
+        essayFeedback: preGradedEssay,
+      };
+    }
+    const ratio = parseEssayScoreRatio(preGradedEssay.score) ?? 0;
     const awarded = Math.round(pts * ratio * 100) / 100;
     return {
       question,
@@ -1906,12 +1927,22 @@ export function gradeExam(questions: any, answers: any, preGradedResults: Record
   let unanswered = 0;
   let manualReview = 0;
   let autoGraded = 0;
+  // Free-response items whose AI grading has not succeeded (yet). Their points
+  // are left OUT of totalPoints, so the percentage covers what was actually
+  // graded, and `pendingPoints` says how much is still to come.
+  let ungraded = 0;
+  let pendingPoints = 0;
 
   const results = questions.map((q: any, i: number) => {
     // Use pre-graded result if available (from immediate feedback mode)
     if (preGradedResults[i]) {
       const pre = preGradedResults[i];
       const pts = q.points || 1;
+      if (pre.status === 'ungraded') {
+        ungraded++;
+        pendingPoints += pts;
+        return pre;
+      }
       totalPoints += pts;
       const awarded = pre.result?.awarded || 0;
       earnedPoints += awarded;
@@ -2166,6 +2197,12 @@ export function gradeExam(questions: any, answers: any, preGradedResults: Record
     autoGraded,
     percentage: totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0,
   };
+  // Only present when something is pending, so a fully graded paper's summary
+  // keeps exactly its historical shape.
+  if (ungraded > 0) {
+    summary.ungraded = ungraded;
+    summary.pendingPoints = pendingPoints;
+  }
 
   // Add coefficient-weighted score if track + subject are provided
   if (options.track && options.subject) {

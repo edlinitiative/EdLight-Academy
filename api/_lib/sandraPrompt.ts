@@ -43,6 +43,23 @@ export type StudentContext = {
   level?: number | null;
 };
 
+/**
+ * The missed question a student asked Sandra to explain ("Explique-moi").
+ * Mirrors shared/explainContext.ts `QuestionContext`; the endpoint sanitizes
+ * it with that module before it reaches this builder.
+ */
+export type ExplainQuestionContext = {
+  surface?: string;
+  question: string;
+  studentAnswer?: string;
+  expectedAnswer?: string;
+  explanation?: string;
+  subject?: string;
+  level?: string;
+  questionType?: string;
+  status?: string;
+};
+
 /** Shared limits contract — the chat endpoint and the widget code against these. */
 export const SANDRA_LIMITS = {
   maxMessageChars: 2000,
@@ -147,6 +164,40 @@ function buildStudentSection(student: StudentContext | undefined): string {
   ].join('\n');
 }
 
+/**
+ * "Explique-moi" — the correction is ALREADY on the student's screen, so the
+ * graded-material rule (never reveal the answer) does not apply to this
+ * question: the job is to make the authored answer understood, step by step,
+ * grounded in the key and explanation provided. When there is no usable key,
+ * say so plainly and teach the method instead of inventing a final answer.
+ */
+export function buildExplainSection(ctx: ExplainQuestionContext | undefined, lang: 'fr' | 'ht'): string {
+  if (!ctx || !ctx.question) return '';
+  const where = [ctx.subject, ctx.level].filter(Boolean).join(', ');
+  const verdict = ctx.status === 'partial'
+    ? 'en partie juste'
+    : ctx.status === 'unanswered' ? 'sans réponse' : 'fausse';
+  const lines = [
+    `Explique-moi : l'élève revoit une question qu'il a ratée${where ? ` (${where})` : ''} et te demande une explication. La correction lui a DÉJÀ été montrée : pour CETTE question, tu peux t'appuyer sur la réponse attendue ci-dessous et l'expliquer.`,
+    `Question : ${ctx.question}`,
+    ctx.studentAnswer ? `Réponse de l'élève (${verdict}) : ${ctx.studentAnswer}` : `Réponse de l'élève : aucune.`,
+    ctx.expectedAnswer ? `Réponse attendue (corrigé officiel) : ${ctx.expectedAnswer}` : '',
+    ctx.explanation ? `Explication rédigée : ${ctx.explanation}` : '',
+    'Ta réponse :',
+    "1. Explique la démarche étape par étape (quatre étapes au maximum, une ou deux phrases chacune), en partant de ce que demande la question jusqu'à la réponse attendue.",
+    "2. Dis précisément où et pourquoi la réponse de l'élève s'écarte de la bonne démarche, avec bienveillance. Si sa réponse est vide, montre par où commencer.",
+    "3. Termine par une seule question courte pour vérifier qu'il a compris, ou propose un exercice semblable.",
+    ctx.expectedAnswer
+      ? "Appuie-toi sur la réponse attendue et l'explication rédigée : ne les contredis pas. Si elles te semblent fausses, dis-le avec prudence plutôt que d'inventer une autre réponse."
+      : "Aucun corrigé fiable n'est enregistré pour cette question : dis-le honnêtement à l'élève, explique la méthode générale, et n'invente pas de réponse finale présentée comme officielle.",
+    'Les formules en LaTeX entre $ (elles seront affichées).',
+    lang === 'ht'
+      ? "Langue : l'élève utilise l'interface en créole haïtien. Fais toute l'explication en créole haïtien, simple et clair."
+      : "Langue : fais l'explication en français simple, sauf si l'élève t'écrit en créole.",
+  ];
+  return lines.filter(Boolean).join('\n');
+}
+
 function buildPageSection(page: PageContext | undefined): string {
   if (!page || (!page.path && !page.courseId && !page.lessonId)) return '';
   const parts: string[] = [];
@@ -164,11 +215,17 @@ export function buildSandraSystemPrompt(args: {
   page?: PageContext;
   chunks: KbChunk[];
   student?: StudentContext;
+  questionContext?: ExplainQuestionContext;
 }): string {
-  const { lang, page, chunks, student } = args;
+  const { lang, page, chunks, student, questionContext } = args;
   const hasGraded = chunks.some((c) => c.type === 'quiz' || c.type === 'exam');
 
-  const pedagogy = hasGraded ? `${PEDAGOGY_BASE}\n${PEDAGOGY_GRADED_WARNING}` : PEDAGOGY_BASE;
+  // The graded-material warning still guards every OTHER quiz/exam excerpt;
+  // the explained question itself is covered by the Explique-moi section.
+  const gradedWarning = questionContext
+    ? `${PEDAGOGY_GRADED_WARNING}\nException : la question de la section « Explique-moi » ci-dessous a déjà été corrigée devant l'élève.`
+    : PEDAGOGY_GRADED_WARNING;
+  const pedagogy = hasGraded ? `${PEDAGOGY_BASE}\n${gradedWarning}` : PEDAGOGY_BASE;
   const language = lang === 'ht' ? `${LANGUAGE_BASE}\n${LANGUAGE_HT_OPENER}` : LANGUAGE_BASE;
 
   const sections = [
@@ -180,6 +237,7 @@ export function buildSandraSystemPrompt(args: {
     buildStudentSection(student),
     buildChunksSection(chunks),
     buildPageSection(page),
+    buildExplainSection(questionContext, lang),
   ];
 
   return sections.filter(Boolean).join('\n\n');

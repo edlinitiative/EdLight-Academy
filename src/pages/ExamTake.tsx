@@ -10,6 +10,8 @@ import MathKeyboard from '../components/MathKeyboard';
 import { useKatex, renderWithKatex } from '../utils/shared';
 import { loadExamAttemptDraft, saveExamAttemptDraft, commitExamSubmission } from '../services/examAttempts';
 import { examDraftKey, readLocalExamDraft, pickResumeDraft, draftPosition, settleWithin } from '../../shared/examDraft';
+import { buildEssayGradeBody, isAiGradable } from '../../shared/essayRegrade';
+import { classifyEssayResponse, ESSAY_GRADE_TIMEOUT_MS } from '../../shared/essayGradeCore';
 import { authedFetch, auth } from '../services/firebase';
 import { track } from '../utils/analytics';
 import { recordTaskResult, loadActiveStudyPlan } from '../services/studyPlanService';
@@ -899,39 +901,26 @@ const ExamTake = () => {
       const wordCount = (userAnswer || '').trim().split(/\s+/).filter(Boolean).length;
       if (wordCount < minWords) return; // caller should show a warning
 
-      // Build rich context for the LLM: include answer_parts labels+answers as reference
-      let modelRef = q.model_answer || q.correct || '';
-      if (q.answer_parts && q.answer_parts.length > 0) {
-        const partsText = q.answer_parts.map(p =>
-          `${p.label}: ${p.answer}${p.alternatives && p.alternatives.length ? ' (also acceptable: ' + p.alternatives.join(', ') + ')' : ''}`
-        ).join('\n');
-        modelRef = modelRef ? modelRef + '\n\nKey expected points:\n' + partsText : partsText;
-      }
-
       setGradingInProgress((prev) => ({ ...prev, [qIndex]: true }));
       try {
-        const response = await authedFetch('/api/grade-essay', {
-            question: q._displayText || q.question,
-            context: q.sectionInstructions || '',
-            answer: userAnswer,
-            modelAnswer: modelRef,
-            answerParts: q.answer_parts || [],
-            points: q.points || 10,
-            type: q.type,
-            subject,
-          });
+        const response = await authedFetch(
+          '/api/grade-essay',
+          buildEssayGradeBody(q, userAnswer, { subject, level: normalizeLevel(exam?.level) }),
+          { timeoutMs: ESSAY_GRADE_TIMEOUT_MS },
+        );
         let essayResult;
         if (response.ok) {
           essayResult = await response.json();
         } else {
-          essayResult = { isCorrect: false, feedback: t('Évaluation automatique indisponible.', 'Koreksyon otomatik pa disponib.'), score: 'N/A' };
+          essayResult = { isCorrect: false, graded: false, feedback: t('Évaluation automatique indisponible.', 'Koreksyon otomatik pa disponib.'), score: 'N/A' };
         }
         const result = gradeSingleQuestion(q, userAnswer, essayResult, { subject });
         setQuestionResults((prev) => ({ ...prev, [qIndex]: result }));
       } catch {
         const result = gradeSingleQuestion(q, userAnswer, {
           isCorrect: false,
-          feedback: t('Erreur de connexion, votre réponse sera évaluée manuellement.', 'Erè koneksyon, y ap korije repons ou an alamen.'),
+          graded: false,
+          feedback: t('Erreur de connexion : la correction pourra être relancée après la remise.', 'Erè koneksyon : w ap ka relanse koreksyon an apre ou fin remèt.'),
           score: 'N/A',
         }, { subject });
         setQuestionResults((prev) => ({ ...prev, [qIndex]: result }));
@@ -997,7 +986,7 @@ const ExamTake = () => {
       const result = gradeSingleQuestion(q, userAnswer, null, { subject });
       setQuestionResults((prev) => ({ ...prev, [qIndex]: result }));
     }
-  }, [questions, answers, questionResults, subject]);
+  }, [questions, answers, questionResults, subject, exam?.level]);
 
   const answeredCount = Object.keys(answers).filter((k) => isAnswerFilled(answers[k])).length;
   const unansweredIndices = [];
@@ -1110,48 +1099,44 @@ const ExamTake = () => {
     // Collect pre-graded results from immediate mode
     const preGraded = feedbackMode === 'immediate' ? { ...questionResults } : {};
 
-    // AI-grade essay / short_answer questions that weren't already pre-graded
+    // AI-grade essay / short_answer questions that weren't already pre-graded.
+    // Same selection rule and request body as the mobile app
+    // (shared/essayRegrade.ts): essays always go to the grader (it marks
+    // structure and language, and French/philosophy as a dissertation, even
+    // without an authored key); a short answer needs a reference.
     const aiJobs = [];
     questions.forEach((q, i) => {
       if (preGraded[i]) return; // already graded
       const userAnswer = answers[i];
-      if (userAnswer == null || userAnswer === '') return; // unanswered
       if (q.type !== 'essay' && q.type !== 'short_answer') return; // not AI-gradable
-
-      // Build model reference the same way as gradeQuestionImmediate
-      let modelRef = q.model_answer || q.correct || '';
-      if (q.answer_parts && q.answer_parts.length > 0) {
-        const partsText = q.answer_parts.map(p =>
-          `${p.label}: ${p.answer}${p.alternatives && p.alternatives.length ? ' (also acceptable: ' + p.alternatives.join(', ') + ')' : ''}`
-        ).join('\n');
-        modelRef = modelRef ? modelRef + '\n\nKey expected points:\n' + partsText : partsText;
-      }
-      if (!modelRef) return; // nothing to grade against
-
-      aiJobs.push({ index: i, question: q, userAnswer, modelRef });
+      if (!isAiGradable(q, userAnswer)) return;
+      aiJobs.push({ index: i, question: q, userAnswer });
     });
 
     // Run AI grading with a bounded concurrency cap (never fire more than a
-    // handful of /api/grade-essay calls at once). Track failures so we can
-    // surface an aggregate "some answers couldn't be auto-graded" notice.
+    // handful of /api/grade-essay calls at once). A call that fails is NOT a
+    // zero: gradeSingleQuestion marks it `ungraded` (left out of the score)
+    // and the results page offers "Corriger maintenant".
     let aiGradeFailures = 0;
     if (aiJobs.length > 0) {
+      const examLevel = normalizeLevel(exam.level);
       const graded = await mapWithConcurrency(aiJobs, 5, async (job) => {
         try {
-          const response = await authedFetch('/api/grade-essay', {
-            question: job.question._displayText || job.question.question,
-            context: job.question.sectionInstructions || '',
-            answer: job.userAnswer,
-            modelAnswer: job.modelRef,
-          });
+          const response = await authedFetch(
+            '/api/grade-essay',
+            buildEssayGradeBody(job.question, job.userAnswer, { subject: examSubject, level: examLevel }),
+            { timeoutMs: ESSAY_GRADE_TIMEOUT_MS },
+          );
           if (response.ok) {
-            return { index: job.index, essayResult: await response.json() };
+            const essayResult = await response.json();
+            if (classifyEssayResponse(essayResult) === 'failed') aiGradeFailures += 1;
+            return { index: job.index, essayResult };
           }
-        } catch { /* network error — fall through */ }
+        } catch { /* network error or timeout — fall through */ }
         aiGradeFailures += 1;
         return {
           index: job.index,
-          essayResult: { isCorrect: false, feedback: t('Évaluation automatique indisponible.', 'Koreksyon otomatik pa disponib.'), score: 'N/A' },
+          essayResult: { isCorrect: false, graded: false, feedback: t('Évaluation automatique indisponible.', 'Koreksyon otomatik pa disponib.'), score: 'N/A' },
         };
       });
 
@@ -3445,6 +3430,7 @@ function ImmediateFeedback({ result, question, color }) {
     incorrect: { icon: '✗', label: t('Incorrect', 'Pa kòrèk'), cls: 'exam-take__feedback--incorrect' },
     'scaffold-complete': { icon: '✓', label: t('Complété', 'Konplè'), cls: 'exam-take__feedback--correct' },
     manual: { icon: '•', label: t('Évaluation manuelle', 'Koreksyon alamen'), cls: 'exam-take__feedback--manual' },
+    ungraded: { icon: '•', label: t('Pas encore corrigée', 'Poko korije'), cls: 'exam-take__feedback--manual' },
     unanswered: { icon: '—', label: t('Sans réponse', 'San repons'), cls: 'exam-take__feedback--unanswered' },
   };
   const cfg = statusConfig[status] || statusConfig.manual;
@@ -3461,11 +3447,21 @@ function ImmediateFeedback({ result, question, color }) {
       <div className="exam-take__feedback-banner">
         <span className="exam-take__feedback-icon">{cfg.icon}</span>
         <span className="exam-take__feedback-label">{cfg.label}</span>
-        <span className="exam-take__feedback-score">{awarded}/{maxPts} pt{maxPts > 1 ? 's' : ''}</span>
+        {status !== 'ungraded' && (
+          <span className="exam-take__feedback-score">{awarded}/{maxPts} pt{maxPts > 1 ? 's' : ''}</span>
+        )}
       </div>
 
-      {/* Essay AI feedback */}
-      {essayFeedback && (
+      {/* Essay AI feedback (a failed call has no grade to show: say so, never "N/A") */}
+      {essayFeedback && classifyEssayResponse(essayFeedback) === 'failed' && (
+        <p className="exam-take__feedback-essay-text">
+          {t(
+            'La correction automatique n’a pas abouti. Vous pourrez la relancer depuis vos résultats.',
+            'Koreksyon otomatik la pa t mache. W ap ka relanse l nan rezilta ou yo.',
+          )}
+        </p>
+      )}
+      {essayFeedback && classifyEssayResponse(essayFeedback) !== 'failed' && (
         <div className="exam-take__feedback-essay">
           <div className="exam-take__feedback-essay-score">
             <span>{t('Note IA :', 'Nòt IA :')}</span> <strong>{essayFeedback.score}</strong>
