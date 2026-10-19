@@ -37,6 +37,13 @@ describe('notification prefs (users/{uid}/settings/notifications)', () => {
     expect(await getNotificationPrefs('u1')).toMatchObject({ competitionUpdates: false, studyReminders: true });
   });
 
+  it('reads arenaAnnouncements as ON unless explicitly false (api/arena/_announce.ts opt-out)', async () => {
+    (getDoc as jest.Mock).mockResolvedValueOnce({ exists: () => false, data: () => ({}) });
+    expect((await getNotificationPrefs('u1')).arenaAnnouncements).toBe(true);
+    (getDoc as jest.Mock).mockResolvedValueOnce({ exists: () => true, data: () => ({ arenaAnnouncements: false }) });
+    expect((await getNotificationPrefs('u1')).arenaAnnouncements).toBe(false);
+  });
+
   it('writes only the changed key, merged into the settings doc', async () => {
     await saveNotificationPrefs('u1', { competitionUpdates: false });
     expect(setDoc).toHaveBeenCalledWith(

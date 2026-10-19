@@ -57,6 +57,7 @@ export type InboxAction =
   | 'source_changed'
   | 'ownership_received'
   | 'owner_missing'
+  | 'report_received'
   | 'event_starting'
   | 'event_starting_soon'
   | 'registration_closing';
@@ -167,6 +168,15 @@ export const INBOX_ACTIONS: Record<InboxAction, { label: Pair; push?: Pair }> = 
     push: [
       'Un événement sans organisateur demande une décision d’administrateur.',
       'Yon evènman san òganizatè bezwen yon desizyon administratè.',
+    ],
+  },
+  // Admin-only (api/_lib/competition.ts `report-content`). The push never
+  // carries the report's reason or the reporter: only that one is waiting.
+  report_received: {
+    label: ['Signalement à examiner', 'Siyalman pou egzamine'],
+    push: [
+      'Un signalement attend une décision de modération.',
+      'Yon siyalman ap tann yon desizyon moderasyon.',
     ],
   },
   announcement: {

@@ -2151,7 +2151,7 @@
         {
           "source": "mobile/src/components/arena/ArenaHubPanel.tsx",
           "match": "Chaque partie fait monter ton école",
-          "line": 107
+          "line": 123
         },
         {
           "source": "mobile/store/app-store-metadata.md",
@@ -2512,7 +2512,7 @@
         {
           "source": "mobile/src/components/arena/ArenaHubPanel.tsx",
           "match": "label={t('Défier un ami'",
-          "line": 121
+          "line": 137
         },
         {
           "source": "mobile/src/components/games/JeuxHub.tsx",
@@ -2777,7 +2777,7 @@
         {
           "source": "mobile/src/components/arena/ArenaHubPanel.tsx",
           "match": "Mon activité · Équipes et compétitions",
-          "line": 133
+          "line": 149
         },
         {
           "source": "shared/competition/workspace.ts",
@@ -2956,7 +2956,7 @@
         {
           "source": "shared/competition/notifications.ts",
           "match": "Tu es invité·e à rejoindre cette équipe.",
-          "line": 75
+          "line": 76
         }
       ],
       "requirementIds": [
@@ -3020,7 +3020,7 @@
         {
           "source": "shared/competition/notifications.ts",
           "match": "Tu peux organiser pour ton école.",
-          "line": 107
+          "line": 108
         }
       ],
       "requirementIds": [
@@ -3141,7 +3141,7 @@
         {
           "source": "shared/competition/notifications.ts",
           "match": "Tous les titulaires ont confirmé : termine l’inscription.",
-          "line": 130
+          "line": 131
         }
       ],
       "requirementIds": [
@@ -3435,24 +3435,29 @@
       ],
       "implementation": [
         "shared/competition/workspace.ts",
-        "api/_lib/competition.ts"
+        "api/_lib/competition.ts",
+        "api/_lib/competitionNotify.ts",
+        "shared/competition/notifications.ts",
+        "docs/design/release-readiness/report-triage-runbook.md"
       ],
       "automatedEvidence": [
-        "api/__tests__/competitionAccountDeletion.test.ts"
+        "api/__tests__/competitionAccountDeletion.test.ts",
+        "api/__tests__/competitionEngine.test.ts"
       ],
       "flags": [],
       "status": "Implemented/unverified",
       "pendingEvidence": [
-        "Named moderation owner, runbook and one real report triaged end to end (TRU-10, §11)"
+        "One real report triaged end to end by the owner within the 24h target (TRU-10, §11)"
       ],
       "mismatch": {
         "severity": "major",
-        "status": "Open",
+        "status": "Resolved",
         "finding": "Reporting is advertised to every viewer, but reports land in an admin-only \"Modération privée\" panel with no named owner, triage target or escalation path; only the account-deletion test exercises report-content.",
-        "recommendation": "Implement the operational side: assign the operations owner and runbook before enabling the pilot; no copy change needed once owned."
+        "recommendation": "Implement the operational side: assign the operations owner and runbook before enabling the pilot; no copy change needed once owned.",
+        "resolution": "Resolved 2026-10-19: report-content now notifies every platform admin (role admin, limit 10) with a typed report_received inbox item per target (report_<kind>_<targetId>, re-flagged unread on each report) and a push without the reason or reporter, at most once per target per hour (server-only competitionReportAlerts/{kind}_{targetId}); never on replayed receipts (api/_lib/competition.ts, tests in api/__tests__/competitionEngine.test.ts). Owner, 24h target, resolution steps and escalation in docs/design/release-readiness/report-triage-runbook.md."
       },
       "notes": "",
-      "owner": null,
+      "owner": "EdLight platform admin (info@edlight.org, role admin)",
       "scenarioIds": [],
       "evidence": []
     },
@@ -3469,7 +3474,7 @@
         {
           "source": "shared/competition/notifications.ts",
           "match": "export const INBOX_ACTIONS",
-          "line": 67
+          "line": 68
         },
         {
           "source": "src/components/NotificationCenter.tsx",
@@ -3732,7 +3737,7 @@
         {
           "source": "shared/competition/notifications.ts",
           "match": "ownership_received: {",
-          "line": 158
+          "line": 159
         }
       ],
       "requirementIds": [
@@ -3855,7 +3860,7 @@
         {
           "source": "shared/competition/notifications.ts",
           "match": "Ton événement commence dans 1 heure.",
-          "line": 260
+          "line": 270
         }
       ],
       "requirementIds": [
@@ -3901,7 +3906,7 @@
         {
           "source": "mobile/src/components/arena/ArenaHubPanel.tsx",
           "match": "On te prévient dès qu’un championnat est annoncé.",
-          "line": 266
+          "line": 287
         },
         {
           "source": "mobile/src/settings/notificationPermission.ts",
@@ -3918,21 +3923,27 @@
       ],
       "implementation": [
         "api/send-broadcast.ts",
-        "mobile/src/settings/notificationPermission.ts"
+        "mobile/src/settings/notificationPermission.ts",
+        "api/arena/_announce.ts",
+        "api/arena/state.ts",
+        "mobile/src/components/arena/ArenaHubPanel.tsx",
+        "mobile/App.tsx"
       ],
       "automatedEvidence": [
-        "mobile/src/settings/__tests__/notificationPermission.test.ts"
+        "mobile/src/settings/__tests__/notificationPermission.test.ts",
+        "api/__tests__/arenaAnnounce.test.ts"
       ],
       "flags": [],
-      "status": "Failed",
+      "status": "Implemented/unverified",
       "pendingEvidence": [
-        "Decision: automatic announcement push vs manual broadcast runbook"
+        "One real draft→registration and registration→doors transition observed on a device (push received, tap opens the Arena hub)"
       ],
       "mismatch": {
         "severity": "major",
-        "status": "Open",
+        "status": "Resolved",
         "finding": "The empty championship card promises an alert when a championship is announced, but no automatic announcement or doors-open push exists; only a manual admin broadcast to all subscribed devices (api/send-broadcast.ts). The 'arena-event' permission reason (and its \"when the Arène opens and your school plays\" text) has no caller.",
-        "recommendation": "Implement through the scheduled-reminder work (ADV-32) with an announcement/doors-open push, or hide copy: reword the card to not promise an alert and make the manual broadcast a named runbook step with an owner."
+        "recommendation": "Implement through the scheduled-reminder work (ADV-32) with an announcement/doors-open push, or hide copy: reword the card to not promise an alert and make the manual broadcast a named runbook step with an owner.",
+        "resolution": "Resolved 2026-10-19: api/arena/state.ts now pushes automatically after the commit — draft→registration (announced) to every user with an Expo token or web-push subscription, registration→doors to the registered players — via api/arena/_announce.ts, claimed once in a transaction (announcedPushAt / doorsPushAt on the tournament) so retries never double-send; opt-out users/{uid}/settings/notifications.arenaAnnouncements === false (web toggle in NotificationCenter; no app toggle yet). FR/HT copy, data.type \"arena\" opens ArenaHub (mobile/App.tsx), web url /arena. The empty-card promise now shows only once notifications are granted; otherwise the card asks through the arena-event pre-prompt. Tests: api/__tests__/arenaAnnounce.test.ts."
       },
       "notes": "",
       "owner": null,

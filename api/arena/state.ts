@@ -89,6 +89,7 @@ import {
   toMillis,
 } from './_shared';
 import { CLAIM_WINDOW_MS, loadClaims } from './claim';
+import { announceArena } from './_announce';
 import { blockersFor } from './review';
 import { correctIndividuals, type FinalBlocker } from '../../shared/arena/review';
 import {
@@ -665,11 +666,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return;
     }
 
+    // ── The two moments students are told about ─────────────────────────
+    // Announced (registration opens) → every device; doors open → the
+    // registered students. After the commit, claimed at most once on the
+    // tournament document, and never able to fail the transition itself.
+    // See api/arena/_announce.ts.
+    const announcement = to === 'registration' || to === 'doors'
+      ? await announceArena(db, String(tid), to === 'registration' ? 'announced' : 'doors', now)
+      : undefined;
+
     res.status(200).json({
       ok: true,
       tournamentId: tid,
       from: outcome.from,
       to,
+      ...(announcement ? { announcement } : {}),
       claimsOpened: placeholders.length,
       eventsEmitted: outcome.eventsEmitted,
       ...(to === 'final' ? {
