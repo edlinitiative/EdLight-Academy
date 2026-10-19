@@ -56,7 +56,12 @@ export type InboxAction =
   | 'fixture_updated'
   | 'source_changed'
   | 'ownership_received'
-  | 'owner_missing';
+  | 'owner_missing'
+  | 'report_received'
+  | 'reports_waiting'
+  | 'event_starting'
+  | 'event_starting_soon'
+  | 'registration_closing';
 
 type Pair = [string, string];
 
@@ -166,6 +171,22 @@ export const INBOX_ACTIONS: Record<InboxAction, { label: Pair; push?: Pair }> = 
       'Yon evènman san òganizatè bezwen yon desizyon administratè.',
     ],
   },
+  // Admin-only (api/_lib/competition.ts `report-content`). The push never
+  // carries the report's reason or the reporter: only that one is waiting.
+  report_received: {
+    label: ['Signalement à examiner', 'Siyalman pou egzamine'],
+    push: [
+      'Un signalement attend une décision de modération.',
+      'Yon siyalman ap tann yon desizyon moderasyon.',
+    ],
+  },
+  reports_waiting: {
+    label: ['Nombreux signalements', 'Anpil siyalman'],
+    push: [
+      'Beaucoup de signalements arrivent : ouvre la modération pour les traiter.',
+      'Anpil siyalman ap rive : louvri moderasyon an pou trete yo.',
+    ],
+  },
   announcement: {
     label: ['Nouvelle annonce', 'Nouvo anons'],
     push: [
@@ -250,6 +271,28 @@ export const INBOX_ACTIONS: Record<InboxAction, { label: Pair; push?: Pair }> = 
     ],
   },
   source_changed: { label: ['Résultat source modifié', 'Rezilta sous la chanje'] },
+  // Scheduled reminders (api/_lib/competitionReminders): sent by the cron, not by a person.
+  event_starting: {
+    label: ['Commence dans 1 heure', 'Kòmanse nan 1 èdtan'],
+    push: [
+      'Ton événement commence dans 1 heure.',
+      'Evènman ou an ap kòmanse nan 1 èdtan.',
+    ],
+  },
+  event_starting_soon: {
+    label: ['Commence dans 10 minutes', 'Kòmanse nan 10 minit'],
+    push: [
+      'Ton événement commence dans 10 minutes. Sois prêt·e !',
+      'Evènman ou an ap kòmanse nan 10 minit. Pare w !',
+    ],
+  },
+  registration_closing: {
+    label: ['Inscriptions bientôt closes', 'Enskripsyon ap fèmen talè'],
+    push: [
+      'Les inscriptions ferment bientôt : confirme ta place ou termine l’inscription.',
+      'Enskripsyon yo ap fèmen talè : konfime plas ou oswa fini enskripsyon an.',
+    ],
+  },
 };
 
 export function isInboxAction(value: unknown): value is InboxAction {

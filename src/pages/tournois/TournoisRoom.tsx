@@ -59,6 +59,7 @@ import {
   useLazyTicker,
   useServerNow,
 } from './parts';
+import ArenaPageHead from '../../components/arena/ArenaPageHead';
 import './Tournois.css';
 
 // ── Question card (live and rounds share it) ───────────────────────────────
@@ -587,14 +588,23 @@ export default function TournoisRoom() {
   if (!tour) {
     return (
       <section className="tn">
-        <div className="tn__narrow tn-card" style={{ textAlign: 'center' }}>
-          <h1 style={{ marginTop: 0 }}>{readError === 'private' ? t('Tournoi privé', 'Tounwa prive') : t('Tournoi introuvable', 'Nou pa jwenn tounwa a')}</h1>
-          <p className="tn-muted">
-            {readError === 'private'
-              ? t('Seuls les joueurs entrés avec le PIN peuvent le voir.', 'Se sèlman jwè ki antre ak PIN nan ki ka wè l.')
-              : t('Le lien est peut-être incomplet.', 'Petèt lyen an pa konplè.')}
-          </p>
-          <Link to="/tournois/rejoindre" className="button button--primary">{t('Entrer un PIN', 'Antre yon PIN')}</Link>
+        <div className="tn__narrow">
+          <ArenaPageHead
+            title={readError === 'private' ? t('Tournoi privé', 'Tounwa prive') : t('Tournoi introuvable', 'Nou pa jwenn tounwa a')}
+            back="/tournois"
+            backLabel={t('Tournois', 'Tounwa')}
+          />
+          <div className="tn-card tn-missing">
+            <p className="tn-muted">
+              {readError === 'private'
+                ? t('Seuls les joueurs entrés avec le PIN peuvent le voir.', 'Se sèlman jwè ki antre ak PIN nan ki ka wè l.')
+                : t('Le lien est peut-être incomplet.', 'Petèt lyen an pa konplè.')}
+            </p>
+            <div className="tn-missing__actions">
+              <Link to="/tournois/rejoindre" className="button button--primary">{t('Entrer un PIN', 'Antre yon PIN')}</Link>
+              <Link to="/tournois" className="button button--ghost">{t('Voir les tournois', 'Wè tounwa yo')}</Link>
+            </div>
+          </div>
         </div>
       </section>
     );

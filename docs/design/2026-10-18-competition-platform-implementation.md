@@ -22,7 +22,7 @@ The requested scope is the core product and competition slices A–D in the [rel
 
 This is a bounded pilot, not demonstrated national-scale operation. New app events accept at most sixty players (the current form uses thirty); independent named teams have exactly three starters; persistent teams hold at most twelve members. Directory pages contain twenty managed listings, with separate bounded legacy/official feeds. Geographic context not established by canonical school data remains unknown or explicitly organizer-declared. Classroom/cohort verification, department-wide eligibility, cross-school league policy and shared-answer/relay modes are not implemented by these pilot contracts.
 
-The new surfaces still need a complete presentation review, localized state-copy review, public identity/avatar treatment, full notification scheduling/delivery integration, support/moderation ownership, account-deletion lifecycle review for the new records and complete advertised-capability mapping. No physical iOS/Android installation, real multi-account school event, production receipt/alert drill, thirty-run performance profile or deployed rules/index migration was performed in this coding session. These remain blockers for the corresponding requirements. The source inventory is a starting declaration inventory; it is not a rendered navigation or marketing audit.
+The original pilot record listed presentation review, localized state copy, public identity/avatars, notification scheduling/delivery, support/moderation ownership, the account-deletion lifecycle and advertised-capability mapping as open. The follow-ups below cover the code side of identity, copy, delivery, scheduled reminders (1 h / 10 min before start and registration closing, run from the tick cron via the server-only `competitionReminders` queue in `api/_lib/competitionReminders.ts`), the deletion lifecycle and the capability mapping. Still open: device-level delivery verification, support/moderation ownership, the presentation review and resolution of the advertised-capability mismatches (see [Advertised-capability mapping](#advertised-capability-mapping)). Firestore rules and indexes were deployed on October 19, 2026. No physical iOS/Android installation, real multi-account school event, production receipt/alert drill or thirty-run performance profile has been performed. These remain blockers for the corresponding requirements.
 
 ## Follow-up delivered (branch `competition/finish-pilot`)
 
@@ -34,7 +34,29 @@ These close the code side of the review items above. They do not change the rele
 - **Localized copy.** Status/state/format/audience/kind labels, Haiti-time dates and every API error code have French and Kreyòl text (`shared/competition/labels.ts`, `errors.ts`); a test fails when a new server code lacks a message.
 - **Diagnostics.** Tournament join, attempt start/recovery, answer receipt (accepted/duplicate/late/rejected), failure, review and cancellation emit allowlisted events (`phase`, `round`, `errorCode`, `recovered` added deliberately); tournament requests run through `observedFetch` flow `tournois`. Competition actions keep the existing `competition_action` signal.
 
-Still open after this follow-up: deploying the Firestore rules and the new indexes (collection-group overrides on `entries.captainUid`, `entries.starters`, `entries.teamId`, `audit.actorUid`), a settings control for `competitionUpdates`, `ACCOUNT_DELETION_SALT` in the deployment environment, an admin alert for started events or leagues left without an eligible owner, the visual presentation review, and every installed-build, pilot and operational item listed above.
+- **Notification switch.** Web Notification Center and the app's Profile expose a `Compétitions et équipes` switch that writes `competitionUpdates`.
+- **Ownerless events.** A heir ladder and the quarter-hourly sweep finish events/leagues whose organizer deleted their account; administrators receive `owner_missing` only when needed.
+
+Still open after this follow-up: deploying the Firestore rules and the new indexes (collection-group overrides on `entries.captainUid`, `entries.starters`, `entries.teamId`, `audit.actorUid`), `ACCOUNT_DELETION_SALT` in the deployment environment, an admin alert for started events or leagues left without an eligible owner, the visual presentation review, and every installed-build, pilot and operational item listed above.
+
+## Advertised-capability mapping
+
+The source-level mapping is recorded as `advertisedCapabilities` (ADV-01–ADV-33) in [`release-readiness/candidate.json`](release-readiness/candidate.json), summarized in [advertised-capabilities.md](release-readiness/advertised-capabilities.md). Every Arène/competition promise in web and native copy, navigation, permission prompts, push copy, meta text and the in-repo store listing maps to requirements, journeys, implementation and automated tests. No row is `Verified`.
+
+It found nine open mismatches. Five are major copy/claim contradictions:
+
+- web play is on while the app-only claim remains;
+- the "Organiser" panel still renders while creation is disabled;
+- iOS universal links lack the competition paths;
+- deletion copy promises full deletion while competition results are pseudonymized;
+- championship-announcement alerts are promised without an automatic push.
+
+Two are major gaps:
+
+- native tournament creation is public-only (parity);
+- reported content has no named owner (operations).
+
+Two are minor copy items. MAP-01 is `Failed` until they are resolved and a rendered audit confirms no unmapped promise. Scheduled competition reminders are tracked as `Not implemented` (ADV-32) until that work lands.
 
 ## Verification commands
 

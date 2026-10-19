@@ -19,10 +19,12 @@
  * own level. No invented events, schools, counts or ranks.
  */
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ChevronRight, Eye, School as SchoolIcon, Swords, Trophy, Zap, Clock, CalendarDays, Play } from 'lucide-react-native';
+import { Bell, ChevronRight, Eye, School as SchoolIcon, Swords, Trophy, Zap, Clock, CalendarDays, Play } from 'lucide-react-native';
+import { askForNotifications, getNotificationPermissionAction } from '../../services/notificationService';
+import type { PermissionAction } from '../../settings/notificationPermission';
 import useStore from '../../contexts/store';
 import { useArenaHub, useNow } from '../../hooks/useArena';
 import { useTrivia } from '../../hooks/useTrivia';
@@ -66,6 +68,20 @@ export default function ArenaHubPanel({ onPractice, onDuel }: ArenaHubPanelProps
     () => teamStandingFor(rankTeams(groups ?? []), schoolName),
     [groups, schoolName],
   );
+
+  // ── Championship alerts ─────────────────────────────────────────────────
+  // null while the OS is being asked where permission stands.
+  const [alerts, setAlerts] = useState<PermissionAction | null>(null);
+  useEffect(() => {
+    let live = true;
+    getNotificationPermissionAction().then((a) => { if (live) setAlerts(a); }).catch(() => {});
+    return () => { live = false; };
+  }, []);
+  const askArenaAlerts = async () => {
+    arenaHaptics.choose();
+    const result = await askForNotifications('arena-event');
+    setAlerts(result === 'granted' ? 'granted' : await getNotificationPermissionAction());
+  };
 
   const go = (screen: string, params?: object) => {
     arenaHaptics.choose();
@@ -256,17 +272,41 @@ export default function ArenaHubPanel({ onPractice, onDuel }: ArenaHubPanelProps
       ) : (
         // Honest, and small: no invented date. The everyday play above is
         // the Arena's job between events (M3), not an empty championship.
-        <View accessible style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 20, backgroundColor: C.surface }}>
-          <CalendarDays color={C.muted} size={20} />
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text style={[arenaType.name, { fontSize: 15, color: C.inkSoft }]}>
-              {t('Aucun championnat prévu pour l’instant', 'Pa gen chanpyona pwograme pou kounye a')}
-            </Text>
-            <Text style={[arenaType.status, { color: C.muted }]}>
-              {t('On te prévient dès qu’un championnat est annoncé.', 'N ap fè w konnen depi yo anonse yon chanpyona.')}
-            </Text>
+        // The promise below is kept by api/arena/_announce.ts (a push to every
+        // device when a championship is announced). It is only true once
+        // notifications are allowed, so until then the card says so and asks —
+        // through the 'arena-event' pre-prompt, never the OS dialog cold.
+        alerts === 'granted' || alerts === null ? (
+          <View accessible style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 20, backgroundColor: C.surface }}>
+            <CalendarDays color={C.muted} size={20} />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={[arenaType.name, { fontSize: 15, color: C.inkSoft }]}>
+                {t('Aucun championnat prévu pour l’instant', 'Pa gen chanpyona pwograme pou kounye a')}
+              </Text>
+              <Text style={[arenaType.status, { color: C.muted }]}>
+                {t('On te prévient dès qu’un championnat est annoncé.', 'N ap fè w konnen depi yo anonse yon chanpyona.')}
+              </Text>
+            </View>
           </View>
-        </View>
+        ) : (
+          <PressableScale
+            onPress={askArenaAlerts}
+            accessibilityRole="button"
+            accessibilityLabel={t('Activer les alertes championnat', 'Aktive alèt chanpyona yo')}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 20, backgroundColor: C.surface }}
+          >
+            <Bell color={C.coral} size={20} />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={[arenaType.name, { fontSize: 15, color: C.inkSoft }]}>
+                {t('Aucun championnat prévu pour l’instant', 'Pa gen chanpyona pwograme pou kounye a')}
+              </Text>
+              <Text style={[arenaType.status, { color: C.muted }]}>
+                {t('Active les notifications pour être prévenu·e dès qu’un championnat est annoncé.', 'Aktive notifikasyon yo pou yo fè w konnen depi yo anonse yon chanpyona.')}
+              </Text>
+            </View>
+            <ChevronRight color={C.muted} size={18} />
+          </PressableScale>
+        )
       )}
 
       {/* With an event on the card, everyday play stays one tap away —

@@ -30,9 +30,9 @@ const DESCRIPTIONS: Record<string, Partial<Record<Lang, string>>> = {
     en: 'Math, chemistry and economics courses for Haitian students. Short videos, interactive quizzes and mock exams, physics included — free, in French and Haitian Creole.',
   },
   arena: {
-    fr: 'Le championnat inter-écoles EdLight : inscrivez votre école, puis affrontez les autres établissements d’Haïti dans l’application.',
-    ht: 'Chanpyona ant lekòl EdLight la : enskri lekòl ou, epi afwonte lòt lekòl an Ayiti nan aplikasyon an.',
-    en: 'The EdLight inter-school championship: register your school on the web, then compete in the app.',
+    fr: 'Le championnat inter-écoles EdLight : inscrivez votre école, puis affrontez les autres établissements d’Haïti sur le site ou dans l’application.',
+    ht: 'Chanpyona ant lekòl EdLight la : enskri lekòl ou, epi afwonte lòt lekòl an Ayiti sou sit la oswa nan aplikasyon an.',
+    en: 'The EdLight inter-school championship: register your school, then compete on the web or in the app.',
   },
   leaderboard: {
     fr: 'Le classement EdLight Academy : les élèves, les écoles, les villes et les départements les plus actifs cette semaine et depuis toujours.',

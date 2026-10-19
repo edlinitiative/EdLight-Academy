@@ -110,6 +110,15 @@
   ],
   "headers": [
     {
+      "source": "/.well-known/(apple-app-site-association|assetlinks.json)",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ]
+    },
+    {
       "source": "/(.*)",
       "headers": [
         {

@@ -13,6 +13,8 @@ const DEFAULT_PREFERENCES = {
   // Pushes for teams/competitions (api/_lib/competitionNotify.ts). Absent = on;
   // the "Mon activité" inbox records items either way.
   competitionUpdates: true,
+  // Championship announced / doors open pushes (api/arena/_announce.ts). Absent = on.
+  arenaAnnouncements: true,
   achievementNotifications: true,
   weeklyProgress: true,
   reminderTime: '18:00', // 6 PM default

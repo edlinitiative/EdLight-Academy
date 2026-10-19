@@ -236,6 +236,8 @@ export type NotificationPrefs = {
   emailNotifications?: boolean;
   /** Gates competition/team pushes (api/_lib/competitionNotify.ts); the inbox still records them. */
   competitionUpdates?: boolean;
+  /** Gates the championship announced / doors-open pushes (api/arena/_announce.ts). */
+  arenaAnnouncements?: boolean;
 };
 
 export async function saveNotificationPrefs(uid: string, prefs: NotificationPrefs) {
@@ -251,6 +253,7 @@ export async function getNotificationPrefs(uid: string): Promise<NotificationPre
     studyReminders: d.studyReminders !== false,
     emailNotifications: d.emailNotifications !== false,
     competitionUpdates: d.competitionUpdates !== false,
+    arenaAnnouncements: d.arenaAnnouncements !== false,
   };
 }
 

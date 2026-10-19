@@ -193,7 +193,15 @@ export function workspacePage(
     if (mine) {
       panels.push({
         title: c('Mon activité', 'Aktivite mwen'),
-        paragraphs: mine.inviteCode
+        // The code only helps while someone can still invite you: creation is
+        // open, or you already belong to (or are being invited into) a team.
+        paragraphs: mine.inviteCode &&
+          (mine.creationEnabled ||
+            (mine.teams || []).length > 0 ||
+            (mine.inbox || []).some(
+              (row: any) =>
+                row.targetKind === 'invite' || row.targetKind === 'team',
+            ))
           ? [
               c(
                 `Mon code d’invitation : ${formatInviteCode(mine.inviteCode)} — donnez-le au capitaine qui veut vous inviter dans son équipe.`,
@@ -513,7 +521,7 @@ export function workspacePage(
         })),
       });
     }
-    if (mine && !mine.creationEnabled)
+    if (mine && !mine.creationEnabled) {
       for (const panel of panels)
         panel.tasks = panel.tasks?.filter(
           (task) =>
@@ -521,6 +529,15 @@ export function workspacePage(
               task.action,
             ),
         );
+      // Creation closed: don't describe new events, and drop "Organiser"
+      // entirely when nothing is left to do in it (non-hosts).
+      const organiser = panels.find((p) => p.title[0] === 'Organiser');
+      if (organiser) {
+        organiser.paragraphs = [];
+        if (!organiser.tasks?.length)
+          panels.splice(panels.indexOf(organiser), 1);
+      }
+    }
     return { title: c('Compétitions', 'Konpetisyon'), panels };
   }
   if (target.kind === 'school')

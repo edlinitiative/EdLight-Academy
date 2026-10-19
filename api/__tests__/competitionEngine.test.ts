@@ -749,3 +749,135 @@ it('membership review notifies the reviewed student; results release without sco
   expect(pushedTo()).toEqual(['a']);
   expect(inboxOf('a')[0]).toMatchObject({ action: 'membership_approved' });
 });
+describe('report-content reaches an owner', () => {
+  const report = (uid: string, targetId: string, op?: string, at = now) =>
+    mutateCompetition(
+      db,
+      uid,
+      uid,
+      {
+        action: 'report-content',
+        operationId: op ?? `report_${++sequence}`,
+        kind: 'team',
+        targetId,
+        reason: 'Nom d’équipe offensant pour mon école',
+      },
+      at,
+    );
+  beforeEach(() => {
+    for (const uid of ['adm1', 'adm2'])
+      mockDb.store.set(`users/${uid}`, { displayName: uid, role: 'admin' });
+    for (let i = 0; i < 12; i++)
+      mockDb.store.set(`teams/target${i}`, { id: `target${i}`, name: `Équipe ${i}` });
+  });
+  it('rejects reports about records that do not exist', async () => {
+    await expect(report('b', 'invented')).rejects.toMatchObject({ code: 'not_found' });
+    expect(mockDb.childrenOf('competitionReports')).toHaveLength(0);
+  });
+  it('limits each reporter per hour, and one reporter cannot use up the admins’ push budget', async () => {
+    mockExpoPush.mockClear();
+    for (let i = 0; i < 10; i++) await report('b', `target${i}`, undefined, now + i);
+    await expect(report('b', 'target10', undefined, now + 20)).rejects.toMatchObject({
+      code: 'rate_limit_exceeded',
+    });
+    // 10 distinct targets from one account: admins are interrupted once (2 admins).
+    expect(mockExpoPush).toHaveBeenCalledTimes(2);
+    expect(mockDb.childrenOf('users/adm1/competitionInbox')).toHaveLength(10);
+    // Someone else's report on a fresh target still reaches the admins.
+    mockExpoPush.mockClear();
+    await report('c', 'target11', undefined, now + 30);
+    expect(mockExpoPush).toHaveBeenCalledTimes(2);
+  });
+  it('keeps a platform ceiling: at it admins get one digest push, past it quiet; titles never in pushes', async () => {
+    const window = Math.floor(now / 3_600_000);
+    mockDb.store.set('teams/t1', { id: 't1', name: 'Nom offensant' });
+    mockDb.store.set('teams/t2', { id: 't2', name: 'Autre' });
+    mockDb.store.set('competitionReportAlerts/_global', { window, pushes: 30 });
+    mockExpoPush.mockClear();
+    await report('b', 't1');
+    expect(mockExpoPush.mock.calls.map((c) => (c[1] as any).data.action)).toEqual([
+      'reports_waiting',
+      'reports_waiting',
+    ]);
+    expect(JSON.stringify(mockExpoPush.mock.calls)).not.toContain('Nom offensant');
+    mockExpoPush.mockClear();
+    await report('c', 't2');
+    expect(mockExpoPush).not.toHaveBeenCalled();
+    // The admin inbox still records every report.
+    expect(doc('users/adm1/competitionInbox/report_team_t2')).toMatchObject({ read: false });
+  });
+  it('gives every admin one unread inbox item per target and a push without the reason', async () => {
+    const teamId = (await mutate('a', 'team-create', { name: 'Les étoiles' }))
+      .teamId as string;
+    mockExpoPush.mockClear();
+    await report('b', teamId);
+    for (const uid of ['adm1', 'adm2'])
+      expect(
+        doc(`users/${uid}/competitionInbox/report_team_${teamId}`),
+      ).toMatchObject({
+        action: 'report_received',
+        targetKind: 'team',
+        targetId: teamId,
+        title: 'Les étoiles',
+        read: false,
+      });
+    expect(mockExpoPush.mock.calls.map((c) => c[0]).sort()).toEqual([
+      'adm1',
+      'adm2',
+    ]);
+    const payloads = JSON.stringify([
+      ...mockExpoPush.mock.calls,
+      ...mockWebPush.mock.calls,
+    ]);
+    expect(payloads).not.toContain('offensant');
+    expect(payloads).not.toContain('"b"');
+    expect(mockExpoPush.mock.calls[0][1]).toMatchObject({
+      body: 'Un signalement attend une décision de modération.',
+      data: {
+        type: 'competition',
+        action: 'report_received',
+        targetKind: 'team',
+        targetId: teamId,
+      },
+    });
+  });
+  it('aggregates a flood: the inbox item updates, admins are pushed at most once per target per hour', async () => {
+    await report('b', 'target1');
+    mockExpoPush.mockClear();
+    doc('users/adm1/competitionInbox/report_team_target1').read = true;
+    await report('c', 'target1', undefined, now + 60_000);
+    await report('d', 'target1', undefined, now + 120_000);
+    expect(mockExpoPush).not.toHaveBeenCalled();
+    expect(doc('users/adm1/competitionInbox/report_team_target1')).toMatchObject(
+      { read: false, updatedAt: now + 120_000 },
+    );
+    expect(mockDb.childrenOf('users/adm1/competitionInbox')).toHaveLength(1);
+    expect(doc('competitionReportAlerts/team_target1')).toMatchObject({
+      reports: 3,
+      lastPushedAt: now,
+      lastReportAt: now + 120_000,
+    });
+    expect(mockDb.childrenOf('competitionReports')).toHaveLength(3);
+    // A different target is its own item and its own push.
+    await report('c', 'target2', undefined, now + 180_000);
+    expect(mockExpoPush.mock.calls.map((c) => c[0]).sort()).toEqual([
+      'adm1',
+      'adm2',
+    ]);
+    mockExpoPush.mockClear();
+    // An hour after the last push, the same target pushes again.
+    await report('b', 'target1', undefined, now + 3_600_000);
+    expect(mockExpoPush).toHaveBeenCalledTimes(2);
+  });
+  it('never pushes for a replayed receipt, and an admin reporter is not pushed about their own report', async () => {
+    await report('adm1', 'target3', 'same-report');
+    expect(mockExpoPush.mock.calls.map((c) => c[0])).toEqual(['adm2']);
+    expect(doc('users/adm1/competitionInbox/report_team_target3').read).toBe(
+      true,
+    );
+    mockExpoPush.mockClear();
+    await report('adm1', 'target3', 'same-report');
+    expect(mockExpoPush).not.toHaveBeenCalled();
+    expect(mockDb.childrenOf('competitionReports')).toHaveLength(1);
+  });
+});

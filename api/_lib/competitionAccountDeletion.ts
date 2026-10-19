@@ -725,6 +725,8 @@ async function inviteCodes(ctx: Ctx) {
     const snap = await ref.get();
     if (snap.exists && snap.data()?.uid === uid) await ref.delete();
   }
+  // The hourly report counter is keyed by uid.
+  await db.doc(`competitionReportAlerts/_reporter_${uid}`).delete();
 }
 
 /** Owned leagues and league invitations/consents. */

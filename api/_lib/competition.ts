@@ -40,7 +40,15 @@ import {
   deliverCompetitionNotices,
   type CompetitionNotice,
 } from './competitionNotify';
+import { clearReminders, scheduleReminders } from './competitionReminders';
 
+/** Admins are pushed about a reported target at most once per this interval; the inbox item updates every time. */
+export const REPORT_PUSH_INTERVAL_MS = 60 * 60 * 1000;
+/** One account can file this many reports per hour, and trigger at most one admin push per hour. */
+export const REPORTS_PER_REPORTER_PER_HOUR = 10;
+/** Platform-wide ceiling on report pushes per hour; reaching it sends one "many waiting" digest push. */
+export const ADMIN_REPORT_PUSHES_PER_HOUR = 30;
+const REPORT_FALLBACK_TITLE = 'Modération · Moderasyon';
 export class CompetitionError extends Error {
   constructor(
     public code: string,
@@ -955,6 +963,7 @@ export async function mutateCompetition(
         };
         tx.set(eventRef(db, e.id), updated);
         publishProjection(tx, db, updated);
+        scheduleReminders(tx, db, updated, now);
         note(e.ownerUid, `event_${e.id}`, 'event', e.id, e.title, 'published');
         result = { ok: true, eventId: e.id };
         break;
@@ -1456,6 +1465,9 @@ export async function mutateCompetition(
         }
         tx.set(eventRef(db, e.id), updated);
         publishProjection(tx, db, updated);
+        // Reminders follow the schedule: rewritten on postpone, removed once the event can no longer start.
+        if (action === 'event-postpone') scheduleReminders(tx, db, updated, now);
+        else if (updated.state !== 'published') clearReminders(tx, db, e.id);
         tx.create(db.doc(`competitionEvents/${e.id}/audit/${generatedId}`), {
           action,
           actorUid: uid,
@@ -2137,6 +2149,62 @@ export async function mutateCompetition(
           'invalid_kind',
           400,
         );
+        const kind = String(body.kind) as 'team' | 'event' | 'league';
+        // A report must reach an owner (docs/design/release-readiness/
+        // report-triage-runbook.md): every platform admin gets one inbox item
+        // per reported target, re-flagged unread on each new report, and at
+        // most one push per target per hour so a flood cannot spam them.
+        // Reads first — a transaction may not read after it writes.
+        const admins = (
+          await tx.get(
+            db.collection('users').where('role', '==', 'admin').limit(10),
+          )
+        ).docs.map((d: { id: string }) => d.id);
+        const alertRef = db.doc(`competitionReportAlerts/${kind}_${targetId}`);
+        const alert = await data(tx, db, alertRef.path);
+        const record = await data(
+          tx,
+          db,
+          `${kind === 'team' ? 'teams' : kind === 'event' ? 'competitionEvents' : 'leagues'}/${targetId}`,
+        );
+        // Only real records can be reported, so invented ids can't mint new push targets.
+        ensure(record, 'not_found', 404);
+        // Budgets are per reporter, never shared: one account can't use up the
+        // admins' attention and silence other people's reports. Pushes stay
+        // bounded by distinct reporters (and per target); the inbox always updates.
+        const window = Math.floor(now / REPORT_PUSH_INTERVAL_MS);
+        const reporterRef = db.doc(`competitionReportAlerts/_reporter_${uid}`);
+        const reporter = await data(tx, db, reporterRef.path);
+        const reporterCount =
+          reporter?.window === window && typeof reporter.count === 'number'
+            ? reporter.count
+            : 0;
+        ensure(reporterCount < REPORTS_PER_REPORTER_PER_HOUR, 'rate_limit_exceeded', 429);
+        const targetTitle =
+          text(record?.title ?? record?.name ?? '', 80) ||
+          REPORT_FALLBACK_TITLE;
+        // A high global ceiling still bounds a many-account flood; hitting it
+        // sends one digest push rather than going silent.
+        const globalRef = db.doc('competitionReportAlerts/_global');
+        const global = await data(tx, db, globalRef.path);
+        const globalPushes =
+          global?.window === window && typeof global.pushes === 'number'
+            ? global.pushes
+            : 0;
+        const reporterPushed =
+          reporter?.window === window && reporter.pushed === true;
+        const wanted =
+          !reporterPushed &&
+          (typeof alert?.lastPushedAt !== 'number' ||
+            now - alert.lastPushedAt >= REPORT_PUSH_INTERVAL_MS);
+        const push = wanted && globalPushes <= ADMIN_REPORT_PUSHES_PER_HOUR;
+        const digest = push && globalPushes === ADMIN_REPORT_PUSHES_PER_HOUR;
+        tx.set(reporterRef, {
+          window,
+          count: reporterCount + 1,
+          pushed: reporterPushed || push,
+        });
+        if (push) tx.set(globalRef, { window, pushes: globalPushes + 1 });
         tx.create(db.doc(`competitionReports/${generatedId}`), {
           uid,
           kind: body.kind,
@@ -2145,6 +2213,41 @@ export async function mutateCompetition(
           state: 'open',
           createdAt: now,
         });
+        tx.set(
+          alertRef,
+          {
+            kind,
+            targetId,
+            reports: (typeof alert?.reports === 'number' ? alert.reports : 0) + 1,
+            lastReportAt: now,
+            lastPushedAt: push ? now : (alert?.lastPushedAt ?? null),
+          },
+          { merge: true },
+        );
+        for (const adminUid of admins) {
+          inbox(
+            tx,
+            db,
+            adminUid,
+            `report_${kind}_${targetId}`,
+            kind,
+            targetId,
+            targetTitle,
+            now,
+            'report_received',
+            adminUid === uid,
+          );
+          // Never the reason, the reporter or the user-written title: only that
+          // a report (or, past the ceiling, many reports) is waiting.
+          if (push && adminUid !== uid)
+            notices.push({
+              uid: adminUid,
+              action: digest ? 'reports_waiting' : 'report_received',
+              targetKind: kind,
+              targetId,
+              title: '', // localized "Arène EdLight" (pushCopy)
+            });
+        }
         break;
       }
       case 'moderation-review': {
