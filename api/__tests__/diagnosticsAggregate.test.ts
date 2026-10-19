@@ -2,6 +2,7 @@ import { FakeDb } from './helpers/fakeFirestore';
 import {
   DIAG_COLLECTION,
   FATAL_SPIKE_THRESHOLD,
+  FLOOD_TITLE,
   __resetDiagnosticsBudgetForTests,
   alertAdminsOfError,
   dayKey,
@@ -132,10 +133,29 @@ it('alert titles carry only validated vocabulary, never client free text', () =>
 it('caps alert pushes per day across instances; past the cap admins still get the inbox item', async () => {
   const db = new FakeDb();
   db.store.set('users/admin1', { role: 'admin' });
-  db.store.set('diagnosticAlertBudget/20261019', { day: '20261019', used: 20 });
+  db.store.set('diagnosticAlertBudget/20261019', { day: '20261019', used: 21 });
   const { deliverCompetitionNotices } = jest.requireMock('../_lib/competitionNotify');
   deliverCompetitionNotices.mockClear();
   await alertAdminsOfError(db as any, { signature: 'cafe1234', day: '20261019', title: 'Crash TypeError' }, NOW);
   expect(db.store.get('users/admin1/competitionInbox/diag_20261019_cafe1234')).toBeTruthy();
   expect(deliverCompetitionNotices).not.toHaveBeenCalled();
+});
+
+it('the push that hits the daily cap is one flood digest, not silence', async () => {
+  const db = new FakeDb();
+  db.store.set('users/admin1', { role: 'admin' });
+  db.store.set('diagnosticAlertBudget/20261019', { day: '20261019', used: 20 });
+  const { deliverCompetitionNotices } = jest.requireMock('../_lib/competitionNotify');
+  deliverCompetitionNotices.mockClear();
+  await alertAdminsOfError(db as any, { signature: 'beef5678', day: '20261019', title: 'Crash TypeError' }, NOW);
+  expect(deliverCompetitionNotices).toHaveBeenCalledWith(db, [expect.objectContaining({ title: FLOOD_TITLE })], 'system_diagnostics');
+});
+
+it('reporter ids are keyed and rotate daily; none without a server secret', () => {
+  const { reporterId } = jest.requireActual('../_lib/diagnosticsAggregate');
+  const a = reporterId('1.2.3.4', '20261019', 's');
+  expect(a).toMatch(/^[0-9a-f]{16}$/);
+  expect(reporterId('1.2.3.4', '20261020', 's')).not.toBe(a);
+  expect(reporterId('1.2.3.4', '20261019', 'other')).not.toBe(a);
+  expect(reporterId('1.2.3.4', '20261019', '')).toBeUndefined();
 });

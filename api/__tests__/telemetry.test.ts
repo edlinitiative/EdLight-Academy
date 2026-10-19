@@ -28,6 +28,7 @@ describe('error aggregates and admin read', () => {
     context: { platform: 'ios', appVersion: '1.2.0', buildNumber: '61' } }] };
 
   it('aggregates sanitized error events, alerts admins, and serves them to admins only', async () => {
+    process.env.DIAGNOSTICS_REPORTER_SECRET = 'test-secret';
     const log = jest.spyOn(console, 'info').mockImplementation(() => {});
     fakeDb.store.set('users/admin1', { role: 'admin' });
     fakeDb.store.set('users/student1', { role: 'student' });

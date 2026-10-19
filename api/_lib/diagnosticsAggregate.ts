@@ -23,6 +23,7 @@
  * aggregated). The collection is server-only: Firestore rules have no match
  * for it, so clients can neither read nor write it.
  */
+import { createHmac } from 'crypto';
 import type { Firestore } from 'firebase-admin/firestore';
 import type { DiagnosticEvent } from '../../shared/telemetry';
 import { SIGNATURE_PATTERN } from '../../shared/errorSignature';
@@ -138,16 +139,30 @@ export function alertTitle(g: Pick<ErrorGroup, 'errorName' | 'errorKind' | 'rele
   return `Crash ${name}${kind ? ` · ${kind}` : ''}${where ? ` · ${where}` : ''}`.slice(0, 80);
 }
 
-/** Claim one push from the day's shared budget; false once exhausted. */
-async function takeAlertPush(db: Firestore, day: string): Promise<boolean> {
+/**
+ * Reporter id for the distinct-reporter threshold: HMAC of the address under a
+ * server secret and the UTC day, so stored values can't be reversed by hashing
+ * candidate addresses and don't link a reporter across days.
+ */
+export function reporterId(address: string, day: string, secret = process.env.DIAGNOSTICS_REPORTER_SECRET || process.env.ACCOUNT_DELETION_SALT || ''): string | undefined {
+  if (!secret) return undefined;
+  return createHmac('sha256', `${secret}:${day}`).update(address).digest('hex').slice(0, 16);
+}
+
+/**
+ * Claim from the day's shared push budget. Fails safe: the claim that hits the
+ * cap becomes one "possible flood" digest push instead of going silent.
+ */
+async function takeAlertPush(db: Firestore, day: string): Promise<'push' | 'digest' | 'none'> {
   const ref = db.doc(`diagnosticAlertBudget/${day}`);
   return db.runTransaction(async (tx) => {
     const used = ((await tx.get(ref)).data() as { used?: number } | undefined)?.used ?? 0;
-    if (used >= ALERT_PUSHES_PER_DAY) return false;
+    if (used > ALERT_PUSHES_PER_DAY) return 'none';
     tx.set(ref, { day, used: used + 1 });
-    return true;
+    return used === ALERT_PUSHES_PER_DAY ? 'digest' : 'push';
   });
 }
+export const FLOOD_TITLE = 'Alertes de crash : plafond du jour atteint';
 
 /** One inbox item + push per platform administrator. Mirrors competitionOrphans `alertAdmins`. */
 export const alertAdminsOfError: AlertSender = async (db, alert, now) => {
@@ -167,8 +182,11 @@ export const alertAdminsOfError: AlertSender = async (db, alert, now) => {
       updatedAt: now,
     });
   await batch.commit();
-  // Past the shared daily cap admins still get the inbox item, but no push.
-  if (!(await takeAlertPush(db, alert.day))) return;
+  // Past the shared daily cap admins still get the inbox item; the push that hits
+  // the cap is a single flood digest, then silence until tomorrow.
+  const budget = await takeAlertPush(db, alert.day);
+  if (budget === 'none') return;
+  if (budget === 'digest') alert = { ...alert, title: FLOOD_TITLE };
   // Lazy: the push senders stay out of the telemetry function's cold start.
   const { deliverCompetitionNotices } = await import('./competitionNotify');
   await deliverCompetitionNotices(
@@ -215,8 +233,11 @@ export async function recordErrorAggregates(
         for (const [k, n] of Object.entries(g.platforms)) platforms[k] = (platforms[k] ?? 0) + n;
         const fatalCount = (prev?.fatalCount ?? 0) + g.fatalCount;
         // Bounded set of hashed reporters, so one sender can't raise an alert alone.
-        const reporters: string[] = Array.isArray(prev?.reporters) ? prev!.reporters.slice(0, 10) : [];
-        if (g.fatalCount && reporter && !reporters.includes(reporter) && reporters.length < 10)
+        // Keyed, day-rotated hashes (see reporterId); only as many as the threshold needs.
+        const reporters: string[] = Array.isArray(prev?.reporters)
+          ? prev!.reporters.slice(0, MIN_DISTINCT_REPORTERS)
+          : [];
+        if (g.fatalCount && reporter && !reporters.includes(reporter) && reporters.length < MIN_DISTINCT_REPORTERS)
           reporters.push(reporter);
         tx.set(ref, {
           signature: g.signature,
