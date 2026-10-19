@@ -230,9 +230,11 @@ function App() {
       } else if (type === 'study-reminder') {
         navigateToTab('Courses');
       } else if (type === 'duel-result') {
-        // Your opponent played the duel you sent — the Jeux tab is where the
-        // result and the rematch button are.
-        navigateToTab('Trivia');
+        // Your opponent played the duel you sent: open THAT duel (result +
+        // rematch), not the generic Jeux tab (P0 validation). Fallback: Jeux.
+        const code = typeof data?.code === 'string' ? data.code : '';
+        if (code && navigationRef.isReady()) (navigationRef.navigate as any)('Defi', { code });
+        else navigateToTab('Trivia');
       } else if (type === 'achievement') {
         // Badge unlocked → Profile, where achievements live.
         navigateToTab('Profile');
