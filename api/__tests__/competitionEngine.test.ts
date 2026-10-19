@@ -774,15 +774,19 @@ describe('report-content reaches an owner', () => {
     await expect(report('b', 'invented')).rejects.toMatchObject({ code: 'not_found' });
     expect(mockDb.childrenOf('competitionReports')).toHaveLength(0);
   });
-  it('limits each reporter per hour and caps admin pushes platform-wide', async () => {
+  it('limits each reporter per hour, and one reporter cannot use up the admins’ push budget', async () => {
     mockExpoPush.mockClear();
     for (let i = 0; i < 10; i++) await report('b', `target${i}`, undefined, now + i);
     await expect(report('b', 'target10', undefined, now + 20)).rejects.toMatchObject({
       code: 'rate_limit_exceeded',
     });
-    // 10 distinct targets, but admins were interrupted only 6 times (2 admins each).
-    expect(mockExpoPush).toHaveBeenCalledTimes(12);
+    // 10 distinct targets from one account: admins are interrupted once (2 admins).
+    expect(mockExpoPush).toHaveBeenCalledTimes(2);
     expect(mockDb.childrenOf('users/adm1/competitionInbox')).toHaveLength(10);
+    // Someone else's report on a fresh target still reaches the admins.
+    mockExpoPush.mockClear();
+    await report('c', 'target11', undefined, now + 30);
+    expect(mockExpoPush).toHaveBeenCalledTimes(2);
   });
   it('gives every admin one unread inbox item per target and a push without the reason', async () => {
     const teamId = (await mutate('a', 'team-create', { name: 'Les étoiles' }))

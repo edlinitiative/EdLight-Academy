@@ -44,9 +44,8 @@ import { clearReminders, scheduleReminders } from './competitionReminders';
 
 /** Admins are pushed about a reported target at most once per this interval; the inbox item updates every time. */
 export const REPORT_PUSH_INTERVAL_MS = 60 * 60 * 1000;
-/** One account can file this many reports per hour; admins get at most this many report pushes per hour in total. */
+/** One account can file this many reports per hour, and trigger at most one admin push per hour. */
 export const REPORTS_PER_REPORTER_PER_HOUR = 10;
-export const ADMIN_REPORT_PUSHES_PER_HOUR = 6;
 const REPORT_FALLBACK_TITLE = 'Modération · Moderasyon';
 export class CompetitionError extends Error {
   constructor(
@@ -2168,8 +2167,9 @@ export async function mutateCompetition(
         );
         // Only real records can be reported, so invented ids can't mint new push targets.
         ensure(record, 'not_found', 404);
-        // Per-reporter and platform-wide hourly windows bound what any one account
-        // (or a coordinated flood) can file and how often admins are interrupted.
+        // Budgets are per reporter, never shared: one account can't use up the
+        // admins' attention and silence other people's reports. Pushes stay
+        // bounded by distinct reporters (and per target); the inbox always updates.
         const window = Math.floor(now / REPORT_PUSH_INTERVAL_MS);
         const reporterRef = db.doc(`competitionReportAlerts/_reporter_${uid}`);
         const reporter = await data(tx, db, reporterRef.path);
@@ -2178,21 +2178,20 @@ export async function mutateCompetition(
             ? reporter.count
             : 0;
         ensure(reporterCount < REPORTS_PER_REPORTER_PER_HOUR, 'rate_limit_exceeded', 429);
-        const globalRef = db.doc('competitionReportAlerts/_global');
-        const global = await data(tx, db, globalRef.path);
-        const globalPushes =
-          global?.window === window && typeof global.pushes === 'number'
-            ? global.pushes
-            : 0;
         const targetTitle =
           text(record?.title ?? record?.name ?? '', 80) ||
           REPORT_FALLBACK_TITLE;
+        const reporterPushed =
+          reporter?.window === window && reporter.pushed === true;
         const push =
-          globalPushes < ADMIN_REPORT_PUSHES_PER_HOUR &&
+          !reporterPushed &&
           (typeof alert?.lastPushedAt !== 'number' ||
             now - alert.lastPushedAt >= REPORT_PUSH_INTERVAL_MS);
-        tx.set(reporterRef, { window, count: reporterCount + 1 });
-        if (push) tx.set(globalRef, { window, pushes: globalPushes + 1 });
+        tx.set(reporterRef, {
+          window,
+          count: reporterCount + 1,
+          pushed: reporterPushed || push,
+        });
         tx.create(db.doc(`competitionReports/${generatedId}`), {
           uid,
           kind: body.kind,
