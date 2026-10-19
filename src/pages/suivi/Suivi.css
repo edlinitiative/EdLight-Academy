@@ -1,0 +1,16 @@
+/* /suivi/:token — a parent's read-only view. Minimal chrome: a brand line and
+   a language switch, then the same sheet as /releve. Tokens and pf-* only. */
+.suivi { min-height: 100vh; background: var(--bg, var(--surface)); padding: 16px 0 64px; }
+.suivi .container { max-width: 940px; margin: 0 auto; padding: 0 16px; display: grid; gap: 16px; }
+.suivi-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.suivi-brand { font-family: var(--font-heading); font-weight: 700; color: var(--text-900); }
+.suivi-lang { display: inline-flex; gap: 4px; }
+.suivi-lang button { min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text-800); font: inherit; cursor: pointer; }
+.suivi-lang button[aria-pressed='true'] { background: var(--azure-soft, var(--surface)); color: var(--text-900); font-weight: 700; }
+.suivi-message h1, .suivi-title { margin: 0.2rem 0 0.6rem; font-family: var(--font-heading); font-size: 1.4rem; color: var(--text-900); }
+.suivi-message p { color: var(--text-muted); line-height: 1.55; }
+.suivi-summary { display: grid; gap: 10px; }
+.suivi-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: 12px; margin: 0; }
+.suivi-facts dt { font-size: var(--text-sm); color: var(--text-muted); }
+.suivi-facts dd { margin: 2px 0 0; font-weight: 700; color: var(--text-900); }
+.suivi-summary .button { justify-self: start; }

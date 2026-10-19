@@ -40,6 +40,7 @@ const NAV: Array<{ section?: string; items: Array<{ to: string; end?: boolean; I
       { to: '/admin/users/moderation', Icon: ShieldAlert, label: 'Modération' },
       { to: '/admin/users/sandra', Icon: MessageCircle, label: 'Sandra' },
       { to: '/admin/users/instructors', Icon: GraduationCap, label: 'Candidatures enseignants' },
+      { to: '/admin/users/growth', Icon: Trophy, label: 'Croissance' },
     ],
   },
   {

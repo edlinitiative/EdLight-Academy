@@ -29,6 +29,14 @@ interface Limit { max: number; windowSec: number }
 const LIMITS: Record<string, Limit> = {
   'classes-read': { max: 300, windowSec: 3600 },
   'classes-write': { max: 90, windowSec: 3600 },
+  // Parent progress links (api/progress-share). The public read is keyed by a
+  // hashed caller address, not a uid: guessing a 192-bit token is hopeless, so
+  // this bounds scraping and Firestore read cost. Not paid, so it fails open.
+  'progress-share-view': { max: 120, windowSec: 3600 },
+  'progress-share-write': { max: 60, windowSec: 3600 },
+  // School ambassador dashboard and admin tools (api/ambassadors).
+  'ambassadors-read': { max: 120, windowSec: 3600 },
+  'ambassadors-write': { max: 120, windowSec: 3600 },
   'competition-read': { max: 1200, windowSec: 3600 },
   'competition-write': { max: 120, windowSec: 3600 },
   'grade-essay':    { max: 20, windowSec: 3600 },

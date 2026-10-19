@@ -44,6 +44,8 @@ import { AccountBlock, GoalRhythm, Regularity, SettingsRow, SkillSpots, Schoolma
 import { courseEvidence, evidenceLine, loadCourseLessonCounts, loadCourseLessonIds } from './profile/profileData';
 import { buildProfilePreview, type ProfilePreview } from './profile/profilePreview';
 import { EVIDENCE, trackJourney } from '../utils/learningJourney';
+import { useIsAmbassador } from '../hooks/useAmbassadors';
+import { AMBASSADOR_LABEL } from '../../shared/ambassadors';
 
 
 
@@ -920,6 +922,7 @@ export default function Profile() {
 
   // Practised / mastered for "Tes cours": the one shared mastery doc.
   const liveUid = !preview && store.isAuthenticated ? store.user?.uid || null : null;
+  const isAmbassador = useIsAmbassador(liveUid);
   const [masteryLive, setMasteryLive] = React.useState<ProgressMap | null>(null);
   const [masteryFailed, setMasteryFailed] = React.useState(false);
   const [masteryTry, setMasteryTry] = React.useState(0);
@@ -1227,6 +1230,7 @@ export default function Profile() {
         <div className="pr-id__nameRow">
           <h1 className="pr-id__name">{accountName}</h1>
           {pill && <span className="pr-pill">{pill}</span>}
+          {isAmbassador && <Link to="/ambassadeur" className="pr-pill">{t(AMBASSADOR_LABEL.fr, AMBASSADOR_LABEL.ht)}</Link>}
         </div>
         <p className="pr-id__meta">
           {alias
