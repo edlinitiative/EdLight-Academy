@@ -262,8 +262,8 @@ export default function ProfileScreen() {
     Alert.alert(
       t('Supprimer le compte', 'Efase kont lan'),
       t(
-        'Cette action est définitive. Ton compte et toutes tes données (progression, XP, résultats) seront supprimés. Impossible de revenir en arrière.',
-        'Aksyon sa a definitif. Kont ou ak tout done ou yo (pwogrè, XP, rezilta) ap efase. Ou pa ka defè sa.',
+        'Cette action est définitive. Ton compte et tes données personnelles (progression, XP, scores) seront supprimés. Dans les compétitions déjà jouées, tes résultats restent dans les classements sous le nom « Compte supprimé », sans ton nom ni ta photo. Impossible de revenir en arrière.',
+        'Aksyon sa a definitif. Kont ou ak done pèsonèl ou yo (pwogrè, XP, nòt) ap efase. Nan konpetisyon ki deja jwe yo, rezilta ou rete nan klasman an sou non « Kont efase », san non ou ni foto ou. Ou pa ka defè sa.',
       ),
       [
         { text: t('Annuler', 'Anile'), style: 'cancel' },

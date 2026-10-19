@@ -2632,7 +2632,7 @@
         {
           "source": "mobile/src/screens/arena/TournoisScreen.tsx",
           "match": "Créer un tournoi individuel",
-          "line": 328
+          "line": 340
         }
       ],
       "requirementIds": [
@@ -2698,17 +2698,17 @@
         {
           "source": "mobile/src/screens/arena/TournoisScreen.tsx",
           "match": "Tournois publics",
-          "line": 415
+          "line": 428
         },
         {
           "source": "mobile/src/screens/arena/TournoisScreen.tsx",
           "match": "Mes tournois et résultats",
-          "line": 400
+          "line": 413
         },
         {
           "source": "mobile/src/screens/arena/CompetitionWorkspaceScreen.tsx",
           "match": "Tournois entre amis",
-          "line": 457
+          "line": 181
         }
       ],
       "requirementIds": [
@@ -3136,7 +3136,7 @@
         {
           "source": "mobile/src/screens/arena/TournoisScreen.tsx",
           "match": "Inscription et équipe de cet événement",
-          "line": 471
+          "line": 484
         },
         {
           "source": "shared/competition/notifications.ts",
@@ -3677,13 +3677,18 @@
       "advertisedAt": [
         {
           "source": "mobile/src/screens/ProfileScreen.tsx",
-          "match": "Ton compte et toutes tes données (progression, XP, résultats) seront supprimés",
+          "match": "tes résultats restent dans les classements sous le nom « Compte supprimé »",
           "line": 265
         },
         {
           "source": "src/pages/DeleteAccount.tsx",
-          "match": "nous supprimons l’ensemble des données associées à votre compte",
-          "line": 52
+          "match": "Ils y apparaissent sous le nom « Compte supprimé »",
+          "line": 83
+        },
+        {
+          "source": "src/pages/Privacy.tsx",
+          "match": "restent dans les classements sous le nom « Compte supprimé »",
+          "line": 185
         }
       ],
       "requirementIds": [
@@ -3710,9 +3715,10 @@
       ],
       "mismatch": {
         "severity": "major",
-        "status": "Open",
+        "status": "Resolved",
         "finding": "The app confirmation and the /supprimer-compte page promise deletion of all data including results. The implementation deletes pending personal competition records but keeps locked rosters, results, standings, audit, disputes, rewards and reports pseudonymized as deleted_<hex> / \"Compte supprimé · Kont efase\" (required by CON-14).",
-        "recommendation": "Hide/correct copy, keep the implementation: disclose in the deletion dialog, the deletion page and the privacy policy that competition results are kept under an anonymous \"Compte supprimé\" name. Needs privacy/legal sign-off."
+        "recommendation": "Hide/correct copy, keep the implementation: disclose in the deletion dialog, the deletion page and the privacy policy that competition results are kept under an anonymous \"Compte supprimé\" name. Needs privacy/legal sign-off.",
+        "resolution": "Resolved 2026-10-19: the app dialog, /delete-account and the privacy policy (updated date) now disclose that results in completed competitions are kept under « Compte supprimé » without identifying data, and dispute text is erased. ACCOUNT_DELETION_SALT set in production. Owner chose truthful copy over deleting results (result-integrity rule)."
       },
       "notes": "",
       "owner": null,

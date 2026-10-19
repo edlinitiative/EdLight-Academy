@@ -77,6 +77,16 @@ export default function DeleteAccount() {
           </article>
 
           <article className="card card--compact">
+            <h3 className="card__title">{t('Ce qui reste, sans votre identité', 'Sa ki rete, san idantite ou')}</h3>
+            <p className="text-muted" style={{ margin: 0 }}>
+              {t(
+                "Dans les compétitions déjà jouées (championnat, tournois, ligues), vos résultats restent dans les classements pour que ceux des autres élèves et des écoles ne changent pas. Ils y apparaissent sous le nom « Compte supprimé », sans votre nom, votre photo, votre adresse e-mail ni aucun identifiant de votre compte. Les textes que vous aviez écrits dans une contestation sont effacés.",
+                "Nan konpetisyon ki deja jwe yo (chanpyona, tounwa, lig), rezilta ou rete nan klasman yo pou rezilta lòt elèv ak lekòl yo pa chanje. Yo parèt sou non « Kont efase », san non ou, foto ou, adrès imèl ou, ni okenn idantifyan kont ou. Tèks ou te ekri nan yon kontestasyon efase.",
+              )}
+            </p>
+          </article>
+
+          <article className="card card--compact">
             <h3 className="card__title">{t('Délai de suppression et conservation', 'Delè efasman ak konsèvasyon')}</h3>
             <p className="text-muted" style={{ margin: 0 }}>
               {t('Vos données seront supprimées dans un délai de ', 'Done ou yo ap efase nan yon delè ')}

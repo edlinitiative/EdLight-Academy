@@ -25,7 +25,7 @@ export default function Privacy() {
                 "Nou respekte vi prive ou. Paj sa a esplike ki done EdLight Academy ranmase, kijan yo itilize yo, ak ki moun yo pataje yo, ak ki dwa ou genyen.",
               )}
             </p>
-            <p className="text-muted" style={{ margin: 0 }}>{t('Date d’entrée en vigueur : 7 juillet 2026 · mise à jour le 18 octobre 2026', 'Dat li antre an vigè : 7 jiyè 2026 · mete ajou 18 oktòb 2026')}</p>
+            <p className="text-muted" style={{ margin: 0 }}>{t('Date d’entrée en vigueur : 7 juillet 2026 · mise à jour le 19 octobre 2026', 'Dat li antre an vigè : 7 jiyè 2026 · mete ajou 19 oktòb 2026')}</p>
           </div>
         </div>
 
@@ -180,7 +180,11 @@ export default function Privacy() {
                 "Nou konsève done ou toutotan kont ou aktif. Ou ka mande nenpòt lè pou efase kont ou ak done ki mache avè l lè ou ekri nan ",
               )}
               <a className="footer__link" href="mailto:info@edlight.org">info@edlight.org</a>.{' '}
-              {t('Nous traiterons votre demande dans un délai raisonnable.', 'Nou pral trete demann ou nan yon delè rezonab.')}
+              {t('Nous traiterons votre demande dans un délai raisonnable.', 'Nou pral trete demann ou nan yon delè rezonab.')}{' '}
+              {t(
+                "Après suppression, vos résultats dans les compétitions déjà jouées restent dans les classements sous le nom « Compte supprimé », sans aucune donnée permettant de vous identifier, afin que les résultats des autres participants ne soient pas modifiés.",
+                "Apre efasman, rezilta ou nan konpetisyon ki deja jwe yo rete nan klasman yo sou non « Kont efase », san okenn done ki ka idantifye w, pou rezilta lòt patisipan yo pa chanje.",
+              )}
             </p>
           </article>
 
