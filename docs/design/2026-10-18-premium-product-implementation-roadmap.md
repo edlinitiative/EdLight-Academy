@@ -49,7 +49,7 @@ Treat a complete student journey as the unit of delivery. A screen is only one p
 | P1 | Finish learning and competition continuity | Students can complete each journey through login, interruptions, and return visits. |
 | P1 | Responsive layouts, accessibility, and measured performance | Agreed device and browser coverage passes with documented exceptions. |
 | P2 | Purposeful motion, optional sound, and richer competition presentation | Effects are integrated into real phases and remain usable with accessibility preferences. |
-| P2 | Evaluate larger product additions | Each proposal has a clear student need, scope, and success measure. |
+| P2 | Evaluate larger product additions | Each proposal has a clear student need, scope, and success measure. See [Larger product additions: evaluation](2026-10-19-larger-product-additions.md). |
 
 ## 1. Consistent UI foundations
 
