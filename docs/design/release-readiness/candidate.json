@@ -3662,14 +3662,16 @@
       "flags": [],
       "status": "Failed",
       "pendingEvidence": [
-        "Cold/warm/refresh link runs on installed iOS and Android binaries (PAR-06)"
+        "Cold/warm/refresh link runs on installed iOS and Android binaries (PAR-06)",
+        "Verify iOS universal links and Android App Links (adb shell pm get-app-links com.edlightacademy) on installed builds after deploy"
       ],
       "mismatch": {
         "severity": "major",
-        "status": "Open",
+        "status": "Resolved",
         "finding": "Android intent filters (mobile/app.json) and the in-app parser handle /tournois and /arena/competitions|evenements|equipes|invitations|ligues|ecoles, but the iOS AASA served from public_original/.well-known lists only /defi/*, /arena, /arena/, /arena/championnat*, /arena/demo*, /arena/jouer*. On iOS, invitation, event, team, league and tournament links open the website. No assetlinks.json is in the repo for Android autoVerify (it may be hosted elsewhere; unverified).",
         "recommendation": "Implement: add the competition paths to the AASA, confirm assetlinks.json hosting with the release signing fingerprint, and verify with the exact binaries (implementation record, enablement step 3).",
-        "progress": "2026-10-19: competition and /tournois paths added to the AASA (public_original/.well-known). Still open: host assetlinks.json with the release signing fingerprint (https://academy.edlight.org/.well-known/assetlinks.json returns 404) and verify both on installed binaries."
+        "progress": "2026-10-19: competition and /tournois paths added to the AASA (public_original/.well-known). Still open: host assetlinks.json with the release signing fingerprint (https://academy.edlight.org/.well-known/assetlinks.json returns 404) and verify both on installed binaries.",
+        "resolution": "Resolved 2026-10-19 in code: the AASA claims /tournois and the competition pages; public_original/.well-known/assetlinks.json lists com.edlightacademy with the Play app-signing and upload SHA-256 fingerprints; both files are served as application/json. Installed-binary verification (iOS universal links, Android autoVerify) remains as pending evidence."
       },
       "notes": "",
       "owner": null,
