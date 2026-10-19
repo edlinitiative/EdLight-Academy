@@ -35,7 +35,7 @@ import {
 import {
   chapterMeta, formatMinutes, isGeneratedLessonBlurb, lessonMinutes, positionInChapter,
 } from '../components/courses/courseOutline';
-import { confirmLessonComplete } from '../services/progressTracking';
+import { completeLessonDurably } from '../services/writeOutbox';
 import { evidenceLabel, trackJourney } from '../utils/learningJourney';
 import { success as hapticSuccess } from '../utils/haptics';
 import { SUBJECT_META } from '../utils/subjectMeta';
@@ -349,9 +349,10 @@ export default function CourseDetailScreen() {
   }, [allLessons]);
 
   // ── Completion (LJ-05): acknowledged ONLY after a server-confirmed save ──
+  // Queued in the persisted outbox first, so an app kill offline can't lose it (L-3).
   const uid = isAuthenticated ? user?.uid ?? null : null;
   const saveCompletion = useCallback(
-    async (u: string, c: string, l: string) => (u ? confirmLessonComplete(u, c, l) : 'local' as const),
+    async (u: string, c: string, l: string) => (u ? completeLessonDurably(u, c, l) : 'local' as const),
     [],
   );
   const completion = useLessonCompletion({

@@ -6,6 +6,7 @@
 import { useEffect, useReducer, useRef } from 'react';
 import { trackJourney } from '../../../utils/learningJourney';
 import { reportError } from '../../../services/telemetry';
+import { pendingLessonIds, subscribeLessonOutbox } from '../../../services/writeOutbox';
 import {
   createCompletionController, type CompletionController, type CompletionOutcome, type SaveFn,
 } from './completionController';
@@ -40,6 +41,21 @@ export function useLessonCompletion({
   const controller = ref.current;
   useEffect(() => { controller.setScope(uid, courseId); }, [controller, uid, courseId]);
   useEffect(() => { controller.setOffline(offline); }, [controller, offline]);
+  // L-3: completions queued before an app kill show as pending until the
+  // outbox replay (launch / reconnect) is confirmed by the server.
+  useEffect(() => {
+    if (!uid || !courseId) return undefined;
+    let live = true;
+    pendingLessonIds(uid, courseId)
+      .then((ids) => { if (live && ids.length) controller.adoptPending(uid, courseId, ids); })
+      .catch(() => {});
+    const off = subscribeLessonOutbox((e) => {
+      if (e.uid !== uid || e.courseId !== courseId) return;
+      if (e.result === 'confirmed') controller.confirmExternal(uid, courseId, e.lessonId);
+      else controller.failExternal(uid, courseId, e.lessonId);
+    });
+    return () => { live = false; off(); };
+  }, [controller, uid, courseId]);
   useEffect(() => () => controller.dispose(), [controller]);
   return controller;
 }

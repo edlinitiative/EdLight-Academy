@@ -41,6 +41,15 @@ Severity order: data loss > wrong grade > blocked access > broken handoff > cosm
 | F19 | Blocked access | web | **Lesson completion unreachable.** "Terminer la leçon" never appeared and video progress was never tracked, because `enrollInCourse` has no caller. `confirmLessonComplete` threw `no-progress-document`. | Signed-in students count as enrolled, and completion creates the progress document with a merge. | `src/services/__tests__/confirmLessonCompleteWeb.test.ts` |
 | F20 | Wrong lesson / account | web | **UnitQuiz wrote to the wrong lesson or account.** The quiz instance survived a jump to another unit, so the chapter test promoted unit 2's lessons using unit 1's answers. The completion effect re-fired after an account switch and wrote the score into the next student's progress. The first quiz in a course did not complete its lesson (a race with document creation). Mastery counted correct answers found after retries. | Remount per unit and lesson, one completion write per run, completion chained after the attempt write, mastery percentage from first tries. | CourseDetail suites; device check L-6 |
 | F21 | Blocked access | web + mobile | **Sandra stuck.** Requests had no ceiling, so the panel stayed "sending" and ignored later messages. On the web, a foreign conversation id caused permanent 403s. | Abort after 90 s; the prompt is kept for retry. On the web, a refused conversation id is dropped and the message is sent once more. | `src/services/__tests__/authedFetchTimeout.test.ts` |
+| F22 | Data loss | mobile | **Lesson completion lost on an app kill (L-3, O-3).** RN Firestore keeps queued writes in memory only. | A persisted, per-account write outbox (`shared/outbox.ts`, AsyncStorage): the completion is queued before the write, removed only on the server ack, and replayed at sign-in, reconnect and foreground, only into the account that queued it. Bounded (60 ops, 30 days), idempotent by operation id. The lesson shows a queued completion as pending until the replay is confirmed (LJ-05 kept: `adoptPending` / `confirmExternal`). | `src/services/__tests__/outbox.test.ts`, `mobile/src/services/__tests__/writeOutbox.test.ts`, `completionController.test.ts` |
+| F23 | Data loss | web + mobile + API | **Leaderboard XP award never retried (D-3).** | Awards carry a client `opId` and go through the outbox (localStorage on the web). `api/leaderboard/award` applies an `opId` once: increments and a per-uid server-only dedupe record (`users/{uid}/serverOps/leaderboardAward`, pruned to 200 ids / 35 days) in one transaction; a retry answers `duplicate: true`. Requests without `opId` (older builds) behave as before. | `api/__tests__/leaderboardAwardIdempotency.test.ts`, `writeOutboxWeb.test.ts` |
+| F24 | Duplicate data | API + web + mobile | **Sandra retry duplicated the exchange (S-2)**, and on a first message created an orphan conversation. | Clients send a `clientMessageId` and reuse it on retry. The server returns the stored reply for an answered id (`duplicate: true`, no LLM call); a first message's conversation id is derived from (uid, id), so a retry that never learned the id finds it. | `api/__tests__/chatRetryIdempotency.test.ts`, `mobile/src/services/__tests__/sandraRetryTranscript.test.ts` |
+| F25 | Trust | API + web + mobile | **Duel scores trusted from the client (D-8) and no bank version (D-9).** | Clients post their picks (French option text) and a `bankHash` of the category. `create`/`accept` grade the picks against the app's bank (`shared/duelGrading.ts`, text not position, since options and distractors are shuffled) when the server holds the duel's bank; otherwise the client score is kept, clamped and recorded as `scoreSource: 'client'`. An opponent on another bank is refused (`409 bank_mismatch`, "mets à jour"). Duels already in flight (no hash) are graded when the new client sends picks. | `api/__tests__/duelServerGrading.test.ts` |
+| F26 | Wrong grade | mobile | **Kreyòl trivia answers graded against another option's translation.** The app's `randomizeBank` shuffled French options but not `optionsHt` (889 of 1,110 bilingual questions misaligned); the web had the fix. | One permutation for both languages. | `mobile/src/utils/__tests__/triviaBankAlignment.test.ts` |
+| F27 | Data loss | web + mobile | **Non-transactional read-modify-writes (L-9, L-10, P-4).** A failed web mastery read dropped the score; a concurrent web/phone write could be joined with a stale read; the plan's `tasks` array was rewritten last-write-wins. | Web mastery and both platforms' study-plan updates run in Firestore transactions; a transaction that can't reach the server is queued in the outbox and replayed through the same transaction. The phone's mastery push is a transactional join; offline it writes nothing (the old delta write could lower a score the web raised) and retries on reconnect/foreground. | `masteryTransactional.test.ts`, `studyPlanTransactional.test.ts`, `mobile/.../masterySyncPush.test.ts` |
+| F28 | Broken handoff | web + mobile | **Study plan never advanced for practice, video, or exams finished on the phone (E-13, P-2, P-3).** | `PlanEvent` + `planTaskMatchesEvent` (the inverse of `planTaskRoute`) + `applyPlanEvent` in `shared/studyPlanTasks.ts`. Exams (web, and now the app), chapter practice and newly completed lessons on both platforms advance the matching task. A chapter task needs that chapter; a course-wide session completes only course tasks. | `src/utils/__tests__/studyPlanEvents.test.ts`, `mobile/src/services/__tests__/planEvents.test.ts` |
+| F29 | Broken handoff | web | **`/dashboard` forgot the destination (A-2).** | Signed-out `/dashboard` redirects to `/?next=<path>`; once the session is confirmed, `/` continues there. Only same-site paths are honoured (`safeInternalPath`). | `src/utils/__tests__/returnPath.test.ts`, `HomeRoute.test.tsx` |
+| F30 | Cosmetic / continuity | mobile | **Sandra transcript empty on reopen (S-5); chapter test lost on a kill (L-8).** | The last 40 turns are mirrored per account and conversation and restored when they match. The chapter test's draw, answers and position are mirrored on every step, bound to the owner (F1 rule), and offered as Reprendre / Recommencer. | `sandraRetryTranscript.test.ts`, `mobile/src/utils/__tests__/chapterTestDraft.test.ts` |
 
 ## Journey × interruption matrix
 
@@ -51,7 +60,7 @@ Platform column: W = web/PWA, M = mobile app. Each row's **Étapes testeur** col
 | ID | Interruption case | Pl. | Result | Notes | Étapes testeur (FR) |
 | --- | --- | --- | --- | --- | --- |
 | A-1 | Sign-in (Google, e-mail) from a protected page | W | OK | Auth is a modal and the page does not change. `/defi/:code` refetches after login. | Ouvrir `/exams/terminale/<id>` déconnecté → « Se connecter » → Google. Vérifier qu'on reste sur la même page d'examen. |
-| A-2 | Signed-out visit to `/dashboard` | W | **Open** | `Courses.tsx` redirects to "/" without remembering the destination. Minor (H2). | Ouvrir `/dashboard` déconnecté, se connecter : noter la page d'arrivée. |
+| A-2 | Signed-out visit to `/dashboard` | W | **Fixed** (F29) | Redirects to `/?next=/dashboard…`; after sign-in `/` continues there. | Ouvrir `/dashboard?x=1` déconnecté, se connecter : arrivée sur `/dashboard?x=1`. |
 | A-3 | Flaky network at sign-in | W | **Fixed** (F8) | — | Activer « Slow 3G » puis se connecter avec un compte qui a déjà classe et filière. Vérifier que classe, filière et école sont conservées. |
 | A-4 | PWA opened offline while signed in | W | **Fixed** (F9) | — | PWA installée, mode avion, ouvrir : l'accueil s'affiche (pas de rond qui tourne sans fin). |
 | A-5 | App killed mid-onboarding (language/class/tour) | M | OK | `languageChosen`, `gradeChosen` and `tourCompleted` are persisted; the `hydrated` gate opens. | Pendant la visite guidée, fermer l'app de force, rouvrir : reprise à l'étape suivante, pas de retour au choix de langue. |
@@ -66,14 +75,14 @@ Platform column: W = web/PWA, M = mobile app. Each row's **Étapes testeur** col
 | --- | --- | --- | --- | --- | --- |
 | L-1 | Complete a lesson (new account) | W | **Fixed** (F19) | — | Nouveau compte → un cours → leçon vidéo : le bouton « Terminer la leçon » apparaît ; après tap, l'état « Terminé » apparaît seulement après confirmation. |
 | L-2 | Complete offline, then reconnect | W | OK | Persistent cache plus server-ack confirmation. | Mode avion → Terminer : état « en attente » ; réseau rétabli : « Terminé ». |
-| L-3 | Complete offline, then app killed | M | **Open** | The memory-only cache drops the queued write. Local `completed` is applied only after the server acknowledges (the deliberate LJ-05 design). Needs a persisted outbox. | Mode avion → Terminer → tuer l'app → réseau → rouvrir : noter si la leçon est terminée. |
+| L-3 | Complete offline, then app killed | M | **Fixed** (F22) | Persisted outbox, replayed at launch / reconnect. Still pending (not done) until the server confirms (LJ-05). | Mode avion → Terminer (« en attente ») → tuer l'app → rouvrir hors ligne : la leçon reste « en attente » → réseau : « Terminé » sans nouveau tap. |
 | L-4 | Quiz key correctness | W | **Fixed** (F18) | Mobile was already correct. | Quiz Chimie (orbitales s/p/d/f) : la bonne réponse « d » est acceptée. |
 | L-5 | Mastery written from both devices | M | **Fixed** (F12) | One shared document (`users/{uid}/mastery/lessons`) on both platforms, verified. | Web : 100 % sur une leçon. Téléphone resté ouvert depuis la veille : faire une autre leçon. Web : la première leçon reste à 100 %. |
 | L-6 | Jump between units mid-quiz | W | **Fixed** (F20) | — | Leçon-quiz du chapitre 1, puis (barre latérale) leçon-quiz du chapitre 2 : les questions changent ; le test de chapitre ne promeut que les leçons du chapitre testé. |
 | L-7 | Sign-out within 4 s of finishing practice | M | **Fixed** (F13) | — | Finir une pratique, se déconnecter tout de suite, se reconnecter : le niveau obtenu est conservé. |
-| L-8 | Chapter test interrupted (background/kill) | M | **Open** | Answers live in component state only (no autosave). A short test, so a restart is acceptable; recorded as an exception. | Commencer un test de chapitre, tuer l'app : le test recommence à zéro (attendu). |
-| L-9 | Web mastery write when the record read fails | W | **Open** | `recordLessonExercise` returns null and drops the score. A blind write is unsafe because a field merge can lower `bestPct`. Needs a transaction. | — |
-| L-10 | Concurrent web/phone write to the same lesson | W | **Open** | The read-modify-write is not transactional (S3). A rare race. | — |
+| L-8 | Chapter test interrupted (background/kill) | M | **Fixed** (F30) | Mirrored on every step, owner-bound. | Commencer un test de chapitre, répondre à 4 questions, tuer l'app, rouvrir le test : « Reprendre (question 5 sur 12) » avec les 4 réponses. Un autre compte sur le même téléphone : pas de « Reprendre ». |
+| L-9 | Web mastery write when the record read fails | W | **Fixed** (F27) | Transaction; on failure the score is queued and replayed (never a blind merge). | Hors ligne, finir un quiz de leçon à 100 % ; réseau rétabli puis recharger : la leçon est « Maîtrise » 100 %. |
+| L-10 | Concurrent web/phone write to the same lesson | W+M | **Fixed** (F27) | Web writes and the phone's push are transactional joins. | — |
 
 ### J3: Exam start → answer → leave → resume → submit → results → history (E2E-03, CON-05)
 
@@ -88,10 +97,10 @@ Platform column: W = web/PWA, M = mobile app. Each row's **Étapes testeur** col
 | E-7 | Submit offline | W | **Fixed** (F4) | — | Mode avion → Remettre : la correction s'affiche avec « Pas encore enregistré… » ; réseau : l'historique montre le résultat. |
 | E-8 | Submit offline, then app killed | M | **Fixed** (F3) | — | Mode avion → Soumettre : message « Pas encore envoyé » ; tuer l'app ; réseau ; rouvrir l'examen : « Reprendre » avec toutes les réponses ; soumettre : un seul résultat. |
 | E-9 | Shared device, two accounts, same exam | W+M | **Fixed** (F1) | — | (see A-7) |
-| E-10 | Timer while the app is closed | W+M | **Open (product decision)** | The remaining time is saved and restored, so the timer pauses while away. Practice exams, not official ones. Document it or make it wall-clock; the decision belongs to the owner. | Examen chronométré, fermer 5 min, rouvrir : noter si le temps a continué. |
+| E-10 | Timer while the app is closed | W+M | **Open (product decision)** | The remaining time is saved and restored, so the timer pauses while away. Options below ("E-10 options"); the decision belongs to the owner. | Examen chronométré, fermer 5 min, rouvrir : noter si le temps a continué. |
 | E-11 | Essay AI grading unavailable at submit | W+M | **Fixed** | A failed grader call is `ungraded` (left out of the percentage, never 0), shown as "Correction provisoire", with "Corriger maintenant" on both platforms (transactional, idempotent, no XP/mastery side effects). Mobile now calls `/api/grade-essay` after submit. `src/utils/__tests__/essayRegrade.test.ts`, `mobile/src/services/__tests__/essayGrading.test.ts`. | Couper le réseau pendant « Correction… » d'une dissertation : le message « Correction provisoire » s'affiche. |
 | E-12 | Results/history after reload on another device | W+M | OK | The stored summary is preferred over a regrade. Stale data removed by F2. | Ouvrir `/exams/resultats` sur un autre appareil : même score. |
-| E-13 | Exam finished on mobile advances the study plan | M | **Open** | Mobile has no `recordTaskResult` (D12). The plan never advances from the app. | — |
+| E-13 | Exam finished on mobile advances the study plan | M | **Fixed** (F28) | After the server acknowledges the submission. | Plan d'étude avec un examen ; le passer sur le téléphone : la tâche avance (historique, prochaine révision). |
 
 ### J4: Daily challenge / trivia / duels (E2E-04, CON-07)
 
@@ -99,32 +108,32 @@ Platform column: W = web/PWA, M = mobile app. Each row's **Étapes testeur** col
 | --- | --- | --- | --- | --- | --- |
 | D-1 | Daily challenge replayed | W+M | OK | The +50 XP is deduplicated per user per day in `xpBreakdown`. | Faire le défi du jour deux fois : bonus une seule fois. |
 | D-2 | Round finished offline or with a token error | W+M | **Fixed** (F7) | — | Mode avion, finir une partie Trivia, réseau : XP, pseudo et école intacts (pas remis à zéro). |
-| D-3 | Leaderboard award POST fails | W+M | **Open** | No outbox or retry, so board XP drifts from profile XP. Needs a persisted outbox plus server dedup on `eventId`. | — |
+| D-3 | Leaderboard award POST fails | W+M | **Fixed** (F23) | Outbox + `opId` dedupe on the server. | Mode avion, finir une partie Trivia, tuer l'app, réseau, rouvrir : le classement de la semaine reçoit l'XP une seule fois. |
 | D-4 | Duel link opened signed out on another device | W | OK | `/defi/:code` keeps the code through the auth modal. | Créer un défi sur le téléphone, ouvrir le lien sur un ordinateur déconnecté, se connecter, jouer : le résultat apparaît chez les deux. |
 | D-5 | Duel link that cold-starts the app; duel-result push | M | **Fixed** (F15, F16) | — | App fermée de force, toucher le lien WhatsApp `…/defi/XXXX` : l'écran du défi s'ouvre. Toucher la notification « ton ami a joué » : le défi s'ouvre. |
 | D-6 | Challenger opens their own link; a third person opens a played duel | M | **Fixed** (F17) | The web was correct. | Ouvrir son propre lien : pas de bouton « Relever », message « C'est ton défi ». Un 3ᵉ compte : « déjà relevé ». |
 | D-7 | Response lost after the score was recorded | M | **Fixed** (F17) | — | Couper le réseau juste après la dernière réponse, réessayer : le résultat enregistré s'affiche (pas « erreur »). |
-| D-8 | Score trusted from the client | API | **Open (trust)** | `api/challenges/accept.ts` and `create.ts` accept a client score. Server grading from the answer indexes is needed. | — |
-| D-9 | Different question banks across OTA and web | W+M | **Open (likely)** | No bank-version stamp on challenges. | — |
+| D-8 | Score trusted from the client | API | **Fixed** (F25) | Server grades the picks; unverifiable scores (older builds, other banks) are recorded as `scoreSource: 'client'`. | — |
+| D-9 | Different question banks across OTA and web | W+M | **Fixed** (F25) | `bankHash` stored at create; a different bank is refused with « mets à jour ». | — |
 
 ### J5: Sandra (CON-04)
 
 | ID | Interruption case | Pl. | Result | Notes | Étapes testeur (FR) |
 | --- | --- | --- | --- | --- | --- |
 | S-1 | Message in flight while backgrounded or on a dead network | W+M | **Fixed** (F21) | Aborted after 90 s, and the text is kept for retry. | Envoyer un message puis couper le réseau : au plus 90 s plus tard, « Réessayer » apparaît avec le texte conservé. |
-| S-2 | Retry after the reply was saved but the response lost | API | **Open** | No `clientMessageId`, so a retry duplicates the exchange (and on the first message, creates an orphan conversation). | — |
+| S-2 | Retry after the reply was saved but the response lost | API | **Fixed** (F24) | `clientMessageId` dedupe. | — |
 | S-3 | Account switch in the same tab | W | **Fixed** (F10, F21) | Mobile was already OK. | (see A-7) |
 | S-4 | Token expiry mid-request | W+M | OK | `getIdToken()` refreshes before every call. | — |
-| S-5 | Transcript after the mobile screen closes | M | **Open (cosmetic)** | The conversation id is kept but the transcript isn't restored. | — |
+| S-5 | Transcript after the mobile screen closes | M | **Fixed** (F30) | Restored per account + conversation. | Discuter avec Sandra, fermer l'écran, le rouvrir : la conversation est là. « Nouvelle conversation » la vide. |
 
 ### J6: Study plan (CON-06)
 
 | ID | Case | Pl. | Result | Notes |
 | --- | --- | --- | --- | --- |
 | P-1 | Exam task completed on the web | W | OK | `recordTaskResult` after submit (no longer blocks navigation). |
-| P-2 | Practice or video tasks completed | W+M | **Open** | No code path marks them done (`useStudyPlan.recordResult` has no caller). This is a feature gap, not a regression. |
-| P-3 | Exam task completed on mobile | M | **Open** | See E-13. |
-| P-4 | Two devices update the plan | W | **Open** | `recordTaskResult` rewrites the whole `tasks` array (last write wins). Needs a transaction. |
+| P-2 | Practice or video tasks completed | W+M | **Fixed** (F28) | Chapter practice and newly completed lessons advance the matching task. |
+| P-3 | Exam task completed on mobile | M | **Fixed** (F28) | See E-13. |
+| P-4 | Two devices update the plan | W+M | **Fixed** (F27) | Transactions on both platforms; offline updates are queued. |
 
 ### J7: Offline (E2E-01, E2E-02)
 
@@ -132,20 +141,32 @@ Platform column: W = web/PWA, M = mobile app. Each row's **Étapes testeur** col
 | --- | --- | --- | --- | --- |
 | O-1 | Cold start offline | W | **Fixed** (F9) | The SW navigation races a 2.5 s timeout against the cached shell (memory: SW guards, unchanged). |
 | O-2 | Queued writes survive a tab close | W | OK | `persistentLocalCache` with the multi-tab manager. |
-| O-3 | Queued writes survive an app kill | M | **Open (platform)** | RN Firestore uses a memory cache only. Mitigated where it matters most: the exam mirror is kept until the server acknowledges (F3), and mastery lives in the persisted store and is re-pushed at the next sync. Lesson completion (L-3) and the XP award (D-3) remain. |
+| O-3 | Queued writes survive an app kill | M | **Fixed where it matters** (F3, F22, F23) | RN Firestore still uses a memory cache. The exam mirror (F3), lesson completion and XP awards (outbox) and mastery (persisted store, transactional re-push) survive a kill. Other fire-and-forget writes (streak, notifications) do not. |
 | O-4 | Every awaited write on a user path is bounded | W+M | **Fixed where found** | Exam submit, session restore, logout and Sandra. Grep `settleWithin` and `withTimeout` when adding new awaited writes. |
 
 ## Open items, by severity
 
-1. **L-3 / O-3 (data loss, mobile):** lesson completion queued offline is lost if the app is killed. Fix: a persisted completion outbox replayed at launch. Applying `completed` locally before acknowledgement would contradict the LJ-05 design, so the owner must decide.
-2. **D-3 (data loss, both platforms):** leaderboard XP award with no retry. Fix: a persisted outbox plus a server dedup key.
-3. ~~**E-11 (wrong grade, web):** essays that failed AI grading are scored 0.~~ Fixed: an `ungraded` status excluded from the percentage, plus "Corriger maintenant" on web and mobile (and mobile essays are now AI-graded at all). Device check: submit a dissertation offline on the phone, reconnect, tap "Korije kounye a".
-4. **D-8 (trust):** client-reported duel score. Fix: server-side grading.
-5. **S-2:** Sandra retry idempotency (`clientMessageId`).
-6. **L-9 / L-10 / P-4:** non-transactional read-modify-writes (web mastery, study plan).
-7. **E-13 / P-2 / P-3:** study-plan propagation is missing for practice and video tasks, and for exams finished on mobile.
-8. **E-10:** exam timer pauses while away; product decision.
-9. **A-2:** `/dashboard` return destination; **S-5:** mobile Sandra transcript.
+Closed in the follow-up pass: E-11 (essay regrade workstream), L-3/O-3 (F22), D-3 (F23), D-8/D-9 (F25), S-2 (F24), L-9/L-10/P-4 (F27), E-13/P-2/P-3 (F28), A-2 (F29), S-5 and L-8 (F30).
+
+1. **E-10:** exam timer pauses while away; product decision, options below.
+
+### E-10 options (owner decision)
+
+Today the remaining time is saved with the draft and restored, so a timed practice exam pauses while the tab or app is closed.
+
+- **A. Keep the pause, say so.** One line on the exam overview and timer ("Le chrono s'arrête quand tu quittes"). No code risk. Fits practice papers taken on an unreliable connection, where a crash or a dropped network would otherwise eat the student's time.
+- **B. Wall-clock deadline.** Store `deadline_ms` at start; remaining = deadline - now on every device. Matches the real Bac. Cost: a student whose phone dies or loses power loses that time; needs a "time's up while you were away" submit path (auto-submit on reopen) and cross-device clock handling (server timestamp at start).
+- **C. Per-exam mode.** Wall-clock for "conditions d'examen" sessions the student opts into, pause for practice. Most honest, most work (UI toggle, both platforms).
+
+Recommendation: A now (copy only), C later if mock-exam sessions become a feature.
+
+### Residual risks of this pass
+
+- Outbox replays run only while the queuing account is signed in; an account that never signs in again on that device keeps its queue until the 30-day expiry.
+- An XP award replayed in a later ISO week is credited to the current week (the server stamps the week).
+- Sandra: a retry sent while the first request is still running on the server (before its reply is stored) is answered twice.
+- Duels from builds whose bank differs from the server's, and from builds older than this change, are still accepted with a client score (recorded `scoreSource: 'client'`).
+- Firestore rules do not cover `users/{uid}/serverOps/*`, so it is server-only by default; no rules deploy is needed.
 
 ## How this was produced
 

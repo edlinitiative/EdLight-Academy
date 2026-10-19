@@ -17,6 +17,8 @@ jest.mock('../../services/dataService', () => ({ getCachedCourses: jest.fn(), lo
 jest.mock('../../utils/examCatalog', () => ({ fetchCatalogIndex: jest.fn(async () => []) }));
 // reviewService (flushReviewPush) reaches firebase too.
 jest.mock('../../services/reviewService', () => ({ flushReviewPush: jest.fn(async () => {}) }));
+// planEvents (study-plan advance on practice finish) reaches firebase/firestore.
+jest.mock('../../services/planEvents', () => ({ recordPlanEvent: jest.fn(async () => 0) }));
 jest.mock('@react-native-community/netinfo', () => ({
   __esModule: true,
   default: { fetch: jest.fn(async () => ({ isConnected: true, isInternetReachable: true })), addEventListener: jest.fn(() => () => {}) },

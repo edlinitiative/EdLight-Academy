@@ -14,14 +14,17 @@
  * Arena realtime data is unaffected: it uses Firestore onSnapshot listeners,
  * not queries, and Firestore manages its own reconnection.
  *
- * The same two signals retry a failed profile sync.
+ * The same two signals retry a failed profile sync and replay the persisted
+ * write outbox (services/writeOutbox) for the signed-in account.
  */
 
 import { AppState, type AppStateStatus } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { focusManager, onlineManager } from '@tanstack/react-query';
 import { isForegroundAppState, isOnlineSnapshot } from './connectivity';
-import { retryProfileSyncIfDue } from './session';
+import { retryProfileSyncIfDue, sessionGuard } from './session';
+import { drainWriteOutbox } from '../services/writeOutbox';
+import { retryMasteryPushIfPending } from '../services/masterySync';
 import { flushTelemetry } from '../services/telemetry';
 
 let installed = false;
@@ -37,6 +40,8 @@ export function installQueryLifecycle(): () => void {
       setOnline(online);
       if (online && !wasOnline) {
         retryProfileSyncIfDue('reconnect');
+        void drainWriteOutbox(sessionGuard.current().uid);
+        void retryMasteryPushIfPending();
         void flushTelemetry();
       }
       wasOnline = online;
@@ -48,7 +53,11 @@ export function installQueryLifecycle(): () => void {
     const sub = AppState.addEventListener('change', (status: AppStateStatus) => {
       const focused = isForegroundAppState(status);
       handleFocus(focused);
-      if (focused) retryProfileSyncIfDue('foreground');
+      if (focused) {
+        retryProfileSyncIfDue('foreground');
+        void drainWriteOutbox(sessionGuard.current().uid);
+        void retryMasteryPushIfPending();
+      }
       void flushTelemetry();
     });
     return () => sub.remove();

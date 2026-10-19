@@ -73,8 +73,68 @@ export interface SendOptions {
   /** "Explique-moi": the missed question, sent as structured context. */
   questionContext?: QuestionContext;
   conversation?: ConversationStore;
+  /** Retry key (S-2): pass the SAME id on retry. Defaults to a fresh one. */
+  clientMessageId?: string;
 }
 
+// ── Transcript restore (S-5) ────────────────────────────────────────────────
+// The server owns the transcript, but reopening the screen showed an empty
+// chat while the conversation id was kept. The last turns are mirrored on the
+// device, per ACCOUNT and per conversation, and restored only when both match.
+
+const TRANSCRIPT_KEY = 'edlight:sandra:transcript:';
+export const TRANSCRIPT_MAX = 40;
+
+export type TranscriptMessage = { id: string; role: 'user' | 'sandra'; text: string };
+export type StoredTranscript = { uid: string; convId: string; messages: TranscriptMessage[] };
+
+/** Messages to show on open: only this account's mirror of the open conversation. */
+export function restorableTranscript(
+  stored: unknown,
+  uid: string | null | undefined,
+  convId: string | null | undefined,
+): TranscriptMessage[] {
+  if (!uid || !convId || !stored || typeof stored !== 'object') return [];
+  const t = stored as Partial<StoredTranscript>;
+  if (t.uid !== uid || t.convId !== convId || !Array.isArray(t.messages)) return [];
+  return t.messages
+    .filter((m) => m && (m.role === 'user' || m.role === 'sandra') && typeof m.text === 'string' && typeof m.id === 'string')
+    .slice(-TRANSCRIPT_MAX);
+}
+
+export async function readTranscript(uid: string | null | undefined): Promise<TranscriptMessage[]> {
+  if (!uid) return [];
+  try {
+    const [raw, convId] = await Promise.all([AsyncStorage.getItem(TRANSCRIPT_KEY + uid), readConvId()]);
+    return restorableTranscript(raw ? JSON.parse(raw) : null, uid, convId);
+  } catch {
+    return [];
+  }
+}
+
+export async function writeTranscript(uid: string | null | undefined, messages: TranscriptMessage[]): Promise<void> {
+  if (!uid) return;
+  try {
+    const convId = await readConvId();
+    if (!convId || !messages.length) {
+      await AsyncStorage.removeItem(TRANSCRIPT_KEY + uid);
+      return;
+    }
+    const value: StoredTranscript = { uid, convId, messages: messages.slice(-TRANSCRIPT_MAX) };
+    await AsyncStorage.setItem(TRANSCRIPT_KEY + uid, JSON.stringify(value));
+  } catch {}
+}
+
+/** A retry key for one question (S-2): resent unchanged on retry. */
+export function newClientMessageId(): string {
+  return `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
+}
+
+/**
+ * `clientMessageId` makes a retry idempotent: if the first attempt's reply was
+ * saved but the response lost, the server returns that stored reply instead of
+ * answering (and recording) the question twice. Pass the SAME id on retry.
+ */
 export async function sendToSandra(
   message: string,
   lang: 'fr' | 'ht',
@@ -84,6 +144,7 @@ export async function sendToSandra(
   opts: SendOptions = {},
 ): Promise<SandraResult> {
   const conversation = opts.conversation ?? persistedConversation;
+  const clientMessageId = opts.clientMessageId ?? newClientMessageId();
   const user = auth.currentUser;
   if (!user) return { kind: 'auth' };
 
@@ -103,6 +164,7 @@ export async function sendToSandra(
   if (opts.questionContext) body.questionContext = opts.questionContext;
   const convId = await conversation.read();
   if (convId) body.conversationId = convId;
+  body.clientMessageId = clientMessageId;
 
   // 90 s ceiling (P0 validation): a fetch on a half-dead network may never
   // settle, leaving the screen "sending" and ignoring every later message.
@@ -137,7 +199,7 @@ export async function sendToSandra(
       // Thread hit the server-side cap — start fresh; transparently re-send
       // the unanswered turn once into the new conversation.
       await conversation.write(null);
-      if (!reply && !isFullRetry) return sendToSandra(message, lang, page, studentContext, true, opts);
+      if (!reply && !isFullRetry) return sendToSandra(message, lang, page, studentContext, true, { ...opts, clientMessageId });
     } else if (typeof data?.conversationId === 'string' && data.conversationId) {
       await conversation.write(data.conversationId);
     }

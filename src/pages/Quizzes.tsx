@@ -522,6 +522,21 @@ const Quizzes = () => {
     signedIn: !!userId,
   });
 
+  // A finished practice session advances its study-plan task (P0 validation
+  // P-2), once per session. '*' (course-wide) only completes course tasks.
+  const planSentFor = useRef<number | null>(null);
+  useEffect(() => {
+    if (!userId || !session || !tally || planSentFor.current === session.start) return;
+    planSentFor.current = session.start;
+    const graded = tally.total - tally.ungraded;
+    if (graded <= 0 || tally.total - tally.unanswered <= 0) return;
+    const pct = Math.round((tally.correct / graded) * 100);
+    const unitId = session.unit && session.unit !== '*' ? session.unit : null;
+    import('../services/studyPlanService')
+      .then((m) => m.recordPlanEvent(userId, { kind: 'practice', course: session.courseCode, unit: unitId }, pct))
+      .catch(() => {});
+  }, [userId, session, tally]);
+
   const subjectLabel = subjectOptions.find((o) => o.value === subjectBase)?.label || subjectBase;
   const levelLabel = level ? level.replace(/^NS(.*)$/i, 'NS $1') : '';
   const unitLabel = unitOptions.find((o) => o.value === unit)?.label || '';

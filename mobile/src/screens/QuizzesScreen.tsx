@@ -49,6 +49,7 @@ import { useReviewConfirmation } from '../components/journey/practice/useReviewC
 import { useOnline } from '../components/journey/practice/useOnline';
 import { questionsLabel } from '../components/journey/practice/copy';
 import type { ReviewScope } from '../components/journey/practice/reviewScope';
+import { recordPlanEvent } from '../services/planEvents';
 import {
   buildDeck, chooseNextAction, fisherYates, itemFromQuizQuestion, reviewIdsOf, sessionSlice, tally,
   type LogEntry, type SessionItem, type SessionMode,
@@ -371,8 +372,19 @@ export default function QuizzesScreen() {
       mode: session.mode, reason, total: tl.total, correct: tl.correct, incorrect: tl.incorrect,
       unanswered: tl.unanswered, ungraded: tl.ungraded,
     });
+    // A finished practice advances its study-plan task (P0 validation P-2).
+    // '*' (course-wide) only completes course-level tasks.
+    const uid = useStore.getState().user?.uid;
+    if (isAuthenticated && uid && answered > 0 && tl.scored > 0 && entry.scope.courseCode) {
+      const unitVal = entry.scope.unit?.value;
+      void recordPlanEvent(uid, {
+        kind: 'practice',
+        course: entry.scope.courseCode,
+        unit: unitVal && unitVal !== '*' ? unitVal : null,
+      }, Math.round((tl.correct / tl.scored) * 100));
+    }
     setResult({ log, reason });
-  }, [session, entry, recordQuizAttempt]);
+  }, [session, entry, recordQuizAttempt, isAuthenticated]);
 
   // ── Result state (computed every render; hooks stay unconditional) ────────
   const slice = session && result ? sessionSlice(session.deck, result.log, session.mode) : null;

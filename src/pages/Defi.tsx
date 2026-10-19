@@ -21,7 +21,8 @@ import { TriviaQuiz } from './TriviaGames';
 import { DuelScoreboard, DuelShareSheet, categoryLabel } from '../components/games/Duels';
 import { useFocusMode } from '../hooks/useFocusMode';
 import { loadDuelBank } from '../utils/duelBank';
-import { acceptErrorMessage, duelState, isDuelCode, normalizeDuelCode, outcomeFor, questionsAt, shuffleOptions, type DuelQuestion } from '../utils/duels';
+import { acceptErrorMessage, duelPicks, duelState, isDuelCode, normalizeDuelCode, outcomeFor, questionsAt, shuffleOptions, type DuelQuestion } from '../utils/duels';
+import { bankHash } from '../../shared/duelGrading';
 import { acceptChallenge, getChallenge, rememberReceived, type AcceptResult, type Challenge } from '../services/challengeWebService';
 import { trackEvent } from '../utils/telemetry';
 import { DuelSubmitStatus, DuelTrustNote, useDuelSubmission } from '../components/arena/trust';
@@ -72,6 +73,7 @@ export default function Defi() {
   const [outcome, setOutcome] = useState<AcceptResult | null>(null);
   const [myScore, setMyScore] = useState<number | null>(null);
   const [myAnswers, setMyAnswers] = useState<RoundAnswer[]>([]);
+  const [duelBankHash, setDuelBankHash] = useState<string | null>(null);
   const [reloadNonce, setReloadNonce] = useState(0);
   // The win ceremony plays once, when the server confirms the win (audit X1).
   const [ceremonyDone, setCeremonyDone] = useState(false);
@@ -107,6 +109,7 @@ export default function Defi() {
       .then((bank) => {
         if (!live) return;
         const qs = questionsAt(bank[challenge.categoryId], challenge.questionIdxs);
+        setDuelBankHash(bankHash(bank[challenge.categoryId]));
         setBankMiss(!qs);
         setQuestions(qs ? qs.map((q) => shuffleOptions(q)) : null);
       })
@@ -118,13 +121,17 @@ export default function Defi() {
   const submitDuel = useDuelSubmission(code, uid);
   const finish = useCallback(async (score: number, _total?: number, answers?: RoundAnswer[]) => {
     setMyScore(score);
-    setMyAnswers(Array.isArray(answers) ? answers : []);
+    const list = Array.isArray(answers) ? answers : [];
+    setMyAnswers(list);
     setPhase('sending');
-    const r = await submitDuel(score);
+    const r = await submitDuel(score, {
+      ...(list.length ? { answers: duelPicks(list) } : {}),
+      bankHash: duelBankHash,
+    });
     setOutcome(r);
     setPhase('done');
     trackEvent('duel_played', { ok: r.ok, result: r.result ?? r.error });
-  }, [submitDuel]);
+  }, [submitDuel, duelBankHash]);
 
   const label = challenge ? categoryLabel(challenge.categoryId, isCreole) : '';
   const challengerName = challenge?.challengerName || t('Ton ami', 'Zanmi ou');

@@ -14,6 +14,7 @@ import { flattenQuestions, normalizeLevel, normalizeSubject, normalizeExamTitle,
 import { gradeExamPendingEssays } from '../../../shared/essayRegrade';
 import { startEssayGrading } from '../services/essayGrading';
 import { loadExamAttemptDraft, saveExamAttemptDraft, commitExamSubmission } from '../services/examAttempts';
+import { recordPlanEvent } from '../services/planEvents';
 import { examDraftKey, readLocalExamDraft, pickResumeDraft, draftPosition, settleWithin } from '../../../shared/examDraft';
 import { recordReview } from '../services/reviewService';
 import useStore from '../contexts/store';
@@ -728,6 +729,9 @@ export default function ExamTakeScreen() {
             percentage: graded.summary?.percentage ?? 0,
           }).catch(() => {});
         }
+        // The study plan advances from the app too (P0 validation E-13, P-3).
+        // Never throws; queued for replay when it can't reach the server.
+        void recordPlanEvent(user.uid, { kind: 'exam', examId }, graded.summary?.percentage ?? 0);
       } else {
         clearActivity();
       }

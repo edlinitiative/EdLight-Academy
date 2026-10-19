@@ -34,7 +34,10 @@ import Button from '../components/ui/Button';
 import SandraFace from '../components/sandra/SandraFace';
 import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
-import { sendToSandra, MAX_CHARS, memoryConversation, persistedConversation, type ConversationStore } from '../services/sandraService';
+import {
+  sendToSandra, MAX_CHARS, memoryConversation, persistedConversation, newClientMessageId,
+  readTranscript, writeTranscript, type ConversationStore,
+} from '../services/sandraService';
 import { EXPLAIN_DISCLOSURE, type QuestionContext } from '../../../shared/explainContext';
 import { tapLight, tapMedium } from '../utils/haptics';
 import { useReduceMotion } from '../utils/motion';
@@ -51,7 +54,7 @@ interface ChatMessage {
 type Notice =
   | { kind: 'limit'; message: string }
   | { kind: 'auth' }
-  | { kind: 'error'; failedText: string };
+  | { kind: 'error'; failedText: string; failedCid: string };
 
 let msgSeq = 0;
 const nextId = () => `msg-${Date.now()}-${msgSeq++}`;
@@ -401,11 +404,16 @@ export default function SandraScreen({
     [onNavigate],
   );
 
-  /** Core send. `appendUser` is false when retrying a turn whose bubble is already shown. */
+  /**
+   * Core send. `appendUser` is false when retrying a turn whose bubble is
+   * already shown; a retry passes the failed turn's `cid` so the server can
+   * answer it from what it already stored (S-2).
+   */
   const deliver = useCallback(
-    async (raw: string, appendUser: boolean) => {
+    async (raw: string, appendUser: boolean, retryCid?: string) => {
       const text = raw.trim();
       if (!text || sending) return;
+      const cid = retryCid || newClientMessageId();
 
       setNotice(null);
       if (appendUser) {
@@ -416,7 +424,7 @@ export default function SandraScreen({
 
       const result = await sendToSandra(
         text, lang, { path: questionContext ? '/mobile/explain' : '/mobile' }, studentContext, false,
-        { questionContext, conversation },
+        { questionContext, conversation, clientMessageId: cid },
       );
       setSending(false);
 
@@ -433,7 +441,7 @@ export default function SandraScreen({
         setNotice({ kind: 'auth' });
       } else {
         // Keep the user's bubble on screen and offer a retry of the same text.
-        setNotice({ kind: 'error', failedText: text });
+        setNotice({ kind: 'error', failedText: text, failedCid: cid });
       }
       scrollToEnd();
     },
@@ -449,12 +457,33 @@ export default function SandraScreen({
     deliver(text, true);
   };
 
+  const uid = user?.uid ?? null;
   const handleReset = () => {
     setMessages([]);
     setInput('');
     setNotice(null);
     conversation.write(null);
+    if (conversation === persistedConversation) void writeTranscript(uid, []);
   };
+
+  // S-5: reopening the screen shows the open conversation again. Restored
+  // only for this account and only while its conversation id is the one kept.
+  const restoredFor = useRef<string | null>(null);
+  useEffect(() => {
+    // Explique-moi sheets keep their own in-memory conversation: never restore the main chat into them.
+    if (!uid || restoredFor.current === uid || conversation !== persistedConversation) return;
+    restoredFor.current = uid;
+    let live = true;
+    readTranscript(uid).then((saved) => {
+      if (live && saved.length) setMessages((prev) => (prev.length ? prev : saved));
+    }).catch(() => {});
+    return () => { live = false; };
+  }, [uid]);
+  // Mirror the transcript after each change (bounded in writeTranscript).
+  useEffect(() => {
+    if (!uid || restoredFor.current !== uid || !messages.length || conversation !== persistedConversation) return;
+    void writeTranscript(uid, messages);
+  }, [uid, messages]);
 
   // Search handoff: consume the query once on mount. Guests see it parked in
   // the composer behind the sign-in gate instead of losing it.
@@ -628,7 +657,7 @@ export default function SandraScreen({
                 variant="outline"
                 label={t('Réessayer', 'Eseye ankò')}
                 disabled={sending}
-                onPress={() => deliver(notice.failedText, false)}
+                onPress={() => deliver(notice.failedText, false, notice.failedCid)}
                 style={{ alignSelf: 'flex-start' }}
               />
             </View>

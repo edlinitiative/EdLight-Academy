@@ -153,6 +153,48 @@ export function createCompletionController(opts: CompletionControllerOptions) {
       }
     },
 
+    /**
+     * Completions still in the persisted outbox (queued before an app kill,
+     * services/writeOutbox) are shown as pending — never as done — until the
+     * replay is confirmed. A lesson already confirmed or in flight is left as is.
+     */
+    adoptPending(forUid: string, forCourse: string, lessonIds: string[]) {
+      if (`${forUid || ''}|${forCourse || ''}` !== scope || !uid) return;
+      let any = false;
+      const out = { ...entries };
+      for (const id of lessonIds) {
+        const cur = entries[id]?.status;
+        if (cur === 'confirmed' || inflight.has(id) || (cur && PENDING.has(cur))) continue;
+        out[id] = { status: offline ? 'queued' : 'saving' };
+        if (!offline) armSlow(id);
+        any = true;
+      }
+      if (any) { entries = out; changed(); }
+    },
+
+    /** The outbox replay was confirmed by the server. */
+    confirmExternal(forUid: string, forCourse: string, lessonId: string) {
+      if (`${forUid || ''}|${forCourse || ''}` !== scope || !uid) return;
+      if (entries[lessonId]?.status === 'confirmed') return;
+      clearTimer(lessonId);
+      freshId = lessonId;
+      set(lessonId, { status: 'confirmed', outcome: 'saved' });
+      const key = `confirmed:${lessonId}`;
+      if (!reported.has(key)) {
+        reported.add(key);
+        opts.track?.('lesson_completion_confirmed', { course_id: courseId, lesson_id: lessonId, outcome: 'saved' });
+      }
+      opts.onConfirmed?.(lessonId, 'saved');
+    },
+
+    /** The outbox replay did not land; the same action retries (same op id). */
+    failExternal(forUid: string, forCourse: string, lessonId: string) {
+      if (`${forUid || ''}|${forCourse || ''}` !== scope || !uid) return;
+      if (entries[lessonId]?.status === 'confirmed' || inflight.has(lessonId)) return;
+      clearTimer(lessonId);
+      set(lessonId, { status: 'failed', reason: offline ? 'offline' : 'error' });
+    },
+
     entryFor(lessonId: string | null | undefined): CompletionEntry {
       return (lessonId && entries[lessonId]) || IDLE;
     },

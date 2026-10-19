@@ -22,7 +22,8 @@
  * endpoint requires an xpDelta > 0.
  */
 
-import { auth, db } from './firebase';
+import { db } from './firebase';
+import { awardXpDurably } from './writeOutbox';
 import {
   doc,
   collection,
@@ -38,7 +39,6 @@ import {
 import type { GroupField, GroupRanking } from '../../../shared/leaderboardAgg';
 
 /** Same serverless base as sandraService / studyPlan — the deployed web API. */
-const AWARD_URL = 'https://academy.edlight.org/api/leaderboard/award';
 const COLLECTIVES_URL = 'https://academy.edlight.org/api/leaderboard/collectives';
 
 /**
@@ -101,36 +101,15 @@ function entryRef(id: string, uid: string) {
 // ─── Writes ─────────────────────────────────────────────────────────────────
 
 /**
- * Best-effort POST to the server-authoritative award endpoint. Mirrors
- * sandraService's auth pattern: uid comes from the verified ID token
- * server-side (never the body). Failures (offline, no user, 401/429/5xx) are
- * logged and swallowed — an XP award must never crash gameplay, matching the
- * old fire-and-forget Firestore writes.
+ * POST to the server-authoritative award endpoint, through the persisted
+ * outbox (services/writeOutbox): the award carries a client operation id, is
+ * kept across app kills until the server confirms it, and is replayed at
+ * launch / reconnect. The server dedupes by that id, so a retry never awards
+ * twice (P0 validation D-3). Never throws — an XP award must not crash
+ * gameplay.
  */
-async function postAward(payload: Record<string, unknown>) {
-  const user = auth.currentUser;
-  if (!user) return;
-  let token: string;
-  try {
-    token = await user.getIdToken();
-  } catch {
-    return;
-  }
-  try {
-    const res = await fetch(AWARD_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) {
-      console.error('[Leaderboard] award endpoint returned', res.status);
-    }
-  } catch (err) {
-    console.error('[Leaderboard] postAward error:', err);
-  }
+async function postAward(uid: string, payload: Record<string, unknown>) {
+  await awardXpDurably(uid, payload);
 }
 
 /**
@@ -146,7 +125,7 @@ async function postAward(payload: Record<string, unknown>) {
  */
 export async function addWeeklyXp(uid: string, xp: number, meta: any = {}) {
   if (!uid || !xp || xp <= 0) return;
-  await postAward({
+  await postAward(uid, {
     xpDelta: xp,
     // Endpoint only writes displayName when it's a valid alias, so an award
     // never erases a pseudo the learner already set.

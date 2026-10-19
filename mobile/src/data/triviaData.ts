@@ -518,10 +518,19 @@ function buildFlagQs(data: any[]) {
 
 /** Shuffle the options of each static question and re-point `answer`. */
 function randomizeBank(questions: any[]) {
+  // ONE permutation for both languages: `optionsHt[i]` must stay the
+  // translation of `options[i]`. Shuffling only the French list (as before)
+  // misaligned them, so a Kreyòl player's "correct" option was often another
+  // answer's translation — a wrong grade (P0 validation; web already fixed).
   return questions.map((item) => {
-    const correct = item.options[item.answer];
-    const options = shuffleArr(item.options);
-    return { ...item, options, answer: options.indexOf(correct) };
+    const order = shuffleArr(item.options.map((_: unknown, i: number) => i));
+    const ht = Array.isArray(item.optionsHt) && item.optionsHt.length === item.options.length ? item.optionsHt : null;
+    return {
+      ...item,
+      options: order.map((i: number) => item.options[i]),
+      optionsHt: ht ? order.map((i: number) => ht[i]) : undefined,
+      answer: order.indexOf(item.answer),
+    };
   });
 }
 

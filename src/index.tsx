@@ -133,6 +133,16 @@ function bootstrapFirebaseAuth() {
             email: user.email || '',
             picture: user.photoURL || '',
           });
+          // Replay writes a failed request left queued: leaderboard awards
+          // (D-3), mastery and study-plan transactions (L-9, P-4). The two
+          // services register their replay handlers when loaded.
+          Promise.all([
+            import('./services/writeOutbox'),
+            import('./services/masteryService'),
+            import('./services/studyPlanService'),
+          ])
+            .then(([{ drainWriteOutbox }]) => drainWriteOutbox(user.uid))
+            .catch(() => {});
         } else {
           logout();
         }

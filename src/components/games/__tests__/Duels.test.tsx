@@ -49,7 +49,7 @@ it('mints the duel from the round just played and opens the share sheet', async 
   panel([{ q: 'Capitale C ?', options: ['C2', 'C1'], answer: 1 }, { q: 'Capitale A ?', options: ['A1', 'A2'], answer: 0 }]);
   await flush();
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Défier un ami/ })); });
-  expect(mockCreate).toHaveBeenCalledWith({ categoryId: 'capitals', questionIdxs: [2, 0], score: 1 });
+  expect(mockCreate).toHaveBeenCalledWith({ categoryId: 'capitals', questionIdxs: [2, 0], score: 1, bankHash: expect.stringMatching(/^b[0-9a-f]{8}$/) });
   expect(screen.getByDisplayValue('https://academy.edlight.org/defi/AB2CD3EF')).toBeInTheDocument();
   await flush();
   const wa = decodeURIComponent(screen.getByRole('link', { name: /WhatsApp/ }).getAttribute('href')!);

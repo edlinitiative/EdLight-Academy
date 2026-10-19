@@ -7,6 +7,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, wit
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { Flame, Check, X, RefreshCw, ChevronRight, ChevronLeft, Share2, Crown, Snowflake, Swords, Star, Clock, Shuffle } from 'lucide-react-native';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
+import { bankHash } from '../../../shared/duelGrading';
 import { getDailyChallengeQuestions } from '../utils/dailyChallenge';
 import { todayStr, awardStreakFreeze } from '../services/streakService';
 import { xpBreakdown } from '../services/triviaService';
@@ -476,7 +477,9 @@ export function QuizPlayer({
   questions: PreparedQuestion[];
   category: any;
   isCreole: boolean;
-  onFinish: (score: number, total: number, mistakes: RoundMistake[]) => void;
+  /** `picks`: the French option text chosen per question (null = timeout) —
+   *  what the server grades a duel from (shared/duelGrading). */
+  onFinish: (score: number, total: number, mistakes: RoundMistake[], picks: (string | null)[]) => void;
   /**
    * What leaving the app does to the 15s question clock — see the TIMING
    * POLICY in utils/deadlineTimer.ts. 'pause' for solo practice (default),
@@ -503,6 +506,7 @@ export function QuizPlayer({
   // answer throws. Reset on a miss, so the build is something to protect.
   const [run, setRun] = useState(0);
   const mistakesRef = useRef<RoundMistake[]>([]);
+  const picksRef = useRef<(string | null)[]>([]);
 
   const q = questions[idx];
   // Language-resolved view: Kreyòl options only when the pair exists (the
@@ -537,6 +541,10 @@ export function QuizPlayer({
     if (confirmed || !q) return;
     setPicked(choice);
     setConfirmed(true);
+    // Canonical French text of the pick: FR and HT options share one order.
+    const shown = isCreole && q.optionsHt ? q.optionsHt : q.options;
+    const at = choice === null ? -1 : shown.indexOf(choice);
+    picksRef.current[idx] = at >= 0 ? q.options[at] ?? null : null;
     const correct = choice !== null && choice === correctFor(q);
     if (correct) {
       success();
@@ -549,7 +557,7 @@ export function QuizPlayer({
     }
     // Crowd-difficulty logging (canonical FR stem so IDs match across langs).
     if (q.q) logAnswerEvent(q.q, correct);
-  }, [confirmed, q, correctFor]);
+  }, [confirmed, q, correctFor, isCreole, idx]);
 
   // Time ran out with nothing chosen → a miss.
   useEffect(() => {
@@ -558,7 +566,9 @@ export function QuizPlayer({
 
   const handleNext = () => {
     tapLight();
-    if (idx + 1 >= questions.length) onFinish(score, questions.length, mistakesRef.current);
+    if (idx + 1 >= questions.length) {
+      onFinish(score, questions.length, mistakesRef.current, questions.map((_, i) => picksRef.current[i] ?? null));
+    }
     else setIdx((i) => i + 1);
   };
 
@@ -899,7 +909,7 @@ export default function TriviaScreen() {
   const [selectedCategory, setSelectedCategory] = useState<any>(null);
   const [roundSize, setRoundSize] = useState(10);
   const [questions, setQuestions] = useState<PreparedQuestion[]>([]);
-  const [finalScore, setFinalScore] = useState({ score: 0, total: 0 });
+  const [finalScore, setFinalScore] = useState<{ score: number; total: number; picks?: (string | null)[] }>({ score: 0, total: 0 });
   // True while the active round is today's Daily Challenge (drives the +50 XP
   // bonus + completedToday tracking, via recordResult({ isDaily: true })).
   const [isDailyRound, setIsDailyRound] = useState(false);
@@ -1004,6 +1014,9 @@ export default function TriviaScreen() {
       categoryId: selectedCategory.id,
       questionIdxs: challengeIdxs,
       score: finalScore.score,
+      // The server grades the duel from these (P0 validation D-8).
+      answers: finalScore.picks?.length === challengeIdxs.length ? finalScore.picks : undefined,
+      bankHash: bankHash((TRIVIA_QUESTIONS as Record<string, any[]>)[selectedCategory.id]),
     });
     if (!created) {
       Alert.alert(
@@ -1052,11 +1065,11 @@ export default function TriviaScreen() {
   );
 
   const handleGameFinish = useCallback(
-    (score: number, total: number, mistakes: RoundMistake[] = []) => {
+    (score: number, total: number, mistakes: RoundMistake[] = [], picks: (string | null)[] = []) => {
       // Captured BEFORE recording flips completedToday, so the results screen
       // knows whether this round was a 0-XP replay of a finished daily.
       const dailyReplay = isDailyRound && !!daily?.completedToday;
-      setFinalScore({ score, total });
+      setFinalScore({ score, total, picks });
       setRoundMistakes(mistakes);
       setWasDailyReplay(dailyReplay);
       setLastReward(null);
