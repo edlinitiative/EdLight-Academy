@@ -53,6 +53,8 @@ import {
 import { TRIVIA_CATEGORIES } from '../data/triviaData';
 import type { PublicQuestion } from '../../../shared/tournois/questions';
 import type { Match } from '../../../shared/tournois/bracket';
+import { COMPETITION_ERROR_MESSAGES } from '../../../shared/competition/errors';
+import { createTeamPlayApi } from '../../../shared/teams/client';
 
 export type {
   TournamentState,
@@ -334,6 +336,10 @@ export const liveAnswer = (
     }),
   );
 
+/** Shared-answer / relay team actions (server authority in api/tournois/_team). */
+export const teamApi = createTeamPlayApi(post);
+export type { TeamState } from '../../../shared/teams/client';
+
 export interface RoundStep {
   round: number;
   pos: number;
@@ -487,11 +493,15 @@ export function errorMessage(
         'Connexion perdue. Réessayez.',
         'Koneksyon an koupe. Eseye ankò.',
       );
-    default:
+    default: {
+      // Team-mode and competition codes share one French/Kreyòl table.
+      const known = code ? COMPETITION_ERROR_MESSAGES[code] : undefined;
+      if (known) return known[isCreole ? 1 : 0];
       return t(
         'Une erreur est survenue. Réessayez.',
         'Gen yon erè. Eseye ankò.',
       );
+    }
   }
 }
 

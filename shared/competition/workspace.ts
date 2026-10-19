@@ -16,6 +16,7 @@ import {
   ENTRY_MODE,
   ENTRY_STATE,
   EVENT_AUDIENCE,
+  GAME_MODE,
   EVENT_STATE,
   FIXTURE_STATUS,
   HOST_KIND,
@@ -306,17 +307,22 @@ export function workspacePage(
       panels.push({
         title: c('Organiser', 'Òganize'),
         paragraphs: [
-          c(
-            'Les nouveaux événements sont limités à 60 joueurs. Les équipes répondent indépendamment avec trois titulaires. Internet est nécessaire.',
-            'Nouvo evènman yo limite a 60 jwè. Ekip yo reponn endepandamman ak twa titilè. Entènèt nesesè.',
-          ),
+          mine.teamModesEnabled === true
+            ? c(
+                'Les nouveaux événements sont limités à 60 joueurs. Les équipes de trois titulaires répondent indépendamment, d’une réponse commune ou en relais. Internet est nécessaire.',
+                'Nouvo evènman yo limite a 60 jwè. Ekip twa titilè yo reponn endepandamman, ak yon repons komen oswa an relè. Entènèt nesesè.',
+              )
+            : c(
+                'Les nouveaux événements sont limités à 60 joueurs. Les équipes répondent indépendamment avec trois titulaires. Internet est nécessaire.',
+                'Nouvo evènman yo limite a 60 jwè. Ekip yo reponn endepandamman ak twa titilè. Entènèt nesesè.',
+              ),
         ],
         tasks: [
           {
             id: 'event-create',
             action: 'event-save',
             label: c('Préparer un événement', 'Prepare yon evènman'),
-            fields: eventFields(host, now),
+            fields: eventFields(host, now, mine.teamModesEnabled === true),
           },
           ...(host
             ? [
@@ -794,7 +800,7 @@ export function workspacePage(
   if (target.kind === 'league') return leaguePage(target.id, data);
   return eventPage(target.id, data, mine, now, people);
 }
-function eventFields(host: boolean, now: number): Field[] {
+function eventFields(host: boolean, now: number, teamModes = false): Field[] {
   return [
     field('title', 'Nom de l’événement', 'Non evènman an'),
     {
@@ -810,6 +816,18 @@ function eventFields(host: boolean, now: number): Field[] {
       ],
       'individual',
     ),
+    // Shared-answer and relay need named teams and a live or window format;
+    // the server refuses any other combination with a translated reason.
+    // Offered only while their own switch is on (Slice E, not the A–D pilot).
+    ...(teamModes ? [select(
+      'gameMode',
+      c(
+        'Jeu des équipes (équipes de trois, direct ou fenêtre)',
+        'Fason ekip yo jwe (ekip twa moun, an dirèk oswa fenèt)',
+      ),
+      Object.entries(GAME_MODE).map(([v, [fr, ht]]) => [v, fr, ht]),
+      'independent',
+    )] : []),
     select(
       'format',
       c('Format', 'Fòma'),
@@ -989,12 +1007,22 @@ function eventPage(
             )
           : join(
               ' · ',
-              e.entryMode === 'named_team'
-                ? c(
-                    '3 titulaires · réponses indépendantes · somme des points · absent = zéro',
-                    '3 titilè · repons endepandan · total pwen yo · absan = zewo',
-                  )
-                : enumLabel(ENTRY_MODE, 'individual'),
+              e.entryMode !== 'named_team'
+                ? enumLabel(ENTRY_MODE, 'individual')
+                : e.gameMode === 'shared'
+                  ? c(
+                      '3 titulaires · une réponse commune par question, envoyée par le porte-parole · pas de réponse = zéro',
+                      '3 titilè · yon repons komen pou chak kesyon, pòtpawòl la voye l · pa gen repons = zewo',
+                    )
+                  : e.gameMode === 'relay'
+                    ? c(
+                        '3 titulaires · relais : chacun répond à son tour, sans remplaçant · tour manqué = zéro',
+                        '3 titilè · relè : chak moun reponn tou pa l, san ranplasan · tou rate = zewo',
+                      )
+                    : c(
+                        '3 titulaires · réponses indépendantes · somme des points · absent = zéro',
+                        '3 titilè · repons endepandan · total pwen yo · absan = zewo',
+                      ),
               enumLabel(PLAY_FORMAT, e.config.format),
               c(
                 `${e.config.questionCount} questions`,
@@ -1103,7 +1131,9 @@ function eventPage(
           ' · ',
           `${r.rank}. ${r.label}`,
           pts(r.points),
-          c(`${r.missing} absent(s)`, `${r.missing} absan`),
+          r.gameMode
+            ? c(`${r.missed ?? 0} question(s) sans réponse`, `${r.missed ?? 0} kesyon san repons`)
+            : c(`${r.missing} absent(s)`, `${r.missing} absan`),
         ),
       ),
     });
@@ -1218,9 +1248,75 @@ function eventPage(
           'Plas la ap libere. Fòk ou konfime epi enskri ankò.',
         ),
       });
+    const teamMode = e.gameMode === 'shared' || e.gameMode === 'relay';
+    const rolesOpen =
+      teamMode &&
+      entry.state !== 'withdrawn' &&
+      (e.state === 'published' || e.state === 'draft') &&
+      now < e.config.startsAt &&
+      data.engineState !== 'running' &&
+      data.engineState !== 'finished';
+    const roleRows: Row[] = !teamMode
+      ? []
+      : e.gameMode === 'shared'
+        ? [
+            ...(entry.roles
+              ? [
+                  personRow(personOf(people, entry.roles.submitter), c('Porte-parole', 'Pòtpawòl')),
+                  personRow(personOf(people, entry.roles.deputy), c('Suppléant', 'Ranplasan')),
+                ]
+              : [c('Porte-parole par défaut : le capitaine s’il est titulaire.', 'Pòtpawòl pa defo : kapitèn lan si li titilè.')]),
+          ]
+        : (entry.relaySlots || entry.starters).map((u: string, i: number) =>
+            personRow(personOf(people, u), c(`Relais ${i + 1}`, `Relè ${i + 1}`)),
+          );
+    if (teamMode)
+      roleRows.push(
+        c(
+          `${(entry.dutiesConfirmed || []).length}/${entry.starters.length} rôles confirmés · figés au début`,
+          `${(entry.dutiesConfirmed || []).length}/${entry.starters.length} wòl konfime · y ap fikse lè sa kòmanse`,
+        ),
+      );
+    if (rolesOpen && entry.captainUid === mine?.uid) {
+      const starters = entry.starters.map((u: string) => personOf(people, u));
+      tasks.push(
+        e.gameMode === 'shared'
+          ? {
+              id: `roles-${entry.id}`,
+              action: 'team-roles',
+              label: c('Choisir le porte-parole et son suppléant', 'Chwazi pòtpawòl la ak ranplasan l'),
+              values: { eventId, entryId: entry.id },
+              fields: [
+                personSelect('submitter', c('Porte-parole (envoie la réponse)', 'Pòtpawòl (voye repons lan)'), starters),
+                personSelect('deputy', c('Suppléant (reprend si besoin)', 'Ranplasan (pran plas li si sa nesesè)'), starters),
+              ],
+            }
+          : {
+              id: `roles-${entry.id}`,
+              action: 'team-roles',
+              label: c('Fixer l’ordre du relais', 'Fikse lòd relè a'),
+              values: { eventId, entryId: entry.id },
+              fields: [1, 2, 3].map((n) =>
+                personSelect(`slot${n}`, c(`Relais ${n}`, `Relè ${n}`), starters),
+              ),
+            },
+      );
+    }
+    if (
+      rolesOpen &&
+      entry.starters.includes(mine?.uid) &&
+      !(entry.dutiesConfirmed || []).includes(mine.uid)
+    )
+      tasks.push({
+        id: `roles-confirm-${entry.id}`,
+        action: 'team-roles-confirm',
+        label: c('J’ai lu mon rôle et je le confirme', 'Mwen li wòl mwen epi mwen konfime l'),
+        values: { eventId, entryId: entry.id, rolesVersion: entry.rolesVersion ?? 0 },
+      });
     panels.push({
       title: c(who(entry.label, 0), who(entry.label, 1)),
       rows: [
+        ...roleRows,
         join(
           ' · ',
           enumLabel(ENTRY_STATE, entry.state),
@@ -1332,7 +1428,13 @@ function organizerPanels(
       action: 'event-save',
       label: c('Modifier le brouillon', 'Modifye bouyon an'),
       values: { eventId, revision: e.revision },
-      fields: eventFields(e.hostKind === 'school', Date.now()).map((f) => ({
+      fields: eventFields(
+        e.hostKind === 'school',
+        Date.now(),
+        data.teamModesEnabled === true ||
+          e.gameMode === 'shared' ||
+          e.gameMode === 'relay',
+      ).map((f) => ({
         ...f,
         value:
           f.type === 'date'
@@ -1820,6 +1922,15 @@ export function taskPayload(
         .map((s) => s.trim())
         .filter(Boolean);
   }
+  if (task.action === 'team-roles') {
+    const slots = ['slot1', 'slot2', 'slot3']
+      .map((key) => values[key])
+      .filter((v): v is string => typeof v === 'string' && !!v);
+    for (const key of ['slot1', 'slot2', 'slot3']) delete values[key];
+    if (slots.length) values.slots = slots;
+  }
+  if (task.action === 'team-roles-confirm' && values.rolesVersion !== undefined)
+    values.rolesVersion = Number(values.rolesVersion);
   if (task.action === 'event-report-result') {
     const scored = Object.keys(values).filter((k) => k.startsWith('score:'));
     if (scored.length) {

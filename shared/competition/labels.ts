@@ -43,6 +43,13 @@ export const ENTRY_MODE: Record<string, Copy> = {
   grade_group: ["Par classe", "Pa klas"],
 };
 
+/** How a named team answers (event.gameMode; missing = independent). */
+export const GAME_MODE: Record<string, Copy> = {
+  independent: ["Réponses indépendantes", "Repons endepandan"],
+  shared: ["Réponse commune (une par équipe)", "Repons komen (youn pa ekip)"],
+  relay: ["Relais (chacun son tour)", "Relè (chak moun tou pa l)"],
+};
+
 export const HOST_KIND: Record<string, Copy> = {
   school: ["Organisateur scolaire approuvé", "Òganizatè lekòl ki apwouve"],
   student: ["Organisé par des élèves", "Se elèv ki òganize l"],

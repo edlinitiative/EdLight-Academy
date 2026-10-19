@@ -62,7 +62,10 @@ export type InboxAction =
   | 'event_starting'
   | 'event_starting_soon'
   | 'registration_closing'
-  | 'error_spike';
+  | 'error_spike'
+  | 'team_roles_set'
+  | 'authority_received'
+  | 'relay_turn';
 
 type Pair = [string, string];
 
@@ -302,6 +305,28 @@ export const INBOX_ACTIONS: Record<InboxAction, { label: Pair; push?: Pair }> = 
     push: [
       'Les inscriptions ferment bientôt : confirme ta place ou termine l’inscription.',
       'Enskripsyon yo ap fèmen talè : konfime plas ou oswa fini enskripsyon an.',
+    ],
+  },
+  // Shared-answer and relay team play (api/tournois/_team.ts, `team-roles`).
+  team_roles_set: {
+    label: ['Rôles de l’équipe à confirmer', 'Wòl ekip la pou konfime'],
+    push: [
+      'Ton capitaine a fixé les rôles de l’équipe : vérifie et confirme le tien.',
+      'Kapitèn ou fikse wòl ekip la : gade epi konfime pa w la.',
+    ],
+  },
+  authority_received: {
+    label: ['Tu tiens la réponse de l’équipe', 'Se ou ki kenbe repons ekip la'],
+    push: [
+      'Tu envoies maintenant la réponse de ton équipe.',
+      'Se ou ki voye repons ekip ou a kounye a.',
+    ],
+  },
+  relay_turn: {
+    label: ['Ton tour de relais', 'Tou relè ou'],
+    push: [
+      'C’est ton tour de relais : commence avant la limite.',
+      'Se tou relè ou : kòmanse anvan limit la.',
     ],
   },
 };

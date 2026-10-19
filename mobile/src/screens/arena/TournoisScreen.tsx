@@ -35,6 +35,7 @@ import {
   arenaInputStyle,
 } from '../../components/arena/WorkspaceKit';
 import { identityText } from '../../../../shared/competition/deletedAccount';
+import TeamModePanel from '../../components/arena/TeamModePanel';
 
 export default function TournoisScreen() {
   const navigation = useNavigation<any>(),
@@ -219,6 +220,10 @@ export default function TournoisScreen() {
   };
   const signIn = () => useStore.getState().toggleAuthModal();
   const joined = !!uid && roster.some((r) => r.uid === uid);
+  // Shared-answer / relay: the team panel owns play; the individual controls never show.
+  const teamPlay =
+    joined &&
+    (tournament?.gameMode === 'shared' || tournament?.gameMode === 'relay');
   const question =
     tournament?.format === 'live' ? live?.question : step?.question;
   const active =
@@ -523,6 +528,7 @@ export default function TournoisScreen() {
                   }}
                 />
                 {joined &&
+                !teamPlay &&
                 tournament.format !== 'live' &&
                 tournament.state === 'running' ? (
                   <ArenaButton
@@ -542,7 +548,17 @@ export default function TournoisScreen() {
                 ) : null}
               </ArenaPanel>
             ) : null}
-            {question ? (
+            {teamPlay && tournament && uid ? (
+              <TeamModePanel
+                tournament={tournament}
+                live={live}
+                roster={roster}
+                uid={uid}
+                ht={ht}
+                nameOf={(v) => nameText(v)}
+              />
+            ) : null}
+            {question && !teamPlay ? (
               <ArenaPanel>
                 <Text
                   accessibilityRole="header"
@@ -668,7 +684,9 @@ export default function TournoisScreen() {
                 {board.namedTeams?.map((row) => (
                   <Text key={row.id} style={[arenaType.body, { color: C.ink }]}>
                     {row.rank}. {row.label} · {row.points} {pts} ·{' '}
-                    {row.missing} {t('absent(s)', 'absan')}
+                    {row.gameMode
+                      ? `${row.missed ?? 0} ${t('question(s) sans réponse', 'kesyon san repons')}`
+                      : `${row.missing} ${t('absent(s)', 'absan')}`}
                   </Text>
                 ))}
                 {board.teams.map((row) => (

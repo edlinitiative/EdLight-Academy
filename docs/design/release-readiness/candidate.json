@@ -1705,7 +1705,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 337,
+      "line": 340,
       "kind": "native-screen",
       "destination": "Loading",
       "owner": null,
@@ -1715,7 +1715,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 340,
+      "line": 343,
       "kind": "native-screen",
       "destination": "Main",
       "owner": null,
@@ -1725,7 +1725,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 341,
+      "line": 344,
       "kind": "native-screen",
       "destination": "Tournois",
       "owner": null,
@@ -1735,7 +1735,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 342,
+      "line": 345,
       "kind": "native-screen",
       "destination": "CompetitionWorkspace",
       "owner": null,
@@ -1745,7 +1745,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 343,
+      "line": 346,
       "kind": "native-screen",
       "destination": "Search",
       "owner": null,
@@ -1755,7 +1755,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 348,
+      "line": 351,
       "kind": "native-screen",
       "destination": "Sandra",
       "owner": null,
@@ -1765,7 +1765,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 357,
+      "line": 360,
       "kind": "native-screen",
       "destination": "StudyPlan",
       "owner": null,
@@ -1775,7 +1775,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 362,
+      "line": 365,
       "kind": "native-screen",
       "destination": "Leaderboard",
       "owner": null,
@@ -1785,7 +1785,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 367,
+      "line": 370,
       "kind": "native-screen",
       "destination": "ArenaLobby",
       "owner": null,
@@ -1795,7 +1795,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 372,
+      "line": 375,
       "kind": "native-screen",
       "destination": "ArenaHub",
       "owner": null,
@@ -1805,7 +1805,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 377,
+      "line": 380,
       "kind": "native-screen",
       "destination": "ArenaWatch",
       "owner": null,
@@ -1815,7 +1815,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 382,
+      "line": 385,
       "kind": "native-screen",
       "destination": "ArenaDoors",
       "owner": null,
@@ -1825,7 +1825,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 387,
+      "line": 390,
       "kind": "native-screen",
       "destination": "ArenaResult",
       "owner": null,
@@ -1835,7 +1835,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 392,
+      "line": 395,
       "kind": "native-screen",
       "destination": "ArenaLive",
       "owner": null,
@@ -1845,7 +1845,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 403,
+      "line": 406,
       "kind": "native-screen",
       "destination": "Teach",
       "owner": null,
@@ -1855,7 +1855,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 408,
+      "line": 411,
       "kind": "native-screen",
       "destination": "AvatarEditor",
       "owner": null,
@@ -1865,7 +1865,7 @@
     },
     {
       "source": "mobile/src/navigation/AppNavigator.tsx",
-      "line": 413,
+      "line": 416,
       "kind": "native-screen",
       "destination": "Defi",
       "owner": null,
@@ -2693,7 +2693,7 @@
         {
           "source": "mobile/src/screens/arena/TournoisScreen.tsx",
           "match": "Créer un tournoi ou une salle privée",
-          "line": 374
+          "line": 379
         }
       ],
       "requirementIds": [
@@ -2765,12 +2765,12 @@
         {
           "source": "mobile/src/screens/arena/TournoisScreen.tsx",
           "match": "Tournois publics",
-          "line": 407
+          "line": 412
         },
         {
           "source": "mobile/src/screens/arena/TournoisScreen.tsx",
           "match": "Mes tournois et résultats",
-          "line": 392
+          "line": 397
         },
         {
           "source": "mobile/src/screens/arena/CompetitionWorkspaceScreen.tsx",
@@ -2849,12 +2849,12 @@
         {
           "source": "shared/competition/workspace.ts",
           "match": "Découvrir une compétition",
-          "line": 414
+          "line": 420
         },
         {
           "source": "shared/competition/workspace.ts",
           "match": "Aucun événement disponible dans cette page",
-          "line": 446
+          "line": 452
         }
       ],
       "requirementIds": [
@@ -2913,7 +2913,7 @@
         {
           "source": "shared/competition/workspace.ts",
           "match": "Mon code d’invitation",
-          "line": 207
+          "line": 208
         }
       ],
       "requirementIds": [
@@ -2966,7 +2966,7 @@
         {
           "source": "shared/competition/workspace.ts",
           "match": "label: c('Créer une équipe', 'Kreye yon ekip')",
-          "line": 257
+          "line": 258
         }
       ],
       "requirementIds": [
@@ -3018,12 +3018,12 @@
         {
           "source": "shared/competition/workspace.ts",
           "match": "Invitation d’équipe",
-          "line": 584
+          "line": 590
         },
         {
           "source": "shared/competition/notifications.ts",
           "match": "Tu es invité·e à rejoindre cette équipe.",
-          "line": 78
+          "line": 81
         }
       ],
       "requirementIds": [
@@ -3077,17 +3077,17 @@
         {
           "source": "shared/competition/workspace.ts",
           "match": "Vérifier une affiliation scolaire",
-          "line": 327
+          "line": 333
         },
         {
           "source": "shared/competition/workspace.ts",
           "match": "Autoriser un organisateur scolaire",
-          "line": 391
+          "line": 397
         },
         {
           "source": "shared/competition/notifications.ts",
           "match": "Tu peux organiser pour ton école.",
-          "line": 110
+          "line": 113
         }
       ],
       "requirementIds": [
@@ -3138,12 +3138,12 @@
         {
           "source": "shared/competition/workspace.ts",
           "match": "Les nouveaux événements sont limités à 60 joueurs",
-          "line": 310
+          "line": 312
         },
         {
           "source": "shared/competition/workspace.ts",
           "match": "Préparer un événement",
-          "line": 318
+          "line": 324
         }
       ],
       "requirementIds": [
@@ -3198,17 +3198,17 @@
         {
           "source": "shared/competition/workspace.ts",
           "match": "Suivre sans s’inscrire",
-          "line": 1088
+          "line": 1116
         },
         {
           "source": "mobile/src/screens/arena/TournoisScreen.tsx",
           "match": "Inscription et équipe de cet événement",
-          "line": 486
+          "line": 491
         },
         {
           "source": "shared/competition/notifications.ts",
           "match": "Tous les titulaires ont confirmé : termine l’inscription.",
-          "line": 133
+          "line": 136
         }
       ],
       "requirementIds": [
@@ -3263,12 +3263,12 @@
         {
           "source": "shared/competition/workspace.ts",
           "match": "Console organisateur",
-          "line": 1527
+          "line": 1629
         },
         {
           "source": "shared/competition/workspace.ts",
           "match": "Contester un résultat",
-          "line": 1265
+          "line": 1361
         }
       ],
       "requirementIds": [
@@ -3320,12 +3320,12 @@
         {
           "source": "shared/competition/workspace.ts",
           "match": "Accueil des inscrits",
-          "line": 1286
+          "line": 1382
         },
         {
           "source": "shared/competition/workspace.ts",
           "match": "Ouvrir l’écran public sans commandes privées",
-          "line": 1537
+          "line": 1639
         }
       ],
       "requirementIds": [
@@ -3376,12 +3376,12 @@
         {
           "source": "shared/competition/workspace.ts",
           "match": "Activité avec résultat déclaré",
-          "line": 898
+          "line": 916
         },
         {
           "source": "shared/competition/workspace.ts",
           "match": "Prix externe facultatif",
-          "line": 928
+          "line": 946
         }
       ],
       "requirementIds": [
@@ -3434,12 +3434,12 @@
         {
           "source": "shared/competition/workspace.ts",
           "match": "Créer une saison pilote",
-          "line": 347
+          "line": 353
         },
         {
           "source": "shared/competition/workspace.ts",
           "match": "Règles de la division",
-          "line": 1653
+          "line": 1755
         }
       ],
       "requirementIds": [
@@ -3490,7 +3490,7 @@
         {
           "source": "shared/competition/workspace.ts",
           "match": "Signaler un problème",
-          "line": 942
+          "line": 960
         }
       ],
       "requirementIds": [
@@ -3541,7 +3541,7 @@
         {
           "source": "shared/competition/notifications.ts",
           "match": "export const INBOX_ACTIONS",
-          "line": 70
+          "line": 73
         },
         {
           "source": "src/components/NotificationCenter.tsx",
@@ -3647,7 +3647,7 @@
         {
           "source": "shared/competition/workspace.ts",
           "match": "Tout marquer comme lu",
-          "line": 235
+          "line": 236
         }
       ],
       "requirementIds": [
@@ -3812,7 +3812,7 @@
         {
           "source": "shared/competition/notifications.ts",
           "match": "ownership_received: {",
-          "line": 161
+          "line": 164
         }
       ],
       "requirementIds": [
@@ -3935,7 +3935,7 @@
         {
           "source": "shared/competition/notifications.ts",
           "match": "Ton événement commence dans 1 heure.",
-          "line": 279
+          "line": 282
         }
       ],
       "requirementIds": [
@@ -4024,6 +4024,132 @@
       "owner": null,
       "scenarioIds": [],
       "evidence": []
+    },
+    {
+      "id": "ADV-34",
+      "kind": "claim",
+      "capability": "Shared-answer team play (one answer per team, versioned submitter authority, transfer and failover) — Slice E",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "shared/competition/labels.ts",
+          "match": "Réponse commune (une par équipe)",
+          "line": 49
+        },
+        {
+          "source": "shared/teams/client.ts",
+          "match": "Seul le porte-parole envoie.",
+          "line": 149
+        }
+      ],
+      "requirementIds": [
+        "MAP-01",
+        "PAR-09",
+        "TRU-03",
+        "TRU-07",
+        "CON-09",
+        "TRU-06"
+      ],
+      "journeys": [
+        "J12"
+      ],
+      "implementation": [
+        "shared/teams/modes.ts",
+        "shared/teams/client.ts",
+        "api/tournois/_team.ts",
+        "api/tournois/play.ts",
+        "api/tournois/_shared.ts",
+        "api/_lib/competition.ts",
+        "api/_lib/competitionAccountDeletion.ts",
+        "shared/competition/workspace.ts",
+        "src/pages/tournois/TeamPlay.tsx",
+        "mobile/src/components/arena/TeamModePanel.tsx"
+      ],
+      "automatedEvidence": [
+        "api/__tests__/teamModes.test.ts",
+        "api/__tests__/teamModesPolicy.test.ts",
+        "api/__tests__/competitionWorkspace.test.ts",
+        "src/pages/tournois/__tests__/TeamPlay.test.tsx",
+        "mobile/src/components/arena/__tests__/teamModePanel.test.tsx"
+      ],
+      "flags": [
+        "COMPETITION_CREATION_ENABLED",
+        "COMPETITION_TEAM_MODES_ENABLED"
+      ],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Two installed devices race an old and a new submitter after a transfer: at most one answer accepted (iOS, Android, web)",
+        "Holder device killed/backgrounded mid-question: deputy claims after 15 s and submits before close; the old device reconnects to the stale-authority state",
+        "Practice question, rules and recovery states reviewed in FR/HT with a real team",
+        "Slice E scope decision: the release contract (2026-10-18) keeps Slice E outside A–D; COMPETITION_TEAM_MODES_ENABLED stays false until its own J12/J13 acceptance"
+      ]
+    },
+    {
+      "id": "ADV-35",
+      "kind": "claim",
+      "capability": "Relay team play (frozen slot order; live rotation, window legs with start deadline and forfeit) — Slice E",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "shared/competition/labels.ts",
+          "match": "Relais (chacun son tour)",
+          "line": 50
+        },
+        {
+          "source": "shared/teams/client.ts",
+          "match": "Pas de remplaçant : un coéquipier ne peut pas jouer votre tour.",
+          "line": 157
+        }
+      ],
+      "requirementIds": [
+        "MAP-01",
+        "PAR-09",
+        "TRU-03",
+        "TRU-07",
+        "CON-09",
+        "TRU-06"
+      ],
+      "journeys": [
+        "J13"
+      ],
+      "implementation": [
+        "shared/teams/modes.ts",
+        "shared/teams/client.ts",
+        "api/tournois/_team.ts",
+        "api/tournois/play.ts",
+        "api/tournois/_shared.ts",
+        "api/_lib/competition.ts",
+        "api/_lib/competitionAccountDeletion.ts",
+        "shared/competition/workspace.ts",
+        "src/pages/tournois/TeamPlay.tsx",
+        "mobile/src/components/arena/TeamModePanel.tsx"
+      ],
+      "automatedEvidence": [
+        "api/__tests__/teamModes.test.ts",
+        "api/__tests__/teamModesPolicy.test.ts",
+        "api/__tests__/competitionWorkspace.test.ts",
+        "src/pages/tournois/__tests__/TeamPlay.test.tsx",
+        "mobile/src/components/arena/__tests__/teamModePanel.test.tsx"
+      ],
+      "flags": [
+        "COMPETITION_CREATION_ENABLED",
+        "COMPETITION_TEAM_MODES_ENABLED"
+      ],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Wrong player cannot submit on installed devices; retry/background cannot duplicate or reorder a turn",
+        "Window relay: the next owner's device receives the relay-turn push; the start deadline and forfeit are observed",
+        "An expired live turn scores zero and the room continues on all three surfaces",
+        "Slice E scope decision: the release contract (2026-10-18) keeps Slice E outside A–D; COMPETITION_TEAM_MODES_ENABLED stays false until its own J12/J13 acceptance"
+      ]
     }
   ]
 }

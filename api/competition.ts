@@ -120,6 +120,7 @@ export async function readEvent(
     audience: e.audience,
     entryPolicy: e.entryPolicy,
     entryMode: e.entryMode,
+    gameMode: e.gameMode ?? 'independent',
     delivery: e.delivery,
     state: e.state,
     config: e.config,
@@ -190,6 +191,7 @@ export async function readEvent(
           ? 'participant'
           : 'viewer',
     eligible: !e.schoolKey || member?.status === 'approved',
+    teamModesEnabled: process.env.COMPETITION_TEAM_MODES_ENABLED === 'true',
     serverNow: Date.now(),
   };
 }
@@ -476,6 +478,9 @@ export default async function handler(
           membershipRequests,
           moderationReports,
           creationEnabled: process.env.COMPETITION_CREATION_ENABLED === 'true',
+          teamModesEnabled:
+            process.env.COMPETITION_CREATION_ENABLED === 'true' &&
+            process.env.COMPETITION_TEAM_MODES_ENABLED === 'true',
           inbox: inbox.docs.map((d) => d.data()),
           teams: teamDocs,
           memberships: memberships.docs.map((d) => d.data()),

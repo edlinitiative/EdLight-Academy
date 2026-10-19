@@ -60,6 +60,7 @@ import {
   useServerNow,
 } from './parts';
 import ArenaPageHead from '../../components/arena/ArenaPageHead';
+import TeamPlay from './TeamPlay';
 import './Tournois.css';
 
 // ── Question card (live and rounds share it) ───────────────────────────────
@@ -382,7 +383,8 @@ function RoundsStage({ tour, standings, matches, me, canPlay, now, offset }: {
   const [review, setReview] = useState<{ round: number; items: ReviewItem[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const rounds = tour.schedule.rounds;
-  if (tour.competitionEventId) return <div className="tn-card"><Link className="button button--primary" to={`/arena/evenements/${tour.competitionEventId}`}>{t('Inscription et composition de l’événement', 'Enskripsyon ak konpozisyon evènman an')}</Link></div>;
+  // Managed events register on the event page; registered entrants play here.
+  if (tour.competitionEventId && !canPlay) return <div className="tn-card"><Link className="button button--primary" to={`/arena/evenements/${tour.competitionEventId}`}>{t('Inscription et composition de l’événement', 'Enskripsyon ak konpozisyon evènman an')}</Link></div>;
   const open = tour.state === 'running' ? roundAt(rounds, now) : null;
   const inBracketRound = tour.format !== 'bracket' || (open && matches.some((m) => m.round === open.index && m.status === 'pending' && (m.a?.uid === me || m.b?.uid === me)));
   const roundName = (i: number) => (tour.format === 'window' ? t('Fenêtre', 'Fenèt') : tour.format === 'bracket' ? t(`Tour ${i + 1}`, `Tou ${i + 1}`) : t(`Manche ${i + 1}`, `Manch ${i + 1}`));
@@ -635,6 +637,7 @@ export function RoomView({ tour, roster, live, progress, standings, matches, me,
   const canPlay = onRoster && !spectate;
   const isCreator = me === tour.creatorUid;
   const liveNow = tour.state === 'running';
+  const teamMode = tour.gameMode === 'shared' || tour.gameMode === 'relay';
 
   return (
     <section className="tn">
@@ -650,6 +653,8 @@ export function RoomView({ tour, roster, live, progress, standings, matches, me,
             {tour.state === 'cancelled' && <span className="tn-chip">{t('Annulé', 'Anile')}</span>}
             {!(liveNow && tour.format === 'live') && <span className="tn-chip">{formatLabel(tour.format, isCreole)}</span>}
             {tour.teamRule === 'school' && <span className="tn-chip">{t('École vs école', 'Lekòl vs lekòl')}</span>}
+            {tour.gameMode === 'shared' && <span className="tn-chip">{t('Réponse commune', 'Repons komen')}</span>}
+            {tour.gameMode === 'relay' && <span className="tn-chip">{t('Relais', 'Relè')}</span>}
             {tour.teamRule === 'grade' && <span className="tn-chip">{t('Classe vs classe', 'Klas vs klas')}</span>}
             <span className="tn-chip">{tour.visibility === 'public' ? t('Public', 'Piblik') : tour.visibility === 'unlisted' ? t('Non listé', 'Pa nan lis') : t('Privé', 'Prive')}</span>
           </div>
@@ -667,7 +672,7 @@ export function RoomView({ tour, roster, live, progress, standings, matches, me,
             <div className="tn-hero__actions">
               <InviteButton t={tour} label={t('Inviter la classe', 'Envite klas la')} />
               <CopyButton text={shareUrl(tour)} label={t('Lien', 'Lyen')} done={t('Lien copié', 'Lyen kopye')} ghost />
-              {onRoster && tour.format === 'live' && (
+              {onRoster && tour.format === 'live' && !teamMode && (
                 <button type="button" role="switch" aria-checked={spectate} className="tn-switch" onClick={() => setSpectate((s) => !s)}>
                   <span className="tn-switch__track" aria-hidden="true" /> {t('Mode spectateur', 'Mòd espektatè')}
                 </button>
@@ -685,9 +690,11 @@ export function RoomView({ tour, roster, live, progress, standings, matches, me,
 
         {!onRoster && tour.state !== 'cancelled' && <JoinPanel tour={tour} pin={pinFromLink} />}
 
-        {standings?.namedTeams?.length ? <div className="tn-card"><h2>{standings.final ? t('Résultat des équipes', 'Rezilta ekip yo') : t('Classement des équipes en cours', 'Klasman ekip yo an kou')}</h2>{standings.namedTeams.map((team) => <p key={team.id}>{team.rank}. {team.label} · {team.points} pts · {team.missing} {t('absents, comptés à zéro', 'absan, konte zewo')}</p>)}</div> : null}
+        {standings?.namedTeams?.length ? <div className="tn-card"><h2>{standings.final ? t('Résultat des équipes', 'Rezilta ekip yo') : t('Classement des équipes en cours', 'Klasman ekip yo an kou')}</h2>{standings.namedTeams.map((team) => <p key={team.id}>{team.rank}. {team.label} · {team.points} pts · {team.gameMode ? `${team.missed ?? 0} ${t('question(s) sans réponse', 'kesyon san repons')}` : `${team.missing} ${t('absents, comptés à zéro', 'absan, konte zewo')}`}</p>)}</div> : null}
         {tour.state === 'cancelled' ? (
           <div className="tn-empty">{t('Ce tournoi a été annulé par son organisateur.', 'Òganizatè a anile tounwa sa a.')}</div>
+        ) : teamMode && onRoster && me ? (
+          <TeamPlay tour={tour} live={live} roster={roster} me={me} now={now} />
         ) : tour.format === 'live' ? (
           <LiveStage tour={tour} live={live} progress={progress} standings={standings} roster={roster} me={me} canPlay={canPlay} now={now} />
         ) : (

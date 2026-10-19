@@ -26,7 +26,10 @@
  *    hostName, competitionReports uid/reviewerUid, membership/role reviewedBy,
  *    leagueInvites/leagueConsents captainUid, league ownerUid, and the
  *    tournament engine: roster/players/standings/winner names, plus their uid
- *    fields. Scores, points, ranks and result rows are copied untouched.
+ *    fields; team-mode records (entry roles/relaySlots/dutiesConfirmed,
+ *    teamControl holder/deputy/slots/presence/transfers, teamAnswers uid,
+ *    teamAttempts answeredBy/leg owners). Scores, points, ranks and result
+ *    rows are copied untouched.
  *
  *  ENGINE KEYS that stay raw: Firestore document ids keyed by uid (individual
  *    entries/{uid}, roster/{uid}, players/{uid}, attempts/{r}_{uid},
@@ -120,6 +123,12 @@ interface Ctx {
   now: number;
   warnings: string[];
   notices: CompetitionNotice[];
+  /**
+   * eventId → ids of every entry the user captained, started or confirmed,
+   * recorded by the entries pass BEFORE tombstoning or a captain handover, so
+   * the team-mode pass finds teamControl/teamAttempts by key afterwards.
+   */
+  teamEntries: Map<string, Set<string>>;
 }
 
 type Op = (b: FirebaseFirestore.WriteBatch) => void;
@@ -560,8 +569,11 @@ async function entries(
       (
         await db.collection(`competitionEvents/${eventId}/entries`).limit(100).get()
       ).docs.filter((d) => mine(d.data() as EventEntry));
+    const seen = ctx.teamEntries.get(eventId) ?? new Set<string>();
+    ctx.teamEntries.set(eventId, seen);
     // Engine withdrawal first: it checks the real captain uid and releases claims and seats itself.
     for (const d of await load()) {
+      seen.add(d.id);
       const x = d.data() as EventEntry;
       if (
         registrationOpen &&
@@ -602,6 +614,19 @@ async function entries(
         starters: swap(x.starters, uid, tomb),
         confirmed: swap(x.confirmed, uid, tomb),
         ...(x.teamId ? {} : { label: DELETED_ACCOUNT_NAME }),
+        // Shared-answer / relay planning (EventEntry.roles, relaySlots, dutiesConfirmed).
+        ...(x.roles
+          ? {
+              roles: {
+                submitter: x.roles.submitter === uid ? tomb : x.roles.submitter,
+                deputy: x.roles.deputy === uid ? tomb : x.roles.deputy,
+              },
+            }
+          : {}),
+        ...(x.relaySlots ? { relaySlots: swap(x.relaySlots, uid, tomb) } : {}),
+        ...(x.dutiesConfirmed
+          ? { dutiesConfirmed: swap(x.dutiesConfirmed, uid, tomb) }
+          : {}),
       });
     }
     await w.flush();
@@ -676,6 +701,80 @@ async function tournaments(ctx: Ctx, tids: Set<string>) {
       const ref = db.doc(`${base}/${col}/${uid}`);
       if ((await ref.get()).exists)
         w.update(ref, { uid: key, displayName: DELETED_ACCOUNT_NAME, avatar: null });
+    }
+    // Team modes: one answer per team (submitter uid), the frozen control
+    // record (holder, deputy, slots, presence, transfer log) and team attempts
+    // (who answered each position, relay leg owners). Points stay untouched.
+    // Control and attempt records are keyed by entry id, so they are read
+    // directly from the user's own entries — never found by a bounded scan.
+    if (t.gameMode === 'shared' || t.gameMode === 'relay') {
+      const answers = await db
+        .collection(`${base}/teamAnswers`)
+        .where('uid', '==', uid)
+        .limit(PAGE)
+        .get();
+      // One answer per question at most (≤ 99): reaching PAGE means something is wrong.
+      if (answers.size >= PAGE) ctx.warnings.push('competition_team_answers_bound');
+      answers.docs.forEach((d) => w.update(d.ref, { uid: tomb }));
+      // Keys from the entries pass (captain, starter or confirmer, before any
+      // tombstone or heir handover), plus direct lookups that do not depend
+      // on it having run: entries naming the uid or its tombstone, and
+      // control records where the uid is captain, holder, deputy or a slot.
+      const entryIds = new Set<string>(
+        t.competitionEventId ? ctx.teamEntries.get(String(t.competitionEventId)) ?? [] : [],
+      );
+      if (t.competitionEventId)
+        for (const member of [uid, tomb])
+          for (const [field, op] of [
+            ['starters', 'array-contains'],
+            ['confirmed', 'array-contains'],
+            ['captainUid', '=='],
+          ] as const)
+            for (const d of (
+              await db
+                .collection(`competitionEvents/${t.competitionEventId}/entries`)
+                .where(field, op, member)
+                .get()
+            ).docs)
+              entryIds.add(d.id);
+      for (const [field, op] of [
+        ['captainUid', '=='],
+        ['holderUid', '=='],
+        ['deputyUid', '=='],
+        ['starters', 'array-contains'],
+        ['slots', 'array-contains'],
+      ] as const)
+        for (const d of (
+          await db.collection(`${base}/teamControl`).where(field, op, uid).get()
+        ).docs)
+          entryIds.add(d.id);
+      const sw = (v: unknown) => (v === uid ? tomb : v);
+      for (const entryId of entryIds) {
+        const c = await get(db, `${base}/teamControl/${entryId}`);
+        if (c) {
+          const lastSeen = { ...(c.lastSeen || {}) };
+          if (uid in lastSeen) {
+            lastSeen[tomb] = lastSeen[uid];
+            delete lastSeen[uid];
+          }
+          w.update(db.doc(`${base}/teamControl/${entryId}`), {
+            captainUid: sw(c.captainUid),
+            starters: swap(c.starters || [], uid, tomb),
+            slots: swap(c.slots || [], uid, tomb),
+            holderUid: sw(c.holderUid),
+            deputyUid: sw(c.deputyUid),
+            lastSeen,
+            transfers: (c.transfers || []).map((x: DocumentData) => ({ ...x, from: sw(x.from), to: sw(x.to) })),
+          });
+        }
+        // Team modes run on live/window only: the single window round is 0.
+        const a = await get(db, `${base}/teamAttempts/0_${entryId}`);
+        if (a)
+          w.update(db.doc(`${base}/teamAttempts/0_${entryId}`), {
+            answeredBy: (a.answeredBy || []).map(sw),
+            ...(a.legs ? { legs: a.legs.map((l: DocumentData) => ({ ...l, owner: sw(l.owner) })) } : {}),
+          });
+      }
     }
     if (!bracket)
       for (const col of ['attempts', 'answers'])
@@ -874,7 +973,15 @@ export async function eraseCompetitionAccount(
   uid: string,
   now: number,
 ): Promise<{ warnings: string[] }> {
-  const ctx: Ctx = { db, uid, tomb: await tombstoneFor(db, uid), now, warnings: [], notices: [] };
+  const ctx: Ctx = {
+    db,
+    uid,
+    tomb: await tombstoneFor(db, uid),
+    now,
+    warnings: [],
+    notices: [],
+    teamEntries: new Map(),
+  };
   const step: Step = async (label, fn) => {
     try {
       await fn();

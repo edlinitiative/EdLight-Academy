@@ -369,6 +369,99 @@ export const COMPETITION_ERROR_MESSAGES: Record<string, Pair> = {
     "Rezilta evènman sa a deja konte pou yon lòt rankont.",
   ],
 
+  // ── Shared-answer and relay team play ─────────────────────────────────
+  team_modes_not_enabled: [
+    "La réponse commune et le relais ne sont pas encore ouverts.",
+    "Repons komen ak relè poko louvri.",
+  ],
+  team_mode_requires_teams: [
+    "La réponse commune et le relais demandent des équipes de trois.",
+    "Repons komen ak relè mande ekip twa moun.",
+  ],
+  invalid_roles: [
+    "Choisissez des rôles différents parmi les trois titulaires.",
+    "Chwazi wòl diferan pami twa titilè yo.",
+  ],
+  roles_locked: [
+    "Les rôles sont figés depuis le début de l’épreuve.",
+    "Wòl yo fikse depi konpetisyon an kòmanse.",
+  ],
+  not_a_starter: [
+    "Seuls les trois titulaires inscrits de l’équipe peuvent jouer ici.",
+    "Se sèlman twa titilè ki enskri nan ekip la ki ka jwe la a.",
+  ],
+  authority_stale: [
+    "La réponse de l’équipe est passée à un coéquipier. Votre écran est à jour.",
+    "Repons ekip la pase bay yon lòt manm. Ekran ou ajou kounye a.",
+  ],
+  not_authority_holder: [
+    "Un coéquipier envoie la réponse de l’équipe. Proposez-lui votre idée.",
+    "Se yon lòt manm ki voye repons ekip la. Pwopoze l lide ou.",
+  ],
+  holder_present: [
+    "Le porteur de la réponse est toujours connecté. Réessayez s’il ne répond plus.",
+    "Moun ki kenbe repons lan toujou konekte. Eseye ankò si li pa reponn ankò.",
+  ],
+  not_your_turn: [
+    "Ce n’est pas votre tour de relais.",
+    "Se pa tou relè ou.",
+  ],
+  turn_not_open: [
+    "Votre tour de relais n’est pas encore ouvert.",
+    "Tou relè ou poko louvri.",
+  ],
+  team_answer_exists: [
+    "Votre équipe a déjà répondu à cette question.",
+    "Ekip ou a deja reponn kesyon sa a.",
+  ],
+  team_not_started: [
+    "L’épreuve n’a pas encore commencé.",
+    "Konpetisyon an poko kòmanse.",
+  ],
+  team_client_required: [
+    "Ce mode d’équipe demande la dernière version d’EdLight. Mettez l’application à jour ou jouez sur le site.",
+    "Mòd ekip sa a mande dènye vèsyon EdLight. Mete aplikasyon an ajou oswa jwe sou sit la.",
+  ],
+  not_team_mode: [
+    "Cet événement se joue en réponses individuelles.",
+    "Evènman sa a jwe ak repons endividyèl.",
+  ],
+  ...same(
+    ["Cette épreuve est annulée.", "Konpetisyon sa a anile."],
+    "cancelled",
+  ),
+  ...same(
+    ["Trop tard pour cette question.", "Twò ta pou kesyon sa a."],
+    "answers_closed",
+  ),
+  ...same(
+    [
+      "Aucune partie ouverte en ce moment. Vérifiez l’horaire.",
+      "Pa gen pati ki louvri kounye a. Gade orè a.",
+    ],
+    "no_open_round",
+    "not_started",
+    "invalid_round",
+  ),
+  ...same(
+    [
+      "Cette réponse ne correspond pas à la question en cours. Votre écran est mis à jour.",
+      "Repons sa a pa koresponn ak kesyon kounye a. Ekran ou ap mete ajou.",
+    ],
+    "invalid_input",
+    "not_live",
+    "live_format",
+    "question_not_found",
+  ),
+  ...same(
+    [
+      "La correction s’ouvre à la fin de l’épreuve.",
+      "Koreksyon an ap louvri lè konpetisyon an fini.",
+    ],
+    "not_closed",
+    "no_attempt",
+  ),
+
   // ── Requests, retries and service ─────────────────────────────────────
   revision_conflict: [
     "La page a changé entre-temps. Actualisez puis recommencez.",
