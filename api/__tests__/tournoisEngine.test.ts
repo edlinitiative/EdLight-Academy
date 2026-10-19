@@ -366,3 +366,19 @@ describe('cron sweep', () => {
     expect(doc(`userTournaments/${r.body.tid}/live/state`)!.phase).toBe('question');
   });
 });
+
+it('recovers the same legacy creation after a lost response, even after the lead-time window passes', async () => {
+  const input={title:'Idempotent creation',format:'window',teamRule:'solo',visibility:'private',categories:['maths_eclair'],questionCount:5,secondsPerQuestion:20,startsAt:clock+5*MIN,windowHours:1,operationId:'same-creation-operation'};
+  const first=await call(createHandler,input,'retry-owner');
+  expect(first.status).toBe(200);
+  const before=db.childrenOf('userTournaments').length;
+  const original=clock;
+  try {
+    clock+=10*MIN;
+    const retry=await call(createHandler,input,'retry-owner');
+    expect(retry.status).toBe(200); expect(retry.body.tid).toBe(first.body.tid); expect(retry.body.pin).toBe(first.body.pin);
+    expect(db.childrenOf('userTournaments')).toHaveLength(before);
+    const conflict=await call(createHandler,{...input,title:'Different event'},'retry-owner');
+    expect(conflict.status).toBe(409); expect(conflict.body.error).toBe('operation_conflict');
+  } finally { clock=original; }
+});

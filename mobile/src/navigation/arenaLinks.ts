@@ -42,6 +42,7 @@ const DUEL_CODE_RE = /^[2-9A-Z]{8}$/;
  * Lowercase; matching is case-insensitive.
  */
 export const RESERVED_ARENA_SEGMENTS: readonly string[] = [
+  'competitions', 'evenements', 'equipes', 'invitations', 'ligues', 'ecoles',
   'championnat',
   'demo',
   'histoire',
@@ -76,6 +77,8 @@ export type ArenaHubSection = 'championnat' | 'demo';
 export const ARENA_DEMO_URL = 'https://academy.edlight.org/arena/demo';
 
 export type LinkTarget =
+  | { screen: 'CompetitionWorkspace'; params: { kind: 'home' | 'event' | 'team' | 'invite' | 'league' | 'school'; id?: string } }
+  | { screen: 'Tournois'; params?: { tournamentId?: string; pin?: string } }
   | { screen: 'Defi'; params: { code: string } }
   | { screen: 'ArenaHub'; params?: { section?: ArenaHubSection } }
   | { screen: 'ArenaLobby'; params: { tournamentId: string } }
@@ -120,7 +123,23 @@ export function resolveAppPath(input: string): LinkTarget | null {
     return code ? { screen: 'Defi', params: { code } } : { screen: 'Main', params: { screen: 'Trivia' } };
   }
 
+  if (head === 'tournois') {
+    if (!segs[1]) return { screen: 'Tournois' };
+    if (segs[1].toLowerCase() === 'rejoindre') {
+      const raw = /[?&]pin=([0-9]{6})(?:[&#]|$)/.exec(input);
+      return { screen: 'Tournois', params: raw ? { pin: raw[1] } : {} };
+    }
+    if (segs[1].toLowerCase() === 'nouveau') return { screen: 'Tournois' };
+    return segs.length === 2 && /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(segs[1]) ? { screen: 'Tournois', params: { tournamentId: segs[1] } } : { screen: 'Tournois' };
+  }
   if (head !== 'arena') return null;
+  const kinds = { evenements: 'event', equipes: 'team', invitations: 'invite', ligues: 'league' } as const;
+  const segment = segs[1]?.toLowerCase();
+  if (segment === 'ecoles' && segs.length === 3 && /^[a-z0-9]+(?: [a-z0-9]+)*$/.test(segs[2]) && segs[2].length <= 180) return {screen:'CompetitionWorkspace',params:{kind:'school',id:segs[2]}};
+  if (segment === 'competitions') return { screen: 'CompetitionWorkspace', params: { kind: 'home' } };
+  if (segment && segment in kinds && segs.length === 3 && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(segs[2])) {
+    return { screen: 'CompetitionWorkspace', params: { kind: kinds[segment as keyof typeof kinds], id: segs[2] } };
+  }
 
   const sub = segs[1];
   if (!sub) return { screen: 'ArenaHub' };

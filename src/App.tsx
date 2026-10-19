@@ -7,7 +7,11 @@ import AdminRoute from './components/AdminRoute';
 import ScrollToTop from './components/ScrollToTop';
 import HomeRoute from './components/HomeRoute';
 import { lazyWithRetry } from './utils/lazyWithRetry';
+import useStore from './contexts/store';
 import { captureRefFromUrl } from './services/referralService';
+
+const CompetitionProjector = lazyWithRetry(() => import('./pages/competition/CompetitionProjector'));
+const CompetitionWorkspace = lazyWithRetry(() => import('./pages/competition/CompetitionWorkspace'));
 
 // Lazy-loaded pages (lazyWithRetry self-heals stale chunk hashes after a deploy)
 const Courses = lazyWithRetry(() => import('./pages/Courses'));
@@ -88,6 +92,14 @@ const queryClient = new QueryClient({
 });
 
 export default function App() {
+  const accountUid = useStore((s) => s.user?.uid);
+  const previousUid = React.useRef(accountUid);
+  React.useEffect(() => {
+    const previous = previousUid.current; previousUid.current = accountUid;
+    if (previous && previous !== accountUid) {
+      try { for (const key of Object.keys(sessionStorage)) if(key.startsWith(`competition-draft:${previous}:`))sessionStorage.removeItem(key); } catch { /* storage may be unavailable */ }
+    }
+  }, [accountUid]);
   // Capture a ?ref=CODE invite param once on load, before any navigation, so it
   // survives the route change to signup (stored in localStorage). Stripped from
   // the URL by the helper.
@@ -173,6 +185,12 @@ export default function App() {
                 {/* The Arène is an arcade: one lobby for every competitive mode.
                     The championship registration page moved under it. */}
                 <Route path="arena" element={<ArenaArcade />} />
+                <Route path="arena/ecoles/:id" element={<CompetitionWorkspace kind="school" />} />
+                <Route path="arena/competitions" element={<CompetitionWorkspace />} />
+                <Route path="arena/evenements/:id" element={<CompetitionWorkspace kind="event" />} />
+                <Route path="arena/equipes/:id" element={<CompetitionWorkspace kind="team" />} />
+                <Route path="arena/invitations/:id" element={<CompetitionWorkspace kind="invite" />} />
+                <Route path="arena/ligues/:id" element={<CompetitionWorkspace kind="league" />} />
                 <Route path="arena/histoire" element={<ArenaStory />} />
                 <Route path="arena/studio" element={<ArenaStudio />} />
                 <Route path="arena/championnat" element={<Arena />} />
@@ -192,6 +210,7 @@ export default function App() {
               </Route>
 
               {/* Chrome-free figure embed for the mobile app's WebView */}
+              <Route path="/arena/ecran/:id" element={<CompetitionProjector />} />
               <Route path="/figure-embed" element={<FigureEmbed />} />
 
               {/* Device-detecting "get the app" smart link (QR-code target) */}

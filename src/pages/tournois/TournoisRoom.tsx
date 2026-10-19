@@ -381,6 +381,7 @@ function RoundsStage({ tour, standings, matches, me, canPlay, now, offset }: {
   const [review, setReview] = useState<{ round: number; items: ReviewItem[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const rounds = tour.schedule.rounds;
+  if (tour.competitionEventId) return <div className="tn-card"><Link className="button button--primary" to={`/arena/evenements/${tour.competitionEventId}`}>{t('Inscription et composition de l’événement', 'Enskripsyon ak konpozisyon evènman an')}</Link></div>;
   const open = tour.state === 'running' ? roundAt(rounds, now) : null;
   const inBracketRound = tour.format !== 'bracket' || (open && matches.some((m) => m.round === open.index && m.status === 'pending' && (m.a?.uid === me || m.b?.uid === me)));
   const roundName = (i: number) => (tour.format === 'window' ? t('Fenêtre', 'Fenèt') : tour.format === 'bracket' ? t(`Tour ${i + 1}`, `Tou ${i + 1}`) : t(`Manche ${i + 1}`, `Manch ${i + 1}`));
@@ -646,13 +647,13 @@ export function RoomView({ tour, roster, live, progress, standings, matches, me,
           {tour.description && <p>{tour.description}</p>}
           <p>{t('Organisé par', 'Òganize pa')} {tour.creatorName} · {tour.playerCount} {t('joueurs', 'jwè')}</p>
           <div className="tn-hero__row">
-            <div className="tn-pin">
+            {tour.schemaVersion !== 2 && <div className="tn-pin">
               <div>
                 <div className="tn-pin__label">{t('PIN de la salle', 'PIN sal la')}</div>
                 <div className="tn-pin__value">{formatPin(tour.pin)}</div>
               </div>
               <CopyButton text={tour.pin} label={t('Copier', 'Kopye')} done={t('Copié', 'Kopye')} />
-            </div>
+            </div>}
             <div className="tn-hero__actions">
               <InviteButton t={tour} label={t('Inviter la classe', 'Envite klas la')} />
               <CopyButton text={shareUrl(tour)} label={t('Lien', 'Lyen')} done={t('Lien copié', 'Lyen kopye')} ghost />
@@ -674,6 +675,7 @@ export function RoomView({ tour, roster, live, progress, standings, matches, me,
 
         {!onRoster && tour.state !== 'cancelled' && <JoinPanel tour={tour} pin={pinFromLink} />}
 
+        {standings?.namedTeams?.length ? <div className="tn-card"><h2>{standings.final ? t('Résultat des équipes', 'Rezilta ekip yo') : t('Classement des équipes en cours', 'Klasman ekip yo an kou')}</h2>{standings.namedTeams.map((team) => <p key={team.id}>{team.rank}. {team.label} · {team.points} pts · {team.missing} {t('absents, comptés à zéro', 'absan, konte zewo')}</p>)}</div> : null}
         {tour.state === 'cancelled' ? (
           <div className="tn-empty">{t('Ce tournoi a été annulé par son organisateur.', 'Òganizatè a anile tounwa sa a.')}</div>
         ) : tour.format === 'live' ? (
@@ -682,7 +684,7 @@ export function RoomView({ tour, roster, live, progress, standings, matches, me,
           <RoundsStage tour={tour} standings={standings} matches={matches} me={me} canPlay={canPlay} now={now} offset={offset} />
         )}
 
-        {isCreator && tour.state === 'scheduled' && (
+        {isCreator && tour.schemaVersion !== 2 && tour.state === 'scheduled' && (
           <div>
             {!confirmCancel ? (
               <button type="button" className="button button--ghost" onClick={() => setConfirmCancel(true)}>

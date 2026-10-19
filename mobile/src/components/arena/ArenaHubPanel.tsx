@@ -130,6 +130,7 @@ export default function ArenaHubPanel({ onPractice, onDuel }: ArenaHubPanelProps
 
   return (
     <View style={{ gap: 14 }}>
+      <ArenaButton variant="secondary" label={t("Mon activité · Équipes et compétitions", "Aktivite mwen · Ekip ak konpetisyon")} onPress={() => navigation.navigate("CompetitionWorkspace", { kind: "home" })} />
       {noEvent ? playCard : null}
 
       {/* ── Who you compete for ───────────────────────────────────────── */}

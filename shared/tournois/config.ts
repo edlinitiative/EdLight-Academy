@@ -122,6 +122,8 @@ export function validateTournamentInput(
   allowedCategories: readonly string[],
 ): ValidationResult {
   const errors: string[] = [];
+  if (input.schemaVersion !== undefined && input.schemaVersion !== 1) errors.push('schemaVersion');
+  if (input.entryMode !== undefined || input.gameMode !== undefined) errors.push('unsupported_capability');
 
   const title = cleanText(input.title, LIMITS.titleMax);
   if (title.length < LIMITS.titleMin) errors.push('title');

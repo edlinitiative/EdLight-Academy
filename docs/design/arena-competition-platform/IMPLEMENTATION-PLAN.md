@@ -249,6 +249,8 @@ Add versioned team submission authority/deputy transfer or server-owned relay sl
 
 ## 10. Verification and instrumentation
 
+Use the [product release readiness contract](../2026-10-18-premium-product-release-readiness.md) as the release gate across the website, installed iOS app and installed Android app. Its requirement IDs, evidence ledger, pilot and sign-off distinguish a completed slice from the full planned release; implementing this plan alone does not establish readiness.
+
 ### Journey traceability
 
 | Journey | Delivery | Main implementation boundary | Required evidence |

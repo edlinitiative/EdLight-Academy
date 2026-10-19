@@ -75,6 +75,8 @@ export const INVITE_HOLD_MS = 10 * 60 * 1000;
 /** Root routes that ARE an invitation destination. */
 const INVITE_ROUTES: Record<string, InviteKind> = {
   Defi: 'duel',
+  Tournois: 'arena',
+  CompetitionWorkspace: 'arena',
   ArenaLobby: 'arena',
   ArenaDoors: 'arena',
   ArenaLive: 'arena',
@@ -102,7 +104,7 @@ export function parseInviteUrl(url: string | null | undefined): InviteKind | nul
   path = path.replace(/^\/+/, '').split(/[?#]/)[0].toLowerCase();
   const [first, second] = path.split('/');
   if (first === 'defi' && second) return 'duel';
-  if (first === 'arena') return 'arena';
+  if (first === 'arena' || first === 'tournois') return 'arena';
   return null;
 }
 

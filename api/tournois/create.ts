@@ -21,13 +21,27 @@
  * the creator chooses a start and a shape, the server lays out every window.
  */
 
+import { createHash } from 'crypto';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { requireAuthDecoded } from '../_lib/requireAuth';
 import { getDb } from '../_lib/firebaseAdmin';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../../src/data/triviaData';
-import { isValidTid, makePin, validateTournamentInput, type TournamentConfig } from '../../shared/tournois/config';
-import { bracketRoundCount, buildSchedule } from '../../shared/tournois/schedule';
-import { drawQuestions, POOL_FACTOR, type BankQuestion, type StoredQuestion } from '../../shared/tournois/questions';
+import {
+  isValidTid,
+  makePin,
+  validateTournamentInput,
+  type TournamentConfig,
+} from '../../shared/tournois/config';
+import {
+  bracketRoundCount,
+  buildSchedule,
+} from '../../shared/tournois/schedule';
+import {
+  drawQuestions,
+  POOL_FACTOR,
+  type BankQuestion,
+  type StoredQuestion,
+} from '../../shared/tournois/questions';
 import {
   COLLECTION,
   PINS,
@@ -44,21 +58,43 @@ const ALLOWED = TRIVIA_CATEGORIES.map((c) => c.id);
 const BANK = TRIVIA_QUESTIONS as unknown as Record<string, BankQuestion[]>;
 
 /** How many separate question pools a tournament needs, and how big each must be. */
-export function poolPlan(cfg: TournamentConfig): { pools: number; perPool: number; min: number } {
-  if (cfg.format === 'live') return { pools: 1, perPool: cfg.questionCount, min: cfg.questionCount };
-  const pools = cfg.format === 'rounds' ? cfg.roundCount
-    : cfg.format === 'bracket' ? Math.max(1, bracketRoundCount(cfg.maxPlayers)) : 1;
-  return { pools, perPool: cfg.questionCount * POOL_FACTOR, min: cfg.questionCount };
+export function poolPlan(cfg: TournamentConfig): {
+  pools: number;
+  perPool: number;
+  min: number;
+} {
+  if (cfg.format === 'live')
+    return { pools: 1, perPool: cfg.questionCount, min: cfg.questionCount };
+  const pools =
+    cfg.format === 'rounds'
+      ? cfg.roundCount
+      : cfg.format === 'bracket'
+        ? Math.max(1, bracketRoundCount(cfg.maxPlayers))
+        : 1;
+  return {
+    pools,
+    perPool: cfg.questionCount * POOL_FACTOR,
+    min: cfg.questionCount,
+  };
 }
 
 /** Split one draw into `pools` equal pools; null when any pool would be short. */
-export function splitPools(drawn: StoredQuestion[], pools: number, min: number): StoredQuestion[][] | null {
+export function splitPools(
+  drawn: StoredQuestion[],
+  pools: number,
+  min: number,
+): StoredQuestion[][] | null {
   const size = Math.floor(drawn.length / pools);
   if (size < min) return null;
-  return Array.from({ length: pools }, (_, i) => drawn.slice(i * size, (i + 1) * size));
+  return Array.from({ length: pools }, (_, i) =>
+    drawn.slice(i * size, (i + 1) * size),
+  );
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
+export default async function handler(
+  req: VercelRequest,
+  res: VercelResponse,
+): Promise<void> {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'method_not_allowed' });
     return;
@@ -81,24 +117,73 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       if (!snap.exists) return 'not_found';
       const t = snap.data() as TournamentDoc;
       if (t.creatorUid !== uid) return 'forbidden';
-      if (t.state !== 'scheduled' || now >= t.startsAt) return 'already_started';
-      tx.update(tRef(db, tid), { state: 'cancelled', nextDeadlineAt: null, updatedAt: now });
+      if (t.schemaVersion === 2) return 'managed_entry_required';
+      if (t.state !== 'scheduled' || now >= t.startsAt)
+        return 'already_started';
+      tx.update(tRef(db, tid), {
+        state: 'cancelled',
+        nextDeadlineAt: null,
+        updatedAt: now,
+      });
       tx.delete(db.doc(`${PINS}/${t.pin}`));
       return 'ok';
     });
     if (out === 'ok') res.status(200).json({ ok: true });
-    else res.status(out === 'not_found' ? 404 : out === 'forbidden' ? 403 : 409).json({ error: out });
+    else
+      res
+        .status(out === 'not_found' ? 404 : out === 'forbidden' ? 403 : 409)
+        .json({ error: out });
     return;
   }
 
   if (!(await enforceRateLimit(res, uid, 'tournois-create'))) return;
 
-  const v = validateTournamentInput(body, now, ALLOWED);
+  const operationId =
+    typeof body.operationId === 'string' &&
+    /^[A-Za-z0-9_-]{1,128}$/.test(body.operationId)
+      ? body.operationId
+      : null;
+  if (body.operationId !== undefined && !operationId) {
+    res.status(400).json({ error: 'invalid_operation' });
+    return;
+  }
+  const stableId = operationId
+    ? createHash('sha256')
+        .update(`${uid}:${operationId}`)
+        .digest('hex')
+        .slice(0, 32)
+    : undefined;
+  const prior = stableId
+    ? await db.doc(`${COLLECTION}/${stableId}`).get()
+    : null;
+  const v = validateTournamentInput(
+    body,
+    prior?.exists ? prior.data()!.createdAt : now,
+    ALLOWED,
+  );
   if (!v.ok) {
     res.status(400).json({ error: 'invalid', fields: v.errors });
     return;
   }
   const cfg = v.config;
+  const inputHash = createHash('sha256')
+    .update(JSON.stringify(cfg))
+    .digest('hex');
+  if (prior?.exists) {
+    const existing = prior.data()!;
+    if (existing.creationInputHash !== inputHash) {
+      res.status(409).json({ error: 'operation_conflict' });
+      return;
+    }
+    const roster = await sub(db, stableId!, `roster/${uid}`).get();
+    res.status(200).json({
+      ok: true,
+      tid: stableId,
+      pin: existing.pin,
+      creatorJoined: roster.exists,
+    });
+    return;
+  }
 
   const identity = await resolveIdentity(db, uid, decoded.name, body);
   if (!identity) {
@@ -107,14 +192,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   }
 
   const plan = poolPlan(cfg);
-  const drawn = drawQuestions(BANK, cfg.categories, plan.pools * plan.perPool, Math.random);
+  const drawn = drawQuestions(
+    BANK,
+    cfg.categories,
+    plan.pools * plan.perPool,
+    Math.random,
+  );
   const pools = splitPools(drawn, plan.pools, plan.min);
   if (!pools) {
     res.status(400).json({ error: 'not_enough_questions' });
     return;
   }
 
-  const ref = db.collection(COLLECTION).doc();
+  const ref = stableId ? db.collection(COLLECTION).doc(stableId) : db.collection(COLLECTION).doc();
   const tid = ref.id;
   const schedule = buildSchedule(cfg);
 
@@ -154,42 +244,74 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     updatedAt: now,
   };
 
-  const batch = db.batch();
-  batch.set(ref, doc);
-  if (cfg.format === 'live') {
-    batch.set(sub(db, tid, 'questions/live'), { items: pools[0] });
-    batch.set(sub(db, tid, 'live/state'), {
-      phase: 'lobby',
-      index: -1,
-      opensAt: schedule.startsAt,
-      closesAt: schedule.startsAt + schedule.questionMs,
-      revealUntil: schedule.startsAt + schedule.questionMs + schedule.revealMs,
-      questionCount: cfg.questionCount,
-      questionMs: schedule.questionMs,
-      question: null,
-      reveal: null,
+  const creation = await db.runTransaction(async (batch) => {
+    const existing = await batch.get(ref);
+    if (existing.exists) {
+      const previous = existing.data()!;
+      batch.delete(db.doc(`${PINS}/${pin}`));
+      if (previous.creationInputHash !== inputHash)
+        return { error: 'operation_conflict' } as const;
+      return { pin: previous.pin as string };
+    }
+    batch.set(ref, {
+      ...doc,
+      ...(operationId ? { creationInputHash: inputHash } : {}),
+    });
+    if (cfg.format === 'live') {
+      batch.set(sub(db, tid, 'questions/live'), { items: pools[0] });
+      batch.set(sub(db, tid, 'live/state'), {
+        phase: 'lobby',
+        index: -1,
+        opensAt: schedule.startsAt,
+        closesAt: schedule.startsAt + schedule.questionMs,
+        revealUntil:
+          schedule.startsAt + schedule.questionMs + schedule.revealMs,
+        questionCount: cfg.questionCount,
+        questionMs: schedule.questionMs,
+        question: null,
+        reveal: null,
+        updatedAt: now,
+      });
+    } else {
+      pools.forEach((items, r) =>
+        batch.set(sub(db, tid, `questions/r${r}`), { items }),
+      );
+    }
+    batch.set(sub(db, tid, 'standings/current'), {
+      rows: [],
+      teams: [],
+      total: 0,
+      final: false,
       updatedAt: now,
     });
-  } else {
-    pools.forEach((items, r) => batch.set(sub(db, tid, `questions/r${r}`), { items }));
-  }
-  batch.set(sub(db, tid, 'standings/current'), { rows: [], teams: [], total: 0, final: false, updatedAt: now });
-  batch.set(db.doc(`users/${uid}/myTournaments/${tid}`), {
-    tid,
-    title: cfg.title,
-    format: cfg.format,
-    startsAt: cfg.startsAt,
-    role: 'creator',
-    joinedAt: now,
+    batch.set(db.doc(`users/${uid}/myTournaments/${tid}`), {
+      tid,
+      title: cfg.title,
+      format: cfg.format,
+      startsAt: cfg.startsAt,
+      role: 'creator',
+      joinedAt: now,
+    });
+    return { pin };
   });
-  await batch.commit();
+  if ('error' in creation) {
+    res.status(409).json({ error: creation.error });
+    return;
+  }
+  pin = creation.pin;
 
   if (cfg.creatorPlays) {
     const joined = await joinTournament(db, tid, identity, now);
     if (!joined.ok) {
       // School vs school with no school on the creator's profile: the
       // tournament still exists, the creator just hosts until they join.
-      res.status(200).json({ ok: true, tid, pin, creatorJoined: false, joinError: joined.error });
+      res.status(200).json({
+        ok: true,
+        tid,
+        pin,
+        creatorJoined: false,
+        joinError: joined.error,
+      });
       return;
     }
   }

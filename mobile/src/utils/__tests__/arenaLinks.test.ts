@@ -114,3 +114,20 @@ describe('helpers', () => {
     expect(normalizeDuelCode('ABCD1234')).toBeNull(); // 1 is not in the alphabet
   });
 });
+
+describe('source-aware competition destinations', () => {
+  it.each(['evenements', 'equipes', 'invitations', 'ligues', 'ecoles', 'competitions'])('never treats %s as an official event id', (segment) => {
+    expect(isValidTournamentId(segment)).toBe(false);
+    expect(resolveAppPath(`/arena/${segment}`)?.screen).not.toBe('ArenaLobby');
+  });
+  it('preserves the user-tournament source and private PIN intent', () => {
+    expect(resolveAppPath('/tournois/same-id')).toEqual({ screen:'Tournois', params:{tournamentId:'same-id'} });
+    expect(resolveAppPath('/arena/jouer/same-id')).toEqual({ screen:'ArenaLobby', params:{tournamentId:'same-id'} });
+    expect(resolveAppPath('https://academy.edlight.org/tournois/rejoindre?pin=123456')).toEqual({screen:'Tournois',params:{pin:'123456'}});
+    expect(resolveAppPath('/tournois/rejoindre?pin=1234567')).toEqual({screen:'Tournois',params:{}});
+  });
+  it.each([['evenements','event'], ['equipes','team'], ['invitations','invite'], ['ligues','league']])('opens %s without changing engine', (segment, kind) => {
+    expect(resolveAppPath(`/arena/${segment}/valid-id`)).toEqual({screen:'CompetitionWorkspace',params:{kind,id:'valid-id'}});
+    expect(resolveAppPath(`/arena/${segment}/bad%2Fid`)?.screen).toBe('ArenaHub');
+  });
+});

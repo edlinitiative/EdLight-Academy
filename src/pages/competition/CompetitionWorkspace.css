@@ -1,0 +1,126 @@
+.cw {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 24px 16px 90px;
+  color: var(--text-900, #f1f5ff);
+  overflow-wrap: anywhere;
+}
+.cw-panel {
+  margin-top: 20px;
+  padding: clamp(16px, 3vw, 28px);
+  border-radius: 24px;
+  background: var(--surface, #13243f);
+}
+.cw-panel h2 {
+  margin-top: 0;
+  font-size: 1.45rem;
+}
+.cw-panel p {
+  max-width: 76ch;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.cw-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 16px 0;
+}
+.cw-links a,
+.cw button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 14px;
+  background: #1f3456;
+  color: #f1f5ff;
+  font: inherit;
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+}
+.cw .cw-primary {
+  background: #ff6a45;
+  color: #12213a;
+  font-weight: 700;
+}
+.cw button:disabled {
+  background: #1f3456;
+  color: #a3b5dc;
+  cursor: wait;
+}
+.cw :is(button, a, input, textarea, select):focus-visible {
+  outline: 3px solid #5ea2ff;
+  outline-offset: 4px;
+}
+.cw-task {
+  padding-top: 16px;
+  margin-top: 16px;
+  display: grid;
+  gap: 14px;
+}
+.cw-task h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.cw label {
+  display: grid;
+  gap: 8px;
+  color: inherit;
+  font-weight: 600;
+}
+.cw :is(input, textarea, select) {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid #7188af;
+  border-radius: 12px;
+  background: #0e1c33;
+  color: #f1f5ff;
+  font: inherit;
+}
+.cw textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+.cw-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+}
+.cw-filter label {
+  flex: 1 1 220px;
+}
+.cw li {
+  padding-block: 6px;
+  line-height: 1.5;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cw * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+@media print {
+  .cw-task,
+  .cw-filter,
+  .cw > nav {
+    display: none;
+  }
+}
+
+.cw-task summary {
+  cursor: pointer;
+  min-height: 44px;
+  font-weight: 700;
+  padding-block: 10px;
+}
+.cw-task form {
+  display: grid;
+  gap: 14px;
+}

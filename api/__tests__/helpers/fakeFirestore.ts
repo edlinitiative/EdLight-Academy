@@ -71,19 +71,19 @@ export class FakeDb {
   }
 }
 
-function snap(path: string, data: Data | undefined) {
+function snap(path: string, data: Data | undefined, db: FakeDb) {
   return {
     id: path.split('/').pop() as string,
     exists: data !== undefined,
     data: () => clone(data),
-    ref: path,
+    ref: db.doc(path),
   };
 }
 
 export class FakeDocRef {
   constructor(private db: FakeDb, public path: string) {}
   get id() { return this.path.split('/').pop() as string; }
-  async get() { return snap(this.path, this.db.store.get(this.path)); }
+  async get() { return snap(this.path, this.db.store.get(this.path), this.db); }
   async set(data: Data, opts?: { merge?: boolean }) { this.applySet(data, opts); }
   async update(data: Data) { this.applyUpdate(data); }
   async create(data: Data) {
@@ -102,7 +102,7 @@ export class FakeDocRef {
   }
 }
 
-type Filter = { field: string; op: '==' | '<='; value: any };
+type Filter = { field: string; op: '==' | '<=' | 'in' | 'array-contains'; value: any };
 
 export class FakeQuery {
   constructor(
@@ -113,7 +113,7 @@ export class FakeQuery {
     private max: number | null,
   ) {}
   doc(id?: string) { return new FakeDocRef(this.db, `${this.path}/${id || this.db.nextId()}`); }
-  where(field: string, op: '==' | '<=', value: any) {
+  where(field: string, op: '==' | '<=' | 'in' | 'array-contains', value: any) {
     return new FakeQuery(this.db, this.path, [...this.filters, { field, op, value }], this.order, this.max);
   }
   orderBy(field: string, dir: 'asc' | 'desc' = 'asc') {
@@ -124,6 +124,8 @@ export class FakeQuery {
     let rows = this.db.childrenOf(this.path).filter(([, d]) => this.filters.every((f) => {
       const v = d[f.field];
       if (f.op === '==') return v === f.value;
+      if (f.op === 'in') return Array.isArray(f.value) && f.value.includes(v);
+      if (f.op === 'array-contains') return Array.isArray(v) && v.includes(f.value);
       return typeof v === 'number' && v <= f.value;
     }));
     if (this.order) {
@@ -134,7 +136,7 @@ export class FakeQuery {
     return rows;
   }
   async get() {
-    const docs = this.rows().map(([p, d]) => snap(p, d));
+    const docs = this.rows().map(([p, d]) => snap(p, d, this.db));
     return { docs, size: docs.length, empty: docs.length === 0 };
   }
   count() {

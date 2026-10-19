@@ -33,6 +33,7 @@ import { answerAttempt, attemptTotals, catchUp, newAttempt, PENDING, type Attemp
 import { playersInRound, type Match } from '../../shared/tournois/bracket';
 import {
   advanceTournament,
+  canSee,
   boundedInt,
   enforceRateLimit,
   parseBody,
@@ -66,6 +67,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   if (!isValidTid(body.tid)) return fail(res, 400, 'invalid_tid');
   const tid = body.tid;
   const db = getDb();
+  const tournament = await readTournament(db, tid);
+  if (!tournament) return fail(res, 404, 'not_found');
+  if (tournament.schemaVersion !== undefined && tournament.schemaVersion !== 1 && tournament.schemaVersion !== 2) return fail(res, 400, 'unsupported_schema');
+  if (!(await canSee(db, tournament, uid))) return fail(res, 403, 'forbidden');
 
   switch (body.action) {
     case 'live-answer':

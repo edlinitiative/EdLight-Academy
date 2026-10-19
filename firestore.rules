@@ -109,6 +109,15 @@ service cloud.firestore {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
 
+      // Private task references are server-written and isolated per account.
+      match /competitionFollows/{itemId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if false;
+      }
+      match /competitionInbox/{itemId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if false;
+      }
       // "Mes tournois": written only by /api/tournois/* (Admin SDK).
       match /myTournaments/{tid} {
         allow read: if request.auth != null && request.auth.uid == userId;
@@ -581,15 +590,25 @@ service cloud.firestore {
     // a query — it is reachable only by its link or its PIN.
     // questions/players/answers/attempts carry the answer key and the raw
     // scores: unreadable by every client, including the creator.
+    // Managed events retain private admission/attendance in API-only documents.
+    function managedTournamentViewer(t) {
+      let e = get(/databases/$(database)/documents/competitionEvents/$(t.competitionEventId)).data;
+      return request.auth != null && (
+        request.auth.uid in e.cohosts
+        || (e.audience == 'school' && e.schoolKey != null
+          && get(/databases/$(database)/documents/schoolMemberships/$(e.schoolKey + '_' + request.auth.uid)).data.status == 'approved'));
+    }
     function canSeeTournament(tid) {
       let t = get(/databases/$(database)/documents/userTournaments/$(tid)).data;
       return t.visibility != 'private'
+        || (t.get('schemaVersion', 1) == 2 && managedTournamentViewer(t))
         || (request.auth != null
             && (t.creatorUid == request.auth.uid
                 || exists(/databases/$(database)/documents/userTournaments/$(tid)/roster/$(request.auth.uid))));
     }
     match /userTournaments/{tid} {
       allow get: if resource.data.visibility != 'private'
+        || (resource.data.get('schemaVersion', 1) == 2 && managedTournamentViewer(resource.data))
         || (request.auth != null
             && (resource.data.creatorUid == request.auth.uid
                 || exists(/databases/$(database)/documents/userTournaments/$(tid)/roster/$(request.auth.uid))));

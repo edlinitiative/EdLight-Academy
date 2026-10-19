@@ -93,6 +93,51 @@
             "BROWSABLE",
             "DEFAULT"
           ]
+        },
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "academy.edlight.org",
+              "pathPrefix": "/tournois"
+            },
+            {
+              "scheme": "https",
+              "host": "academy.edlight.org",
+              "pathPrefix": "/arena/competitions"
+            },
+            {
+              "scheme": "https",
+              "host": "academy.edlight.org",
+              "pathPrefix": "/arena/evenements"
+            },
+            {
+              "scheme": "https",
+              "host": "academy.edlight.org",
+              "pathPrefix": "/arena/equipes"
+            },
+            {
+              "scheme": "https",
+              "host": "academy.edlight.org",
+              "pathPrefix": "/arena/invitations"
+            },
+            {
+              "scheme": "https",
+              "host": "academy.edlight.org",
+              "pathPrefix": "/arena/ligues"
+            },
+            {
+              "scheme": "https",
+              "host": "academy.edlight.org",
+              "pathPrefix": "/arena/ecoles"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ],
       "blockedPermissions": [

@@ -31,6 +31,7 @@ module.exports = {
   clearMocks: true,
   // Heavy generated/data folders are never unit-tested.
   testPathIgnorePatterns: [
+    '/competitionEmulator.test.ts$',
     '/node_modules/',
     '/dist/',
     '/src/dataconnect-generated/',

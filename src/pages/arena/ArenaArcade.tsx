@@ -198,6 +198,7 @@ export default function ArenaArcade() {
 
   return (
     <div className="ah">
+      <nav aria-label={t("Compétitions", "Konpetisyon")} style={{ padding: "12px 24px" }}><Link className="an-ghost" to="/arena/competitions">{t("Mon activité · Équipes et compétitions", "Aktivite mwen · Ekip ak konpetisyon")}</Link></nav>
       {/* ═══ The city ═══════════════════════════════════════════════════════ */}
       <section ref={heroRef} className="ah-hero" aria-labelledby="ah-title">
         <div className="ah-sky" aria-hidden="true">

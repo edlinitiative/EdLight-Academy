@@ -6,6 +6,8 @@ Scope: EdLight Academy website and mobile app
 
 Purpose: Turn the existing feature set into a consistent, dependable, premium student experience.
 
+Release gate: [Premium product release readiness contract](2026-10-18-premium-product-release-readiness.md) defines the implementation coverage, website/iOS/Android evidence and sign-off required to call the agreed product scope ready.
+
 ## Assessment and evidence
 
 Both products have substantial feature breadth. The next phase should prioritize complete journeys, consistent interaction quality, and production reliability before adding broad new features.

@@ -1,0 +1,726 @@
+/** Native user-tournament journey, using the existing authoritative engine. */
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  AppState,
+  ScrollView,
+  Share,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import useStore from '../../contexts/store';
+import {
+  ArenaScreen,
+  ArenaPanel,
+  ArenaButton,
+} from '../../components/arena/ArenaKit';
+import { arenaColors as C, arenaType } from '../../theme/arenaTheme';
+import * as service from '../../services/tournoisService';
+import type { Match } from '../../../../shared/tournois/bracket';
+import { TRIVIA_CATEGORIES } from '../../data/triviaData';
+
+export default function TournoisScreen() {
+  const navigation = useNavigation<any>(),
+    route = useRoute<any>();
+  const uid = useStore((s) => s.user?.uid);
+  const user = useStore((s) => s.user);
+  const ht = useStore((s) => s.language) === 'ht';
+  const t = (fr: string, creole: string) => (ht ? creole : fr);
+  const [tid, setTid] = useState<string | null>(
+    route.params?.tournamentId ?? null,
+  );
+  const [pin, setPin] = useState(route.params?.pin ?? '');
+  const [viewUid, setViewUid] = useState(uid);
+  const [tournament, setTournament] = useState<service.Tournament | null>(null);
+  const [live, setLive] = useState<service.LiveState | null>(null);
+  const [board, setBoard] = useState<service.Standings | null>(null);
+  const [roster, setRoster] = useState<service.RosterEntry[]>([]);
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [step, setStep] = useState<service.RoundStep | null>(null);
+  const [review, setReview] = useState<service.ReviewItem[] | null>(null);
+  const [roundReview, setRoundReview] = useState(0);
+  const [events, setEvents] = useState<service.Tournament[]>([]);
+  const [mine, setMine] = useState<service.MyTournament[]>([]);
+  const [busy, setBusy] = useState(false),
+    [error, setError] = useState('');
+  const [choice, setChoice] = useState<number | null>(null),
+    [accepted, setAccepted] = useState(false);
+  const [now, setNow] = useState(Date.now()),
+    [offset, setOffset] = useState(0);
+  const [title, setTitle] = useState(''),
+    [creating, setCreating] = useState(false);
+  const [format, setFormat] = useState<
+    'live' | 'window' | 'rounds' | 'bracket'
+  >('window');
+  const lock = useRef(false),
+    generation = useRef(0);
+  const pendingCreation = useRef<Record<string, unknown> | null>(null);
+  const shownAt = useRef(Date.now());
+  const activeTarget = useRef({ uid, tid });
+  activeTarget.current = { uid, tid };
+  const load = useCallback(() => {
+    const epoch = generation.current;
+    service
+      .listPublic('open')
+      .then((rows) => {
+        if (epoch === generation.current) setEvents(rows);
+      })
+      .catch(() => {
+        if (epoch === generation.current) setError('network');
+      });
+    if (uid)
+      service
+        .listMine(uid)
+        .then((rows) => {
+          if (epoch === generation.current) setMine(rows);
+        })
+        .catch(() => {
+          if (epoch === generation.current) setError('network');
+        });
+  }, [uid]);
+  useEffect(() => {
+    generation.current++;
+    setMine([]);
+    setBusy(false);
+    setStep(null);
+    setReview(null);
+    setChoice(null);
+    setAccepted(false);
+    load();
+    return () => {
+      generation.current++;
+    };
+  }, [load]);
+  useEffect(() => {
+    setTid(route.params?.tournamentId ?? null);
+    setPin(route.params?.pin ?? '');
+  }, [route.params?.tournamentId, route.params?.pin]);
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now() + offset), 250);
+    return () => clearInterval(timer);
+  }, [offset]);
+  const synchronize = useCallback(async () => {
+    if (!tid) return;
+    const serverNow = await service.tick(tid);
+    if (serverNow !== null) setOffset(serverNow - Date.now());
+  }, [tid]);
+  useEffect(() => {
+    setViewUid(uid);
+    setTournament(null);
+    setLive(null);
+    setBoard(null);
+    setRoster([]);
+    setMatches([]);
+    setStep(null);
+    setReview(null);
+    setError('');
+    if (!tid) return;
+    const slow = setTimeout(() => setError('network'), 8000);
+    const unsubs = [
+      service.watchTournament(tid, (row, err) => {
+        clearTimeout(slow);
+        setViewUid(uid);
+        setTournament(row);
+        if (!row && !err) setError('not_found');
+        if (err) setError(err === 'private' ? 'pin_required' : 'network');
+      }),
+      service.watchLive(tid, setLive),
+      service.watchStandings(tid, setBoard),
+      service.watchRoster(tid, setRoster),
+      service.watchMatches(tid, setMatches),
+    ];
+    void synchronize();
+    const timer = setInterval(() => {
+      void synchronize();
+    }, 30000);
+    const app = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        void synchronize();
+        setStep(null);
+      }
+    });
+    return () => {
+      unsubs.forEach((unsub) => unsub());
+      clearTimeout(slow);
+      clearInterval(timer);
+      app.remove();
+    };
+  }, [tid, uid, synchronize]);
+  useEffect(() => {
+    setChoice(null);
+    setAccepted(false);
+    shownAt.current = live?.opensAt ?? Date.now();
+  }, [tid, live?.index, live?.opensAt, step?.pos, step?.round]);
+  useEffect(() => {
+    const deadline = tournament?.nextDeadlineAt;
+    if (!deadline) return;
+    const timer = setTimeout(
+      () => {
+        void synchronize();
+      },
+      Math.max(80, Math.min(30000, deadline - Date.now() - offset + 50)),
+    );
+    return () => clearTimeout(timer);
+  }, [tournament?.nextDeadlineAt, offset, synchronize]);
+
+  const run = async (task: () => Promise<void>) => {
+    if (lock.current) return;
+    lock.current = true;
+    setBusy(true);
+    setError('');
+    const epoch = generation.current;
+    try {
+      await task();
+    } catch (err) {
+      if (
+        epoch === generation.current &&
+        (!(err instanceof Error) || err.message !== 'request_failed')
+      )
+        setError('network');
+    } finally {
+      lock.current = false;
+      if (epoch === generation.current) setBusy(false);
+    }
+  };
+  const check = <T,>(result: service.ApiResult<T>): T => {
+    if (
+      uid !== useStore.getState().user?.uid ||
+      tid !== activeTarget.current.tid
+    )
+      throw new Error('request_failed');
+    if (!result.ok || !result.data) {
+      setError(result.error || 'network');
+      throw new Error('request_failed');
+    }
+    return result.data;
+  };
+  const signIn = () => useStore.getState().toggleAuthModal();
+  const joined = !!uid && roster.some((r) => r.uid === uid);
+  const question =
+    tournament?.format === 'live' ? live?.question : step?.question;
+  const active =
+    tournament?.format === 'live'
+      ? live?.phase === 'question' && now < (live?.closesAt ?? 0)
+      : !!step && !step.done && now < (step.deadline ?? 0);
+  const deadline =
+    tournament?.format === 'live' ? live?.closesAt : step?.deadline;
+  const label = (fr: string, creole: string) => (
+    <Text style={[arenaType.body, { color: C.ink }]}>{t(fr, creole)}</Text>
+  );
+  const inputStyle = {
+    color: C.ink,
+    backgroundColor: C.surfaceRaised,
+    padding: 14,
+    borderRadius: 12,
+    minHeight: 48,
+  };
+  const join = () =>
+    run(async () => {
+      if (!uid) {
+        signIn();
+        return;
+      }
+      const out = check(
+        await service.joinTournament(
+          { ...(tid ? { tid } : {}), ...(pin ? { pin } : {}) },
+          { displayName: user?.displayName, grade: useStore.getState().grade },
+        ),
+      );
+      setTid(out.tid);
+      navigation.setParams({ tournamentId: out.tid, pin: undefined });
+      await synchronize();
+    });
+  if (viewUid !== uid)
+    return (
+      <ArenaScreen world={false}>
+        <Text style={{ color: C.ink, padding: 24 }}>
+          {t('Chargement du compte…', 'Ap chaje kont lan…')}
+        </Text>
+      </ArenaScreen>
+    );
+  return (
+    <ArenaScreen world={false}>
+      <ScrollView
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ padding: 18, gap: 16, paddingBottom: 60 }}
+      >
+        <ArenaButton
+          variant="secondary"
+          label={t('Retour', 'Retounen')}
+          onPress={() => navigation.goBack()}
+        />
+        <Text
+          accessibilityRole="header"
+          style={[arenaType.hero, { color: C.ink }]}
+        >
+          {tournament?.title || t('Tournois entre amis', 'Tounwa ant zanmi')}
+        </Text>
+        {error ? (
+          <ArenaPanel tone="warn">
+            <Text accessibilityRole="alert" style={{ color: C.ink }}>
+              {service.errorMessage(error, ht)}
+            </Text>
+            <ArenaButton
+              variant="secondary"
+              label={t('Réessayer', 'Eseye ankò')}
+              onPress={() => {
+                setError('');
+                if (tid) void synchronize();
+                else load();
+              }}
+            />
+          </ArenaPanel>
+        ) : null}
+        {tid && !tournament ? (
+          <ArenaPanel>
+            <TextInput
+              accessibilityLabel="PIN"
+              value={pin}
+              onChangeText={setPin}
+              keyboardType="number-pad"
+              maxLength={6}
+              style={inputStyle}
+            />
+            <ArenaButton
+              label={t('Rejoindre avec le PIN', 'Antre ak PIN nan')}
+              busy={busy}
+              onPress={join}
+            />
+          </ArenaPanel>
+        ) : null}
+        {!uid ? (
+          <ArenaButton
+            label={t('Se connecter pour participer', 'Konekte pou patisipe')}
+            onPress={signIn}
+          />
+        ) : null}
+        {!tid ? (
+          <>
+            <ArenaPanel>
+              {label('Rejoindre avec un PIN', 'Antre ak yon PIN')}
+              <TextInput
+                accessibilityLabel="PIN"
+                value={pin}
+                onChangeText={setPin}
+                keyboardType="number-pad"
+                maxLength={6}
+                style={inputStyle}
+              />
+              <ArenaButton
+                label={t('Rejoindre', 'Antre')}
+                busy={busy}
+                onPress={join}
+              />
+            </ArenaPanel>
+            <ArenaButton
+              variant="secondary"
+              label={t(
+                'Créer un tournoi individuel',
+                'Kreye yon tounwa endividyèl',
+              )}
+              onPress={() => (uid ? setCreating(!creating) : signIn())}
+            />
+            {creating ? (
+              <ArenaPanel>
+                <TextInput
+                  accessibilityLabel={t('Nom du tournoi', 'Non tounwa a')}
+                  placeholder={t('Nom du tournoi', 'Non tounwa a')}
+                  placeholderTextColor={C.muted}
+                  value={title}
+                  onChangeText={(value) => {
+                    pendingCreation.current = null;
+                    setTitle(value);
+                  }}
+                  maxLength={60}
+                  style={inputStyle}
+                />
+                {(['live', 'window', 'rounds', 'bracket'] as const).map(
+                  (value) => (
+                    <ArenaButton
+                      key={value}
+                      variant={format === value ? 'primary' : 'secondary'}
+                      label={service.formatLabel(value, ht)}
+                      onPress={() => {
+                        pendingCreation.current = null;
+                        setFormat(value);
+                      }}
+                    />
+                  ),
+                )}
+                {label(
+                  'Début dans 10 minutes · 10 questions · 20 secondes · fenêtre/manche de 24 h · 2 manches · public · 30 places. Questions de culture générale, sans prix.',
+                  'Kòmanse nan 10 minit · 10 kesyon · 20 segonn · fenèt/manch 24 è · 2 manch · piblik · 30 plas. Kesyon kilti jeneral, san pri.',
+                )}
+                <ArenaButton
+                  label={t('Créer', 'Kreye')}
+                  busy={busy}
+                  onPress={() =>
+                    run(async () => {
+                      const out = check(
+                        await service.createTournament(
+                          (pendingCreation.current ??= {
+                            title,
+                            format,
+                            visibility: 'public',
+                            teamRule: 'solo',
+                            categories: [TRIVIA_CATEGORIES[0].id],
+                            questionCount: 10,
+                            secondsPerQuestion: 20,
+                            startsAt: Date.now() + 600000,
+                            windowHours: 24,
+                            roundHours: 24,
+                            roundCount: 2,
+                            maxPlayers: 30,
+                          }),
+                        ),
+                      );
+                      pendingCreation.current = null;
+                      setTid(out.tid);
+                      setCreating(false);
+                    })
+                  }
+                />
+              </ArenaPanel>
+            ) : null}
+            {mine.length ? (
+              <Text
+                accessibilityRole="header"
+                style={[arenaType.name, { color: C.ink }]}
+              >
+                {t('Mes tournois et résultats', 'Tounwa ak rezilta mwen yo')}
+              </Text>
+            ) : null}
+            {mine.map((row) => (
+              <ArenaButton
+                key={row.tid}
+                variant="secondary"
+                label={row.title}
+                onPress={() => setTid(row.tid)}
+              />
+            ))}
+            <Text
+              accessibilityRole="header"
+              style={[arenaType.name, { color: C.ink }]}
+            >
+              {t('Tournois publics', 'Tounwa piblik')}
+            </Text>
+            {!events.length
+              ? label(
+                  'Aucun tournoi disponible. Vous pouvez jouer une partie dans Jeux ou créer un tournoi.',
+                  'Pa gen tounwa disponib. Ou ka jwe yon pati nan Jwèt oswa kreye yon tounwa.',
+                )
+              : null}
+            {events.map((row) => (
+              <ArenaButton
+                key={row.id}
+                variant="secondary"
+                label={`${row.title} · ${service.formatLabel(row.format, ht)}`}
+                onPress={() => setTid(row.id)}
+              />
+            ))}
+          </>
+        ) : (
+          <>
+            {!tournament && !error
+              ? label('Chargement du tournoi…', 'Ap chaje tounwa a…')
+              : null}
+            {tournament ? (
+              <ArenaPanel>
+                {label(
+                  service.formatLabel(tournament.format, ht),
+                  service.formatLabel(tournament.format, ht),
+                )}
+                <Text style={{ color: C.muted }}>
+                  {new Date(tournament.startsAt).toLocaleString(
+                    ht ? 'fr-HT' : 'fr-FR',
+                  )}{' '}
+                  · {tournament.state} · {roster.length}/{tournament.maxPlayers}
+                </Text>
+                {tournament.teamRule !== 'solo'
+                  ? label(
+                      'Groupes déclarés par les joueurs, non vérifiés. Seuls les meilleurs scores comptent.',
+                      'Gwoup jwè yo deklare, ki pa verifye. Se sèlman pi bon nòt yo ki konte.',
+                    )
+                  : null}
+                {!joined &&
+                tournament.schemaVersion !== 2 &&
+                tournament.state !== 'finished' &&
+                tournament.state !== 'cancelled' ? (
+                  <ArenaButton
+                    label={t(
+                      'Confirmer mon inscription',
+                      'Konfime enskripsyon mwen',
+                    )}
+                    busy={busy}
+                    onPress={join}
+                  />
+                ) : null}
+                {tournament.competitionEventId ? (
+                  <ArenaButton
+                    variant="secondary"
+                    label={t(
+                      'Inscription et équipe de cet événement',
+                      'Enskripsyon ak ekip evènman sa a',
+                    )}
+                    onPress={() =>
+                      navigation.navigate('CompetitionWorkspace', {
+                        kind: 'event',
+                        id: tournament.competitionEventId,
+                      })
+                    }
+                  />
+                ) : null}
+                {joined
+                  ? label('Inscription confirmée', 'Enskripsyon konfime')
+                  : null}
+                {tournament.visibility === 'private' && !joined ? (
+                  <TextInput
+                    accessibilityLabel="PIN"
+                    value={pin}
+                    onChangeText={setPin}
+                    keyboardType="number-pad"
+                    style={inputStyle}
+                  />
+                ) : null}
+                <ArenaButton
+                  variant="secondary"
+                  label={t('Partager l’invitation', 'Pataje envitasyon an')}
+                  onPress={() => {
+                    void Share.share({ message: service.shareUrl(tournament) });
+                  }}
+                />
+                {joined &&
+                tournament.format !== 'live' &&
+                tournament.state === 'running' ? (
+                  <ArenaButton
+                    label={t(
+                      step ? 'Reprendre ma manche' : 'Commencer / reprendre',
+                      step ? 'Reprann manch mwen' : 'Kòmanse / reprann',
+                    )}
+                    busy={busy}
+                    onPress={() =>
+                      run(async () => {
+                        const next = check(await service.startRound(tid));
+                        setStep(next);
+                        setOffset(next.serverNow - Date.now());
+                      })
+                    }
+                  />
+                ) : null}
+              </ArenaPanel>
+            ) : null}
+            {question ? (
+              <ArenaPanel>
+                <Text
+                  accessibilityRole="header"
+                  style={[arenaType.name, { color: C.ink }]}
+                >
+                  {ht ? question.qHt || question.q : question.q}
+                </Text>
+                <Text
+                  accessibilityLiveRegion="polite"
+                  style={{ color: C.muted }}
+                >
+                  {Math.max(0, Math.ceil(((deadline ?? now) - now) / 1000))} s
+                </Text>
+                {(ht
+                  ? question.optionsHt?.length
+                    ? question.optionsHt
+                    : question.options
+                  : question.options
+                ).map((option, i) => (
+                  <ArenaButton
+                    key={`${i}-${option}`}
+                    variant={choice === i ? 'primary' : 'secondary'}
+                    label={`${String.fromCharCode(65 + i)}. ${option}`}
+                    disabled={!joined || !active || busy || accepted}
+                    onPress={() => setChoice(i)}
+                  />
+                ))}
+                {joined && !accepted ? (
+                  <ArenaButton
+                    label={t('Valider la réponse', 'Valide repons lan')}
+                    disabled={choice === null || !active}
+                    busy={busy}
+                    onPress={() =>
+                      run(async () => {
+                        if (choice === null) return;
+                        if (tournament?.format === 'live') {
+                          check(
+                            await service.liveAnswer(
+                              tid,
+                              live!.index,
+                              choice,
+                              shownAt.current,
+                            ),
+                          );
+                          setAccepted(true);
+                        } else if (step) {
+                          const next = check(
+                            await service.answerRound(
+                              tid,
+                              step.round,
+                              step.pos,
+                              choice,
+                            ),
+                          );
+                          setStep(next);
+                          setOffset(next.serverNow - Date.now());
+                        }
+                      })
+                    }
+                  />
+                ) : null}
+                {accepted
+                  ? label(
+                      'Réponse enregistrée. Révélation à la fin du temps.',
+                      'Repons anrejistre. Repons kòrèk la ap parèt lè tan an fini.',
+                    )
+                  : null}
+                {live?.phase === 'reveal' && live.reveal ? (
+                  <Text style={{ color: C.ink }}>
+                    {question.options[live.reveal.answer]}
+                    {'\n'}
+                    {ht
+                      ? live.reveal.explanationHt || live.reveal.explanation
+                      : live.reveal.explanation}
+                  </Text>
+                ) : null}
+              </ArenaPanel>
+            ) : null}
+            {step?.done
+              ? label(
+                  'Manche terminée. Les corrections seront disponibles après la fermeture de la manche.',
+                  'Manch lan fini. Koreksyon yo ap disponib lè manch lan fèmen.',
+                )
+              : null}
+            {board ? (
+              <ArenaPanel>
+                <Text
+                  accessibilityRole="header"
+                  style={[arenaType.name, { color: C.ink }]}
+                >
+                  {board.final
+                    ? t('Résultats du tournoi', 'Rezilta tounwa a')
+                    : t('Classement en cours', 'Klasman an kou')}
+                </Text>
+                {board.rows.slice(0, 30).map((row) => (
+                  <Text key={row.uid} style={{ color: C.ink }}>
+                    {row.rank}. {row.displayName} · {row.points} pts
+                  </Text>
+                ))}
+                {board.namedTeams?.map((row) => (
+                  <Text key={row.id} style={{ color: C.ink }}>
+                    {row.rank}. {row.label} · {row.points} pts · {row.missing}{' '}
+                    {t('absents', 'absan')}
+                  </Text>
+                ))}
+                {board.teams.map((row) => (
+                  <Text key={row.key} style={{ color: C.muted }}>
+                    {row.rank}. {row.label} · {row.score} pts · {row.counted}{' '}
+                    {t('comptés', 'konte')}
+                  </Text>
+                ))}
+                {!board.rows.length
+                  ? label(
+                      'Les scores apparaîtront après les réponses.',
+                      'Nòt yo ap parèt apre repons yo.',
+                    )
+                  : null}
+              </ArenaPanel>
+            ) : null}
+            {matches.length ? (
+              <ArenaPanel>
+                {matches.map((m) => (
+                  <Text key={m.id} style={{ color: C.ink }}>
+                    {t('Manche', 'Manch')} {m.round + 1}:{' '}
+                    {m.a?.displayName || '—'} / {m.b?.displayName || '—'} ·{' '}
+                    {m.winnerUid || '—'}
+                  </Text>
+                ))}
+              </ArenaPanel>
+            ) : null}
+            {joined && tournament ? (
+              <ArenaPanel>
+                {tournament.format !== 'live' ? (
+                  <TextInput
+                    accessibilityLabel={t(
+                      'Numéro de manche pour les corrections',
+                      'Nimewo manch pou koreksyon yo',
+                    )}
+                    keyboardType="number-pad"
+                    value={String(roundReview + 1)}
+                    onChangeText={(s) =>
+                      setRoundReview(Math.max(0, (parseInt(s, 10) || 1) - 1))
+                    }
+                    style={inputStyle}
+                  />
+                ) : null}
+                <ArenaButton
+                  variant="secondary"
+                  label={t(
+                    'Voir les corrections disponibles',
+                    'Gade koreksyon ki disponib yo',
+                  )}
+                  busy={busy}
+                  onPress={() =>
+                    run(async () => {
+                      setReview(
+                        check(
+                          await service.reviewAnswers(
+                            tid,
+                            tournament.format === 'live'
+                              ? undefined
+                              : roundReview,
+                          ),
+                        ).items,
+                      );
+                    })
+                  }
+                />
+                {review?.map((item, i) => (
+                  <View key={i}>
+                    <Text style={{ color: C.ink }}>
+                      {ht ? item.qHt || item.q : item.q}
+                    </Text>
+                    <Text style={{ color: C.muted }}>
+                      {item.options[item.answer]} ·{' '}
+                      {ht
+                        ? item.explanationHt || item.explanation
+                        : item.explanation}
+                    </Text>
+                  </View>
+                ))}
+              </ArenaPanel>
+            ) : null}
+            {tournament &&
+            tournament.schemaVersion !== 2 &&
+            tournament.creatorUid === uid &&
+            tournament.state === 'scheduled' ? (
+              <ArenaButton
+                variant="secondary"
+                label={t('Annuler le tournoi', 'Anile tounwa a')}
+                busy={busy}
+                onPress={() =>
+                  run(async () => {
+                    check(await service.cancelTournament(tid));
+                  })
+                }
+              />
+            ) : null}
+            <ArenaButton
+              variant="secondary"
+              label={t('Trouver un autre tournoi', 'Chèche yon lòt tounwa')}
+              onPress={() => {
+                setTid(null);
+                load();
+              }}
+            />
+          </>
+        )}
+      </ScrollView>
+    </ArenaScreen>
+  );
+}

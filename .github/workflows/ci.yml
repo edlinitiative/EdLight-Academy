@@ -32,6 +32,8 @@ jobs:
       # api/ is invisible to it. Both steps are required, and for a while
       # neither ran over api/, which meant "tsc clean" was being reported for
       # serverless code nothing had ever type-checked.
+      - name: Validate release ledger structure
+        run: npm run release:check
       - name: Typecheck web
         run: npx tsc --noEmit
       # api/ has its own project because it compiles to CommonJS for the
@@ -44,6 +46,12 @@ jobs:
         run: npm test -- --ci
       # A broken production build (webpack + prebuild/postbuild hooks) must
       # fail CI. These build scripts are self-contained (no secrets/network).
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Verify competition rules and concurrent transactions
+        run: npm run test:competition:emulator
       - name: Build web (production)
         run: npm run build
 

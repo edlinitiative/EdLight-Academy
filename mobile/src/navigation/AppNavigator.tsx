@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, View, useColorScheme } from 'react-native';
 import {
   NavigationContainer,
@@ -22,15 +22,21 @@ import ArenaLobbyScreen from '../screens/arena/ArenaLobbyScreen';
 import ArenaLiveScreen from '../screens/arena/ArenaLiveScreen';
 import ArenaDoorsScreen from '../screens/arena/ArenaDoorsScreen';
 import ArenaResultScreen from '../screens/arena/ArenaResultScreen';
+import CompetitionWorkspaceScreen from '../screens/arena/CompetitionWorkspaceScreen';
+import TournoisScreen from '../screens/arena/TournoisScreen';
 import ArenaHubScreen from '../screens/arena/ArenaHubScreen';
 import ArenaWatchScreen from '../screens/arena/ArenaWatchScreen';
 import AvatarEditorScreen, { type AvatarSection } from '../screens/AvatarEditorScreen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { savedCompetitionTarget, restoreCompetitionTarget } from './competitionContinuity';
 import * as ExpoLinking from 'expo-linking';
 import { useReduceMotion } from '../utils/motion';
 import { resolveAppPath, stateForTarget, type ArenaHubSection } from './arenaLinks';
 
 export type RootParamList = {
   Loading: undefined;
+  Tournois: { tournamentId?: string; pin?: string } | undefined;
+  CompetitionWorkspace: { kind?: 'home' | 'event' | 'team' | 'invite' | 'league' | 'school'; id?: string } | undefined;
   Main: undefined;
   Search: undefined;
   Sandra: { ask?: string } | undefined;
@@ -267,17 +273,57 @@ function useTransition() {
 export default function AppNavigator() {
   const authConfirmed = useStore((s) => s.authConfirmed);
   const tx = useTransition();
+  const uid = useStore((s) => s.user?.uid ?? null);
+  const previousUid = useRef(uid);
+  const [ready, setReady] = useState(false);
+  const restored = useRef(false);
+  const restorationComplete = useRef(false);
+  useEffect(() => {
+    const previous = previousUid.current; previousUid.current = uid;
+    if (previous && previous !== uid) {
+      void AsyncStorage.removeItem('competition:last-destination');
+      void AsyncStorage.getAllKeys().then((keys) => AsyncStorage.multiRemove(keys.filter((key) => key.startsWith(`competition-draft:${previous}:`))));
+      if (navigationRef.isReady()) navigationRef.resetRoot({ routes: [{ name: 'Main' }] });
+    }
+  }, [uid]);
+  useEffect(() => {
+    if (!authConfirmed || !ready || restored.current) return;
+    restored.current = true;
+    let valid = true;
+    void Promise.all([ExpoLinking.getInitialURL(), AsyncStorage.getItem('competition:last-destination')]).then(([url, raw]) => {
+      if (!valid) return;
+      if (url) {
+        // Linking may have resolved while only Loading was registered.
+        // Reapply the typed destination after authentication readiness.
+        const target = resolveAppPath(url);
+        if (target && ['Tournois', 'CompetitionWorkspace'].includes(target.screen) && navigationRef.isReady())
+          (navigationRef.navigate as any)(target.screen, target.params);
+        return;
+      }
+      if (!raw) return;
+      try { const target = restoreCompetitionTarget(JSON.parse(raw), useStore.getState().user?.uid ?? null); if (target && navigationRef.isReady()) (navigationRef.navigate as any)(target.screen, target.params); } catch { /* ignore invalid local navigation */ }
+    }).catch(() => undefined).finally(() => { if(valid)restorationComplete.current=true; });
+    return () => { valid = false; };
+  }, [authConfirmed, ready]);
+  const rememberDestination = () => {
+    if(!restorationComplete.current)return;
+    const target = savedCompetitionTarget(navigationRef.getCurrentRoute());
+    if (target) void AsyncStorage.setItem('competition:last-destination', JSON.stringify({ uid, target })).catch(() => undefined);
+    else if (navigationRef.getCurrentRoute()?.name === 'Main') void AsyncStorage.removeItem('competition:last-destination').catch(() => undefined);
+  };
 
   return (
     <>
       <NetworkStatus />
-      <NavigationContainer ref={navigationRef} linking={linking}>
+      <NavigationContainer ref={navigationRef} linking={linking} onReady={() => setReady(true)} onStateChange={rememberDestination}>
         <Stack.Navigator screenOptions={{ headerShown: false, ...tx('fade') }}>
           {!authConfirmed ? (
             <Stack.Screen name="Loading" component={LoadingScreen} />
           ) : (
             <>
               <Stack.Screen name="Main" component={TabNavigator} />
+              <Stack.Screen name="Tournois" component={TournoisScreen} />
+              <Stack.Screen name="CompetitionWorkspace" component={CompetitionWorkspaceScreen} />
               <Stack.Screen
                 name="Search"
                 component={SearchModal}

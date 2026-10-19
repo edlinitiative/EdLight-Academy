@@ -16,6 +16,7 @@ The experience connects discovery to eligibility, preparation, play, results and
 2. [Complete user and game journeys](USER-JOURNEYS.md): student, captain, teammate, organizer, spectator, league and physical-event experiences, including interruptions and exceptions.
 3. [Premium experience specification](EXPERIENCE-SPEC.md): navigation, screens, interaction states, visual hierarchy, motion and accessibility.
 4. [Architecture and delivery plan](IMPLEMENTATION-PLAN.md): current source inventory, required changes, proposed contracts, compatibility, sequencing and acceptance gates.
+5. [Product release readiness contract](../2026-10-18-premium-product-release-readiness.md): product-wide purpose, continuity, parity, trust and presentation requirements; platform evidence, pilot and final release gates.
 
 ## Core decisions proposed
 
@@ -42,10 +43,12 @@ This expands the [October 17 Arena roadmap](../2026-10-17-arena-premium-roadmap.
 
 The [visual and broadcast brief](../2026-10-17-arena-visual-motion-broadcast-brief.md) remains the visual foundation: Haitian night stadium, readable sports graphics, school identity and purposeful ceremonies. Everyday school events receive a restrained version of that language. The [premium product roadmap](../2026-10-18-premium-product-implementation-roadmap.md) continues to govern reliability, truthful saved/submitted states and cross-device validation.
 
-These documents specify future behavior. The source inventory distinguishes existing functionality from proposed additions. Writing this specification does not implement or publish the platform. Earlier telemetry changes in the working tree remain separate.
+These documents specify future behavior. The source inventory distinguishes existing functionality from proposed additions. Writing this specification does not implement or publish the platform. The diagnostics foundation and initial specifications were merged into `main` at `76fc8e7`; that merge does not establish production distribution or completion of the proposed platform.
 
 ## Decisions to validate in the pilot
 
 Validate the three-player default, school organizer onboarding, school-membership approval workload, competition frequency, student appetite for persistent teams and the usefulness of regional discovery with participating schools. Do not assume every school already has sufficient connectivity, an administrator, or enough active players to sustain a league.
 
 Launch gates are complete journeys and reliable operation, not the number of event types visible in a menu.
+
+Pilot code and remaining gates are recorded in [the implementation record](../2026-10-18-competition-platform-implementation.md) and [candidate ledger](../release-readiness/README.md). Full readiness remains blocked.

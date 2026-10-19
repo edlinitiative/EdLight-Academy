@@ -27,6 +27,8 @@ import { FieldValue } from 'firebase-admin/firestore';
 interface Limit { max: number; windowSec: number }
 
 const LIMITS: Record<string, Limit> = {
+  'competition-read': { max: 1200, windowSec: 3600 },
+  'competition-write': { max: 120, windowSec: 3600 },
   'grade-essay':    { max: 20, windowSec: 3600 },
   'grade-scaffold': { max: 30, windowSec: 3600 },
   'generate-plan':  { max: 5,  windowSec: 3600 },
@@ -90,7 +92,7 @@ const LIMITS: Record<string, Limit> = {
   'tournois-create': { max: 10, windowSec: 86400 },
   'tournois-join':   { max: 60, windowSec: 3600 },
   'tournois-play':   { max: 600, windowSec: 3600 },
-  'tournois-tick':   { max: 3000, windowSec: 3600 },
+  'tournois-tick':   { max: 15000, windowSec: 3600 },
   // Avatar editor saves (api/users/avatar): a few saves per session is normal.
   'users-avatar':    { max: 30, windowSec: 3600 },
 };

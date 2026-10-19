@@ -1,0 +1,1842 @@
+{
+  "target": "Full planned release: core and A–D",
+  "decision": "BLOCKED",
+  "owners": {
+    "release": null,
+    "engineering": null,
+    "design": null,
+    "qa": null,
+    "operations": null
+  },
+  "artifacts": {
+    "commit": null,
+    "website": null,
+    "api": null,
+    "rules": null,
+    "indexes": null,
+    "ios": null,
+    "android": null
+  },
+  "requirements": [
+    {
+      "id": "MAP-01",
+      "requirement": "Every exposed or promised capability belongs to the frozen scope or an explicit removed/deferred claim",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "MAP-02",
+      "requirement": "Every in-scope capability maps to purpose, recovery, platform coverage, authority and rendered-state evidence",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "MAP-03",
+      "requirement": "Supported learning/exam content and assets match their advertised subjects, levels and interaction types",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "PUR-01",
+      "requirement": "Home prioritizes a real next lesson, interrupted exam, due review or other supported next task, with a concise reason and meaningful fallback",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "PUR-02",
+      "requirement": "Arène prioritizes active participation and confirmations before recommendations, with practice available between events",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "PUR-03",
+      "requirement": "Students can discover school, departmental and national opportunities, change browsing scope and inspect other public school/league activity",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "PUR-04",
+      "requirement": "Event previews explain organizer, entry/game mode, eligibility, schedule/duration, connection needs, scoring, audience and any reward provider before commitment",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "PUR-05",
+      "requirement": "Labels match the action: following, team membership, registration, approval, check-in, playing and external registration have different confirmations",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "PUR-06",
+      "requirement": "Results explain actual achievement and one useful next action: corrections/practice, next lesson, next round/fixture or relevant event",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "PUR-07",
+      "requirement": "Organizers see the next operational obligation and spectators see current phase, competing entities and relevant stakes",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "PUR-08",
+      "requirement": "Empty, full, closed, canceled, delayed and service-failure states explain the actual condition and an available action",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "CON-01",
+      "requirement": "Authentication and required onboarding preserve the validated original task, event, invitation or lesson; acceptance remains explicit",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "CON-02",
+      "requirement": "Lesson position, course/lesson context, relevant selection and supported playback position survive departure and return",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "CON-03",
+      "requirement": "Lesson/progress writes distinguish saving, queued, slow, failed and confirmed; retries preserve useful work",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "CON-04",
+      "requirement": "Sandra receives the intended permitted lesson/exam context and offers a reliable return to it",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "CON-05",
+      "requirement": "Exam drafts and attempt identity survive supported navigation, process restart and account-scoped recovery; timer rules remain authoritative",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "CON-06",
+      "requirement": "Practice and corrections retain their source and lead to relevant explanations/practice when available",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "CON-07",
+      "requirement": "A friend challenge completes across two accounts, including a signed-out recipient and later result retrieval by both",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "CON-08",
+      "requirement": "Persistent teams, invitations, event confirmation and locked rosters remain distinct and recoverable",
+      "status": "Implemented/unverified",
+      "owner": null,
+      "implementation": [
+        "api/_lib/competition.ts",
+        "shared/teams/policy.ts",
+        "shared/competition/workspace.ts"
+      ],
+      "evidence": [],
+      "notes": "Pilot implementation and focused automated regression checks exist. Installed-device, production and acceptance evidence remain required. This is not a release pass."
+    },
+    {
+      "id": "CON-09",
+      "requirement": "Every live/window/round mode resumes its existing authoritative attempt or phase; retries cannot restart time or generate extra answers",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "CON-10",
+      "requirement": "Return navigation retains discovery filters/scroll, originating school/league and current fixture; history remains findable",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "CON-11",
+      "requirement": "Notifications resolve current phase/role only after startup/auth readiness and deduplicate delivery",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "CON-12",
+      "requirement": "Organizers can recover drafts and complete publish/run/review/close; material schedule changes have explicit reconfirmation/update paths",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "CON-13",
+      "requirement": "Physical and external event journeys preserve entry, authorized instructions, check-in/report status and post-event outcome",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "CON-14",
+      "requirement": "Final results, team/event lineups, league fixtures and reward status survive later membership/profile changes",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "CON-15",
+      "requirement": "Notification permission/preferences and scheduled/push reminders follow the current account and user's choice",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "PAR-01",
+      "requirement": "Essential account, course, lesson, practice, review, exam, Sandra and progress tasks work on all three surfaces",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "PAR-02",
+      "requirement": "User-created individual competitions have native discovery, entry, readiness, play, corrections and history",
+      "status": "Implemented/unverified",
+      "owner": null,
+      "implementation": [
+        "mobile/src/screens/arena/TournoisScreen.tsx",
+        "mobile/src/services/tournoisService.ts"
+      ],
+      "evidence": [],
+      "notes": "Pilot implementation and focused automated regression checks exist. Installed-device, production and acceptance evidence remain required. This is not a release pass."
+    },
+    {
+      "id": "PAR-03",
+      "requirement": "Teams can be created, invited, confirmed, entered and revisited from mobile or web",
+      "status": "Implemented/unverified",
+      "owner": null,
+      "implementation": [
+        "src/pages/competition/CompetitionWorkspace.tsx",
+        "mobile/src/screens/arena/CompetitionWorkspaceScreen.tsx"
+      ],
+      "evidence": [],
+      "notes": "Pilot implementation and focused automated regression checks exist. Installed-device, production and acceptance evidence remain required. This is not a release pass."
+    },
+    {
+      "id": "PAR-04",
+      "requirement": "Native school organizers can perform the declared event creation and operational tasks; desktop adds useful space rather than exclusive basic access",
+      "status": "Implemented/unverified",
+      "owner": null,
+      "implementation": [
+        "shared/competition/workspace.ts",
+        "api/_lib/competition.ts"
+      ],
+      "evidence": [],
+      "notes": "Pilot implementation and focused automated regression checks exist. Installed-device, production and acceptance evidence remain required. This is not a release pass."
+    },
+    {
+      "id": "PAR-05",
+      "requirement": "Public/private competition discovery, league tables and spectator access use the same policies across clients",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "PAR-06",
+      "requirement": "All published link types have correct native/web fallback and backward compatibility",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "PAR-07",
+      "requirement": "Cross-device state refresh is deliberate; online data supersedes stale caches without losing local drafts",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "PAR-08",
+      "requirement": "Any retained browser handoff identifies destination, reason, auth/consent requirements and a return path",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "PAR-09",
+      "requirement": "Supported combinations and genuine limitations are explicit; unsupported modes do not appear selectable",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "TRU-01",
+      "requirement": "Accounts isolate private drafts, caches, subscriptions, invitations and history; revocation removes protected access",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "TRU-02",
+      "requirement": "School catalog identity, student membership, team membership and organizer authority are separately validated",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "TRU-03",
+      "requirement": "Critical writes use stable attempt/entry identities, duplicate prevention and safe receipt recovery; server timing/scoring prevails",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "TRU-04",
+      "requirement": "Invitation acceptance, team capacity, entry exclusivity and roster lock are transactionally enforced",
+      "status": "Implemented/unverified",
+      "owner": null,
+      "implementation": [
+        "api/_lib/competition.ts",
+        "api/__tests__/competitionEmulator.test.ts"
+      ],
+      "evidence": [],
+      "notes": "Pilot implementation and focused automated regression checks exist. Installed-device, production and acceptance evidence remain required. This is not a release pass."
+    },
+    {
+      "id": "TRU-05",
+      "requirement": "Discoverability, entry and viewing are independently enforced; public projections contain no private credentials/evidence",
+      "status": "Implemented/unverified",
+      "owner": null,
+      "implementation": [
+        "firestore.rules",
+        "scripts/test_competition_rules.cjs",
+        "api/competition.ts"
+      ],
+      "evidence": [],
+      "notes": "Pilot implementation and focused automated regression checks exist. Installed-device, production and acceptance evidence remain required. This is not a release pass."
+    },
+    {
+      "id": "TRU-06",
+      "requirement": "Results identify source, rules version, finality and contribution; league points derive deterministically from accepted result revisions",
+      "status": "Implemented/unverified",
+      "owner": null,
+      "implementation": [
+        "shared/leagues/standings.ts",
+        "shared/teams/policy.ts",
+        "api/tournois/_shared.ts"
+      ],
+      "evidence": [],
+      "notes": "Pilot implementation and focused automated regression checks exist. Installed-device, production and acceptance evidence remain required. This is not a release pass."
+    },
+    {
+      "id": "TRU-07",
+      "requirement": "Hidden answers/correctness/scores remain hidden until the applicable release; the content bank supports the claimed assessment",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "TRU-08",
+      "requirement": "Optional rewards identify issuer, conditions, eligibility and fulfillment responsibility; external reports are labeled",
+      "status": "Implemented/unverified",
+      "owner": null,
+      "implementation": [
+        "api/_lib/competition.ts",
+        "shared/competition/workspace.ts"
+      ],
+      "evidence": [],
+      "notes": "Pilot implementation and focused automated regression checks exist. Installed-device, production and acceptance evidence remain required. This is not a release pass."
+    },
+    {
+      "id": "TRU-09",
+      "requirement": "Errors can be investigated from production evidence with client/backend/build context and privacy filtering",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "TRU-10",
+      "requirement": "Moderation, host/membership disputes, result adjudication and fulfillment support have reachable named owners",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "TRU-11",
+      "requirement": "Legacy events/links remain valid and rollback preserves registered participation, results and private access",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "PRE-01",
+      "requirement": "Learning and competition each have coherent typography, spacing, hierarchy, cards, controls and status language using existing foundations",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "PRE-02",
+      "requirement": "A compact identity and one dominant current action lead each screen; scenery supports rather than hides the task",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "PRE-03",
+      "requirement": "School/team/player identity stays recognizable through navigation, play, standings and history",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "PRE-04",
+      "requirement": "Loading, empty, disabled, submitting, slow, queued, error, retry and success states are designed and truthful",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "PRE-05",
+      "requirement": "Long French/Creole text, math, school names and large text remain readable",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "PRE-06",
+      "requirement": "Navigation, forms, timers, roster states and scoreboards support screen readers, web keyboard and visible focus",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "PRE-07",
+      "requirement": "Touch targets, contrast, safe areas, keyboard avoidance and fixed controls preserve comfortable input",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "PRE-08",
+      "requirement": "Motion/sound explain real events, respect preferences and tolerate authoritative phase changes",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "PRE-09",
+      "requirement": "Arrival, active play, reveal, intervals, provisional results and final celebration have proportionate connected presentation",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "PRE-10",
+      "requirement": "Spectator/projector and organizer views fit their roles and retain current context",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "PRE-11",
+      "requirement": "Performance is measured against frozen budgets and product screens remain responsive during data/animation work",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "E2E-01",
+      "requirement": "Fresh/returning/offline startup → deliberate onboarding/auth → correct task; sign-out/switch clears previous private state",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "E2E-02",
+      "requirement": "Home continuation → correct lesson/position → Sandra → return → completion with failed/queued save → reconnect → confirmed progress → relevant practice",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "E2E-03",
+      "requirement": "Find appropriate exam → draft answers → restart/background deadline → recover attempt → ambiguous submit/retry → one result → corrections/history",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "E2E-04",
+      "requirement": "Create/play/share → signed-out friend opens on another client → login/complete → both retrieve the same result later",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "E2E-05",
+      "requirement": "Discover eligible event → register → reminder → live/window/round/bracket as supported → interruption → accurate final outcome and next action",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "E2E-06",
+      "requirement": "Captain plus two signed-out invitees → accept membership/confirm eligibility → register/freeze roster → independent play → missing/reconnecting member → truthful combined result/history",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "E2E-07",
+      "requirement": "Existing official registration/doors → rejoin/live answer → reconnect → provisional/final result → correct counted/non-counted contribution and authorized claims path",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "E2E-08",
+      "requirement": "Authorized draft → publish → approvals/readiness → schedule update/reconfirmation → run/monitor → dispute/no-contest/cancel as applicable → valid final record",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "E2E-09",
+      "requirement": "Public school/region discovery → permitted broadcast → follow another team → expanded board/reconnect → final state; private data remains inaccessible",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "E2E-10",
+      "requirement": "Approved host listing → accurate registration/venue instructions → private check-in or external handoff → correctly attributed result → optional fulfillment status",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "E2E-11",
+      "requirement": "Enroll division → fixture/roster confirmation → play → postponement/dispute/correction → recomputed table → final season without duplicate points or early qualification",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    },
+    {
+      "id": "E2E-12",
+      "requirement": "Existing links/records and old supported client → new backend/rules → rollback creation/discovery flag → registered users can still play, recover and access history",
+      "status": "Not implemented",
+      "owner": null,
+      "implementation": [],
+      "evidence": [],
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+    }
+  ],
+  "inventory": [
+    {
+      "source": "src/App.tsx",
+      "line": 121,
+      "kind": "web-route",
+      "destination": "/",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 122,
+      "kind": "web-route",
+      "destination": "(index)",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 123,
+      "kind": "web-route",
+      "destination": "courses",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 124,
+      "kind": "web-route",
+      "destination": "courses/:courseId",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 127,
+      "kind": "web-route",
+      "destination": "dashboard",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 128,
+      "kind": "web-route",
+      "destination": "quizzes",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 132,
+      "kind": "web-route",
+      "destination": "practice",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 133,
+      "kind": "web-route",
+      "destination": "revision",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 134,
+      "kind": "web-route",
+      "destination": "about",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 135,
+      "kind": "web-route",
+      "destination": "contact",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 136,
+      "kind": "web-route",
+      "destination": "enseigner",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 137,
+      "kind": "web-route",
+      "destination": "enseignants/:instructorId",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 138,
+      "kind": "web-route",
+      "destination": "faq",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 139,
+      "kind": "web-route",
+      "destination": "help",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 140,
+      "kind": "web-route",
+      "destination": "privacy",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 141,
+      "kind": "web-route",
+      "destination": "delete-account",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 142,
+      "kind": "web-route",
+      "destination": "terms",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 143,
+      "kind": "web-route",
+      "destination": "defi/:code",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 144,
+      "kind": "web-route",
+      "destination": "exams",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 146,
+      "kind": "web-route",
+      "destination": "exams/resultats",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 147,
+      "kind": "web-route",
+      "destination": "exams/:level",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 148,
+      "kind": "web-route",
+      "destination": "exams/:level/matiere/:subject",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 150,
+      "kind": "web-route",
+      "destination": "exams/:level/:examId",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 151,
+      "kind": "web-route",
+      "destination": "exams/:level/:examId/take",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 152,
+      "kind": "web-route",
+      "destination": "exams/:level/:examId/results",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 153,
+      "kind": "web-route",
+      "destination": "study-plan",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 154,
+      "kind": "web-route",
+      "destination": "jeux",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 155,
+      "kind": "web-route",
+      "destination": "jeux/:gameId",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 157,
+      "kind": "web-route",
+      "destination": "trivia",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 158,
+      "kind": "web-route",
+      "destination": "trivia/:gameId",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 159,
+      "kind": "web-route",
+      "destination": "profile",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 160,
+      "kind": "web-route",
+      "destination": "profile/avatar",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 164,
+      "kind": "web-route",
+      "destination": "releve",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 187,
+      "kind": "web-route",
+      "destination": "arena",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 188,
+      "kind": "web-route",
+      "destination": "arena/ecoles/:id",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 189,
+      "kind": "web-route",
+      "destination": "arena/competitions",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 190,
+      "kind": "web-route",
+      "destination": "arena/evenements/:id",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 191,
+      "kind": "web-route",
+      "destination": "arena/equipes/:id",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 192,
+      "kind": "web-route",
+      "destination": "arena/invitations/:id",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 193,
+      "kind": "web-route",
+      "destination": "arena/ligues/:id",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 194,
+      "kind": "web-route",
+      "destination": "arena/histoire",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 195,
+      "kind": "web-route",
+      "destination": "arena/studio",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 196,
+      "kind": "web-route",
+      "destination": "arena/championnat",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 200,
+      "kind": "web-route",
+      "destination": "arena/jouer",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 201,
+      "kind": "web-route",
+      "destination": "arena/jouer/:tid",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 203,
+      "kind": "web-route",
+      "destination": "tournois",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 204,
+      "kind": "web-route",
+      "destination": "tournois/nouveau",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 205,
+      "kind": "web-route",
+      "destination": "tournois/rejoindre",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 206,
+      "kind": "web-route",
+      "destination": "tournois/:id",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 207,
+      "kind": "web-route",
+      "destination": "classement",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 208,
+      "kind": "web-route",
+      "destination": "leaderboard",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 209,
+      "kind": "web-route",
+      "destination": "*",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 213,
+      "kind": "web-route",
+      "destination": "/arena/ecran/:id",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 214,
+      "kind": "web-route",
+      "destination": "/figure-embed",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 217,
+      "kind": "web-route",
+      "destination": "/download",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 220,
+      "kind": "web-route",
+      "destination": "/admin",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 221,
+      "kind": "web-route",
+      "destination": "(index)",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 223,
+      "kind": "web-route",
+      "destination": "content/courses",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 224,
+      "kind": "web-route",
+      "destination": "content/courses/:courseId",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 225,
+      "kind": "web-route",
+      "destination": "content/videos",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 226,
+      "kind": "web-route",
+      "destination": "content/quizzes",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 227,
+      "kind": "web-route",
+      "destination": "content/exams",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 228,
+      "kind": "web-route",
+      "destination": "content/trivia",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 230,
+      "kind": "web-route",
+      "destination": "content/arena/questions",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 231,
+      "kind": "web-route",
+      "destination": "content/arena",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 232,
+      "kind": "web-route",
+      "destination": "content/verify",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 234,
+      "kind": "web-route",
+      "destination": "users",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 235,
+      "kind": "web-route",
+      "destination": "users/moderation",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 236,
+      "kind": "web-route",
+      "destination": "users/sandra",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 238,
+      "kind": "web-route",
+      "destination": "users/instructors",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 239,
+      "kind": "web-route",
+      "destination": "users/:uid",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 241,
+      "kind": "web-route",
+      "destination": "data/collections",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 242,
+      "kind": "web-route",
+      "destination": "data/stats",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 244,
+      "kind": "web-route",
+      "destination": "courses",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 245,
+      "kind": "web-route",
+      "destination": "verify",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 256,
+      "kind": "web-route",
+      "destination": "/arena/reclamation",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 257,
+      "kind": "web-route",
+      "destination": "/arena/autorisation",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 261,
+      "kind": "web-route",
+      "destination": "/direct",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 264,
+      "kind": "web-route",
+      "destination": "/arena/demo",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "src/App.tsx",
+      "line": 265,
+      "kind": "web-route",
+      "destination": "/live",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/AppNavigator.tsx",
+      "line": 321,
+      "kind": "native-screen",
+      "destination": "Loading",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/AppNavigator.tsx",
+      "line": 324,
+      "kind": "native-screen",
+      "destination": "Main",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/AppNavigator.tsx",
+      "line": 325,
+      "kind": "native-screen",
+      "destination": "Tournois",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/AppNavigator.tsx",
+      "line": 326,
+      "kind": "native-screen",
+      "destination": "CompetitionWorkspace",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/AppNavigator.tsx",
+      "line": 327,
+      "kind": "native-screen",
+      "destination": "Search",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/AppNavigator.tsx",
+      "line": 332,
+      "kind": "native-screen",
+      "destination": "Sandra",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/AppNavigator.tsx",
+      "line": 341,
+      "kind": "native-screen",
+      "destination": "StudyPlan",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/AppNavigator.tsx",
+      "line": 346,
+      "kind": "native-screen",
+      "destination": "Leaderboard",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/AppNavigator.tsx",
+      "line": 351,
+      "kind": "native-screen",
+      "destination": "ArenaLobby",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/AppNavigator.tsx",
+      "line": 356,
+      "kind": "native-screen",
+      "destination": "ArenaHub",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/AppNavigator.tsx",
+      "line": 361,
+      "kind": "native-screen",
+      "destination": "ArenaWatch",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/AppNavigator.tsx",
+      "line": 366,
+      "kind": "native-screen",
+      "destination": "ArenaDoors",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/AppNavigator.tsx",
+      "line": 371,
+      "kind": "native-screen",
+      "destination": "ArenaResult",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/AppNavigator.tsx",
+      "line": 376,
+      "kind": "native-screen",
+      "destination": "ArenaLive",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/AppNavigator.tsx",
+      "line": 387,
+      "kind": "native-screen",
+      "destination": "Teach",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/AppNavigator.tsx",
+      "line": 392,
+      "kind": "native-screen",
+      "destination": "AvatarEditor",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/AppNavigator.tsx",
+      "line": 397,
+      "kind": "native-screen",
+      "destination": "Defi",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/CoursesNavigator.tsx",
+      "line": 34,
+      "kind": "native-screen",
+      "destination": "CourseList",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/CoursesNavigator.tsx",
+      "line": 35,
+      "kind": "native-screen",
+      "destination": "CourseDetail",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/CoursesNavigator.tsx",
+      "line": 36,
+      "kind": "native-screen",
+      "destination": "Quizzes",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/ExamsNavigator.tsx",
+      "line": 29,
+      "kind": "native-screen",
+      "destination": "ExamLanding",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/ExamsNavigator.tsx",
+      "line": 30,
+      "kind": "native-screen",
+      "destination": "ExamBrowser",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/ExamsNavigator.tsx",
+      "line": 31,
+      "kind": "native-screen",
+      "destination": "ExamOverview",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/ExamsNavigator.tsx",
+      "line": 32,
+      "kind": "native-screen",
+      "destination": "ExamTake",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/ExamsNavigator.tsx",
+      "line": 33,
+      "kind": "native-screen",
+      "destination": "ExamResults",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/ExamsNavigator.tsx",
+      "line": 34,
+      "kind": "native-screen",
+      "destination": "ExamHistory",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/NativeTabNavigator.tsx",
+      "line": 104,
+      "kind": "native-screen",
+      "destination": "Dashboard",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/NativeTabNavigator.tsx",
+      "line": 109,
+      "kind": "native-screen",
+      "destination": "Courses",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/NativeTabNavigator.tsx",
+      "line": 119,
+      "kind": "native-screen",
+      "destination": "Exams",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/NativeTabNavigator.tsx",
+      "line": 130,
+      "kind": "native-screen",
+      "destination": "Trivia",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/NativeTabNavigator.tsx",
+      "line": 135,
+      "kind": "native-screen",
+      "destination": "Profile",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/QuizNavigator.tsx",
+      "line": 31,
+      "kind": "native-screen",
+      "destination": "Quizzes",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/TabNavigator.tsx",
+      "line": 225,
+      "kind": "native-screen",
+      "destination": "Dashboard",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/TabNavigator.tsx",
+      "line": 235,
+      "kind": "native-screen",
+      "destination": "Courses",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/TabNavigator.tsx",
+      "line": 253,
+      "kind": "native-screen",
+      "destination": "Exams",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/TabNavigator.tsx",
+      "line": 277,
+      "kind": "native-screen",
+      "destination": "Trivia",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    },
+    {
+      "source": "mobile/src/navigation/TabNavigator.tsx",
+      "line": 287,
+      "kind": "native-screen",
+      "destination": "Profile",
+      "owner": null,
+      "scenarioIds": [],
+      "statesReviewed": [],
+      "evidence": []
+    }
+  ]
+}

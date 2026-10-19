@@ -61,6 +61,7 @@ import {
   type LivePhase,
   type Schedule,
 } from '../../shared/tournois/schedule';
+import { rankNamedTeams } from '../../shared/teams/policy';
 import { rankPlayers, rankTournamentTeams, type PlayerRow } from '../../shared/tournois/scoring';
 import { firstRound, nextRound, resolveMatch, type Entrant, type Match, type RoundScore } from '../../shared/tournois/bracket';
 import { toPublicQuestion, type StoredQuestion } from '../../shared/tournois/questions';
@@ -71,6 +72,8 @@ export const PINS = 'tournamentPins';
 export type TournamentState = 'scheduled' | 'running' | 'finished' | 'cancelled';
 
 export interface TournamentDoc extends TournamentConfig {
+  schemaVersion?: 1 | 2;
+  competitionEventId?: string;
   id: string;
   creatorUid: string;
   creatorName: string;
@@ -163,6 +166,14 @@ export async function canSee(db: Firestore, t: TournamentDoc, uid: string | null
   if (t.visibility !== 'private') return true;
   if (!uid) return false;
   if (t.creatorUid === uid) return true;
+  if (t.schemaVersion === 2 && t.competitionEventId) {
+    const e = (await db.doc(`competitionEvents/${t.competitionEventId}`).get()).data();
+    if (['manage', 'checkin'].includes(e?.cohosts?.[uid])) return true;
+    if (e?.audience === 'school' && e.schoolKey) {
+      const membership = (await db.doc(`schoolMemberships/${e.schoolKey}_${uid}`).get()).data();
+      if (membership?.status === 'approved') return true;
+    }
+  }
   return (await sub(db, t.id, `roster/${uid}`).get()).exists;
 }
 
@@ -199,10 +210,11 @@ export const STANDINGS_ROWS = 500;
  * so running it twice (two ticks racing) writes the same document twice.
  */
 export async function recomputeStandings(db: Firestore, tid: string, now: number): Promise<void> {
-  const tSnap = await tRef(db, tid).get();
+  await db.runTransaction(async (tx) => {
+  const tSnap = await tx.get(tRef(db, tid));
   if (!tSnap.exists) return;
   const t = tSnap.data() as TournamentDoc;
-  const snap = await subCol(db, tid, 'players').get();
+  const snap = await tx.get(subCol(db, tid, 'players'));
   const rows: PlayerRow[] = snap.docs.map((d) => {
     const p = d.data() as PlayerDoc;
     return {
@@ -236,10 +248,30 @@ export async function recomputeStandings(db: Firestore, tid: string, now: number
     qualified: s.qualified,
     needed: s.needed,
   }));
+  let namedTeams: ReturnType<typeof rankNamedTeams> = [];
+  if (t.schemaVersion === 2 && t.competitionEventId) {
+    const event = (await tx.get(db.doc(`competitionEvents/${t.competitionEventId}`))).data();
+    if (event?.entryMode === 'named_team') {
+      const entries = await tx.get(db.collection(`competitionEvents/${t.competitionEventId}/entries`).where('state', '==', 'registered'));
+      let namedScores = rows;
+      if (t.format !== 'live') {
+        const attempts = await tx.get(subCol(db, tid, 'attempts'));
+        const elapsed = new Map<string, number>();
+        for (const a of attempts.docs) {
+          const attempt = a.data() as { uid: string; choices: number[]; elapsedMs: number[] };
+          const submittedMs = attempt.choices.reduce((sum, choice, i) => sum + (choice >= 0 ? attempt.elapsedMs[i] || 0 : 0), 0);
+          elapsed.set(attempt.uid, (elapsed.get(attempt.uid) || 0) + submittedMs);
+        }
+        namedScores = rows.map((r) => ({ ...r, totalMs: elapsed.get(r.uid) || 0 }));
+      }
+      namedTeams = rankNamedTeams(entries.docs.map((d) => ({ id: d.id, label: d.data().label as string, starters: d.data().starters as string[] })), namedScores, t.questionCount, t.schedule.questionMs);
+    }
+  }
   const final = t.state === 'finished';
-  await sub(db, tid, 'standings/current').set({
+  tx.set(sub(db, tid, 'standings/current'), {
     rows: ranked,
     teams,
+    namedTeams,
     total: rows.length,
     final,
     updatedAt: now,
@@ -247,7 +279,10 @@ export async function recomputeStandings(db: Firestore, tid: string, now: number
   const patch: Record<string, unknown> = { standingsDirty: false, updatedAt: now };
   if (final) {
     // The bracket's winner is decided by the bracket, not by total points.
-    if (t.format !== 'bracket') {
+    if (namedTeams.length) {
+      patch.winner = null;
+      patch.winningEntrants = namedTeams.filter((row) => row.rank === 1 && row.points > 0).map((row) => ({ id: row.id, label: row.label }));
+    } else if (t.format !== 'bracket') {
       const top = ranked[0];
       patch.winner = top && top.points > 0 ? { uid: top.uid, displayName: top.displayName } : null;
     }
@@ -256,7 +291,8 @@ export async function recomputeStandings(db: Firestore, tid: string, now: number
     // A dirty-standings nudge pulled the deadline forward; put it back on the schedule.
     patch.nextDeadlineAt = scheduledDeadline(t, now);
   }
-  await tRef(db, tid).update(patch);
+  tx.update(tRef(db, tid), patch);
+  });
 }
 
 // ── Advancing ──────────────────────────────────────────────────────────────
@@ -521,7 +557,7 @@ export interface JoinIdentity {
 
 export type JoinOutcome =
   | { ok: true; already: boolean; seed: number }
-  | { ok: false; error: 'not_found' | 'closed' | 'full' | 'school_required' | 'grade_required' };
+  | { ok: false; error: 'not_found' | 'closed' | 'full' | 'school_required' | 'grade_required' | 'managed_entry_required' };
 
 /** Can a new player still come in? A knockout is drawn at the start; the rest take late arrivals. */
 export function joinOpen(t: Pick<TournamentDoc, 'state' | 'format'>): boolean {
@@ -542,6 +578,7 @@ export async function joinTournament(db: Firestore, tid: string, who: JoinIdenti
     const rosterRef = sub(db, tid, `roster/${who.uid}`);
     const existing = await tx.get(rosterRef);
     if (existing.exists) return { ok: true, already: true, seed: existing.data()?.seed || 0 };
+    if (t.schemaVersion === 2) return { ok: false, error: 'managed_entry_required' };
     if (!joinOpen(t)) return { ok: false, error: 'closed' };
     if ((t.playerCount || 0) >= t.maxPlayers) return { ok: false, error: 'full' };
     if (t.teamRule === 'school' && !who.school) return { ok: false, error: 'school_required' };

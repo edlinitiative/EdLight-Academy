@@ -87,7 +87,11 @@
     "pipeline:exams": "bash scripts/run_exam_pipeline.sh",
     "pipeline:exams:gemini": "bash scripts/run_exam_pipeline.sh --gemini",
     "check:bundles": "node scripts/check_exam_bundles.mjs",
-    "debundle:exams": "node scripts/debundle_exams.mjs"
+    "debundle:exams": "node scripts/debundle_exams.mjs",
+    "test:competition:emulator": "bash scripts/test_competition_emulator.sh",
+    "release:check": "node scripts/release_readiness.mjs",
+    "release:inventory": "node scripts/release_readiness.mjs --inventory",
+    "release:gate": "node scripts/release_readiness.mjs --gate"
   },
   "browserslist": {
     "production": [
