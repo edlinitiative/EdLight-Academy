@@ -1,6 +1,9 @@
 import { createHash, randomInt } from 'node:crypto';
-import type { Firestore, Transaction } from 'firebase-admin/firestore';
-import { CLASS_LIMITS, ClassError, assertMember, assertTeacher, classDetail, classId, classText, classWeek, type ClassDetail, type ClassRecord, type ClassWeek } from '../../shared/classes';
+import type { Firestore } from 'firebase-admin/firestore';
+import { CLASS_CONSENT_VERSION, CLASS_LIMITS, ClassError, assertMember, assertTeacher, classDetail, classId, classText, classWeek, type ClassDetail, type ClassRecord, type ClassWeek } from '../../shared/classes';
+import { balanceHouses, keepAndFill, parseHouses, smallestHouse } from '../../shared/classHouses';
+import { detachFromClassTournaments } from '../tournois/_shared';
+import { eraseTeacherFixtures, fixtureCategories, fixtureViews, readOpenFixtures } from './classFixtures';
 import { flattenQuestions, gradeExam } from '../../shared/examUtils';
 import { isEssayType } from '../../shared/essayGradeCore';
 import { examFetcher } from './explainGate';
@@ -13,6 +16,7 @@ const codeAlphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const newCode = () => Array.from({ length: 6 }, () => codeAlphabet[randomInt(codeAlphabet.length)]).join('');
 const stableId = (uid: string, requestId: unknown) => createHash('sha256').update(`${uid}:${classId(requestId)}`).digest('hex').slice(0, 28);
 const emptyWeek = (): ClassWeek => ({ xp: {}, completed: {} });
+const previousWeek = (now: number) => classWeek(now - 7 * 86400000);
 
 export async function classHome(db: Firestore, uid: string) {
   const [account, role, owned] = await Promise.all([
@@ -43,8 +47,12 @@ export async function readClass(db: Firestore, uid: string, id: string, now: num
     const byUid = Object.fromEntries(Object.entries(approved).map(([id, value]) => [id, Object.keys(value as object)]));
     const out = classDetail(c, uid, (week.data() as ClassWeek) || emptyWeek(), byUid, now);
     // Scores are private to the teacher; answers and transcripts are never returned.
-    return { ...out, scores: out.teacher ? approved as ClassDetail['scores'] : {} };
-  });
+    return { detail: { ...out, scores: out.teacher ? approved as ClassDetail['scores'] : {} } as ClassDetail, c };
+  }).then(async ({ detail, c }) => ({
+    ...detail,
+    fixtures: await fixtureViews(db, c, uid, now),
+    ...(detail.teacher ? { fixtureCategories: fixtureCategories() } : {}),
+  }));
 }
 
 export async function createClass(db: Firestore, uid: string, body: Record<string, unknown>, now: number) {
@@ -109,7 +117,7 @@ export async function joinClass(db: Firestore, uid: string, name: string, code: 
     if (c.teacherUid === uid || c.members[uid] || c.pending[uid]) return { id: c.id, pending: !!c.pending[uid] };
     const ids = (account.data()?.ids || []) as string[];
     if (ids.length >= CLASS_LIMITS.perStudent || c.pendingUids.length >= CLASS_LIMITS.pending || c.memberUids.length >= CLASS_LIMITS.students) throw new ClassError('full');
-    c.pending[uid] = { name: name.slice(0, 80), joinedAt: now };
+    c.pending[uid] = { name: name.slice(0, 80), joinedAt: now, consent: CLASS_CONSENT_VERSION };
     c.pendingUids.push(uid);
     tx.set(ref, c);
     tx.set(accountRef, { ids: [...new Set([...ids, c.id])] });
@@ -118,6 +126,16 @@ export async function joinClass(db: Firestore, uid: string, name: string, code: 
 }
 
 export async function mutateClass(db: Firestore, uid: string, action: string, body: Record<string, unknown>, now: number) {
+  const out = await mutateClassTx(db, uid, action, body, now);
+  if (action === 'remove' || action === 'leave') {
+    // Stop counting for this class in class tournaments. Scores stay; standings re-check membership regardless.
+    const target = action === 'leave' ? uid : classId(body.studentUid);
+    await detachFromClassTournaments(db, target, classId(body.id), now).catch(() => console.error('[classes] tournament detach failed'));
+  }
+  return out;
+}
+
+async function mutateClassTx(db: Firestore, uid: string, action: string, body: Record<string, unknown>, now: number) {
   const id = classId(body.id);
   // Fetch and validate published content before starting a transaction. No arbitrary URL supplied by clients.
   let exam: any;
@@ -130,12 +148,19 @@ export async function mutateClass(db: Firestore, uid: string, action: string, bo
     const snap = await tx.get(ref);
     if (!snap.exists) throw new ClassError('not_found');
     const c = snap.data() as ClassRecord;
-    if (action !== 'leave') {
+    if (action !== 'leave' && action !== 'share-mastery') {
       assertTeacher(c, uid);
       const role = await tx.get(db.doc(`classTeachers/${uid}`));
       if (role.data()?.active !== true) throw new ClassError('teacher_required');
     }
-    else if (!c.members[uid] && !c.pending[uid]) return { ok: true, joined: false };
+    else if (action === 'leave' && !c.members[uid] && !c.pending[uid]) return { ok: true, joined: false };
+    if (action === 'share-mastery') {
+      // A member who joined under the earlier disclosure re-accepts the current one.
+      if (!c.members[uid]) throw new ClassError('forbidden');
+      c.members[uid] = { ...c.members[uid], consent: CLASS_CONSENT_VERSION };
+      tx.set(ref, c);
+      return { ok: true, joined: false };
+    }
     if (c.archived && action !== 'leave') throw new ClassError('archived');
     let joined = false;
     if (action === 'approve' || action === 'reject' || action === 'remove' || action === 'leave') {
@@ -149,9 +174,13 @@ export async function mutateClass(db: Firestore, uid: string, action: string, bo
         if (!c.members[target]) {
           if (c.memberUids.length >= CLASS_LIMITS.students) throw new ClassError('full');
           c.members[target] = c.pending[target]; c.memberUids.push(target); joined = true;
+          // A new member lands in the smallest house, so headcounts stay within one.
+          const house = smallestHouse((c.houses || []).map((h) => h.id), c.houseOf || {}, c.memberUids);
+          if (house) c.houseOf = { ...(c.houseOf || {}), [target]: house };
         }
       } else {
         delete c.members[target]; c.memberUids = c.memberUids.filter((v) => v !== target);
+        if (c.houseOf) delete c.houseOf[target];
         tx.set(accountRef, { ids: ((account.data()?.ids || []) as string[]).filter((v) => v !== id) });
         const byUid = completions?.data()?.byUid || {};
         delete byUid[target];
@@ -169,27 +198,39 @@ export async function mutateClass(db: Firestore, uid: string, action: string, bo
         c.assignments.push({ id: aid, title: classText(body.title), examId: classId(body.examId), level, createdAt: now, dueAt });
       }
     } else if (action === 'archive') {
+      const open = await readOpenFixtures(tx, db, c);
       c.archived = true;
       tx.delete(db.doc(`classCodes/${c.code}`));
+      for (const f of open) {
+        tx.set(db.doc(`classFixtures/${f.id}`), { ...f, state: 'cancelled', decidedAt: now });
+        tx.delete(db.doc(`classFixtureCodes/${f.code}`));
+      }
+    } else if (action === 'houses-set' || action === 'houses-balance') {
+      const houses = action === 'houses-set' ? parseHouses(body.houses) : c.houses || [];
+      if (!houses.length) throw new ClassError('invalid_input');
+      const ids = houses.map((h) => h.id);
+      if (action === 'houses-set' && body.mode === 'keep') c.houseOf = keepAndFill(c.memberUids, ids, c.houseOf || {});
+      else {
+        // Spread recent strength: this week's and last week's practice XP.
+        const [now0, prev] = await Promise.all([tx.get(ref.collection('weeks').doc(classWeek(now))), tx.get(ref.collection('weeks').doc(previousWeek(now)))]);
+        const strength: Record<string, number> = {};
+        for (const w of [now0.data(), prev.data()] as Array<ClassWeek | undefined>) for (const [u, xp] of Object.entries(w?.xp || {})) strength[u] = (strength[u] || 0) + xp;
+        c.houseOf = balanceHouses(c.memberUids, ids, strength);
+      }
+      c.houses = houses;
+    } else if (action === 'house-move') {
+      const target = classId(body.studentUid), house = classId(body.houseId);
+      if (!c.members[target] || !(c.houses || []).some((h) => h.id === house)) throw new ClassError('not_found');
+      c.houseOf = { ...(c.houseOf || {}), [target]: house };
+    } else if (action === 'houses-clear') {
+      delete c.houses; delete c.houseOf;
     } else throw new ClassError('invalid_input');
     tx.set(ref, c);
     return { ok: true, joined };
   });
 }
 
-/** Reads are performed before any award writes. Returned callback writes in the SAME award transaction. */
-export async function prepareClassXp(db: Firestore, tx: Transaction, uid: string, xp: number, now: number): Promise<() => void> {
-  const classes = await tx.get(db.collection('classes').where('memberUids', 'array-contains', uid).limit(CLASS_LIMITS.perStudent));
-  const active = classes.docs.filter((d) => !d.data().archived && d.data().members?.[uid]);
-  const rows = await Promise.all(active.map(async (d) => {
-    const ref = d.ref.collection('weeks').doc(classWeek(now));
-    const snap = await tx.get(ref);
-    const week = (snap.data() as ClassWeek) || emptyWeek();
-    week.xp[uid] = (week.xp[uid] || 0) + xp;
-    return { ref, week };
-  }));
-  return () => rows.forEach(({ ref, week }) => tx.set(ref, week));
-}
+export { prepareClassXp } from './classXp';
 
 /** Recompute objective practice marks with the existing grader; never accept a caller-supplied score. */
 export async function completeAssignment(db: Firestore, uid: string, id: string, assignmentId: string, now: number) {
@@ -252,6 +293,7 @@ export async function eraseClassAccount(db: Firestore, uid: string) {
         tx.set(ref, { ids: ((snap.data()?.ids || []) as string[]).filter((id) => id !== c.id) });
       });
     }
+    await eraseTeacherFixtures(db, uid, c, Date.now());
     await db.doc(`classCodes/${c.code}`).delete(); await db.recursiveDelete(d.ref);
   }
   const account = await db.doc(`classAccounts/${uid}`).get();
@@ -262,6 +304,7 @@ export async function eraseClassAccount(db: Firestore, uid: string) {
       if (!snap.exists) return;
       const c = snap.data() as ClassRecord;
       delete c.members[uid]; delete c.pending[uid];
+      if (c.houseOf) delete c.houseOf[uid];
       c.memberUids = c.memberUids.filter((v) => v !== uid); c.pendingUids = c.pendingUids.filter((v) => v !== uid);
       tx.set(ref, c);
     });
@@ -269,6 +312,8 @@ export async function eraseClassAccount(db: Firestore, uid: string) {
       const doneRef = ref.collection('state').doc('completions'), done = await tx.get(doneRef);
       const byUid = done.data()?.byUid || {}; delete byUid[uid]; tx.set(doneRef, { byUid });
     });
+    // Best-effort: never let tournament hygiene abort the erasure below (standings re-check membership anyway).
+    await detachFromClassTournaments(db, uid, classId(id), Date.now()).catch(() => console.warn('[classes] erase: tournament detach failed'));
     const weeks = await ref.collection('weeks').get();
     for (const w of weeks.docs) await db.runTransaction(async (tx) => {
       const snap = await tx.get(w.ref); const week = snap.data() as ClassWeek;

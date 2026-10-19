@@ -45,6 +45,7 @@ export function TournamentTile({ tour }: { tour: Tournament }) {
         <span className="tn-pill">{formatLabel(tour.format, isCreole)}</span>
         {tour.teamRule === 'school' && <span className="tn-pill">{t('École vs école', 'Lekòl vs lekòl')}</span>}
         {tour.teamRule === 'grade' && <span className="tn-pill">{t('Classe vs classe', 'Klas vs klas')}</span>}
+        {tour.teamRule === 'class' && <span className="tn-pill">{t('Classe vérifiée', 'Klas verifye')}</span>}
       </div>
       <p className="tn-tile__title">{tour.title}</p>
       <div className="tn-tile__meta">

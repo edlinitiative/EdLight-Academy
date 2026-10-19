@@ -57,7 +57,7 @@ import { requireAuthDecoded } from '../_lib/requireAuth';
 import { checkRateLimit } from '../_lib/rateLimit';
 import { getDb } from '../_lib/firebaseAdmin';
 import { cleanAvatar } from '../../src/arena-art/avatars/avatarConfig';
-import { prepareClassXp } from '../_lib/classSpaces';
+import { prepareClassXp } from '../_lib/classXp';
 
 /** A single call can award at most this much XP (bounds injection abuse). */
 const MAX_XP_DELTA = 5000;

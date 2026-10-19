@@ -117,6 +117,7 @@ function snap(path: string, data: Data | undefined, db: FakeDb) {
 export class FakeDocRef {
   constructor(private db: FakeDb, public path: string) {}
   get id() { return this.path.split('/').pop() as string; }
+  collection(name: string) { return this.db.collection(`${this.path}/${name}`); }
   async get() { return snap(this.path, this.db.store.get(this.path), this.db); }
   async set(data: Data, opts?: { merge?: boolean }) { this.applySet(data, opts); }
   async update(data: Data) { this.applyUpdate(data); }

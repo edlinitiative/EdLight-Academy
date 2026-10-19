@@ -49,6 +49,7 @@ import {
   joinTournament,
   parseBody,
   resolveIdentity,
+  resolveVerifiedClass,
   sub,
   tRef,
   type TournamentDoc,
@@ -301,7 +302,8 @@ export default async function handler(
   pin = creation.pin;
 
   if (cfg.creatorPlays) {
-    const joined = await joinTournament(db, tid, identity, now);
+    const verified = cfg.teamRule === 'class' ? await resolveVerifiedClass(db, uid, body.classId) : null;
+    const joined = await joinTournament(db, tid, verified ? { ...identity, ...verified } : identity, now);
     if (!joined.ok) {
       // School vs school with no school on the creator's profile: the
       // tournament still exists, the creator just hosts until they join.

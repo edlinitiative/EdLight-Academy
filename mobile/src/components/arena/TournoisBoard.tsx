@@ -28,6 +28,7 @@ import {
   type RowMove,
 } from '../../../../shared/competition/presentation';
 import { POINTS } from '../../../../shared/competition/labels';
+import { teamRuleLabel } from '../../../../shared/tournois/config';
 import type { LiveState, Standings } from '../../../../shared/tournois/models';
 
 type T = (fr: string, ht: string) => string;
@@ -240,7 +241,7 @@ export default function TournoisBoard({
       {squads.length ? (
         <>
           <Text accessibilityRole="header" style={[arenaType.name, { color: C.inkSoft }]}>
-            {teamRule === 'school' ? t('École contre école', 'Lekòl kont lekòl') : t('Classe contre classe', 'Klas kont klas')}
+            {teamRuleLabel(teamRule, !!ht)}
           </Text>
           <Rows lines={squads} mine={null} t={t} pts={pts} open detail={detail} />
         </>

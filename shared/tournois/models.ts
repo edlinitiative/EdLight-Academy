@@ -28,6 +28,8 @@ export interface Tournament extends TournamentConfig {
   bracketRounds: number;
   winner: { uid: string; displayName: string } | null;
   createdAt: number;
+  /** Present on a class-vs-class fixture: entry is through Mes classes only. */
+  classFixtureId?: string;
 }
 
 export interface LiveReveal {
@@ -116,6 +118,9 @@ export interface RosterEntry {
   displayName: string;
   school: string | null;
   grade: string | null;
+  /** teamRule 'class': public team key + label of the verified class. */
+  classKey?: string | null;
+  classLabel?: string | null;
   seed: number;
   joinedAt: number;
 }

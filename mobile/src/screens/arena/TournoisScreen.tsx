@@ -482,7 +482,12 @@ export default function TournoisScreen() {
                   {enumLabel(TOURNAMENT_STATE, tournament.state)[ht ? 1 : 0]} ·{' '}
                   {roster.length}/{tournament.maxPlayers}
                 </Text>
-                {tournament.teamRule !== 'solo'
+                {tournament.teamRule === 'class'
+                  ? label(
+                      'Équipes : classes vérifiées par leur professeur. Seuls les meilleurs scores comptent.',
+                      'Ekip yo : klas pwofesè yo verifye. Se sèlman pi bon nòt yo ki konte.',
+                    )
+                  : tournament.teamRule !== 'solo'
                   ? label(
                       'Groupes déclarés par les joueurs, non vérifiés. Seuls les meilleurs scores comptent.',
                       'Gwoup jwè yo deklare, ki pa verifye. Se sèlman pi bon nòt yo ki konte.',

@@ -39,6 +39,7 @@ import { isTeamAction, teamPlay, teamReview, TeamError } from './_team';
 import {
   advanceTournament,
   canSee,
+  classPlayAllowed,
   boundedInt,
   enforceRateLimit,
   parseBody,
@@ -76,6 +77,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   if (!tournament) return fail(res, 404, 'not_found');
   if (tournament.schemaVersion !== undefined && tournament.schemaVersion !== 1 && tournament.schemaVersion !== 2) return fail(res, 400, 'unsupported_schema');
   if (!(await canSee(db, tournament, uid))) return fail(res, 403, 'forbidden');
+  // Verified classes: leaving or being removed from the class ends play for it.
+  if (['live-answer', 'start', 'answer'].includes(String(body.action)) && !(await classPlayAllowed(db, tournament, uid))) {
+    return fail(res, 403, 'class_required');
+  }
   // A mode this build does not know is never played as if it were independent.
   if (parseGameMode(tournament.gameMode) === null) return fail(res, 400, 'unsupported_mode');
   const teamMode = isTeamGameMode(tournament.gameMode);
