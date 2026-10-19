@@ -2,6 +2,8 @@ import React, { useMemo } from 'react';
 import { Text, TextInput, View } from 'react-native';
 import { useColors, useTheme, typeScale } from '../theme/theme';
 import useStore from '../contexts/store';
+import { flowPieces } from '../utils/flowPieces';
+import { balanceMathAcrossBlanks } from '../../../shared/mathBlanks';
 
 /**
  * One input per blank, for questions whose text carries more than one blank.
@@ -134,4 +136,72 @@ export function numberBlanks(text: string): string {
     i += 1;
     return marker;
   });
+}
+
+/**
+ * The web's FillBlankText on the phone: the sentence with its inputs IN it.
+ * Same split (BLANK_RE + balanceMathAcrossBlanks), same storage (one blank →
+ * the raw value, several → "val1|val2"), and the same "(indice)" right after
+ * a blank used as that blank's placeholder. Used for the fill_blank questions
+ * the shared compiler does not turn into inline widgets.
+ */
+export function InlineFillBlank({ text, value, onChange, header }: {
+  text: string;
+  value: string;
+  onChange: (v: string) => void;
+  header?: React.ReactNode;
+}) {
+  const colors = useColors();
+  const { cardSurface, radius, isDark } = useTheme();
+  const parts = useMemo(() => balanceMathAcrossBlanks(String(text ?? '').split(BLANK_RE)), [text]);
+  const blankCount = parts.length - 1;
+  const values = blankCount > 1 ? splitValues(value, blankCount) : [value ?? ''];
+  const set = (i: number, v: string) => {
+    if (blankCount <= 1) { onChange(v); return; }
+    const next = [...values];
+    next[i] = v;
+    onChange(next.every((x) => !x.trim()) ? '' : next.join('|'));
+  };
+  const word = { fontSize: 18, lineHeight: 34, color: colors.ink } as const;
+
+  return (
+    <View style={{ ...cardSurface, padding: 20, gap: 14 }}>
+      {header}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' }}>
+        {parts.map((segment, i) => {
+          let hint = '';
+          let clean = segment;
+          if (i > 0) {
+            const m = segment.match(/^\s*\(([^)]+)\)/);
+            if (m) { hint = m[1]; clean = segment.slice(m[0].length); }
+          }
+          return (
+            <React.Fragment key={i}>
+              {i > 0 ? (
+                <TextInput
+                  value={values[i - 1]}
+                  onChangeText={(v) => set(i - 1, v)}
+                  placeholder={hint || '…'}
+                  placeholderTextColor={colors.faint}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardAppearance={isDark ? 'dark' : 'light'}
+                  accessibilityLabel={blankCount > 1 ? `Blanc ${i}` : 'Blanc à compléter'}
+                  style={{
+                    minWidth: hint ? Math.max(96, hint.length * 10 + 24) : 96, minHeight: 44, marginHorizontal: 2,
+                    paddingHorizontal: 12, paddingVertical: 8, textAlign: 'center', fontSize: 16, color: colors.ink,
+                    backgroundColor: colors.surfaceAlt, borderRadius: radius.control,
+                    borderWidth: 1, borderColor: values[i - 1] ? colors.azure : 'transparent',
+                  }}
+                />
+              ) : null}
+              {flowPieces(clean).map((p, j) => (p.kind === 'break'
+                ? <View key={`${i}-${j}`} style={{ width: '100%', height: 0 }} />
+                : <Text key={`${i}-${j}`} style={word}>{p.text}</Text>))}
+            </React.Fragment>
+          );
+        })}
+      </View>
+    </View>
+  );
 }

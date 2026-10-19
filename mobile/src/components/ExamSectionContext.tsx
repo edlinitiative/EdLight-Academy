@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { ChevronDown, ChevronUp, BookOpen } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { useColors, useTheme, typeScale, fonts } from '../theme/theme';
+import MathText from './MathText';
 
 /**
  * "I- Compétence Linguistique" → { numeral: 'I', name: 'Compétence Linguistique' }
@@ -22,7 +23,6 @@ function cleanExamText(raw: unknown): string {
   return String(raw ?? '')
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/?[a-z][^>]*>/gi, '')
-    .replace(/\*\*/g, '')
     .replace(/[ \t]*\n[ \t]*/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
@@ -59,166 +59,86 @@ function PassageCard({ passage, label = 'Texte à lire' }: { passage: string; la
         style={{ maxHeight: 200 }}
         contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 8, paddingBottom: 14 }}
       >
-        <Text style={[typeScale.body, { lineHeight: 22, color: colors.muted }]}>{passage}</Text>
+        <MathText text={passage} style={[typeScale.body, { lineHeight: 22, color: colors.muted }]} />
       </ScrollView>
     </View>
   );
 }
 
 /**
- * Section context shown above each question.
+ * Section context shown above each question — the web's SectionHeader +
+ * ReadingPassage (src/pages/ExamTake.tsx), on every question of the section:
  *
- * - First question of a section → prominent intro block: title + instructions
- *   + (if present) the reading passage in a height-capped scrollable card.
- * - Following questions of the same section → compact one-line chip with a
- *   "Consignes" toggle that re-expands instructions + passage on demand.
+ * - a slim title row, with the SHORT instructions (≤ 200 chars) open under it
+ *   by default and a chevron to fold them away;
+ * - long instructions (an embedded reading text) or the section's passage in
+ *   an always-visible, height-capped card.
+ *
+ * It used to hide the instructions behind a collapsed "Consignes" chip even on
+ * the section's first question, so the actual task ("Recopier et compléter
+ * judicieusement les phrases suivantes") was invisible, and it announced each
+ * section with a heavy "NOUVELLE SECTION" card the web never had.
  */
+const SHORT_INSTRUCTIONS = 200;
+
 export default function ExamSectionContext({
   title,
   instructions,
   passage,
-  isSectionStart,
 }: {
   title: string;
   instructions?: string | null;
   passage?: string | null;
-  isSectionStart: boolean;
+  /** Kept for callers; the header now reads the same on every question. */
+  isSectionStart?: boolean;
 }) {
   const colors = useColors();
-  const { shadow, radius } = useTheme();
-  const [expanded, setExpanded] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
-  const cardShadow = shadow.sm;
 
   const safeTitle = cleanExamText(title);
   const safeInstructions = cleanExamText(instructions);
   const safePassage = cleanExamText(passage);
-  const longInstructions = safeInstructions.length > LONG_INSTRUCTIONS;
+  const shortInstructions = safeInstructions && safeInstructions.length <= SHORT_INSTRUCTIONS ? safeInstructions : '';
+  const panelText = safePassage || (safeInstructions.length > SHORT_INSTRUCTIONS ? safeInstructions : '');
 
   if (!safeTitle && !safeInstructions && !safePassage) return null;
 
   const { numeral, name } = parseSectionTitle(safeTitle);
   const displayTitle = numeral ? t(`Section ${numeral} · ${name}`, `Seksyon ${numeral} · ${name}`) : safeTitle;
 
-  // ── Section intro (first question of the section) ──────────────────────────
-  // Title stays prominent; the consignes (often long, generic exam-wide rules)
-  // are behind a collapsed "Consignes" toggle so they never push the question
-  // off-screen. Any reading passage stays visible (students need to read it).
-  if (isSectionStart) {
-    return (
-      <View style={{ marginBottom: 16, gap: 10 }}>
-        <View
-          style={[
-            {
-              backgroundColor: colors.surface,
-              borderRadius: radius.card,
-              padding: 16,
-            },
-            cardShadow,
-          ]}
-        >
-          <Text style={[typeScale.overline, { color: colors.azureInk, marginBottom: 4 }]}>
-            {t('Nouvelle section', 'Nouvo seksyon')}
-          </Text>
-          {safeTitle ? (
-            <Text style={[typeScale.h2, { color: colors.ink }]}>
-              {displayTitle}
-            </Text>
-          ) : null}
-
-          {safeInstructions ? (
-            <TouchableOpacity
-              onPress={() => setExpanded((v) => !v)}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-                marginTop: 12,
-                alignSelf: 'flex-start',
-                paddingHorizontal: 10,
-                paddingVertical: 6,
-                borderRadius: 999,
-                backgroundColor: colors.surfaceAlt,
-              }}
-              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-              accessibilityRole="button"
-              accessibilityState={{ expanded }}
-              accessibilityLabel={t('Consignes', 'Konsiy')}
-            >
-              <Text style={[typeScale.label, { color: colors.azureInk, fontFamily: fonts.headingBold }]}>{t('Consignes', 'Konsiy')}</Text>
-              {expanded ? <ChevronUp color={colors.azureInk} size={14} /> : <ChevronDown color={colors.azureInk} size={14} />}
-            </TouchableOpacity>
-          ) : null}
-
-          {expanded && safeInstructions && !longInstructions ? (
-            <Text style={[typeScale.bodyMd, { lineHeight: 21, color: colors.muted, marginTop: 12 }]}>
-              {safeInstructions}
-            </Text>
-          ) : null}
-        </View>
-
-        {expanded && safeInstructions && longInstructions ? (
-          <PassageCard passage={safeInstructions} label={t('Consignes et texte', 'Konsiy ak tèks')} />
-        ) : null}
-        {safePassage ? <PassageCard passage={safePassage} label={t('Texte à lire', 'Tèks pou li')} /> : null}
-      </View>
-    );
-  }
-
-  // ── Compact version (subsequent questions of the same section) ─────────────
   return (
-    <View style={{ marginBottom: 14 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <View style={{ flex: 1, backgroundColor: colors.azureSoft, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, alignSelf: 'flex-start' }}>
-          <Text style={[typeScale.micro, { color: colors.azureInk, fontFamily: fonts.headingBold }]} numberOfLines={1}>
-            {displayTitle}
-          </Text>
-        </View>
-        {safeInstructions || safePassage ? (
-          <TouchableOpacity
-            onPress={() => setExpanded((v) => !v)}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 4,
-              paddingHorizontal: 10,
-              paddingVertical: 5,
-              borderRadius: 999,
-              backgroundColor: colors.surface,
-            }}
-            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-            accessibilityRole="button"
-            accessibilityState={{ expanded }}
-            accessibilityLabel={t('Consignes', 'Konsiy')}
-          >
-            <Text style={[typeScale.micro, { color: colors.muted }]}>{t('Consignes', 'Konsiy')}</Text>
-            {expanded ? <ChevronUp color={colors.muted} size={13} /> : <ChevronDown color={colors.muted} size={13} />}
-          </TouchableOpacity>
-        ) : null}
-      </View>
+    <View style={{ marginBottom: 16, gap: 10 }}>
+      {safeTitle ? (
+        <TouchableOpacity
+          activeOpacity={shortInstructions ? 0.6 : 1}
+          disabled={!shortInstructions}
+          onPress={() => setCollapsed((c) => !c)}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 32 }}
+          accessibilityRole={shortInstructions ? 'button' : 'header'}
+          accessibilityState={shortInstructions ? { expanded: !collapsed } : undefined}
+          accessibilityLabel={shortInstructions
+            ? `${displayTitle}. ${collapsed ? t('Afficher les instructions', 'Montre konsiy yo') : t('Masquer les instructions', 'Kache konsiy yo')}`
+            : displayTitle}
+        >
+          <Text style={[typeScale.titleSm, { flex: 1, color: colors.ink, fontFamily: fonts.headingBold }]}>{displayTitle}</Text>
+          {shortInstructions
+            ? (collapsed ? <ChevronDown color={colors.muted} size={18} /> : <ChevronUp color={colors.muted} size={18} />)
+            : null}
+        </TouchableOpacity>
+      ) : null}
 
-      {expanded ? (
-        <View style={{ marginTop: 10, gap: 10 }}>
-          {safeInstructions && longInstructions ? (
-            <PassageCard passage={safeInstructions} label={t('Consignes et texte', 'Konsiy ak tèks')} />
-          ) : safeInstructions ? (
-            <View
-              style={[
-                {
-                  backgroundColor: colors.surface,
-                  borderRadius: radius.card,
-                  padding: 14,
-                },
-                cardShadow,
-              ]}
-            >
-              <Text style={[typeScale.bodyMd, { lineHeight: 21, color: colors.muted }]}>{safeInstructions}</Text>
-            </View>
-          ) : null}
-          {safePassage ? <PassageCard passage={safePassage} label={t('Texte à lire', 'Tèks pou li')} /> : null}
-        </View>
+      {shortInstructions && !collapsed ? (
+        <MathText text={shortInstructions} style={[typeScale.bodyMd, { lineHeight: 22, color: colors.muted }]} />
+      ) : null}
+
+      {panelText ? (
+        <PassageCard
+          passage={panelText}
+          label={safePassage ? t('Texte à lire', 'Tèks pou li') : t('Consignes et texte', 'Konsiy ak tèks')}
+        />
       ) : null}
     </View>
   );

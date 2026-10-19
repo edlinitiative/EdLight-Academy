@@ -7,6 +7,8 @@ import { MathChips, MathPreview } from '../ExamAnswerInput';
 import useStore from '../../contexts/store';
 import { useColors, useTheme, typeScale } from '../../theme/theme';
 import { mathToText } from '../../utils/mathText';
+import { flowPieces } from '../../utils/flowPieces';
+import { balanceMathAcrossBlanks } from '../../../../shared/mathBlanks';
 
 /**
  * Renders a compiled question: the prompt is a document, and each answer is a
@@ -135,9 +137,11 @@ function WidgetInput({ widget, value, onChange, inline, mathy }: {
   );
 }
 
+export { flowPieces } from '../../utils/flowPieces';
+
 /**
- * The prompt, with its inputs in place. Text runs and inline fields are laid
- * out in one wrapping row so a field sits in the sentence rather than under it.
+ * The prompt, with its inputs in place. Text is laid out word by word in one
+ * wrapping row, so a field sits in the sentence rather than under it.
  */
 function Prompt({ blocks, widgets, response, onChange }: {
   blocks: Block[];
@@ -148,23 +152,40 @@ function Prompt({ blocks, widgets, response, onChange }: {
   const colors = useColors();
   const hasHole = blocks.some((b) => b.type === 'widget');
 
+  if (!hasHole) {
+    return (
+      <View style={{ gap: 12 }}>
+        {blocks.map((block, i) => (block.type === 'text'
+          // Raw: MathText typesets delimited LaTeX and falls back to
+          // mathToText itself. Transforming first strips the `$…$` and makes
+          // the KaTeX path unreachable.
+          ? <MathText key={`t${i}`} text={block.content} style={{ fontSize: 18, color: colors.ink, lineHeight: 27 }} />
+          : block.type === 'figure' ? <ExamFigure key={`f${i}`} description={block.description} /> : null))}
+      </View>
+    );
+  }
+
+  // A blank inside a formula leaves each neighbouring run with an unmatched
+  // `$`; close and reopen the formula around it, as the web does.
+  const textIdx = blocks.map((b, i) => (b.type === 'text' ? i : -1)).filter((i) => i >= 0);
+  const balanced = balanceMathAcrossBlanks(textIdx.map((i) => (blocks[i] as Extract<Block, { type: 'text' }>).content));
+  const runText = new Map(textIdx.map((bi, k) => [bi, balanced[k]]));
+
+  const word = { fontSize: 18, lineHeight: 34, color: colors.ink } as const;
   return (
-    <View style={{ flexDirection: hasHole ? 'row' : 'column', flexWrap: 'wrap', alignItems: 'center' }}>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' }}>
       {blocks.map((block, i) => {
         if (block.type === 'text') {
-          return (
-            <MathText
-              key={`t${i}`}
-              // Raw: MathText typesets delimited LaTeX and falls back to
-              // mathToText itself. Transforming first strips the `$…$` and
-              // makes the KaTeX path unreachable.
-              text={block.content}
-              style={{ fontSize: 18, color: colors.ink, lineHeight: hasHole ? 34 : 27 }}
-            />
-          );
+          return flowPieces(runText.get(i) ?? block.content).map((p, j) => (p.kind === 'break'
+            ? <View key={`t${i}-${j}`} style={{ width: '100%', height: 0 }} />
+            : <Text key={`t${i}-${j}`} style={word}>{p.text}</Text>));
         }
         if (block.type === 'figure') {
-          return <ExamFigure key={`f${i}`} description={block.description} />;
+          return (
+            <View key={`f${i}`} style={{ width: '100%' }}>
+              <ExamFigure description={block.description} />
+            </View>
+          );
         }
         const widget = widgets[block.id];
         if (!widget) return null;
@@ -182,11 +203,14 @@ function Prompt({ blocks, widgets, response, onChange }: {
   );
 }
 
-export default function QuestionView({ question, response, onChange, mathy }: {
+export default function QuestionView({ question, response, onChange, mathy, header }: {
   question: CompiledQuestion;
   response: Response;
   onChange: (id: string, value: string) => void;
   mathy?: boolean;
+  /** Drawn at the top of the prompt card (the "Question 1 / 20 · 4 pts" row),
+   *  so header, sentence and blanks sit in ONE card as on the web. */
+  header?: React.ReactNode;
 }) {
   const { cardSurface } = useTheme();
 
@@ -199,7 +223,8 @@ export default function QuestionView({ question, response, onChange, mathy }: {
 
   return (
     <View style={{ gap: 16 }}>
-      <View style={{ ...cardSurface, padding: 20 }}>
+      <View style={{ ...cardSurface, padding: 20, gap: 14 }}>
+        {header}
         <Prompt
           blocks={question.prompt}
           widgets={question.widgets}
