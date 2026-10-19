@@ -164,8 +164,10 @@ describe('ArenaArcade', () => {
     expect(mockNavigate).toHaveBeenLastCalledWith('Leaderboard', undefined);
     await press('duel');
     expect(handlers.onDuel).toHaveBeenCalledTimes(1);
+    // Quick play stays in the Arena — never the Jeux tab's Trivia page.
     await press('quick');
-    expect(handlers.onPractice).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).toHaveBeenLastCalledWith('ArenaQuick', undefined);
+    expect(handlers.onPractice).not.toHaveBeenCalled();
     await press('mini');
     expect(handlers.onMiniGames).toHaveBeenCalledTimes(1);
     tree.unmount();

@@ -194,7 +194,7 @@ describe('the cabinets', () => {
     expect(cabinetAction('room', null)).toEqual({ kind: 'navigate', screen: 'Tournois' });
     expect(cabinetAction('board', null)).toEqual({ kind: 'navigate', screen: 'Leaderboard' });
     expect(cabinetAction('duel', null)).toEqual({ kind: 'duel' });
-    expect(cabinetAction('quick', null)).toEqual({ kind: 'practice' });
+    expect(cabinetAction('quick', null)).toEqual({ kind: 'navigate', screen: 'ArenaQuick' });
     expect(cabinetAction('mini', null)).toEqual({ kind: 'mini' });
     expect(cabinetAction('activity', null)).toEqual({ kind: 'navigate', screen: 'CompetitionWorkspace', params: { kind: 'home' } });
     expect(cabinetAction('champ', { kind: 'none' })).toEqual({ kind: 'navigate', screen: 'ArenaHub', params: { section: 'championnat' } });
