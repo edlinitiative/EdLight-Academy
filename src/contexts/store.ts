@@ -1,5 +1,16 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { QuestionContext } from '../../shared/explainContext';
+
+/**
+ * A contextual ask that carries structured grounding ("Explique-moi" on a
+ * missed question). It always opens a FRESH conversation, and the panel keeps
+ * sending `questionContext` with the follow-ups of that conversation.
+ */
+export interface SandraAskRequest {
+  message: string;
+  questionContext?: QuestionContext;
+}
 
 // Number of course videos an anonymous (signed-out) visitor may watch for free
 // before being asked to create an account.
@@ -54,7 +65,7 @@ export interface AppState {
   /** Global search overlay (navbar icon / Cmd+K) */
   searchOpen: boolean;
   /** Query handed from search to Sandra ("Ask Sandra" row); consumed by SandraWidget */
-  sandraAsk: string | null;
+  sandraAsk: string | SandraAskRequest | null;
 
   // Actions
   setUser: (user: any) => void;
@@ -88,7 +99,7 @@ export interface AppState {
   setShowNotifications: (show: boolean) => void;
   setFocusMode: (focus: boolean) => void;
   setSearchOpen: (open: boolean) => void;
-  setSandraAsk: (query: string | null) => void;
+  setSandraAsk: (query: string | SandraAskRequest | null) => void;
   logout: () => void;
 }
 

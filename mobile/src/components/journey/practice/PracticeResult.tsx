@@ -13,6 +13,7 @@ import { Check, Clock, AlertCircle, Smartphone, ChevronDown, ChevronUp, X } from
 import { useTheme, typeScale, fonts } from '../../../theme/theme';
 import Button from '../../ui/Button';
 import { AnswerStatus, Correction } from './Answer';
+import type { ExplainSurface } from '../../../../../shared/explainContext';
 import { questionsLabel, type Tx } from './copy';
 import {
   correctionCount, savedLineKind, sessionSlice, statusOf, tally,
@@ -29,7 +30,7 @@ export interface ResultActions {
 export default function PracticeResult({
   items, log, mode, stopped, t, title, context,
   signedIn, onSignIn, newErrors, confirm, onRecheck,
-  next, nextLessonTitle, dueInScope, actions, onCorrectionsOpened, onClose, children,
+  next, nextLessonTitle, dueInScope, actions, onCorrectionsOpened, onClose, children, explainSurface,
 }: {
   items: SessionItem[];
   log: Array<LogEntry | null>;
@@ -53,6 +54,8 @@ export default function PracticeResult({
   /** Leave the result. Focus mode hides the tab bar, so without it the next actions are the only way out. */
   onClose?: () => void;
   children?: React.ReactNode;
+  /** "Explique-moi" on each missed question (needs an ExplainProvider above). */
+  explainSurface?: ExplainSurface;
 }) {
   const { colors, cardSurface, isDark, elevation } = useTheme();
   const [open, setOpen] = useState(false);
@@ -254,7 +257,7 @@ export default function PracticeResult({
                   </TouchableOpacity>
                   {isOpen ? (
                     <View style={{ paddingHorizontal: 16, paddingBottom: 18 }}>
-                      <Correction item={m.item} entry={m.entry} t={t} />
+                      <Correction item={m.item} entry={m.entry} t={t} explainSurface={explainSurface} />
                     </View>
                   ) : null}
                 </View>
@@ -288,7 +291,7 @@ export default function PracticeResult({
             </TouchableOpacity>
             {open ? shownItems.map((item, i) => (
               <View key={`${item.id}-${i}`} style={{ ...cardSurface, padding: 18 }}>
-                <Correction item={item} entry={shownLog[i]} t={t} showQuestion index={i + 1} />
+                <Correction item={item} entry={shownLog[i]} t={t} showQuestion index={i + 1} explainSurface={explainSurface} />
               </View>
             )) : null}
           </View>

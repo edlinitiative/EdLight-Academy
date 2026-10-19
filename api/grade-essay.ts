@@ -5,6 +5,7 @@ import { chatJSON, resolveLLMConfig, LLMError } from './_lib/llm';
 import {
   analyzeWordCount,
   buildEssayRubric,
+  selectRubricProfile,
   buildGradingPrompt,
   normalizeGraderResponse,
   computeEssayScore,
@@ -28,7 +29,7 @@ import {
  *   answerParts?: AnswerPart[],  // the rubric (expected points)
  *   points?: number,             // max points (default 10)
  *   type?: 'essay' | 'short_answer',
- *   subject?: string,
+ *   subject?: string,            // 'Français' / 'Philosophie' → dissertation rubric
  *   level?: string,
  * }
  *
@@ -93,7 +94,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  const rubric = buildEssayRubric(answerParts);
+  // French and philosophy essays are marked as dissertations (structure +
+  // language), everything else on its authored content points.
+  const profile = selectRubricProfile({ subject, type, question });
+  const rubric = buildEssayRubric(answerParts, profile);
   const word = analyzeWordCount(answer, type);
 
   // Graceful, still-useful response when the LLM can't or shouldn't run.
@@ -113,6 +117,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       wordMessage: word.message,
       capped: false,
       graded: false,
+      rubricProfile: profile,
     });
   };
 
@@ -124,7 +129,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
   const config = resolveLLMConfig();
   if (!config) {
-    manualFallback('Évaluation automatique indisponible (aucun fournisseur IA configuré). Votre réponse sera revue manuellement.');
+    manualFallback('Évaluation automatique indisponible (aucun fournisseur IA configuré). Votre réponse n’est pas encore corrigée : relancez la correction depuis vos résultats.');
     return;
   }
 
@@ -158,11 +163,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       wordMessage: word.message,
       capped: score.capped,
       graded: true,
+      rubricProfile: profile,
       provider: config.label,
     });
   } catch (error) {
     const detail = error instanceof LLMError ? `${error.provider} ${error.status}` : 'unknown';
     console.error('grade-essay failed:', detail, error instanceof Error ? error.message : error);
-    manualFallback('L\'évaluation automatique a échoué. Votre réponse sera revue manuellement.');
+    manualFallback('L\'évaluation automatique a échoué. Votre réponse n’est pas encore corrigée : relancez la correction depuis vos résultats.');
   }
 }

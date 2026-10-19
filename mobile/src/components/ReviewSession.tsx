@@ -12,6 +12,7 @@ import { Exercices } from './LessonPractice';
 import Button from './ui/Button';
 import { AnswerStatus } from './journey/practice/Answer';
 import { dueIdsInScope, dueRowsInScope, type ReviewScope } from './journey/practice/reviewScope';
+import { ExplainProvider } from './sandra/ExplainSheet';
 
 /**
  * Revizyon — a quiz made ONLY of the student's own missed questions.
@@ -100,6 +101,7 @@ export default function ReviewSession({
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaProvider>
+        <ExplainProvider>
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top', 'bottom']}>
           <View
             style={{
@@ -145,6 +147,7 @@ export default function ReviewSession({
               cards={cards}
               isCreole={isCreole}
               onStart={onStart}
+              explainSurface="revision"
               onAnswer={(card, ok) => {
                 const meta = review[card.id];
                 recordReviewOutcome(card.id, ok, {
@@ -172,6 +175,7 @@ export default function ReviewSession({
             />
           )}
         </SafeAreaView>
+        </ExplainProvider>
       </SafeAreaProvider>
     </Modal>
   );

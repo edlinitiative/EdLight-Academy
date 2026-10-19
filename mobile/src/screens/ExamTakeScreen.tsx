@@ -10,7 +10,9 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { ChevronLeft, ChevronRight, Send, Lightbulb, Check } from 'lucide-react-native';
 import { fetchSingleExam } from '../utils/examCatalog';
-import { flattenQuestions, gradeExam, normalizeSubject, normalizeExamTitle, normalizeYear, stripExamHallBoilerplate, subjectFromText } from '../utils/examUtils';
+import { flattenQuestions, normalizeLevel, normalizeSubject, normalizeExamTitle, normalizeYear, stripExamHallBoilerplate, subjectFromText } from '../utils/examUtils';
+import { gradeExamPendingEssays } from '../../../shared/essayRegrade';
+import { startEssayGrading } from '../services/essayGrading';
 import { loadExamAttemptDraft, saveExamAttemptDraft, commitExamSubmission } from '../services/examAttempts';
 import { examDraftKey, readLocalExamDraft, pickResumeDraft, draftPosition, settleWithin } from '../../../shared/examDraft';
 import { recordReview } from '../services/reviewService';
@@ -654,7 +656,11 @@ export default function ExamTakeScreen() {
       // Pass the raw answers map (index-keyed) straight to the grader — it reads
       // `answers[i]` directly, so wrapping in `{ given }` broke every match.
       // Options drive language fuzzy-matching (subject) + coefficient weighting.
-      const graded = gradeExam(questions, answers, {}, { subject, track: track ?? undefined });
+      // Written answers the AI grader can mark are held as `ungraded` (left out
+      // of the score) instead of `manual` with 0 points: they are graded right
+      // after the paper is saved (startEssayGrading below), never before, so a
+      // slow or absent grader can never block the submission.
+      const graded = gradeExamPendingEssays(questions, answers, { subject, track: track ?? undefined });
 
       // Persist a lean per-question result (indexed by question order) so the
       // results screen can render correctness from the grader instead of
@@ -676,6 +682,7 @@ export default function ExamTakeScreen() {
           // Save the cleaned short title, not the raw ministry boilerplate.
           title: normalizeExamTitle(exam),
           subject,
+          track: track ?? undefined,
           summary: graded.summary,
           results: gradedResults,
           answers,
@@ -702,10 +709,21 @@ export default function ExamTakeScreen() {
         // Acknowledged: now the mirror and the Home "Reprendre" card can go.
         AsyncStorage.removeItem(localDraftKey).catch(() => {});
         clearActivity();
+        // AI-grade the written answers now that the paper is on the account.
+        // Not awaited: the results screen follows the run and offers
+        // "Corriger maintenant" if it fails (offline, timeout, rate limit).
+        if (graded.pending.length > 0) {
+          startEssayGrading(user.uid, examId, questions, {
+            subject,
+            level: normalizeLevel(String(exam?.level ?? '')),
+          }).catch(() => {});
+        }
         // Fold this graded round into the spaced-repetition schedule for its
         // subject (Adaptive Engine, Slice 2). Fire-and-forget: a failed schedule
-        // write must never block submission or lose the result.
-        if (subject) {
+        // write must never block submission or lose the result. Recorded once,
+        // here, from the auto-graded part only (a paper of essays still being
+        // graded has no score yet): the essay regrade never records it again.
+        if (subject && (graded.summary?.totalPoints ?? 0) > 0) {
           recordReview(user.uid, subject, {
             subject,
             percentage: graded.summary?.percentage ?? 0,

@@ -12,6 +12,7 @@ import {
 } from './_lib/sandraPrompt';
 import { SANDRA_TOOL_DEFS, createToolExecutor } from './_lib/sandraTools';
 import { getDb } from './_lib/firebaseAdmin';
+import { sanitizeQuestionContext, type QuestionContext } from '../shared/explainContext';
 
 /**
  * POST /api/chat
@@ -26,6 +27,8 @@ import { getDb } from './_lib/firebaseAdmin';
  *   message: string,                  // non-empty, ≤ SANDRA_LIMITS.maxMessageChars
  *   lang?: 'fr' | 'ht',               // UI language (default 'fr')
  *   page?: { path?, courseId?, lessonId? },
+ *   questionContext?: QuestionContext, // "Explique-moi" on a missed question
+ *                                      // (shared/explainContext.ts), sanitized here
  * }
  *
  * 200 → { reply, conversationId, remaining }
@@ -39,6 +42,7 @@ interface ChatBody {
   lang?: string;
   page?: { path?: string; courseId?: string; lessonId?: string };
   studentContext?: { grade?: unknown; track?: unknown; level?: unknown };
+  questionContext?: unknown;
 }
 
 interface StoredMessage {
@@ -57,6 +61,13 @@ interface StoredMessage {
   kbHits?: number;
   /** Set only when retrieval threw — the KB index or embedding key is broken. */
   kbError?: true;
+  /**
+   * On a user message sent from "Explique-moi": where it came from and which
+   * question, ids only (the texts are in the message's own system context and
+   * not worth duplicating). Lets the admin transcript browser and the success
+   * metric join an explanation to the question it was about.
+   */
+  explain?: { surface: string; questionId?: string; examId?: string; status?: string };
 }
 
 const CHAT_LIMIT_MAX = 30; // mirrors LIMITS['chat'] in _lib/rateLimit.ts
@@ -116,7 +127,7 @@ async function retrieveChunks(
   page: PageContext | undefined,
 ): Promise<{ chunks: KbChunk[]; failed: boolean }> {
   try {
-    const [qVec] = await embed([message]);
+    const [qVec] = await embed([message.slice(0, 2000)]);
     const queryVector = FieldValue.vector(qVec);
     const base = db.collection('sandraKb');
 
@@ -191,6 +202,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   const lang: 'fr' | 'ht' = body.lang === 'ht' ? 'ht' : 'fr';
   const page = sanitizePage(body.page);
   const student = sanitizeStudent(body.studentContext);
+  const questionContext: QuestionContext | undefined = sanitizeQuestionContext(body.questionContext);
 
   try {
     const db = getDb();
@@ -230,8 +242,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     // NOTE: for a first message, the conversation doc is deliberately NOT
     // created yet — if the LLM call below fails, nothing is persisted, so no
     // empty 0-message shells pollute the admin transcript browser.
-    const { chunks, failed: kbFailed } = await retrieveChunks(db, message, page);
-    const system = buildSandraSystemPrompt({ lang, page, chunks, student });
+    // "Explique-moi I don't get it" says nothing about the topic: search the
+    // knowledge base on the question itself (and its key) instead.
+    const retrievalQuery = questionContext
+      ? [questionContext.question, questionContext.expectedAnswer].filter(Boolean).join('\n')
+      : message;
+    const { chunks, failed: kbFailed } = await retrieveChunks(db, retrievalQuery, page);
+    const system = buildSandraSystemPrompt({ lang, page, chunks, student, questionContext });
     const llmMessages = [
       ...history.slice(-SANDRA_LIMITS.historyTurns).map((m) => ({
         role: m.role === 'assistant' ? ('assistant' as const) : ('user' as const),
@@ -291,6 +308,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         messageCount: 0,
         lang,
         firstPage: page?.path || '',
+        // A conversation opened from "Explique-moi" says so at the top level,
+        // so the success metric can find them without scanning messages.
+        ...(questionContext ? { explainSurface: questionContext.surface } : {}),
         messages: [],
       });
     }
@@ -298,6 +318,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     // ── Persist both turns atomically (one update) ──────────────────────────
     const now = Date.now();
     const userMsg: StoredMessage = { role: 'user', text: message, ts: now };
+    if (questionContext) {
+      const explain: NonNullable<StoredMessage['explain']> = { surface: questionContext.surface };
+      if (questionContext.questionId) explain.questionId = questionContext.questionId;
+      if (questionContext.examId) explain.examId = questionContext.examId;
+      if (questionContext.status) explain.status = questionContext.status;
+      userMsg.explain = explain;
+    }
     const assistantMsg: StoredMessage = {
       role: 'assistant',
       text: reply,

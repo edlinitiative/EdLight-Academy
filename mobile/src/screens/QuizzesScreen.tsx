@@ -44,6 +44,7 @@ import { displayCourseName } from '../utils/courseName';
 import PracticeEntry, { ScopeNotice } from '../components/journey/practice/PracticeEntry';
 import PracticeRunner, { type FinishReason } from '../components/journey/practice/PracticeRunner';
 import PracticeResult from '../components/journey/practice/PracticeResult';
+import { ExplainProvider } from '../components/sandra/ExplainSheet';
 import { useReviewConfirmation } from '../components/journey/practice/useReviewConfirmation';
 import { useOnline } from '../components/journey/practice/useOnline';
 import { questionsLabel } from '../components/journey/practice/copy';
@@ -428,17 +429,20 @@ export default function QuizzesScreen() {
   if (phase === 'taking' && session && entry) {
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top', 'bottom']}>
-        <SessionShell
-          key={session.id}
-          deck={session.deck}
-          mode={session.mode}
-          t={t}
-          title={entry.scope.unit?.label || ''}
-          context={contextOf(entry.scope)}
-          onAnswer={onAnswer}
-          onFinish={onFinish}
-          onExit={() => setSession(null)}
-        />
+        <ExplainProvider>
+          <SessionShell
+            key={session.id}
+            deck={session.deck}
+            mode={session.mode}
+            t={t}
+            title={entry.scope.unit?.label || ''}
+            context={contextOf(entry.scope)}
+            onAnswer={onAnswer}
+            onFinish={onFinish}
+            onExit={() => setSession(null)}
+            explainSurface="practice"
+          />
+        </ExplainProvider>
       </SafeAreaView>
     );
   }
@@ -449,7 +453,9 @@ export default function QuizzesScreen() {
     const next = chooseNextAction({ dueInScope, hasNextLesson: !!entry.scope.nextLesson && entry.origin === 'handoff', poolSize }, tl);
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top', 'bottom']}>
+        <ExplainProvider>
         <PracticeResult
+          explainSurface={session.mode === 'quiz' ? 'quiz_result' : 'practice'}
           items={session.deck}
           log={result.log}
           mode={session.mode}
@@ -481,6 +487,7 @@ export default function QuizzesScreen() {
             </View>
           ) : null}
         </PracticeResult>
+        </ExplainProvider>
         {reviewModal}
       </SafeAreaView>
     );

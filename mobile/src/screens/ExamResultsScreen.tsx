@@ -1,13 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { CheckCircle2, XCircle, Trophy, RefreshCw, ChevronLeft, ChevronDown, ChevronUp, Share2, Circle } from 'lucide-react-native';
+import { CheckCircle2, XCircle, Trophy, RefreshCw, ChevronLeft, ChevronDown, ChevronUp, Share2, Circle, HelpCircle } from 'lucide-react-native';
 import { loadExamResult } from '../services/examResults';
 import { shareScore } from '../services/scoreShare';
 import { fetchSingleExam } from '../utils/examCatalog';
-import { flattenQuestions } from '../utils/examUtils';
+import { flattenQuestions, normalizeLevel, normalizeSubject } from '../utils/examUtils';
+import { essayJobsFromDoc, type EssayGradingOutcome } from '../../../shared/essayRegrade';
+import { classifyEssayResponse } from '../../../shared/essayGradeCore';
+import { examQuestionContext } from '../../../shared/explainContext';
+import { essayGradingKey, essayGradingRegistry, startEssayGrading } from '../services/essayGrading';
+import { ExplainProvider } from '../components/sandra/ExplainSheet';
+import ExplainButton from '../components/sandra/ExplainButton';
 import useStore from '../contexts/store';
 import { useColors, useTheme, typeScale, fonts } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
@@ -40,6 +46,11 @@ function isCorrectResult(item: any, answer: any, question: any): boolean {
   return given != null && given !== '' && String(given).toLowerCase() === String(correctAnswer ?? '').toLowerCase();
 }
 
+/** Not graded yet: an essay waiting for (or failed by) the AI grader, or a key-less item. */
+function isPendingResult(item: any): boolean {
+  return item?.status === 'ungraded' || item?.status === 'manual';
+}
+
 function isUnansweredResult(item: any, answer: any): boolean {
   if (item?.status) return item.status === 'unanswered';
   const given = answer?.given ?? answer;
@@ -51,7 +62,7 @@ function isUnansweredResult(item: any, answer: any): boolean {
  * an azure tonal pill and an 8pt bar. Opaque, no gradient, no glow. Counts up
  * from 0 unless the OS asks for reduced motion.
  */
-function ScoreCard({ percentage, scoreLine }: { percentage: number; scoreLine?: string }) {
+function ScoreCard({ percentage, scoreLine, pendingOnly = false }: { percentage: number; scoreLine?: string; pendingOnly?: boolean }) {
   const language = useStore((s) => s.language);
   const { colors, cardSurface } = useTheme();
   const isCreole = language === 'ht';
@@ -59,7 +70,7 @@ function ScoreCard({ percentage, scoreLine }: { percentage: number; scoreLine?: 
   const reduceMotion = useReduceMotion();
 
   // Celebrate a strong result — this is the emotional peak of the exam flow.
-  useEffect(() => { if (percentage >= 70) hapticSuccess(); }, [percentage]);
+  useEffect(() => { if (percentage >= 70 && !pendingOnly) hapticSuccess(); }, [percentage, pendingOnly]);
 
   const [display, setDisplay] = useState(reduceMotion ? percentage : 0);
   useEffect(() => {
@@ -77,9 +88,14 @@ function ScoreCard({ percentage, scoreLine }: { percentage: number; scoreLine?: 
     return () => cancelAnimationFrame(raf);
   }, [percentage, reduceMotion]);
 
-  const phrase = percentage >= 70 ? t('Excellent !', 'Ekselan !') : percentage >= 50 ? t('Bien essayé !', 'Byen eseye !') : t('Continue à réviser !', 'Kontinye revize !');
+  const phrase = pendingOnly
+    ? t('Correction en attente', 'Koreksyon ap tann')
+    : percentage >= 70 ? t('Excellent !', 'Ekselan !') : percentage >= 50 ? t('Bien essayé !', 'Byen eseye !') : t('Continue à réviser !', 'Kontinye revize !');
   // One spoken node for the whole score — "Score : 78 pour cent, Bien essayé".
-  const scoreA11y = `${t('Score', 'Nòt')} : ${percentage} ${t('pour cent', 'pou san')}, ${phrase}`;
+  // Nothing graded yet is never read (or shown) as 0.
+  const scoreA11y = pendingOnly
+    ? `${t('Score', 'Nòt')} : ${t('pas encore corrigé', 'poko korije')}`
+    : `${t('Score', 'Nòt')} : ${percentage} ${t('pour cent', 'pou san')}, ${phrase}`;
 
   return (
     <View style={{ ...cardSurface, borderRadius: 24, padding: 20, gap: 12 }}>
@@ -87,8 +103,8 @@ function ScoreCard({ percentage, scoreLine }: { percentage: number; scoreLine?: 
         <View accessible accessibilityLabel={scoreA11y} style={{ gap: 2 }}>
           <Text style={[typeScale.meta, { color: colors.muted }]}>{t('Score', 'Nòt')}</Text>
           <Text maxFontSizeMultiplier={1.3} style={{ fontFamily: fonts.heading, fontSize: 56, lineHeight: 60, letterSpacing: -2, color: colors.ink, fontVariant: ['tabular-nums'] }}>
-            {display}
-            <Text style={{ fontFamily: fonts.headingBold, fontSize: 22, letterSpacing: 0, color: colors.muted }}> %</Text>
+            {pendingOnly ? '–' : display}
+            {pendingOnly ? null : <Text style={{ fontFamily: fonts.headingBold, fontSize: 22, letterSpacing: 0, color: colors.muted }}> %</Text>}
           </Text>
           {scoreLine ? <Text style={[typeScale.meta, { color: colors.muted }]}>{scoreLine}</Text> : null}
         </View>
@@ -97,13 +113,13 @@ function ScoreCard({ percentage, scoreLine }: { percentage: number; scoreLine?: 
         </View>
       </View>
       <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ height: 8, borderRadius: 99, backgroundColor: colors.surfaceAlt, overflow: 'hidden' }}>
-        <View style={{ height: 8, borderRadius: 99, width: `${Math.max(0, Math.min(100, percentage))}%`, backgroundColor: colors.azureFill }} />
+        <View style={{ height: 8, borderRadius: 99, width: `${pendingOnly ? 0 : Math.max(0, Math.min(100, percentage))}%`, backgroundColor: colors.azureFill }} />
       </View>
     </View>
   );
 }
 
-function QuestionReviewItem({ question, index, answer, result }: { question: any; index: number; answer: any; result: any }) {
+function QuestionReviewItem({ question, index, answer, result, subject, level, examId }: { question: any; index: number; answer: any; result: any; subject?: string; level?: string; examId?: string }) {
   const language = useStore((s) => s.language);
   const colors = useColors();
   const { cardSurface, isDark } = useTheme();
@@ -114,9 +130,20 @@ function QuestionReviewItem({ question, index, answer, result }: { question: any
   const correctAnswer = question.correct;
   const given = answer?.given ?? answer;
   const isUnanswered = isUnansweredResult(result, answer);
-  const isCorrect = !isUnanswered && isCorrectResult(result, answer, question);
+  const isPending = !isUnanswered && isPendingResult(result);
+  const isPartial = result?.status === 'partial';
+  const isCorrect = !isUnanswered && !isPending && isCorrectResult(result, answer, question);
   // Correctness must not rely on the icon colour alone — state it in the label.
-  const statusLabel = isUnanswered ? t('sans réponse', 'san repons') : isCorrect ? t('correcte', 'kòrèk') : t('incorrecte', 'pa kòrèk');
+  const statusLabel = isUnanswered
+    ? t('sans réponse', 'san repons')
+    : isPending
+      ? t('pas encore corrigée', 'poko korije')
+      : isCorrect ? t('correcte', 'kòrèk') : isPartial ? t('en partie juste', 'yon pati kòrèk') : t('incorrecte', 'pa kòrèk');
+  const neutral = isUnanswered || isPending;
+  const essay = result?.essayFeedback && classifyEssayResponse(result.essayFeedback) !== 'failed' ? result.essayFeedback : null;
+  const explainCtx = !isPending && !isUnanswered && !isCorrect
+    ? examQuestionContext({ question, answer: given, status: isPartial ? 'partial' : 'incorrect', subject, level, examId })
+    : undefined;
   const questionText = mathToText(String(question._displayText ?? question.question ?? ''));
 
   return (
@@ -130,10 +157,12 @@ function QuestionReviewItem({ question, index, answer, result }: { question: any
       style={{ ...cardSurface, marginBottom: 12, overflow: 'hidden' }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 14, minHeight: 64 }}>
-        <View style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: isUnanswered ? colors.surfaceAlt : isCorrect ? colors.successSoft : colors.dangerSoft }}>
+        <View style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: neutral ? colors.surfaceAlt : isCorrect ? colors.successSoft : colors.dangerSoft }}>
           {isUnanswered
             ? <Circle color={colors.muted} size={16} strokeWidth={2.4} />
-            : isCorrect
+            : isPending
+              ? <HelpCircle color={colors.muted} size={18} strokeWidth={2.4} />
+              : isCorrect
               ? <CheckCircle2 color={okInk} size={18} strokeWidth={2.4} />
               : <XCircle color={colors.danger} size={18} strokeWidth={2.4} />}
         </View>
@@ -151,8 +180,8 @@ function QuestionReviewItem({ question, index, answer, result }: { question: any
         <View style={{ paddingHorizontal: 16, paddingBottom: 16, gap: 12 }}>
           <View style={{ gap: 6 }}>
             <Text style={[typeScale.body, { color: colors.muted }]}>{t('Ta réponse :', 'Repons ou :')}</Text>
-            <View style={{ backgroundColor: isUnanswered ? colors.surfaceAlt : isCorrect ? colors.successSoft : colors.dangerSoft, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 }}>
-              <Text style={{ fontFamily: fonts.medium, fontSize: 16, lineHeight: 23, color: isUnanswered ? colors.muted : isCorrect ? okInk : colors.danger }}>
+            <View style={{ backgroundColor: neutral ? colors.surfaceAlt : isCorrect ? colors.successSoft : colors.dangerSoft, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 }}>
+              <Text style={{ fontFamily: fonts.medium, fontSize: 16, lineHeight: 23, color: isUnanswered ? colors.muted : isPending ? colors.ink : isCorrect ? okInk : colors.danger }}>
                 {isUnanswered ? t('Sans réponse', 'San repons') : String(given)}
               </Text>
             </View>
@@ -173,15 +202,52 @@ function QuestionReviewItem({ question, index, answer, result }: { question: any
               </View>
             </View>
           )}
+          {essay ? <EssayFeedbackBlock feedback={essay} t={t} /> : null}
+          {isPending && !essay && (question.type === 'essay' || question.type === 'short_answer') ? (
+            <Text style={[typeScale.body, { color: colors.muted }]}>
+              {t('Ta rédaction n’est pas encore corrigée : elle ne compte pas encore dans ton score.', 'Redaksyon ou poko korije : li poko konte nan nòt ou.')}
+            </Text>
+          ) : null}
+          <ExplainButton context={explainCtx} />
         </View>
       )}
     </PressableScale>
   );
 }
 
+/** The AI grade of a written answer: an estimate, labelled as one. */
+function EssayFeedbackBlock({ feedback, t }: { feedback: any; t: (fr: string, ht: string) => string }) {
+  const colors = useColors();
+  const { isDark } = useTheme();
+  const strengths: string[] = Array.isArray(feedback?.strengths) ? feedback.strengths : [];
+  const improvements: string[] = Array.isArray(feedback?.improvements) ? feedback.improvements : [];
+  return (
+    <View style={{ gap: 8, padding: 16, borderRadius: 14, backgroundColor: isDark ? colors.surfaceAlt : colors.bg }}>
+      <Text style={[typeScale.bodyMd, { color: colors.ink }]}>
+        {t('Note IA (indicative) : ', 'Nòt IA (endikatif) : ')}{String(feedback.score ?? '')}
+      </Text>
+      {feedback.feedback ? <Text style={[typeScale.body, { color: colors.ink }]}>{String(feedback.feedback)}</Text> : null}
+      {strengths.length > 0 ? (
+        <View style={{ gap: 2 }}>
+          <Text style={[typeScale.label, { color: colors.muted }]}>{t('Points forts', 'Pwen fò')}</Text>
+          {strengths.map((x, i) => <Text key={i} style={[typeScale.body, { color: colors.ink }]}>{`• ${x}`}</Text>)}
+        </View>
+      ) : null}
+      {improvements.length > 0 ? (
+        <View style={{ gap: 2 }}>
+          <Text style={[typeScale.label, { color: colors.muted }]}>{t('Pour progresser', 'Pou pwogrese')}</Text>
+          {improvements.map((x, i) => <Text key={i} style={[typeScale.body, { color: colors.ink }]}>{`• ${x}`}</Text>)}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 function computeMastery(questions: any[], answers: Record<string, any>, gradedResults: any[]) {
   const groups: Record<string, { correct: number; total: number }> = {};
   questions.forEach((q, i) => {
+    // Not graded yet: out of the score, so out of the section bars too.
+    if (gradedResults[i]?.status === 'ungraded') return;
     const section = q.sectionTitle || q.section || 'Général';
     if (!groups[section]) groups[section] = { correct: 0, total: 0 };
     groups[section].total++;
@@ -229,6 +295,27 @@ export default function ExamResultsScreen() {
   const [loadError, setLoadError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [reviewFilter, setReviewFilter] = useState<'all' | 'wrong' | 'correct'>('all');
+  const [exam, setExam] = useState<any | null>(null);
+  const [gradeOutcome, setGradeOutcome] = useState<EssayGradingOutcome | null>(null);
+
+  // A grading run for this paper, started at submit or by "Corriger maintenant".
+  const gradingKey = user?.uid ? essayGradingKey(user.uid, examId) : '';
+  const grading = useSyncExternalStore(
+    essayGradingRegistry.subscribe,
+    () => (gradingKey ? essayGradingRegistry.isRunning(gradingKey) : false),
+  );
+  // When a run finishes (here or on the take screen), reload the regraded paper.
+  useEffect(() => {
+    if (!gradingKey) return undefined;
+    return essayGradingRegistry.subscribe((key) => {
+      if (key !== gradingKey || essayGradingRegistry.isRunning(key)) return;
+      const outcome = essayGradingRegistry.lastOutcome(key);
+      setGradeOutcome(outcome);
+      if (outcome && (outcome.status === 'graded' || outcome.status === 'stale' || outcome.status === 'nothing')) {
+        setReloadKey((k) => k + 1);
+      }
+    });
+  }, [gradingKey]);
 
   useEffect(() => {
     incrementGuestInteraction();
@@ -246,7 +333,10 @@ export default function ExamResultsScreen() {
       .then(([r, exam]) => {
         if (!alive) return;
         setResult(r);
-        if (exam) setQuestions(flattenQuestions(exam) as any[]);
+        if (exam) {
+          setExam(exam);
+          setQuestions(flattenQuestions(exam) as any[]);
+        }
       })
       // Without this, a failed load fell through to percentage = 0 and rendered
       // a real-looking "0%" — a failure was indistinguishable from a bad score.
@@ -335,10 +425,37 @@ export default function ExamResultsScreen() {
   const filteredQuestions = questions.filter((q, i) => {
     if (reviewFilter === 'all') return true;
     const isCorrect = isCorrectResult(gradedResults[i], answers[i], q);
-    return reviewFilter === 'correct' ? isCorrect : !isCorrect;
+    if (reviewFilter === 'correct') return isCorrect;
+    return !isCorrect && !isPendingResult(gradedResults[i]);
   });
 
+  // Written answers the AI grader can still mark (pending, failed, or an old
+  // paper from before the app called the grader). Same rule as the run.
+  const regradableCount = result && questions.length > 0 ? essayJobsFromDoc(questions, result).length : 0;
+  const pendingPoints = Number(summary.pendingPoints) || 0;
+  const pendingOnly = maxScore === 0 && (regradableCount > 0 || pendingPoints > 0);
+  const examSubject = exam ? normalizeSubject(exam.subject ?? '') : (result?.subject ?? undefined);
+  const examLevel = exam ? normalizeLevel(String(exam.level ?? '')) : undefined;
+  const gradeNow = () => {
+    if (!user?.uid || questions.length === 0 || grading) return;
+    tapMedium();
+    setGradeOutcome(null);
+    startEssayGrading(user.uid, examId, questions, { subject: examSubject, level: examLevel }).catch(() => {});
+  };
+  const gradeMessage = (() => {
+    const o = gradeOutcome;
+    if (!o) return null;
+    if (o.status === 'missing') {
+      return t('Ta copie n’est pas encore enregistrée sur ton compte. Réessaie quand tu es connecté.', 'Kopi ou poko anrejistre sou kont ou. Eseye ankò lè ou konekte.');
+    }
+    if (o.status !== 'failed') return null;
+    if (o.rateLimited) return t('Trop de corrections demandées pour l’instant. Réessaie dans une heure.', 'Twòp koreksyon mande pou kounye a. Eseye ankò nan inèdtan.');
+    if (o.offline) return t('Pas de connexion : la correction n’a pas pu être lancée. Réessaie quand tu es connecté.', 'Pa gen koneksyon : koreksyon an pa t ka fèt. Eseye ankò lè ou konekte.');
+    return t('La correction automatique n’a pas abouti. Réessaie dans un moment.', 'Koreksyon otomatik la pa t mache. Eseye ankò talè.');
+  })();
+
   return (
+    <ExplainProvider>
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
       {/* Header — shares the page background (no white-bar seam) */}
       <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.bg }}>
@@ -362,19 +479,46 @@ export default function ExamResultsScreen() {
       </View>
 
       {/* Celebration burst for a passing result (skipped under reduce-motion) */}
-      {Math.round(percentage) >= 70 && <Confetti />}
+      {Math.round(percentage) >= 70 && !pendingOnly && <Confetti />}
 
       <ScrollView className="flex-1" contentContainerStyle={[{ paddingBottom: 100 }, centerColumn]}>
         {/* Score — the 06b score card, opaque */}
         <View style={{ marginHorizontal: 20, marginTop: 8 }}>
           <ScoreCard
             percentage={Math.round(percentage)}
+            pendingOnly={pendingOnly}
             scoreLine={maxScore > 0 ? t(`${scored} points sur ${maxScore}`, `${scored} pwen sou ${maxScore}`) : undefined}
           />
         </View>
 
-        {/* Share the score — doubles as a referral invite. */}
-        <Button
+        {/* Written answers not graded yet: "Correction provisoire", never a 0. */}
+        {regradableCount > 0 || grading ? (
+          <View style={[cardSurface, { marginHorizontal: 20, marginTop: 16, padding: 18, gap: 12 }]} accessibilityLiveRegion="polite">
+            <Text style={[typeScale.cardTitle, { color: colors.ink }]}>{t('Correction provisoire', 'Koreksyon pwovizwa')}</Text>
+            <Text style={[typeScale.body, { color: colors.muted }]}>
+              {grading
+                ? t('Correction de ta rédaction en cours… Ton score se mettra à jour tout seul.', 'N ap korije redaksyon ou… Nòt ou ap mete l ajou poukont li.')
+                : regradableCount === 1
+                  ? t('Une réponse rédigée n’est pas encore corrigée : elle ne compte pas encore dans ton score.', 'Yon repons ekri poko korije : li poko konte nan nòt ou.')
+                  : t(`${regradableCount} réponses rédigées ne sont pas encore corrigées : elles ne comptent pas encore dans ton score.`, `${regradableCount} repons ekri poko korije : yo poko konte nan nòt ou.`)}
+            </Text>
+            {gradeMessage && !grading ? <Text style={[typeScale.bodyMd, { color: colors.ink }]}>{gradeMessage}</Text> : null}
+            {user?.uid && !grading ? (
+              <Button
+                onPress={gradeNow}
+                variant="secondary"
+                size="md"
+                icon={<RefreshCw color={colors.azureInk} size={18} />}
+                label={t('Corriger maintenant', 'Korije kounye a')}
+                accessibilityLabel={t('Corriger maintenant', 'Korije kounye a')}
+                style={{ alignSelf: 'flex-start' }}
+              />
+            ) : null}
+          </View>
+        ) : null}
+
+        {/* Share the score — doubles as a referral invite. Not while nothing is graded. */}
+        {pendingOnly ? null : <Button
           onPress={() => shareScore({
             title: t('Bac blanc', 'Bak blan'),
             score: Math.round(percentage),
@@ -388,7 +532,7 @@ export default function ExamResultsScreen() {
           accessibilityLabel={t('Partager mon score', 'Pataje nòt mwen')}
           label={t('Partager mon score', 'Pataje nòt mwen')}
           style={{ marginHorizontal: 20, marginTop: 16 }}
-        />
+        />}
 
         {/* Handoff into the XP loop — an exam just finished is the moment a
             content-only user is most likely to try the Défi (falls back to
@@ -474,6 +618,9 @@ export default function ExamResultsScreen() {
                     index={originalIdx}
                     answer={answers[originalIdx]}
                     result={gradedResults[originalIdx]}
+                    subject={examSubject}
+                    level={examLevel}
+                    examId={examId}
                   />
                 );
               })
@@ -503,5 +650,6 @@ export default function ExamResultsScreen() {
         </View>
       </ScrollView>
     </SafeAreaView>
+    </ExplainProvider>
   );
 }

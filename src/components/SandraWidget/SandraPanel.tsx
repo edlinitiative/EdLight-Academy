@@ -6,6 +6,7 @@ import { authedFetch } from '../../services/firebase';
 import useStore from '../../contexts/store';
 import { useTrivia } from '../../hooks/useTrivia';
 import InstructionRenderer from '../InstructionRenderer';
+import { EXPLAIN_DISCLOSURE, type QuestionContext } from '../../../shared/explainContext';
 
 /** sessionStorage key holding the active conversation id — a new browser
  *  session (or a full conversation) starts a fresh one. */
@@ -60,6 +61,19 @@ export default function SandraPanel({ open, onClose }: SandraPanelProps) {
 
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  /*
+   * "Explique-moi": the missed question this conversation is about. Kept for
+   * the whole conversation (every follow-up is still about that question, and
+   * the server rebuilds the system prompt per message) and dropped with
+   * "Nouvelle conversation". A ref, not only state, because the ask handler
+   * sends in the same tick it sets it.
+   */
+  const [explainCtx, setExplainCtx] = useState<QuestionContext | null>(null);
+  const explainRef = useRef<QuestionContext | null>(null);
+  const setExplain = (ctx: QuestionContext | null) => {
+    explainRef.current = ctx;
+    setExplainCtx(ctx);
+  };
 
   // Keep the newest message (or the typing indicator) in view.
   useEffect(() => {
@@ -79,6 +93,17 @@ export default function SandraPanel({ open, onClose }: SandraPanelProps) {
     if (!open || !sandraAsk) return;
     const ask = sandraAsk;
     setSandraAsk(null);
+    if (typeof ask !== 'string') {
+      // A question-grounded ask starts its own conversation, so the
+      // explanation is not mixed into an unrelated thread.
+      writeConvId(null);
+      setMessages([]);
+      setError(null);
+      setExplain(ask.questionContext ?? null);
+      if (user) void send(ask.message);
+      else setInput(ask.message);
+      return;
+    }
     if (user) void send(ask);
     else setInput(ask);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -119,6 +144,7 @@ export default function SandraPanel({ open, onClose }: SandraPanelProps) {
           level: typeof triviaLevel?.level === 'number' ? triviaLevel.level : null,
         },
       };
+      if (explainRef.current) body.questionContext = explainRef.current;
       const convId = readConvId();
       if (convId) body.conversationId = convId;
 
@@ -201,6 +227,7 @@ export default function SandraPanel({ open, onClose }: SandraPanelProps) {
 
   const startNewConversation = () => {
     writeConvId(null);
+    setExplain(null);
     setMessages([]);
     setError(null);
     setInput('');
@@ -262,6 +289,11 @@ export default function SandraPanel({ open, onClose }: SandraPanelProps) {
         </div>
       </header>
 
+      {explainCtx && (
+        <p className="sandra-panel__explain-note" role="note">
+          {i18n.language === 'ht' ? EXPLAIN_DISCLOSURE.ht : EXPLAIN_DISCLOSURE.fr}
+        </p>
+      )}
       <div className="sandra-panel__messages" ref={listRef} aria-live="polite">
         {signedIn && messages.length === 0 && !sending && !error && (
           <div className="sandra-welcome">

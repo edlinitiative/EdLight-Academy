@@ -21,6 +21,7 @@ import Button from '../../ui/Button';
 import { AnswerOption, Correction, Rich } from './Answer';
 import { questionsLabel, type Tx } from './copy';
 import { reviewOutcomeOf, statusOf, type LogEntry, type SessionItem, type SessionMode } from './session';
+import type { ExplainSurface } from '../../../../../shared/explainContext';
 
 export type FinishReason = 'done' | 'stopped';
 
@@ -49,6 +50,8 @@ export default function PracticeRunner({
   onFinish,
   onExit,
   chrome = 'full',
+  explainSurface,
+  liveExplain = false,
 }: {
   items: SessionItem[];
   mode: SessionMode;
@@ -67,6 +70,14 @@ export default function PracticeRunner({
    * the host's own close handles Android back.
    */
   chrome?: 'full' | 'minimal';
+  /** Where "Explique-moi" is reported from (needs an ExplainProvider above). */
+  explainSurface?: ExplainSurface;
+  /**
+   * Offer it on the live correction too. Practice always does; a quiz only
+   * when it is not scored for mastery (Révision), otherwise it waits for the
+   * result list.
+   */
+  liveExplain?: boolean;
 }) {
   const { colors, cardSurface, isDark } = useTheme();
   const [idx, setIdx] = useState(0);
@@ -199,7 +210,12 @@ export default function PracticeRunner({
 
         {checked ? (
           <View style={{ ...cardSurface, padding: 20, marginTop: 8 }} accessibilityLiveRegion="polite">
-            <Correction item={item} entry={entry} t={t} />
+            <Correction
+              item={item}
+              entry={entry}
+              t={t}
+              explainSurface={explainSurface && (mode === 'practice' || liveExplain) ? explainSurface : undefined}
+            />
           </View>
         ) : null}
       </ScrollView>

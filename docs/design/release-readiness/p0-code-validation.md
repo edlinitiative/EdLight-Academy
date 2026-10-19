@@ -89,7 +89,7 @@ Platform column: W = web/PWA, M = mobile app. Each row's **Étapes testeur** col
 | E-8 | Submit offline, then app killed | M | **Fixed** (F3) | — | Mode avion → Soumettre : message « Pas encore envoyé » ; tuer l'app ; réseau ; rouvrir l'examen : « Reprendre » avec toutes les réponses ; soumettre : un seul résultat. |
 | E-9 | Shared device, two accounts, same exam | W+M | **Fixed** (F1) | — | (see A-7) |
 | E-10 | Timer while the app is closed | W+M | **Open (product decision)** | The remaining time is saved and restored, so the timer pauses while away. Practice exams, not official ones. Document it or make it wall-clock; the decision belongs to the owner. | Examen chronométré, fermer 5 min, rouvrir : noter si le temps a continué. |
-| E-11 | Essay AI grading unavailable at submit | W | **Open** | Scored 0 and persisted. "Correction provisoire" and a warning are shown, but there is no regrade path. | Couper le réseau pendant « Correction… » d'une dissertation : le message « Correction provisoire » s'affiche. |
+| E-11 | Essay AI grading unavailable at submit | W+M | **Fixed** | A failed grader call is `ungraded` (left out of the percentage, never 0), shown as "Correction provisoire", with "Corriger maintenant" on both platforms (transactional, idempotent, no XP/mastery side effects). Mobile now calls `/api/grade-essay` after submit. `src/utils/__tests__/essayRegrade.test.ts`, `mobile/src/services/__tests__/essayGrading.test.ts`. | Couper le réseau pendant « Correction… » d'une dissertation : le message « Correction provisoire » s'affiche. |
 | E-12 | Results/history after reload on another device | W+M | OK | The stored summary is preferred over a regrade. Stale data removed by F2. | Ouvrir `/exams/resultats` sur un autre appareil : même score. |
 | E-13 | Exam finished on mobile advances the study plan | M | **Open** | Mobile has no `recordTaskResult` (D12). The plan never advances from the app. | — |
 
@@ -139,7 +139,7 @@ Platform column: W = web/PWA, M = mobile app. Each row's **Étapes testeur** col
 
 1. **L-3 / O-3 (data loss, mobile):** lesson completion queued offline is lost if the app is killed. Fix: a persisted completion outbox replayed at launch. Applying `completed` locally before acknowledgement would contradict the LJ-05 design, so the owner must decide.
 2. **D-3 (data loss, both platforms):** leaderboard XP award with no retry. Fix: a persisted outbox plus a server dedup key.
-3. **E-11 (wrong grade, web):** essays that failed AI grading are scored 0. Fix: an `ungraded` status excluded from the percentage, plus a regrade action.
+3. ~~**E-11 (wrong grade, web):** essays that failed AI grading are scored 0.~~ Fixed: an `ungraded` status excluded from the percentage, plus "Corriger maintenant" on web and mobile (and mobile essays are now AI-graded at all). Device check: submit a dissertation offline on the phone, reconnect, tap "Korije kounye a".
 4. **D-8 (trust):** client-reported duel score. Fix: server-side grading.
 5. **S-2:** Sandra retry idempotency (`clientMessageId`).
 6. **L-9 / L-10 / P-4:** non-transactional read-modify-writes (web mastery, study plan).

@@ -98,7 +98,60 @@ export interface RubricCriterion {
 export interface EssayRubric {
   criteria: RubricCriterion[];
   hasContentRubric: boolean;
+  /** Which calibration the prompt and criteria follow. */
+  profile: RubricProfile;
 }
+
+/**
+ * Rubric profiles.
+ *
+ *   standard      content points from `answer_parts` + three competency axes.
+ *   dissertation  the Bac French / philosophy composition: the same content
+ *                 points (when authored) PLUS the four structural criteria a
+ *                 Haitian Bac examiner marks (introduction and problématique,
+ *                 plan, argumentation with examples, conclusion). Language is
+ *                 the existing `language` axis. Without this, a dissertation
+ *                 with no authored answer_parts was judged on three generic
+ *                 axes only, so a text with no problématique and no plan could
+ *                 still score well.
+ */
+export type RubricProfile = 'standard' | 'dissertation';
+
+const fold = (v: unknown) =>
+  String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+/**
+ * Pick the profile from what the client sends. Short answers are never
+ * dissertations. French and philosophy essays are, and so is any essay whose
+ * statement says it is one ("Sujet de dissertation", "Dissertez…").
+ */
+export function selectRubricProfile(input: { subject?: string; type?: string; question?: string }): RubricProfile {
+  if (input.type === 'short_answer') return 'standard';
+  const subject = fold(input.subject);
+  if (/\b(francais|philosophie|philo|ethique)\b/.test(subject)) return 'dissertation';
+  if (/\bdissert/.test(fold(input.question))) return 'dissertation';
+  return 'standard';
+}
+
+/** The structural criteria of the dissertation profile, in exam order. */
+export const DISSERTATION_CRITERIA: Array<{ label: string; expected: string }> = [
+  {
+    label: 'Introduction et problématique',
+    expected: "amène le sujet, le reformule et pose une problématique claire (une vraie question à résoudre), puis annonce le plan",
+  },
+  {
+    label: 'Plan',
+    expected: 'un développement en parties distinctes et progressives (par exemple thèse, antithèse, synthèse), reliées par des transitions',
+  },
+  {
+    label: 'Argumentation et exemples',
+    expected: 'des arguments précis qui répondent à la problématique, chacun appuyé par un exemple (auteur, oeuvre, fait, situation vécue)',
+  },
+  {
+    label: 'Conclusion',
+    expected: 'fait le bilan, répond nettement à la problématique et peut ouvrir sur une question voisine',
+  },
+];
 
 const BOILERPLATE_LABEL = /^(matching\s+pair|point|partie|aspect)\s*\d*$/i;
 const DEPENDS_LABEL = /^(answer|réponse|reponse|respuesta)\s+(depends|dépend|depend|depende)/i;
@@ -109,7 +162,7 @@ const DEPENDS_LABEL = /^(answer|réponse|reponse|respuesta)\s+(depends|dépend|d
  * "Drawbacks of small town living" rows) into one criterion listing every
  * expected item — so the LLM judges coverage, not row-by-row duplicates.
  */
-export function buildEssayRubric(answerParts: AnswerPart[] | undefined): EssayRubric {
+export function buildEssayRubric(answerParts: AnswerPart[] | undefined, profile: RubricProfile = 'standard'): EssayRubric {
   const parts = Array.isArray(answerParts) ? answerParts : [];
   const order: string[] = [];
   const byLabel = new Map<string, { label: string; expected: string[] }>();
@@ -130,7 +183,13 @@ export function buildEssayRubric(answerParts: AnswerPart[] | undefined): EssayRu
     const e = byLabel.get(key)!;
     return { id: i + 1, label: e.label, expected: [...new Set(e.expected)].join(' ; ') };
   });
-  return { criteria, hasContentRubric: criteria.length > 0 };
+  if (profile === 'dissertation') {
+    for (const c of DISSERTATION_CRITERIA) {
+      if (byLabel.has(c.label.toLowerCase())) continue; // authored already
+      criteria.push({ id: criteria.length + 1, label: c.label, expected: c.expected });
+    }
+  }
+  return { criteria, hasContentRubric: criteria.length > 0, profile };
 }
 
 // ── Prompt ──────────────────────────────────────────────────────────────────
@@ -149,8 +208,14 @@ export interface PromptInput {
 export function buildGradingPrompt(input: PromptInput): { system: string; user: string } {
   const { question, answer, modelAnswer, context, subject, level, rubric, word } = input;
 
+  const dissertation = rubric.profile === 'dissertation';
   const system = [
     'You are an experienced Haitian high-school examiner grading a student composition.',
+    ...(dissertation ? [
+      'This is a DISSERTATION (Haitian Bac, French or philosophy). Mark it the way a Bac examiner does: the rubric includes the four structural criteria of the exercise (introduction with a real problématique, an organised plan, arguments each supported by an example, a conclusion that answers the problématique).',
+      'Level 2 on a structural criterion requires the element to be clearly present and doing its job (a problématique is a genuine question the essay then answers, not a restatement of the subject). A list of ideas with no plan is organization 0 or 1. Reward a personal, well-supported argument even when it differs from the model answer.',
+      'The language axis judges French usage for this level: sentence correctness, clarity, register and connectors. Be fair to second-language writers, but a text that is hard to follow cannot get language 2.',
+    ] : []),
     'Grade ONLY against the explicit rubric below — it defines the minimum expectations for this level.',
     'The students are Haitian high-schoolers writing in a second language; they may answer in French, English, Haitian Creole, or Spanish.',
     'Judge IDEAS and whether each expected point is addressed — be fair and encouraging, and do not penalize minor second-language grammar or spelling.',
@@ -167,6 +232,7 @@ export function buildGradingPrompt(input: PromptInput): { system: string; user: 
 
   const user = [
     subject ? `MATIÈRE: ${subject}${level ? ` (${level})` : ''}` : '',
+    dissertation ? 'EXERCICE: dissertation (barème du Bac : introduction et problématique, plan, argumentation et exemples, conclusion, langue).' : '',
     context ? `TEXTE DE RÉFÉRENCE:\n${context}` : '',
     `QUESTION:\n${question}`,
     `LONGUEUR: ${word.words} mots (attendu ≈ ${word.developTarget}).`,

@@ -429,3 +429,81 @@ describe('api/chat handler', () => {
     });
   });
 });
+
+describe('api/chat "Explique-moi" (questionContext)', () => {
+  const questionContext = {
+    surface: 'exam_results',
+    question: 'Résoudre $2x + 3 = 7$.',
+    studentAnswer: 'x = 5',
+    expectedAnswer: 'x = 2',
+    explanation: 'On isole x : 2x = 4.',
+    subject: 'Mathématiques',
+    level: 'Baccalauréat',
+    questionType: 'short_answer',
+    status: 'incorrect',
+    examId: 'bac-math-2022',
+    questionId: 'q-17',
+  };
+
+  it('grounds the system prompt in the missed question, in the student language', async () => {
+    const res = makeRes();
+    await handler(makeReq({ body: { message: 'Eksplike m kesyon sa a.', lang: 'ht', questionContext } }), res as any);
+
+    expect(res.statusCode).toBe(200);
+    const { system } = chatWithToolsMock.mock.calls[0][0];
+    expect(system).toContain('Explique-moi');
+    expect(system).toContain('Question : Résoudre $2x + 3 = 7$.');
+    expect(system).toContain("Réponse de l'élève (fausse) : x = 5");
+    expect(system).toContain('Réponse attendue (corrigé officiel) : x = 2');
+    expect(system).toContain('On isole x');
+    expect(system).toContain('créole haïtien');
+    // The student's bubble stays the short sentence, not a pasted question.
+    const { messages } = chatWithToolsMock.mock.calls[0][0];
+    expect(messages[messages.length - 1]).toEqual({ role: 'user', content: 'Eksplike m kesyon sa a.' });
+  });
+
+  it('retrieves knowledge on the question itself, not on "explain this"', async () => {
+    const res = makeRes();
+    await handler(makeReq({ body: { message: 'Explique-moi cette question.', lang: 'fr', questionContext } }), res as any);
+
+    expect(embedMock).toHaveBeenCalledTimes(1);
+    expect(embedMock.mock.calls[0][0][0]).toContain('Résoudre $2x + 3 = 7$.');
+  });
+
+  it('records where the explanation came from (ids only) and tags the conversation', async () => {
+    const { db, setMock, updateMock } = makeDb();
+    getDbMock.mockReturnValue(db);
+    const res = makeRes();
+    await handler(makeReq({ body: { message: 'Explique-moi cette question.', lang: 'fr', questionContext } }), res as any);
+
+    expect(setMock.mock.calls[0][0].explainSurface).toBe('exam_results');
+    const [userMsg] = updateMock.mock.calls[0][0].messages.__arrayUnion;
+    expect(userMsg.explain).toEqual({ surface: 'exam_results', questionId: 'q-17', examId: 'bac-math-2022', status: 'incorrect' });
+    expect(JSON.stringify(userMsg.explain)).not.toContain('x = 5');
+  });
+
+  it('never presents a placeholder key as the answer, and bounds every field', async () => {
+    const res = makeRes();
+    await handler(makeReq({
+      body: {
+        message: 'Explique-moi.',
+        lang: 'fr',
+        questionContext: { ...questionContext, expectedAnswer: 'Texte manquant', question: 'Q'.repeat(9000) },
+      },
+    }), res as any);
+
+    const { system } = chatWithToolsMock.mock.calls[0][0];
+    expect(system).not.toContain('Texte manquant');
+    expect(system).toContain('Aucun corrigé fiable');
+    expect(system).not.toContain('Q'.repeat(1501));
+  });
+
+  it('ignores a malformed questionContext and answers as a normal chat', async () => {
+    const res = makeRes();
+    await handler(makeReq({ body: { message: 'Bonjour', lang: 'fr', questionContext: 'not an object' } }), res as any);
+
+    expect(res.statusCode).toBe(200);
+    const { system } = chatWithToolsMock.mock.calls[0][0];
+    expect(system).not.toContain('Réponse attendue (corrigé officiel)');
+  });
+});

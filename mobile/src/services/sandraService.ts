@@ -2,7 +2,7 @@
  * Sandra — AI tutor chat client.
  * Talks to the SAME serverless endpoint as the web app
  * (https://academy.edlight.org/api/chat): POST with a Firebase ID token,
- * body { message, lang, page?, conversationId? } → { reply, conversationId,
+ * body { message, lang, page?, conversationId?, studentContext?, questionContext? } → { reply, conversationId,
  * remaining } (or { conversationFull: true } when the thread hits its cap).
  *
  * The active conversation id persists in AsyncStorage so a chat survives app
@@ -11,6 +11,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth } from './firebase';
+import type { QuestionContext } from '../../../shared/explainContext';
 
 const CHAT_URL = 'https://academy.edlight.org/api/chat';
 const CONV_KEY = 'edlight:sandra:conv';
@@ -48,13 +49,41 @@ export async function writeConvId(id: string | null) {
   } catch {}
 }
 
+/**
+ * Where a conversation id lives. The main chat persists it (AsyncStorage) so a
+ * chat survives restarts; an "Explique-moi" sheet keeps its own in memory, so
+ * explaining a missed question never hijacks the student's ongoing chat.
+ */
+export interface ConversationStore {
+  read: () => Promise<string | null>;
+  write: (id: string | null) => Promise<void>;
+}
+
+export const persistedConversation: ConversationStore = { read: readConvId, write: writeConvId };
+
+export function memoryConversation(): ConversationStore {
+  let id: string | null = null;
+  return {
+    read: async () => id,
+    write: async (next) => { id = next; },
+  };
+}
+
+export interface SendOptions {
+  /** "Explique-moi": the missed question, sent as structured context. */
+  questionContext?: QuestionContext;
+  conversation?: ConversationStore;
+}
+
 export async function sendToSandra(
   message: string,
   lang: 'fr' | 'ht',
   page?: { path: string; courseId?: string; lessonId?: string },
   studentContext?: StudentContext,
   isFullRetry = false,
+  opts: SendOptions = {},
 ): Promise<SandraResult> {
+  const conversation = opts.conversation ?? persistedConversation;
   const user = auth.currentUser;
   if (!user) return { kind: 'auth' };
 
@@ -71,7 +100,8 @@ export async function sendToSandra(
     page: page || { path: '/mobile' },
   };
   if (studentContext) body.studentContext = studentContext;
-  const convId = await readConvId();
+  if (opts.questionContext) body.questionContext = opts.questionContext;
+  const convId = await conversation.read();
   if (convId) body.conversationId = convId;
 
   // 90 s ceiling (P0 validation): a fetch on a half-dead network may never
@@ -106,10 +136,10 @@ export async function sendToSandra(
     if (data?.conversationFull) {
       // Thread hit the server-side cap — start fresh; transparently re-send
       // the unanswered turn once into the new conversation.
-      await writeConvId(null);
-      if (!reply && !isFullRetry) return sendToSandra(message, lang, page, studentContext, true);
+      await conversation.write(null);
+      if (!reply && !isFullRetry) return sendToSandra(message, lang, page, studentContext, true, opts);
     } else if (typeof data?.conversationId === 'string' && data.conversationId) {
-      await writeConvId(data.conversationId);
+      await conversation.write(data.conversationId);
     }
 
     if (!reply) return { kind: 'error' };

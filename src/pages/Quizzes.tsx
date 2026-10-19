@@ -15,6 +15,7 @@ import { readPracticeHandoff, trackJourney } from '../utils/learningJourney';
 import { toDirectItemFromRow } from '../services/quizBank';
 import { useAppData } from '../hooks/useData';
 import { useFocusMode } from '../hooks/useFocusMode';
+import { SandraFocusPanel } from '../components/SandraWidget';
 import useStore from '../contexts/store';
 import { gradeProfile } from '../config/trackConfig';
 import { useTranslation } from 'react-i18next';
@@ -642,6 +643,7 @@ const Quizzes = () => {
     const next = fromLesson && scope?.nextLesson ? { title: scope.nextLesson.title, href: lessonHref(scope.nextLesson.id) || '' } : null;
     return (
       <section className="section qz qz--result">
+        <SandraFocusPanel />
         <div className="container qz__container">
           <QuizResult
             deck={completedDeck}
@@ -761,6 +763,9 @@ const Quizzes = () => {
     const seen = practiceDeck.length;
     return (
       <section className="section qz qz--taking">
+        {/* Practice runs in focus mode, where Layout does not mount the
+            global Sandra widget: this host serves "Explique-moi". */}
+        <SandraFocusPanel />
         <div className="container qz__container">
           <h1 className="qz__sr-only">{sessionHeading}</h1>
           <div className="qz-top">
@@ -804,7 +809,7 @@ const Quizzes = () => {
           )}
 
           <div className="qz-question">
-            <DirectBankQuiz item={bankDirectItem} onScore={handlePracticeScore} onNext={undefined} onClose={undefined} />
+            <DirectBankQuiz item={bankDirectItem} onScore={handlePracticeScore} onNext={undefined} onClose={undefined} explainSurface="practice" />
           </div>
 
           {bankMessage && <p className="qz-message" role="status">{bankMessage}</p>}

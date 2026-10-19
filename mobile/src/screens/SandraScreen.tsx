@@ -34,7 +34,8 @@ import Button from '../components/ui/Button';
 import SandraFace from '../components/sandra/SandraFace';
 import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
-import { sendToSandra, writeConvId, MAX_CHARS } from '../services/sandraService';
+import { sendToSandra, MAX_CHARS, memoryConversation, persistedConversation, type ConversationStore } from '../services/sandraService';
+import { EXPLAIN_DISCLOSURE, type QuestionContext } from '../../../shared/explainContext';
 import { tapLight, tapMedium } from '../utils/haptics';
 import { useReduceMotion } from '../utils/motion';
 import { useTheme, fonts, typeScale, touch, type Palette } from '../theme/theme';
@@ -248,6 +249,7 @@ export default function SandraScreen({
   onClose,
   onNavigate,
   initialAsk,
+  questionContext,
 }: {
   onClose?: () => void;
   /** Called with an in-app path (e.g. "/study-plan") when a chat link is tapped. */
@@ -255,6 +257,12 @@ export default function SandraScreen({
   /** Query handed over from SearchScreen's "Mande Sandra" row — auto-sent
    *  when signed in, parked in the composer otherwise. */
   initialAsk?: string;
+  /**
+   * "Explique-moi" from a correction: the missed question, sent as structured
+   * context with every message of this conversation. The conversation id is
+   * then kept in memory only, so the student's main chat is left untouched.
+   */
+  questionContext?: QuestionContext;
 }) {
   const { user, language, toggleAuthModal, grade, track, enrolledCourses, lastActivity } = useStore();
   const { level } = useTrivia();
@@ -283,6 +291,11 @@ export default function SandraScreen({
     () => ({ grade: grade ?? null, track: track ?? null, level: level?.level ?? null }),
     [grade, track, level?.level],
   );
+
+  // An explain sheet gets its own in-memory conversation (see questionContext).
+  const conversationRef = useRef<ConversationStore | null>(null);
+  if (!conversationRef.current) conversationRef.current = questionContext ? memoryConversation() : persistedConversation;
+  const conversation = conversationRef.current;
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -401,7 +414,10 @@ export default function SandraScreen({
       setSending(true);
       scrollToEnd();
 
-      const result = await sendToSandra(text, lang, { path: '/mobile' }, studentContext);
+      const result = await sendToSandra(
+        text, lang, { path: questionContext ? '/mobile/explain' : '/mobile' }, studentContext, false,
+        { questionContext, conversation },
+      );
       setSending(false);
 
       if (result.kind === 'reply') {
@@ -422,7 +438,7 @@ export default function SandraScreen({
       scrollToEnd();
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sending, lang, isCreole, studentContext],
+    [sending, lang, isCreole, studentContext, questionContext, conversation],
   );
 
   const handleSend = () => {
@@ -437,7 +453,7 @@ export default function SandraScreen({
     setMessages([]);
     setInput('');
     setNotice(null);
-    writeConvId(null);
+    conversation.write(null);
   };
 
   // Search handoff: consume the query once on mount. Guests see it parked in
@@ -550,6 +566,13 @@ export default function SandraScreen({
           <View style={{ alignSelf: 'center', backgroundColor: colors.surface, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6, marginBottom: 16 }}>
             <Text style={[typeScale.caption, { color: colors.muted }]}>{t('Aujourd’hui', 'Jodi a')}</Text>
           </View>
+
+          {/* Explique-moi: say in one line what left the correction screen. */}
+          {questionContext ? (
+            <Text style={[typeScale.caption, { color: colors.muted, textAlign: 'center', marginBottom: 14 }]}>
+              {isCreole ? EXPLAIN_DISCLOSURE.ht : EXPLAIN_DISCLOSURE.fr}
+            </Text>
+          ) : null}
 
           {messages.length === 0 ? (
             <SandraBubble onLinkPress={handleLinkPress} text={greeting} accessibilityLabel={`Sandra : ${greeting}`} />

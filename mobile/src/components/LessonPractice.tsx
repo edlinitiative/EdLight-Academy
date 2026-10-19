@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Modal, View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import type { ExplainSurface } from '../../../shared/explainContext';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { X, RotateCcw, ChevronLeft, ChevronRight, Info } from 'lucide-react-native';
 import { useAppData } from '../hooks/useData';
@@ -96,7 +97,7 @@ function Flashcards({ cards, isCreole }: { cards: Card[]; isCreole: boolean }) {
 // never marked wrong, never sent to Révision, never counted in the score.
 
 export function Exercices({
-  cards, isCreole, onFinish, onAnswer, resultLevel, renderDone, onStart,
+  cards, isCreole, onFinish, onAnswer, resultLevel, renderDone, onStart, explainSurface,
 }: {
   cards: Card[];
   isCreole: boolean;
@@ -109,6 +110,11 @@ export function Exercices({
   /** Replace the default end screen (Révision draws its own). */
   renderDone?: (args: { tally: Tally; restart: () => void }) => React.ReactNode;
   onStart?: () => void;
+  /**
+   * Révision passes 'revision': "Explique-moi" on each wrong answer, live
+   * (needs an ExplainProvider above). A lesson's scored exercises omit it.
+   */
+  explainSurface?: ExplainSurface;
 }) {
   const colors = useColors();
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -176,6 +182,8 @@ export function Exercices({
       chrome="minimal"
       title=""
       t={t}
+      explainSurface={explainSurface}
+      liveExplain={!!explainSurface}
       onAnswer={(item, _entry, outcome) => {
         const card = byId.get(item.id);
         if (card && outcome != null) onAnswer?.(card, outcome);

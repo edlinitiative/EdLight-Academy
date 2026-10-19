@@ -233,3 +233,21 @@
 .section.xp.xp-res .exam-results__tally-item--pending { background: var(--xp-azure-soft); color: var(--xp-azure-ink); }
 .section.xp.xp-res .exam-results__tally-item--right svg,
 .section.xp.xp-res .exam-results__tally-item--wrong svg { color: inherit; }
+
+/* Essays not yet AI-graded: the sentence, the retry, the outcome. */
+.exam-results__regrade { display: grid; gap: 0.5rem; }
+.exam-results__regrade p { margin: 0; }
+.exam-results__regrade-btn { justify-self: start; }
+.exam-results__regrade-msg { font-weight: 600; }
+
+/* AI grade of a written answer (an estimate). */
+.exam-results__essay {
+  margin-top: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 12px;
+  background: var(--surface-muted, rgba(27, 111, 224, 0.06));
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+.exam-results__essay p { margin: 0 0 0.4rem; }
+.exam-results__essay-list ul { margin: 0.25rem 0 0.4rem 1.1rem; padding: 0; }
