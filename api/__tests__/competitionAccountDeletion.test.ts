@@ -21,7 +21,8 @@ const mutate = (uid: string, action: string, values: Record<string, unknown> = {
   mutateCompetition(db, uid, uid, { action, operationId: `op_${++sequence}`, ...values }, now);
 const erase = (uid: string, at = now) => eraseCompetitionAccount(db, uid, at);
 const doc = (path: string) => mockDb.store.get(path);
-const tombA = deletedAccountTombstone('a');
+process.env.ACCOUNT_DELETION_SALT = 'test-secret';
+const tombA = deletedAccountTombstone('a')!;
 const snapshot = () => JSON.stringify([...mockDb.store.entries()].sort());
 
 const config = (format = 'window') => ({
@@ -331,5 +332,27 @@ describe('ownerless events finish without manual work', () => {
     expect(doc(`competitionEvents/${eventId}`)).toMatchObject({ state: 'published', ownerUid: 'host' });
     expect(doc(`users/host/competitionInbox/event_${eventId}`)!.action).toBe('ownership_received');
     expect(mockDb.store.has(`competitionOrphans/event_${eventId}`)).toBe(false);
+  });
+});
+
+describe('tombstones', () => {
+  afterEach(() => {
+    process.env.ACCOUNT_DELETION_SALT = 'test-secret';
+  });
+  it('are keyed by the server secret, never a public constant', () => {
+    expect(deletedAccountTombstone('a', 'one')).not.toEqual(deletedAccountTombstone('a', 'two'));
+    expect(deletedAccountTombstone('a', '')).toBeNull();
+  });
+  it('fall back to a random tombstone kept on the user doc until the account is gone', async () => {
+    delete process.env.ACCOUNT_DELETION_SALT;
+    const eventId = await publishedEvent('host');
+    await registerIndividual(eventId, 'a');
+    await erase('a', later);
+    const tomb = doc('users/a')!.deletionTombstone;
+    expect(tomb).toMatch(/^deleted_[0-9a-f]{16}$/);
+    expect(tomb).not.toEqual(tombA);
+    expect(doc(`competitionEvents/${eventId}/entries/a`)!.captainUid).toBe(tomb);
+    await erase('a', later);
+    expect(doc('users/a')!.deletionTombstone).toBe(tomb);
   });
 });

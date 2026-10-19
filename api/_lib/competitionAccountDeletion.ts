@@ -58,7 +58,7 @@
  * Idempotent: every pass selects by the raw uid, which the first run replaces
  * or deletes, so a rerun finds nothing left to change.
  */
-import { createHash } from 'crypto';
+import { createHmac, randomBytes } from 'crypto';
 import type {
   DocumentData,
   DocumentReference,
@@ -79,11 +79,29 @@ import { markOrphaned } from './competitionOrphans';
 import { defaultAlias, isValidAlias } from '../../shared/alias';
 import { CompetitionError, mutateCompetition } from './competition';
 
-/** Stable, non-reversible stand-in for a deleted uid; same input → same tombstone across reruns. */
-export function deletedAccountTombstone(uid: string): string {
-  const salt =
-    process.env.ACCOUNT_DELETION_SALT || 'edlight-competition-erasure-v1';
-  return `deleted_${createHash('sha256').update(`${salt}:${uid}`).digest('hex').slice(0, 16)}`;
+/**
+ * Non-reversible stand-in for a deleted uid: an HMAC keyed by the server secret
+ * ACCOUNT_DELETION_SALT, stable across reruns. Never keyed by a public constant —
+ * anyone holding a uid could otherwise recompute it and re-identify the records.
+ */
+export function deletedAccountTombstone(
+  uid: string,
+  secret = process.env.ACCOUNT_DELETION_SALT,
+): string | null {
+  if (!secret) return null;
+  return `deleted_${createHmac('sha256', secret).update(uid).digest('hex').slice(0, 16)}`;
+}
+
+/** Without the secret: a random tombstone, parked on the user doc (deleted last) so a rerun reuses it. */
+async function tombstoneFor(db: Firestore, uid: string): Promise<string> {
+  const keyed = deletedAccountTombstone(uid);
+  if (keyed) return keyed;
+  const ref = db.doc(`users/${uid}`);
+  const kept = (await ref.get()).data()?.deletionTombstone;
+  if (typeof kept === 'string' && /^deleted_[0-9a-f]{16}$/.test(kept)) return kept;
+  const fresh = `deleted_${randomBytes(8).toString('hex')}`;
+  await ref.set({ deletionTombstone: fresh }, { merge: true });
+  return fresh;
 }
 
 /** Writer used by system-authored audit rows (no human actor). */
@@ -850,7 +868,7 @@ export async function eraseCompetitionAccount(
   uid: string,
   now: number,
 ): Promise<{ warnings: string[] }> {
-  const ctx: Ctx = { db, uid, tomb: deletedAccountTombstone(uid), now, warnings: [], notices: [] };
+  const ctx: Ctx = { db, uid, tomb: await tombstoneFor(db, uid), now, warnings: [], notices: [] };
   const step: Step = async (label, fn) => {
     try {
       await fn();
