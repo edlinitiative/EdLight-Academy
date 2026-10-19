@@ -20,6 +20,7 @@ import {
 } from './src/services/notificationService';
 import { registerForPushNotifications } from './src/services/pushService';
 import { syncMasteryOnLogin, startMasterySync, disposeMasterySync } from './src/services/masterySync';
+import { drainWriteOutbox } from './src/services/writeOutbox';
 import { hydrateQueryCache, persistQueryCacheOnChange } from './src/services/queryPersistence';
 import { installGlobalErrorHandlers, installProductionTelemetry, reportError } from './src/services/telemetry';
 import AppErrorBoundary from './src/components/AppErrorBoundary';
@@ -140,6 +141,11 @@ function AuthGate() {
         // every auth event. Runs after any account-switch wipe above, so the
         // previous student's map is never merged into this account.
         syncMasteryOnLogin(uid).catch(() => {});
+
+        // Replay this account's persisted outbox (lesson completions and XP
+        // awards that an app kill or a dead network left unconfirmed — L-3/D-3).
+        // Only this uid's operations, only while it is the signed-in account.
+        drainWriteOutbox(uid).catch(() => {});
       } catch (error) {
         reportError(error, { flow: 'auth_gate' });
       } finally {

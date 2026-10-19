@@ -133,6 +133,10 @@ function bootstrapFirebaseAuth() {
             email: user.email || '',
             picture: user.photoURL || '',
           });
+          // Replay leaderboard awards a failed POST left queued (D-3).
+          import('./services/writeOutbox')
+            .then(({ drainWriteOutbox }) => drainWriteOutbox(user.uid))
+            .catch(() => {});
         } else {
           logout();
         }
