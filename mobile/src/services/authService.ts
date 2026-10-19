@@ -105,12 +105,26 @@ export async function loginWithAppleCredential(identityToken: string, rawNonce: 
 
 export async function logoutUser() {
   const { logout } = await loadFirebase();
-  // Best-effort: stop remote pushes to this device before signing out.
+  const { withTimeout } = await import('../lifecycle/sessionLogic');
+  const uid = useStore.getState().user?.uid;
+  // Push the mastery/review the debounce still holds BEFORE the local map is
+  // cleared — the last exercise set was lost otherwise (P0 validation).
+  // Bounded: offline the write only queues.
   try {
-    const uid = useStore.getState().user?.uid;
+    if (uid) {
+      const { flushMasterySync } = await import('./masterySync');
+      await withTimeout(flushMasterySync(uid), 2500, 'mastery flush');
+    }
+  } catch {
+    // never block logout
+  }
+  // Best-effort: stop remote pushes to this device before signing out.
+  // Bounded: an offline updateDoc never settles, and awaiting it left the
+  // student unable to sign out at all without signal (P0 validation).
+  try {
     if (uid) {
       const { unregisterPushToken } = await import('./pushService');
-      await unregisterPushToken(uid);
+      await withTimeout(unregisterPushToken(uid), 3000, 'push token removal');
     }
   } catch {
     // never block logout

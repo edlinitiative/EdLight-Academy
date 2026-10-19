@@ -2,7 +2,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { applyExerciseScore, applyChapterTestResult } from '../utils/mastery';
-import { applyReviewOutcome, pruneReview, type ReviewMap, type ReviewMeta } from '../utils/review';
+import { applyReviewOutcome, pruneReview, mergeReview, type ReviewMap, type ReviewMeta } from '../utils/review';
+import { mergeProgress } from '../utils/masteryMerge';
 
 export const FREE_VIDEO_LIMIT = 3;
 
@@ -225,7 +226,10 @@ const useStore = create<AppState>()(
 
       // The caller (services/masterySync) has already joined this with local
       // state, so it can be taken wholesale.
-      mergeRemoteProgress: (progress) => set({ progress: progress ?? {} }),
+      // JOIN, never replace: the merged map was computed from a snapshot taken
+      // before the network read, and a score recorded meanwhile must survive
+      // (the join is monotonic, so re-joining is always safe — P0 validation).
+      mergeRemoteProgress: (progress) => set((s) => ({ progress: mergeProgress(s.progress as any, (progress ?? {}) as any) })),
 
       recordReviewOutcome: (questionId, correct, meta) =>
         set((s) => {
@@ -239,7 +243,7 @@ const useStore = create<AppState>()(
           return { review: pruneReview({ ...s.review, [questionId]: next }, now) };
         }),
 
-      mergeRemoteReview: (review) => set({ review: review ?? {} }),
+      mergeRemoteReview: (review) => set((s) => ({ review: mergeReview(s.review, review ?? {}) })),
 
       recordQuizAttempt: (quizId, attempt) =>
         set((s) => ({
