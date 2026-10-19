@@ -282,3 +282,54 @@ it('deletes the user’s invite code but never someone else’s', async () => {
   expect(mockDb.store.has(`competitionInviteCodes/${mine}`)).toBe(false);
   expect(doc(`competitionInviteCodes/${theirs}`)).toMatchObject({ uid: 'b' });
 });
+
+describe('ownerless events finish without manual work', () => {
+  const { sweepOrphans, ORPHAN_GRACE_MS } = jest.requireActual('../_lib/competitionOrphans');
+  it('queues a started event with no heir, then closes it once the engine is final', async () => {
+    const eventId = await publishedEvent('a');
+    await registerIndividual(eventId, 'b');
+    await erase('a', later);
+    expect(doc(`competitionEvents/${eventId}`)).toMatchObject({ state: 'published', ownerUid: tombA });
+    expect(doc(`competitionOrphans/event_${eventId}`)).toMatchObject({ kind: 'event', since: later });
+    // Still running: the sweep waits.
+    await sweepOrphans(db, later + 60000);
+    expect(doc(`competitionEvents/${eventId}`)!.state).toBe('published');
+    Object.assign(mockDb.store.get(`userTournaments/${eventId}`)!, { state: 'finished', standingsDirty: false });
+    expect(await sweepOrphans(db, later + 120000)).toEqual({ queued: 1, settled: 1 });
+    expect(doc(`competitionEvents/${eventId}`)!.state).toBe('closed');
+    expect(doc(`users/b/competitionInbox/entry_${eventId}_b`)!.action).toBe('closed');
+    expect(mockDb.store.has(`competitionOrphans/event_${eventId}`)).toBe(false);
+  });
+  it('alerts administrators once when an open dispute needs a person', async () => {
+    mockDb.store.set('users/admin1', { displayName: 'admin1', role: 'admin' });
+    const eventId = await publishedEvent('a');
+    await registerIndividual(eventId, 'b');
+    await mutate('b', 'event-dispute', { eventId, reason: 'Question 3' });
+    await erase('a', later);
+    await sweepOrphans(db, later + ORPHAN_GRACE_MS + 1);
+    await sweepOrphans(db, later + ORPHAN_GRACE_MS + 2);
+    expect(doc(`users/admin1/competitionInbox/orphan_event_${eventId}`)).toMatchObject({
+      action: 'owner_missing',
+      read: false,
+    });
+    expect(doc(`competitionOrphans/event_${eventId}`)!.alertedAt).toBe(later + ORPHAN_GRACE_MS + 1);
+    expect(doc(`competitionEvents/${eventId}`)!.state).toBe('published');
+  });
+  it('hands a school event to the school’s other approved host when no co-host can', async () => {
+    for (const [uid, reviewedAt] of [['a', 1], ['host', 2], ['cohost', 3]] as const)
+      mockDb.store.set(`schoolRoles/lycee_${uid}`, {
+        uid,
+        schoolKey: 'lycee',
+        role: 'host',
+        status: 'approved',
+        reviewedAt,
+      });
+    const eventId = await publishedEvent('a');
+    await registerIndividual(eventId, 'b');
+    Object.assign(mockDb.store.get(`competitionEvents/${eventId}`)!, { hostKind: 'school', schoolKey: 'lycee' });
+    await erase('a', later);
+    expect(doc(`competitionEvents/${eventId}`)).toMatchObject({ state: 'published', ownerUid: 'host' });
+    expect(doc(`users/host/competitionInbox/event_${eventId}`)!.action).toBe('ownership_received');
+    expect(mockDb.store.has(`competitionOrphans/event_${eventId}`)).toBe(false);
+  });
+});

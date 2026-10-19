@@ -285,6 +285,8 @@ export async function mutateCompetition(
   displayName: string,
   body: Record<string, unknown>,
   now: number,
+  // Server-only: the ownerless-event sweep acts with administrator authority. Never set from a request.
+  options: { system?: boolean } = {},
 ) {
   const action = String(body.action || '');
   const operationId = id(body.operationId);
@@ -332,7 +334,7 @@ export async function mutateCompetition(
         403,
       );
     const user = await data(tx, db, `users/${uid}`);
-    const admin = user?.role === 'admin';
+    const admin = options.system === true || user?.role === 'admin';
     const publicIdentity = await data(
       tx,
       db,

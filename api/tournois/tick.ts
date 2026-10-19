@@ -23,6 +23,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getDb, isAdminConfigured } from '../_lib/firebaseAdmin';
 import { isValidTid } from '../../shared/tournois/config';
+import { sweepOrphans } from '../_lib/competitionOrphans';
 import { COLLECTION, advanceTournament, clientKey, cronAuthorized, enforceRateLimit, parseBody } from './_shared';
 
 const SWEEP_LIMIT = 40;
@@ -54,7 +55,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         console.error('[tournois/tick] sweep failed for', d.id, err);
       }
     }
-    res.status(200).json({ ok: true, swept: due.size, advanced });
+    // Ownerless competitions change slowly: finish them on the quarter hour, never failing the tick.
+    let orphans = null;
+    if (new Date(now).getUTCMinutes() % 15 === 0)
+      orphans = await sweepOrphans(db, now).catch((err) => {
+        console.error('[tournois/tick] orphan sweep failed', err);
+        return null;
+      });
+    res.status(200).json({ ok: true, swept: due.size, advanced, orphans });
     return;
   }
 

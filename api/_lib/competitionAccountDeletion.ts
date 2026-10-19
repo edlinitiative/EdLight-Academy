@@ -74,6 +74,8 @@ import type {
 } from '../../shared/competition/platform';
 import { DELETED_ACCOUNT_NAME } from '../../shared/competition/deletedAccount';
 import { inviteCodeFor } from './competitionPeople';
+import { deliverCompetitionNotices, type CompetitionNotice } from './competitionNotify';
+import { markOrphaned } from './competitionOrphans';
 import { defaultAlias, isValidAlias } from '../../shared/alias';
 import { CompetitionError, mutateCompetition } from './competition';
 
@@ -95,6 +97,7 @@ interface Ctx {
   tomb: string;
   now: number;
   warnings: string[];
+  notices: CompetitionNotice[];
 }
 
 type Op = (b: FirebaseFirestore.WriteBatch) => void;
@@ -158,6 +161,41 @@ async function approvedHost(db: Firestore, uid: string, schoolKey: string | null
   if (!schoolKey) return false;
   const role = await get(db, `schoolRoles/${schoolKey}_${uid}`);
   return role?.status === 'approved' && role?.role === 'host';
+}
+
+/** The earliest-approved other host of a school: the automatic heir when no co-host can take over. */
+async function schoolHostHeir(db: Firestore, schoolKey: string | null, uid: string) {
+  if (!schoolKey) return undefined;
+  const hosts = (
+    await db.collection('schoolRoles').where('schoolKey', '==', schoolKey).limit(100).get()
+  ).docs
+    .map((r) => r.data())
+    .filter((r) => r.uid !== uid && r.status === 'approved' && r.role === 'host')
+    .sort((a, b) => (a.reviewedAt || 0) - (b.reviewedAt || 0));
+  return hosts[0]?.uid as string | undefined;
+}
+
+/** The new owner's typed inbox item (and a push once the writes have landed). */
+function ownershipNotice(
+  w: Writes,
+  db: Firestore,
+  heir: string,
+  kind: 'event' | 'league',
+  targetId: string,
+  title: string,
+  now: number,
+): CompetitionNotice {
+  w.set(db.doc(`users/${heir}/competitionInbox/${kind}_${targetId}`), {
+    id: `${kind}_${targetId}`,
+    kind,
+    targetKind: kind,
+    targetId,
+    action: 'ownership_received',
+    title,
+    read: false,
+    updatedAt: now,
+  });
+  return { uid: heir, action: 'ownership_received', targetKind: kind, targetId, title };
 }
 
 /** Run one engine action as the departing account; a refusal is recorded, never thrown. */
@@ -365,8 +403,11 @@ async function teams(ctx: Ctx, events: Set<string>) {
         .set({
           id: `team_${teamId}`,
           kind: 'team',
+          targetKind: 'team',
           targetId: teamId,
+          action: 'captain_transferred',
           title: seen.name,
+          read: false,
           updatedAt: now,
         });
     if (outcome === 'delete') {
@@ -425,11 +466,16 @@ async function ownedEvents(ctx: Ctx, events: Set<string>) {
         heir = candidate;
         break;
       }
+      // No managing co-host: the school's own approved host keeps a school event going.
+      if (!heir && e.hostKind === 'school')
+        heir = (await schoolHostHeir(db, e.schoolKey, uid)) ?? null;
       if (!heir && !started(e, tournament, now)) {
         await engine(ctx, 'event-cancel', { eventId });
         e = (await get(db, `competitionEvents/${eventId}`)) as CompetitionEvent;
       }
-      // A started event without an heir keeps running; an admin can close or report it.
+      // A started event without an heir is finished automatically (competitionOrphans).
+      if (!heir && e.state === 'published')
+        await markOrphaned(db, 'event', eventId, e.title, now);
     }
     const owner = heir ?? tomb;
     const hostName = heir ? await publicName(db, heir) : DELETED_ACCOUNT_NAME;
@@ -451,13 +497,7 @@ async function ownedEvents(ctx: Ctx, events: Set<string>) {
         revision: e.revision + 1,
         at: now,
       });
-      w.set(db.doc(`users/${heir}/competitionInbox/event_${eventId}`), {
-        id: `event_${eventId}`,
-        kind: 'event',
-        targetId: eventId,
-        title: e.title,
-        updatedAt: now,
-      });
+      ctx.notices.push(ownershipNotice(w, db, heir, 'event', eventId, e.title, now));
     }
     if (await get(db, `competitionDirectory/${eventId}`))
       w.update(db.doc(`competitionDirectory/${eventId}`), { hostName });
@@ -691,26 +731,18 @@ async function leagues(ctx: Ctx) {
       await db.recursiveDelete(d.ref);
       continue;
     }
-    const hosts = (
-      await db
-        .collection('schoolRoles')
-        .where('schoolKey', '==', league.schoolKey)
-        .limit(100)
-        .get()
-    ).docs
-      .map((r) => r.data())
-      .filter((r) => r.uid !== uid && r.status === 'approved' && r.role === 'host')
-      .sort((a, b) => (a.reviewedAt || 0) - (b.reviewedAt || 0));
-    const heir = hosts[0]?.uid as string | undefined;
-    if (
-      !heir &&
-      league.state === 'active' &&
-      league.fixtures.every((f) => f.status === 'final' || f.status === 'no_contest')
-    )
+    const heir = await schoolHostHeir(db, league.schoolKey, uid);
+    const resolved = league.fixtures.every(
+      (f) => f.status === 'final' || f.status === 'no_contest',
+    );
+    if (!heir && league.state === 'active' && resolved)
       await engine(ctx, 'league-close', {
         leagueId: league.id,
         revision: league.revision,
       });
+    // Unresolved fixtures need adjudication: the sweep alerts administrators once.
+    else if (!heir && league.state !== 'closed')
+      await markOrphaned(db, 'league', league.id, league.title, now);
     const w = new Writes(db);
     w.update(d.ref, { ownerUid: heir ?? tomb });
     if (heir) {
@@ -720,13 +752,7 @@ async function leagues(ctx: Ctx) {
         ownerUid: heir,
         at: now,
       });
-      w.set(db.doc(`users/${heir}/competitionInbox/league_${league.id}`), {
-        id: `league_${league.id}`,
-        kind: 'league',
-        targetId: league.id,
-        title: league.title,
-        updatedAt: now,
-      });
+      ctx.notices.push(ownershipNotice(w, db, heir, 'league', league.id, league.title, now));
     }
     await w.flush();
   }
@@ -824,7 +850,7 @@ export async function eraseCompetitionAccount(
   uid: string,
   now: number,
 ): Promise<{ warnings: string[] }> {
-  const ctx: Ctx = { db, uid, tomb: deletedAccountTombstone(uid), now, warnings: [] };
+  const ctx: Ctx = { db, uid, tomb: deletedAccountTombstone(uid), now, warnings: [], notices: [] };
   const step: Step = async (label, fn) => {
     try {
       await fn();
@@ -854,5 +880,6 @@ export async function eraseCompetitionAccount(
   await step('leagues', () => leagues(ctx));
   await step('invite_codes', () => inviteCodes(ctx));
   await personal(ctx, step);
+  await deliverCompetitionNotices(db, ctx.notices, uid);
   return { warnings: ctx.warnings };
 }

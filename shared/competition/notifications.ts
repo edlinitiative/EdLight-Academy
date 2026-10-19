@@ -54,7 +54,9 @@ export type InboxAction =
   | 'league_consent'
   | 'fixtures_scheduled'
   | 'fixture_updated'
-  | 'source_changed';
+  | 'source_changed'
+  | 'ownership_received'
+  | 'owner_missing';
 
 type Pair = [string, string];
 
@@ -150,6 +152,20 @@ export const INBOX_ACTIONS: Record<InboxAction, { label: Pair; push?: Pair }> = 
     ],
   },
   cohost_removed: { label: ['Co-organisation retirée', 'Ko-òganizasyon retire'] },
+  ownership_received: {
+    label: ['Organisation transférée', 'Òganizasyon transfere'],
+    push: [
+      'L’organisateur a quitté EdLight : tu gères maintenant cet événement.',
+      'Òganizatè a kite EdLight : se ou ki jere evènman sa a kounye a.',
+    ],
+  },
+  owner_missing: {
+    label: ['Sans organisateur', 'San òganizatè'],
+    push: [
+      'Un événement sans organisateur demande une décision d’administrateur.',
+      'Yon evènman san òganizatè bezwen yon desizyon administratè.',
+    ],
+  },
   announcement: {
     label: ['Nouvelle annonce', 'Nouvo anons'],
     push: [
