@@ -483,6 +483,7 @@ export default function TournoisCreateForm({
                     { v: 'solo', label: t('Chacun pour soi', 'Chak moun pou tèt li') },
                     { v: 'school', label: t('École contre école', 'Lekòl kont lekòl') },
                     { v: 'grade', label: t('Classe contre classe', 'Klas kont klas') },
+                    { v: 'class', label: t('Classe vérifiée', 'Klas verifye') },
                   ]}
                 />
                 {draft.teamRule !== 'solo' ? (

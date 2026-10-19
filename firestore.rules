@@ -613,6 +613,7 @@ service cloud.firestore {
         || (t.get('schemaVersion', 1) == 2 && managedTournamentViewer(t))
         || (request.auth != null
             && (t.creatorUid == request.auth.uid
+                || request.auth.uid in t.get('classTeacherUids', [])
                 || exists(/databases/$(database)/documents/userTournaments/$(tid)/roster/$(request.auth.uid))));
     }
     match /userTournaments/{tid} {
@@ -620,6 +621,7 @@ service cloud.firestore {
         || (resource.data.get('schemaVersion', 1) == 2 && managedTournamentViewer(resource.data))
         || (request.auth != null
             && (resource.data.creatorUid == request.auth.uid
+                || request.auth.uid in resource.data.get('classTeacherUids', [])
                 || exists(/databases/$(database)/documents/userTournaments/$(tid)/roster/$(request.auth.uid))));
       allow list: if resource.data.visibility == 'public';
       allow write: if false;
@@ -655,6 +657,8 @@ service cloud.firestore {
     match /classAccounts/{document=**} { allow read, write: if false; }
     match /classTeachers/{document=**} { allow read, write: if false; }
     match /classCodes/{document=**} { allow read, write: if false; }
+    match /classFixtures/{document=**} { allow read, write: if false; }
+    match /classFixtureCodes/{document=**} { allow read, write: if false; }
 
     // Default: deny all other access
     match /{document=**} {

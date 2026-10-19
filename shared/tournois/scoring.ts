@@ -8,7 +8,7 @@
  * a creator can pick 10 s or 30 s per question.
  */
 import { rankTeams, normalizeName, type GroupRanking, type TeamStanding } from '../leaderboardAgg';
-import type { TeamRule } from './config';
+import { TEAM_AVERAGE_MIN, type TeamAggregate, type TeamRule } from './config';
 
 export const POINTS_FULL = 1000;
 export const POINTS_HALF = 500;
@@ -56,6 +56,9 @@ export interface PlayerRow {
   displayName: string;
   school?: string | null;
   grade?: string | null;
+  /** Verified class team key (a hash of the class id, never the id) and its label. */
+  classKey?: string | null;
+  classLabel?: string | null;
   points: number;
   correct: number;
   answered: number;
@@ -87,7 +90,10 @@ export function rankPlayers(rows: PlayerRow[]): RankedPlayer[] {
 }
 
 /** Team key for a player under a team rule, or null when they have none. */
-export function teamKeyFor(rule: TeamRule, row: Pick<PlayerRow, 'school' | 'grade'>): { key: string; label: string } | null {
+export function teamKeyFor(rule: TeamRule, row: Pick<PlayerRow, 'school' | 'grade' | 'classKey' | 'classLabel'>): { key: string; label: string } | null {
+  if (rule === 'class') {
+    return row.classKey ? { key: row.classKey, label: (row.classLabel || '').trim() || row.classKey } : null;
+  }
   if (rule === 'school') {
     const label = (row.school || '').trim();
     return label ? { key: normalizeName(label), label } : null;
@@ -104,8 +110,9 @@ export function teamKeyFor(rule: TeamRule, row: Pick<PlayerRow, 'school' | 'grad
  * `teamSize` players — the Arène's rule, via the same `rankTeams`, so a team
  * cannot win on turnout and one star cannot carry it.
  */
-export function rankTournamentTeams(rule: TeamRule, teamSize: number, rows: PlayerRow[]): TeamStanding[] {
+export function rankTournamentTeams(rule: TeamRule, teamSize: number, rows: PlayerRow[], aggregate: TeamAggregate = 'sum'): TeamStanding[] {
   if (rule === 'solo' || teamSize <= 0) return [];
+  if (aggregate === 'average') return rankAverageTeams(rule, teamSize, rows);
   const groups = new Map<string, GroupRanking>();
   for (const r of rows) {
     const team = teamKeyFor(rule, r);
@@ -119,4 +126,41 @@ export function rankTournamentTeams(rule: TeamRule, teamSize: number, rows: Play
     groups.set(team.key, g);
   }
   return rankTeams([...groups.values()], { teamSize });
+}
+
+/**
+ * Mean of each team's best `teamSize` players who answered at least once.
+ * Turnout beyond N earns nothing and a short team is not penalised for size:
+ * it qualifies with TEAM_AVERAGE_MIN(N) players. Scores are whole points.
+ */
+export function rankAverageTeams(rule: TeamRule, teamSize: number, rows: PlayerRow[]): TeamStanding[] {
+  const minimum = TEAM_AVERAGE_MIN(teamSize);
+  const groups = new Map<string, { key: string; label: string; members: number; played: number[] }>();
+  for (const r of rows) {
+    const team = teamKeyFor(rule, r);
+    if (!team) continue;
+    const g = groups.get(team.key) || { key: team.key, label: team.label, members: 0, played: [] };
+    g.members += 1;
+    if ((r.answered || 0) > 0) g.played.push(r.points || 0);
+    groups.set(team.key, g);
+  }
+  const standings: TeamStanding[] = [...groups.values()].map((g) => {
+    const best = g.played.sort((a, b) => b - a).slice(0, teamSize);
+    const counted = best.length;
+    return {
+      key: g.key, label: g.label,
+      teamXp: counted ? Math.round(best.reduce((n, v) => n + v, 0) / counted) : 0,
+      counted, members: g.members, qualified: counted >= minimum, needed: Math.max(0, minimum - counted), rank: 0,
+    };
+  });
+  standings.sort((a, b) => (a.qualified !== b.qualified ? (a.qualified ? -1 : 1) : 0)
+    || b.teamXp - a.teamXp || b.counted - a.counted || a.label.localeCompare(b.label));
+  let rank = 0;
+  standings.forEach((s, i) => {
+    if (!s.qualified) return;
+    const prev = standings[i - 1];
+    rank = prev && prev.qualified && prev.teamXp === s.teamXp && prev.counted === s.counted ? rank : rank + 1;
+    s.rank = rank;
+  });
+  return standings;
 }

@@ -5,6 +5,10 @@ import { checkRateLimit } from './_lib/rateLimit';
 import { isAdminUid } from './arena/_shared';
 import { ClassError, classId, classText } from '../shared/classes';
 import { classHome, completeAssignment, createClass, joinClass, mutateClass, readClass, syncExamClasses } from './_lib/classSpaces';
+import { classAnalytics } from './_lib/classAnalytics';
+import { acceptFixture, closeFixture, joinFixture, previewFixture, proposeFixture } from './_lib/classFixtures';
+
+const READS = ['home', 'read', 'analytics', 'fixture-preview'];
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Cache-Control', 'private, no-store');
@@ -14,7 +18,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const body = (typeof req.body === 'string' ? JSON.parse(req.body) : req.body) || {};
     const action = classText(body.action, 30), uid = user.uid, db = getDb(), now = Date.now();
-    if (!(await checkRateLimit(uid, action === 'home' || action === 'read' ? 'classes-read' : 'classes-write')).allowed) {
+    if (!(await checkRateLimit(uid, READS.includes(action) ? 'classes-read' : 'classes-write')).allowed) {
       res.status(429).json({ error: 'rate_limit' }); return;
     }
     let out: unknown;
@@ -26,6 +30,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       out = await joinClass(db, uid, user.name || classText(body.name, 80), classText(body.code, 6).toUpperCase(), now);
     } else if (action === 'complete') out = await completeAssignment(db, uid, classId(body.id), classId(body.assignmentId), now);
     else if (action === 'sync-exam') out = await syncExamClasses(db, uid, classId(body.examId), now);
+    else if (action === 'analytics') out = await classAnalytics(db, uid, classId(body.id), body.courseId);
+    else if (action === 'fixture-propose') out = await proposeFixture(db, uid, body, now);
+    else if (action === 'fixture-preview') out = await previewFixture(db, uid, body.code);
+    else if (action === 'fixture-accept') out = await acceptFixture(db, uid, body.code, body.id, now);
+    else if (action === 'fixture-decline' || action === 'fixture-cancel') out = await closeFixture(db, uid, body, action, now);
+    else if (action === 'fixture-join') out = await joinFixture(db, uid, body.id, body.fixtureId, now);
     else if (action === 'grant-teacher' || action === 'revoke-teacher') {
       if (!(await isAdminUid(db, uid))) throw new ClassError('forbidden');
       const application = await db.doc(`instructorApplications/${classId(body.applicationId)}`).get();
