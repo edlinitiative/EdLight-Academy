@@ -2631,8 +2631,8 @@
         },
         {
           "source": "mobile/src/screens/arena/TournoisScreen.tsx",
-          "match": "Créer un tournoi individuel",
-          "line": 328
+          "match": "Créer un tournoi ou une salle privée",
+          "line": 374
         }
       ],
       "requirementIds": [
@@ -2651,11 +2651,16 @@
         "src/pages/tournois/TournoisCreate.tsx",
         "mobile/src/screens/arena/TournoisScreen.tsx",
         "api/tournois/create.ts",
-        "shared/tournois/config.ts"
+        "shared/tournois/config.ts",
+        "mobile/src/components/arena/TournoisCreateForm.tsx",
+        "mobile/src/services/tournoisService.ts",
+        "shared/tournois/creationInput.ts"
       ],
       "automatedEvidence": [
         "api/__tests__/tournoisEngine.test.ts",
-        "api/__tests__/tournoisLogic.test.ts"
+        "api/__tests__/tournoisLogic.test.ts",
+        "mobile/src/services/__tests__/tournoisCreate.test.ts",
+        "mobile/src/components/arena/__tests__/tournoisCreateForm.test.tsx"
       ],
       "flags": [],
       "status": "Implemented/unverified",
@@ -2666,9 +2671,10 @@
       ],
       "mismatch": {
         "severity": "major",
-        "status": "Open",
+        "status": "Resolved",
         "finding": "Native creation is a fixed preset: public visibility, solo, first trivia category, start in 10 minutes, 30 places (TournoisScreen.tsx createTournament call with visibility: 'public'). Private PIN rooms, school/grade team rules, category choice and scheduling are web-only, while the web arcade advertises private class rooms and PAR-04 expects phone organizers.",
-        "recommendation": "Implement private/PIN visibility and a start-time choice in native creation (preferred: PAR-02/PAR-04), or declare native creation as \"quick public tournament\" in the PAR-09 limitations and link to the web form for private rooms."
+        "recommendation": "Implement private/PIN visibility and a start-time choice in native creation (preferred: PAR-02/PAR-04), or declare native creation as \"quick public tournament\" in the PAR-09 limitations and link to the web form for private rooms.",
+        "resolution": "Resolved 2026-10-19: native creation (TournoisCreateForm) now offers every web option — format (live/window/rounds/bracket), categories, question count and seconds, start date+time with schedule preview, window/round/bracket lengths and size, solo/school/grade team rule with counted players, public/unlisted/private PIN visibility and organiser-plays — plus the one-tap \"Rapide\" public preset. Both platforms build the body with shared/tournois/creationInput.creationPayload and the app checks it with the server validator before sending; after a private/unlisted room is created the PIN is shown large with copy/share and the /tournois/rejoindre?pin= link. Join-by-PIN already existed natively. Copy is via the system share sheet and long-press text selection (no clipboard native module in the OTA runtime). Evidence: mobile tournoisCreate.test.ts, tournoisCreateForm.test.tsx; installed-device run still pending."
       },
       "notes": "",
       "owner": null,
