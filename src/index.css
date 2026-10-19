@@ -4259,6 +4259,14 @@ textarea.input-field {
 	background: #0F7A42;
 }
 
+/* Back online but not yet confirmed (queue draining / data refreshing): azure,
+   not success green — green is reserved for "Tout est synchronisé ✓", which
+   is said only once the outbox is empty. White on #1557B8 is 6.6:1. */
+.network-banner--syncing,
+.network-banner--refreshing {
+	background: #1557B8;
+}
+
 /* When the bottom tab bar is present, lift the banner above it. */
 .app-shell:not(.app-shell--focused) .network-banner {
 	bottom: calc(env(safe-area-inset-bottom, 0px) + 4.75rem);

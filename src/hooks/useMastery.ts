@@ -61,7 +61,11 @@ export function useCourseMastery(courseId?: string | null) {
   }, [user?.uid, courseId]);
 
   useEffect(() => {
-    load();
+    // A rejected import/read ends in `failed`, never an endless `loading`.
+    load().catch(() => {
+      setFailed(true);
+      setLoading(false);
+    });
   }, [load]);
 
   // Exposed so a surface that just finished a quiz can pull the new rung in

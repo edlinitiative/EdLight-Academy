@@ -655,6 +655,7 @@ export function subscribeToComments(threadKey, callback) {
     });
   } catch (error) {
     console.error('[Firebase] Error subscribing to comments:', error);
+    callback([]); // end the caller's loading state instead of spinning forever
     return () => {}; // Return empty unsubscribe function
   }
 }

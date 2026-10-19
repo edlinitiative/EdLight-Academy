@@ -19,29 +19,13 @@
 import { auth, authedFetch } from './firebase';
 import {
   classifyHttpStatus,
-  createOutbox,
-  memoryOutboxStorage,
   newOperationId,
   type OutboxHandlers,
   type OutboxResult,
-  type OutboxStorage,
 } from '../../shared/outbox';
+import { outbox } from './outboxStore';
 
-function browserStorage(): OutboxStorage {
-  try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      const ls = window.localStorage;
-      return {
-        getItem: (k) => ls.getItem(k),
-        setItem: (k, v) => ls.setItem(k, v),
-        removeItem: (k) => ls.removeItem(k),
-      };
-    }
-  } catch { /* private mode / blocked storage */ }
-  return memoryOutboxStorage();
-}
-
-export const outbox = createOutbox(browserStorage(), { prefix: 'edlight-outbox', maxOps: 60 });
+export { outbox };
 
 async function postAwardOnce(uid: string, body: Record<string, unknown>): Promise<OutboxResult> {
   if (!uid || auth.currentUser?.uid !== uid) return 'retry'; // never under another account's token
@@ -73,6 +57,9 @@ export async function queueForReplay(uid: string, kind: string, payload: unknown
 /** Replay this account's queued writes (no-op unless it is signed in). */
 export async function drainWriteOutbox(uid: string | null | undefined): Promise<void> {
   if (!uid || auth.currentUser?.uid !== uid) return;
+  // A queue left by an earlier session (drained here at sign-in, possibly while
+  // offline) must also be retried on reconnect, not only one queued this session.
+  installOnlineReplay();
   try {
     await outbox.drain(uid, handlers);
   } catch { /* next sign-in / reconnect tries again */ }
