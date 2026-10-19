@@ -31,6 +31,14 @@ export default function Privacy() {
 
         <div className="grid" style={{ gap: '0.75rem' }}>
           <article className="card card--compact">
+            <h3 className="card__title">{t('Aide et correction par intelligence artificielle', 'Èd ak koreksyon avèk entèlijans atifisyèl')}</h3>
+            <p>{t('Quand tu utilises Sandra ou la correction automatique d’une réponse rédigée, le texte nécessaire est transmis à nos fournisseurs d’intelligence artificielle pour produire la réponse. « Explique-moi » transmet la question, ta réponse et la correction disponible. Les échanges avec Sandra sont enregistrés et peuvent être consultés par les administrateurs pour le suivi du service ; ils ne sont pas partagés avec tes camarades ou ton professeur de classe. Les notes et explications générées par IA sont indicatives et peuvent contenir des erreurs. Tu peux demander la suppression de tes données ou supprimer ton compte.', 'Lè ou sèvi ak Sandra oswa koreksyon otomatik yon repons ekri, nou voye tèks ki nesesè a bay founisè entèlijans atifisyèl nou yo pou prepare repons lan. « Eksplike m » voye kesyon an, repons ou ak koreksyon ki disponib la. Nou anrejistre konvèsasyon Sandra yo; administratè yo ka konsilte yo pou swiv sèvis la, men nou pa pataje yo ak kamarad ou oswa pwofesè klas ou. Nòt ak eksplikasyon IA yo se endikasyon epi yo ka gen erè. Ou ka mande pou efase done ou oswa efase kont ou.')}</p>
+          </article>
+          <article className="card card--compact">
+            <h3 className="card__title">{t('Classes privées (pilote)', 'Klas prive (pilòt)')}</h3>
+            <p>{t('Rejoindre une classe est facultatif et nécessite ton accord puis l’approbation du professeur. Les membres voient ton nom, tes XP de pratique gagnés dans la classe et tes devoirs terminés. Le professeur approuvé voit aussi les scores de tes devoirs ; tes réponses et conversations Sandra ne sont pas partagées avec la classe ou le professeur. Le code ne donne pas accès au tableau sans approbation. Tu peux quitter à tout moment depuis Mes classes : ton nom et tes devoirs ne sont plus visibles. La suppression du compte efface tes données de classe ; si le professeur supprime son compte, ses classes sont supprimées.', 'Antre nan yon klas se chwa ou; sa mande akò ou epi apwobasyon pwofesè a. Manm yo wè non ou, XP pratik ou genyen nan klas la ak devwa ou fini. Pwofesè ki apwouve a wè nòt devwa ou tou; nou pa pataje repons ou ak konvèsasyon Sandra ou ak klas la oswa pwofesè a. Kòd la pa bay aksè ak tablo a san apwobasyon. Ou ka kite nenpòt lè nan Klas mwen yo: non ou ak devwa ou pa vizib ankò. Lè ou efase kont ou, done klas ou efase; si pwofesè a efase kont li, klas li yo efase.')}</p>
+          </article>
+          <article className="card card--compact">
             <h3 className="card__title">{t('Qui sommes-nous', 'Ki moun nou ye')}</h3>
             <p className="text-muted" style={{ margin: 0 }}>
               {t(

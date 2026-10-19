@@ -4,7 +4,19 @@ Date: October 19, 2026
 
 Roadmap item: P2, "Evaluate larger product additions" in the [premium product implementation roadmap](2026-10-18-premium-product-implementation-roadmap.md). Each proposal below states a student need with its source, a scope, dependencies and risks, a rough cost, a success measure, and a recommendation.
 
-This is a planning document. It does not authorize implementation, data changes or deployment. The roadmap's P0 and P1 work comes first: production telemetry, device journey validation, and complete learning and competition journeys. Nothing here should displace it.
+The proposals below preserve the original evaluation. The owner subsequently requested implementation on October 19. Local implementation status is recorded below; it does not establish deployment, installed-device acceptance or successful pilot outcomes. The roadmap's P0/P1 release gates still apply.
+
+## Implementation status after checking the current source
+
+| Item | Current state | Evidence / remaining work |
+| --- | --- | --- |
+| 1. Explique-moi | Already implemented before this pass on web and native correction surfaces | `shared/explainContext.ts`, `api/_lib/explainGate.ts`, web `ExplainWithSandra`, native `ExplainButton`/`ExplainSheet`; sanitizer, assessment gate, disclosures and `correction_explain_opened` tests exist. Canonical reviewed explanation cache remains later. |
+| 2. Mobile essay grading | Already implemented before this pass, including the dissertation rubric profile | `mobile/src/services/essayGrading.ts`, shared regrading, result pending/retry/criterion feedback and `essayDissertation.test.ts`. Real teacher calibration and the measured agreement target remain unverified. |
+| 3. Class spaces | MVP implemented locally in this pass | [Implementation and pilot acceptance](2026-10-19-class-spaces-implementation.md): approved teacher grants, six-character codes, approval, private weekly board, exam assignments, server-recomputed objective marks, web/native student access, account deletion and privacy copy. School pilot has not been run. |
+| 4–6. Deferred additions | Still deferred under this document's recommendation | Offline-failure evidence, class-pilot results and operational decisions have not been supplied. |
+| 7–9. Rejected additions | Not built | The recommendations below remain unchanged. |
+
+The original “mobile never calls the grader” and “corrections have no Sandra entry” statements below describe the earlier scan and are superseded by this status table. No production retention or essay-grading baseline was measured in this local implementation session.
 
 ## Ranked summary
 

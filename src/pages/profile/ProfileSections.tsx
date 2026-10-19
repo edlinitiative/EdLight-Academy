@@ -355,6 +355,7 @@ export function AccountBlock({ email, t, onLogout, showLogout = true }: {
       )}
 
       <nav className="pr-account__rows" aria-label={t('Compte', 'Kont')}>
+        <Link to="/classes" className="pr-arow"><span className="pr-arow__text">{t('Mes classes', 'Klas mwen yo')}</span><FileText size={20} aria-hidden="true" /></Link>
         <Link to="/releve" className="pr-arow"><span className="pr-arow__text">{t('Relevé de progression', 'Relve pwogrè')}</span><FileText size={20} aria-hidden="true" /></Link>
         <Link to="/privacy" className="pr-arow"><span className="pr-arow__text">{t('Confidentialité', 'Konfidansyalite')}</span><ShieldCheck size={20} aria-hidden="true" /></Link>
         {showLogout && (

@@ -86,7 +86,16 @@ service cloud.firestore {
 
       // Exam attempts (practice exams): one active draft per exam_id
       match /examAttempts/{examId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, delete: if request.auth != null && request.auth.uid == userId;
+        // A submitted attempt carries the server's clock: submitted_at must be
+        // request.time when set (clients write serverTimestamp()) or unchanged,
+        // so a student can't backdate a submission (class assignments rely on it).
+        allow create, update: if request.auth != null && request.auth.uid == userId
+          && (request.resource.data.get('status', '') != 'submitted'
+            || request.resource.data.get('submitted_at', null) == request.time
+            || (resource != null
+              && resource.data.get('submitted_at', null) == request.resource.data.get('submitted_at', null)
+              && resource.data.get('status', '') == 'submitted'));
       }
 
       // Exam results (practice exams): persisted for cross-device access
@@ -640,6 +649,12 @@ service cloud.firestore {
       allow get: if true;
       allow list, write: if false;
     }
+
+    // Private classroom pilot. All access and approval is mediated by /api/classes.
+    match /classes/{document=**} { allow read, write: if false; }
+    match /classAccounts/{document=**} { allow read, write: if false; }
+    match /classTeachers/{document=**} { allow read, write: if false; }
+    match /classCodes/{document=**} { allow read, write: if false; }
 
     // Default: deny all other access
     match /{document=**} {

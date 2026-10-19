@@ -27,6 +27,8 @@ import { FieldValue } from 'firebase-admin/firestore';
 interface Limit { max: number; windowSec: number }
 
 const LIMITS: Record<string, Limit> = {
+  'classes-read': { max: 300, windowSec: 3600 },
+  'classes-write': { max: 90, windowSec: 3600 },
   'competition-read': { max: 1200, windowSec: 3600 },
   'competition-write': { max: 120, windowSec: 3600 },
   'grade-essay':    { max: 20, windowSec: 3600 },

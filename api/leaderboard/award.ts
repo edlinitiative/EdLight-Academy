@@ -57,6 +57,7 @@ import { requireAuthDecoded } from '../_lib/requireAuth';
 import { checkRateLimit } from '../_lib/rateLimit';
 import { getDb } from '../_lib/firebaseAdmin';
 import { cleanAvatar } from '../../src/arena-art/avatars/avatarConfig';
+import { prepareClassXp } from '../_lib/classSpaces';
 
 /** A single call can award at most this much XP (bounds injection abuse). */
 const MAX_XP_DELTA = 5000;
@@ -237,12 +238,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           duplicate = true;
           return;
         }
+        const writeClassXp = await prepareClassXp(db, tx, uid, xpDelta, Date.now());
         const built = buildProfile(allTimeSnap.data() as Record<string, unknown> | undefined);
         hidden = built.hidden;
         const now = Date.now();
         tx.set(weeklyRef, { ...built.profile, weekId: id, xp: FieldValue.increment(xpDelta) }, { merge: true });
         tx.set(allTimeRef, { ...built.profile, xp: FieldValue.increment(xpDelta) }, { merge: true });
         tx.set(opsRef, { ops: pruneOps({ ...ops, [appliedOpId]: now }, now), updatedAt: now });
+        writeClassXp();
       });
     } else {
       // Everyone appears on the board by default under a privacy-safe alias
@@ -250,12 +253,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       // entry is the durable record for both facts: `hidden` must survive the
       // weekly reset (fresh weekly docs would otherwise resurface an opted-out
       // learner), and an already-stored alias means no derivation is needed.
-      const built = buildProfile((await allTimeRef.get()).data() as Record<string, unknown> | undefined);
-      hidden = built.hidden;
-      await Promise.all([
-        weeklyRef.set({ ...built.profile, weekId: id, xp: FieldValue.increment(xpDelta) }, { merge: true }),
-        allTimeRef.set({ ...built.profile, xp: FieldValue.increment(xpDelta) }, { merge: true }),
-      ]);
+      await db.runTransaction(async (tx) => {
+        const existing = await tx.get(allTimeRef);
+        const writeClassXp = await prepareClassXp(db, tx, uid, xpDelta, Date.now());
+        const built = buildProfile(existing.data() as Record<string, unknown> | undefined);
+        hidden = built.hidden;
+        tx.set(weeklyRef, { ...built.profile, weekId: id, xp: FieldValue.increment(xpDelta) }, { merge: true });
+        tx.set(allTimeRef, { ...built.profile, xp: FieldValue.increment(xpDelta) }, { merge: true });
+        writeClassXp();
+      });
     }
 
     // ── Optional per-game record claim (leaderboards/records) ──────────────

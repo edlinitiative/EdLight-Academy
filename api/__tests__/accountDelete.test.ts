@@ -23,6 +23,9 @@ jest.mock('../_lib/requireAuth', () => ({ requireAuth: async () => 'u1' }));
 jest.mock('../_lib/competitionAccountDeletion', () => ({
   eraseCompetitionAccount: (...args: unknown[]) => mockErase(...(args as [])),
 }));
+jest.mock('../_lib/classSpaces', () => ({
+  eraseClassAccount: async () => { calls.push('classes'); },
+}));
 import handler from '../users/delete';
 
 function res() {
@@ -41,7 +44,7 @@ it('erases competition records before the user tree and the Auth account, surfac
   const { r, out } = res();
   await handler({ method: 'POST', headers: {} } as any, r);
   expect(mockErase).toHaveBeenCalledWith(mockDb, 'u1', expect.any(Number));
-  expect(calls.slice(0, 3)).toEqual(['competition', 'recursiveDelete:users/u1', 'auth']);
+  expect(calls.slice(0, 4)).toEqual(['competition', 'classes', 'recursiveDelete:users/u1', 'auth']);
   // The server-only tombstone outlives everything else, so a retried deletion reuses it.
   expect(calls[calls.length - 1]).toBe('delete:accountDeletions/u1');
   expect(out.status).toBe(200);

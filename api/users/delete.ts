@@ -30,6 +30,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getDb, getAuthAdmin, isAdminConfigured } from '../_lib/firebaseAdmin';
 import { requireAuth } from '../_lib/requireAuth';
 import { eraseCompetitionAccount } from '../_lib/competitionAccountDeletion';
+import { eraseClassAccount } from '../_lib/classSpaces';
 
 /** Delete an array of doc refs in chunked batches (Firestore caps at 500/batch). */
 async function deleteRefs(db: FirebaseFirestore.Firestore, refs: FirebaseFirestore.DocumentReference[]) {
@@ -76,6 +77,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   });
 
   // 1. The user document tree (doc + every subcollection).
+  await step('classes', () => eraseClassAccount(db, uid));
+
   await step('user_tree', () => db.recursiveDelete(db.collection('users').doc(uid)));
 
   // 2. Leaderboard entries: entry id == uid, one per period. Enumerate periods

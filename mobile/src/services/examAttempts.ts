@@ -101,6 +101,9 @@ export async function commitExamSubmission(userId: string, examId: string, resul
   const attempt = submittedAttemptPayload(attemptExtra);
   batch.set(doc(db, 'users', userId, 'examAttempts', examId), attempt, replaceFieldsOptions(attempt));
   await batch.commit();
+  if (auth.currentUser?.uid === userId) {
+    void import('./classService').then(({ classRequest }) => classRequest('sync-exam', { examId })).catch(() => {});
+  }
   recordStreakActivity(userId).catch(() => {});
   return true;
 }

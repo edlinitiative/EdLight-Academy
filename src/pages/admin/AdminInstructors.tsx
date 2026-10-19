@@ -7,6 +7,7 @@ import {
   type QueryDocumentSnapshot, type DocumentData, type QueryConstraint,
 } from 'firebase/firestore';
 import { db } from '../../services/firebase';
+import { classRequest } from '../../services/classService';
 
 /**
  * AdminInstructors — review pipeline for volunteer-instructor applications.
@@ -76,6 +77,17 @@ export default function AdminInstructors() {
   const [filter, setFilter] = useState<'all' | AppStatus>('all');
   const [expanded, setExpanded] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [classNotice, setClassNotice] = useState('');
+
+  async function setClassTeacher(app: InstructorApplication, active: boolean) {
+    setSavingId(app.id); setClassNotice('');
+    try {
+      await classRequest(active ? 'grant-teacher' : 'revoke-teacher', { applicationId: app.id });
+      setClassNotice(active ? 'Accès classes activé pour le compte vérifié de ce candidat.' : 'Création et gestion des classes désactivées pour ce compte.');
+    } catch {
+      setClassNotice('Modification impossible. Vérifiez que la candidature est approuvée et que le candidat possède un compte avec cette adresse e-mail vérifiée.');
+    } finally { setSavingId(null); }
+  }
 
   const loadPage = useCallback(async (after: QueryDocumentSnapshot<DocumentData> | null) => {
     const ref = collection(db, 'instructorApplications');
@@ -203,6 +215,7 @@ export default function AdminInstructors() {
       </div>
 
       <div className="admin-card">
+        {classNotice && <p role="status">{classNotice}</p>}
         {loading ? (
           <div className="admin-empty">Chargement des candidatures…</div>
         ) : visible.length === 0 ? (
@@ -276,6 +289,7 @@ export default function AdminInstructors() {
                               </div>
                               {(a.status === 'approved') && (
                                 <div style={{ marginTop: 10 }}>
+                                  <button className="admin-btn admin-btn--ghost" disabled={savingId === a.id} onClick={() => setClassTeacher(a, true)}>Activer le pilote classes</button>
                                   {a.instructorId ? (
                                     <Link
                                       className="admin-btn admin-btn--ghost"
@@ -297,6 +311,7 @@ export default function AdminInstructors() {
                                   )}
                                 </div>
                               )}
+                              <button className="admin-btn admin-btn--ghost" disabled={savingId === a.id} onClick={() => setClassTeacher(a, false)}>Révoquer l’accès classes</button>
                             </div>
                           </td>
                         </tr>
