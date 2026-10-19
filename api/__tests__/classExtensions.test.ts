@@ -277,6 +277,21 @@ describe('membership drift in class tournaments', () => {
     expect(st.teams).toEqual([]);
     expect(st.rows.map((r: any) => [r.uid, r.points])).toEqual([['s3', 4000], ['s1', 2000]]);
   });
+  it('a failing tournament detach never stops the rest of the account erasure', async () => {
+    const a = await classWith('tA', 'NS3 A', { s1: 'Alice', s2: 'Anne' });
+    mockDb.store.set(`classes/${a}/weeks/${classWeek(clock)}`, { xp: { s1: 50, s2: 10 }, completed: { s1: 1 } });
+    mockDb.store.set(`classes/${a}/state/completions`, { byUid: { s1: { x: { late: false } } } });
+    const shared = require('../tournois/_shared');
+    const spy = jest.spyOn(shared, 'detachFromClassTournaments').mockRejectedValue(new Error('boom'));
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    await eraseClassAccount(db, 's1');
+    expect(spy).toHaveBeenCalled();
+    expect(store(`classes/${a}/weeks/${classWeek(clock)}`).xp).toEqual({ s2: 10 });
+    expect(store(`classes/${a}/state/completions`).byUid).toEqual({});
+    expect(store(`classes/${a}`).members.s1).toBeUndefined();
+    expect(store('classAccounts/s1')).toBeUndefined();
+    spy.mockRestore(); warn.mockRestore();
+  });
   it('account deletion of a student detaches them from the class group', async () => {
     const a = await classWith('tA', 'NS3 A', { s1: 'Alice', s2: 'Anne' });
     const tid = await newTournament();

@@ -312,7 +312,8 @@ export async function eraseClassAccount(db: Firestore, uid: string) {
       const doneRef = ref.collection('state').doc('completions'), done = await tx.get(doneRef);
       const byUid = done.data()?.byUid || {}; delete byUid[uid]; tx.set(doneRef, { byUid });
     });
-    await detachFromClassTournaments(db, uid, classId(id), Date.now());
+    // Best-effort: never let tournament hygiene abort the erasure below (standings re-check membership anyway).
+    await detachFromClassTournaments(db, uid, classId(id), Date.now()).catch(() => console.warn('[classes] erase: tournament detach failed'));
     const weeks = await ref.collection('weeks').get();
     for (const w of weeks.docs) await db.runTransaction(async (tx) => {
       const snap = await tx.get(w.ref); const week = snap.data() as ClassWeek;
