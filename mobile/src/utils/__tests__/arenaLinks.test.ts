@@ -60,8 +60,14 @@ describe('resolveAppPath', () => {
     expect(resolveAppPath('arena/DEMO?ref=x')).toEqual({ screen: 'ArenaHub', params: { section: 'demo' } });
   });
 
+  it('opens Mode Histoire natively (ported from the web), never as a tournament', () => {
+    expect(resolveAppPath('arena/histoire')).toEqual({ screen: 'ArenaStory' });
+    expect(resolveAppPath('https://academy.edlight.org/arena/HISTOIRE?c=2')).toEqual({ screen: 'ArenaStory' });
+    expect(stateForTarget({ screen: 'ArenaStory' })).toEqual({ routes: [{ name: 'Main' }, { name: 'ArenaStory' }] });
+  });
+
   it('never parses a web-only page as a tournament', () => {
-    expect(resolveAppPath('arena/histoire')).toEqual({ screen: 'ArenaHub' });
+    expect(resolveAppPath('arena/studio/x')).toEqual({ screen: 'ArenaHub' });
     expect(resolveAppPath('arena/studio')).toEqual({ screen: 'ArenaHub' });
     expect(resolveAppPath('arena/reclamation?tid=abc')).toEqual({ screen: 'ArenaHub' });
   });

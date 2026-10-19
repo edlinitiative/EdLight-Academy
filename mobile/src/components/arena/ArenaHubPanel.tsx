@@ -48,9 +48,17 @@ export interface ArenaHubPanelProps {
   onPractice: () => void;
   /** Start a round that ends in a duel invitation (Jeux). */
   onDuel: () => void;
+  /**
+   * 'arcade' — inside the Arène arcade (components/arena/ArenaArcade): the
+   * city, the lobby strip and the cabinets already carry everyday play, the
+   * school and the workspace, so the panel is ONLY the championship: the one
+   * event action, its alerts and the watch/results rows.
+   */
+  variant?: 'full' | 'arcade';
 }
 
-export default function ArenaHubPanel({ onPractice, onDuel }: ArenaHubPanelProps) {
+export default function ArenaHubPanel({ onPractice, onDuel, variant = 'full' }: ArenaHubPanelProps) {
+  const arcade = variant === 'arcade';
   const navigation = useNavigation<any>();
   const isCreole = useStore((s) => s.language) === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -146,10 +154,11 @@ export default function ArenaHubPanel({ onPractice, onDuel }: ArenaHubPanelProps
 
   return (
     <View style={{ gap: 14 }}>
-      <ArenaButton variant="secondary" label={t("Mon activité · Équipes et compétitions", "Aktivite mwen · Ekip ak konpetisyon")} onPress={() => navigation.navigate("CompetitionWorkspace", { kind: "home" })} />
-      {noEvent ? playCard : null}
+      {arcade ? null : <ArenaButton variant="secondary" label={t("Mon activité · Équipes et compétitions", "Aktivite mwen · Ekip ak konpetisyon")} onPress={() => navigation.navigate("CompetitionWorkspace", { kind: "home" })} />}
+      {noEvent && !arcade ? playCard : null}
 
       {/* ── Who you compete for ───────────────────────────────────────── */}
+      {arcade ? null : (
       <View
         accessible
         accessibilityLabel={[
@@ -233,6 +242,7 @@ export default function ArenaHubPanel({ onPractice, onDuel }: ArenaHubPanelProps
           </View>
         ) : null}
       </View>
+      )}
 
       {/* ── The one event action ──────────────────────────────────────── */}
       {hub.status === 'loading' ? (
@@ -311,7 +321,7 @@ export default function ArenaHubPanel({ onPractice, onDuel }: ArenaHubPanelProps
 
       {/* With an event on the card, everyday play stays one tap away —
           tonal, because the event owns the screen's one coral action. */}
-      {tour && copy ? (
+      {tour && copy && !arcade ? (
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <ArenaButton variant="secondary" label={t('Jouer une partie', 'Jwe yon pati')} onPress={() => { arenaHaptics.choose(); onPractice(); }} icon={<Zap color={C.ink} size={16} />} style={{ flex: 1, minHeight: 52 }} />
           <ArenaButton variant="secondary" label={t('Défier un ami', 'Defye yon zanmi')} onPress={() => { arenaHaptics.choose(); onDuel(); }} icon={<Swords color={C.ink} size={16} />} style={{ flex: 1, minHeight: 52 }} />
