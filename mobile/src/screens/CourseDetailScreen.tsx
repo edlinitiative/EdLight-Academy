@@ -423,7 +423,7 @@ export default function CourseDetailScreen() {
   );
 
   if (!course && isLoading) return withChrome(<ListSkeleton rows={6} />);
-  if (!course && isError) return withChrome(<ErrorState onRetry={() => refetch()} />);
+  if (!course && isError) return withChrome(<ErrorState onRetry={() => refetch()} secondaryLabel={t('Retour', 'Retounen')} onSecondary={goBack} />);
   if (!course) {
     // The catalogue loaded but this course is not in it (stale link / hidden).
     return withChrome(

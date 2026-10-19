@@ -6,6 +6,7 @@ import NetInfo from '@react-native-community/netinfo';
 import useStore from '../contexts/store';
 import { useColors } from '../theme/theme';
 import { isOnlineSnapshot } from '../lifecycle/connectivity';
+import { useReduceMotion } from '../utils/motion';
 
 /**
  * Live connectivity via NetInfo. Returns:
@@ -39,6 +40,7 @@ export default function NetworkStatus() {
   const hiddenY = -(80 + insets.top); // fully off-screen even with a large notch
   const translateY = useRef(new Animated.Value(hiddenY)).current;
   const [visible, setVisible] = useState(false);
+  const reduceMotion = useReduceMotion();
 
   const offline = isConnected === false;
 
@@ -68,17 +70,18 @@ export default function NetworkStatus() {
       setVisible(true);
       Animated.timing(translateY, {
         toValue: 0,
-        duration: 300,
+        // Reduce Motion: the banner appears in place instead of sliding.
+        duration: reduceMotion ? 0 : 300,
         useNativeDriver: true,
       }).start();
     } else {
       Animated.timing(translateY, {
         toValue: hiddenY,
-        duration: 300,
+        duration: reduceMotion ? 0 : 300,
         useNativeDriver: true,
       }).start(() => setVisible(false));
     }
-  }, [show, hiddenY]);
+  }, [show, hiddenY, reduceMotion]);
 
   if (!visible) return null;
 

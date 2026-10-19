@@ -20,7 +20,7 @@ export function useLeaderboard(max = 25, period: 'week' | 'all' = 'week') {
   // list…) shares ONE query/Firestore read; slice locally for smaller views.
   const fetchCount = Math.max(max, 25);
 
-  const { data: entries, isLoading, refetch, isFetching } = useQuery({
+  const { data: entries, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['leaderboard-weekly', period === 'all' ? 'all-time' : id, fetchCount],
     queryFn: () => (period === 'all' ? getAllTimeTop(fetchCount) : getWeeklyTop(fetchCount, id)),
     staleTime: 2 * 60 * 1000,
@@ -69,6 +69,8 @@ export function useLeaderboard(max = 25, period: 'week' | 'all' = 'week') {
     myRank: myEntry ? (myEntry as any).rank : null,
     isLoading: isLoading || (weekIsEmpty && prevLoading),
     isFetching,
+    /** The board query failed (a network failure must not read as "no entries yet"). */
+    isError,
     refetch,
     weekId: id,
     /** True when the fresh week has no entries yet and last week's board is shown instead. */

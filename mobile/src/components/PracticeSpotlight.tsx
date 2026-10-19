@@ -3,6 +3,8 @@ import {
   Modal, View, Text, TouchableOpacity, Dimensions, StyleSheet, findNodeHandle, UIManager,
 } from 'react-native';
 import { useColors, type Palette } from '../theme/theme';
+import { modalAnimation, isReduceMotionOn } from '../utils/motion';
+import Button from './ui/Button';
 
 const DIM = 'rgba(15,23,42,0.72)';
 const { height: SCREEN_H } = Dimensions.get('window');
@@ -55,8 +57,8 @@ export default function PracticeSpotlight({
   const tipBottom = SCREEN_H - holeTop + 14;
 
   return (
-    <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={onDismiss}>
-      <TouchableOpacity activeOpacity={1} style={StyleSheet.absoluteFill} onPress={onDismiss}>
+    <Modal visible transparent animationType={modalAnimation(isReduceMotionOn(), 'fade')} statusBarTranslucent onRequestClose={onDismiss}>
+      <TouchableOpacity accessible={false} accessibilityRole="none" activeOpacity={1} style={StyleSheet.absoluteFill} onPress={onDismiss}>
         {/* 4 dim panels leaving a clear "hole" over the target */}
         <View style={[styles.dim, { top: 0, left: 0, right: 0, height: holeTop }]} />
         <View style={[styles.dim, { top: holeBottom, left: 0, right: 0, bottom: 0 }]} />
@@ -77,9 +79,7 @@ export default function PracticeSpotlight({
         <View style={[styles.tip, { bottom: tipBottom }]}>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.body}>{body}</Text>
-          <TouchableOpacity style={styles.btn} onPress={onDismiss} activeOpacity={0.85}>
-            <Text style={styles.btnText}>{cta}</Text>
-          </TouchableOpacity>
+          <Button label={cta} onPress={onDismiss} size="sm" style={{ alignSelf: 'flex-start', minHeight: 44 }} />
           <View style={styles.arrow} />
         </View>
       </TouchableOpacity>
@@ -95,8 +95,6 @@ const makeStyles = (colors: Palette) => StyleSheet.create({
   },
   title: { fontSize: 17, fontWeight: '800', color: colors.ink, marginBottom: 6 },
   body: { fontSize: 14.5, lineHeight: 21, color: colors.muted, marginBottom: 14 },
-  btn: { alignSelf: 'flex-start', backgroundColor: colors.azure, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 10 },
-  btnText: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
   arrow: {
     position: 'absolute', bottom: -9, left: '50%', marginLeft: -9,
     width: 0, height: 0, borderLeftWidth: 9, borderRightWidth: 9, borderTopWidth: 10,

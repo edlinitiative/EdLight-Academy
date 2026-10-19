@@ -283,7 +283,7 @@ export default function ExamResultsScreen() {
   );
 
   if (loading) return withChrome(<LoadingState message={t('Chargement des résultats…', 'Ap chaje rezilta yo…')} />);
-  if (loadError) return withChrome(<ErrorState onRetry={() => setReloadKey((k) => k + 1)} />);
+  if (loadError) return withChrome(<ErrorState onRetry={() => setReloadKey((k) => k + 1)} secondaryLabel={t('Retour', 'Retounen')} onSecondary={goBack} />);
 
   // Guests never get a persisted result (ExamTakeScreen only saves for signed-in
   // users), so `result` is null and every derived number below would be 0. Don't

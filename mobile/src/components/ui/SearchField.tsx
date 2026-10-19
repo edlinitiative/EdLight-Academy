@@ -44,6 +44,8 @@ const SearchField = forwardRef<TextInput, SearchFieldProps>(function SearchField
         returnKeyType="search"
         autoCorrect={false}
         accessibilityLabel={placeholder}
+        // The field is a fixed 56pt pill: cap growth so the typed query never clips.
+        maxFontSizeMultiplier={1.5}
         style={{ flex: 1, height: '100%', fontFamily: fonts.regular, fontSize: 16, color: colors.ink, paddingVertical: 0 }}
         {...rest}
       />

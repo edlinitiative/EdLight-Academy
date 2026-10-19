@@ -236,6 +236,8 @@ export default function ExamOverviewScreen() {
         <ErrorState
           title={t("Impossible de charger l'examen.", 'Nou pa ka chaje egzamen an.')}
           onRetry={() => setRetryCount((n) => n + 1)}
+          secondaryLabel={t('Retour', 'Retounen')}
+          onSecondary={() => navigation.goBack()}
         />
       </SafeAreaView>
     );

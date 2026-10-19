@@ -176,7 +176,7 @@ export function StatusPill({ kind, t, style }: { kind: StatusLabel; t: T; style?
       }, style]}
     >
       <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: tone }} />
-      <Text style={[arenaType.status, { color: C.inkSoft }]}>{text}</Text>
+      <Text maxFontSizeMultiplier={1.5} style={[arenaType.status, { color: C.inkSoft }]}>{text}</Text>
     </View>
   );
 }

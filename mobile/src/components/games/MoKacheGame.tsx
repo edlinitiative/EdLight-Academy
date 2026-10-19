@@ -18,6 +18,7 @@ import { typeScale } from '../../theme/theme';
 import { useArenaColors, arenaColors as C } from '../../theme/arenaTheme';
 import { success, warn } from '../../utils/haptics';
 import PressableScale from '../ui/PressableScale';
+import { useReduceMotion } from '../../utils/motion';
 import GameOverCard from './GameOverCard';
 
 const MAX_GUESSES = 6;
@@ -107,6 +108,11 @@ export default function MoKacheGame({ isCreole, onExit, onRecord, highScore = nu
   const [showHint, setShowHint] = useState(false);
 
   const shakeX = useRef(new Animated.Value(0)).current;
+
+  const reduceMotion = useReduceMotion();
+  // Read through a ref: `shake` is captured by the memoised submit handler.
+  const reduceMotionRef = useRef(reduceMotion);
+  reduceMotionRef.current = reduceMotion;
   // One record per puzzle (same idempotency pattern as the other games) — the
   // key changes with the daily date / practice nonce, re-arming the guard.
   const recordedRef = useRef<string | null>(null);
@@ -156,6 +162,8 @@ export default function MoKacheGame({ isCreole, onExit, onRecord, highScore = nu
   }, [onRecord, mode, today, practiceNonce]);
 
   const shake = () => {
+    // Reduce Motion: the invalid-word haptic + message carry it; no shake.
+    if (reduceMotionRef.current) return;
     Animated.sequence([
       Animated.timing(shakeX, { toValue: 8, duration: 55, useNativeDriver: true }),
       Animated.timing(shakeX, { toValue: -8, duration: 55, useNativeDriver: true }),

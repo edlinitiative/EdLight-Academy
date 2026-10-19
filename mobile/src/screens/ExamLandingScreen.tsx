@@ -13,7 +13,7 @@ import PageTitle from '../components/ui/PageTitle';
 import Segmented from '../components/ui/Segmented';
 import StatNumeral from '../components/ui/StatNumeral';
 import Button from '../components/ui/Button';
-import { Skeleton } from '../components/StateViews';
+import { Skeleton, InlineError } from '../components/StateViews';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import { tapLight } from '../utils/haptics';
 import { fetchCatalogIndex } from '../utils/examCatalog';
@@ -227,13 +227,18 @@ export default function ExamLandingScreen() {
 
   // ── The catalog: counts and newest papers come from the real index ────────
   const [catalog, setCatalog] = React.useState<any[] | null>(null);
+  // A failed fetch is NOT "no subjects": keep it distinct so the tile grid
+  // offers a retry instead of telling the student the level is empty.
+  const [catalogFailed, setCatalogFailed] = React.useState(false);
+  const [catalogAttempt, setCatalogAttempt] = React.useState(0);
   React.useEffect(() => {
     let active = true;
+    setCatalogFailed(false);
     fetchCatalogIndex()
       .then((c) => { if (active) setCatalog(Array.isArray(c) ? c : []); })
-      .catch(() => { if (active) setCatalog([]); });
+      .catch(() => { if (active) { setCatalog([]); setCatalogFailed(true); } });
     return () => { active = false; };
-  }, []);
+  }, [catalogAttempt]);
 
   const { subjects, total, recent } = React.useMemo(() => {
     const bySubject = new Map<string, SubjectStat>();
@@ -467,6 +472,11 @@ export default function ExamLandingScreen() {
                 </View>
               ))}
             </View>
+          ) : catalogFailed && subjects.length === 0 ? (
+            <InlineError
+              message={t('La liste des sujets n’a pas pu être chargée.', 'Lis sijè yo pa t ka chaje.')}
+              onRetry={() => { setCatalog(null); setCatalogAttempt((n) => n + 1); }}
+            />
           ) : subjects.length === 0 ? (
             <Text style={[typeScale.body, { color: colors.muted }]}>
               {t('Aucun sujet disponible pour ce niveau pour le moment.', 'Pa gen sijè pou nivo sa a pou kounye a.')}

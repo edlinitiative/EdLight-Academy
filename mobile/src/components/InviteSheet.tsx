@@ -84,7 +84,7 @@ export default function InviteSheet({ visible, onClose, lang }: InviteSheetProps
   return (
     <Modal visible={visible} transparent animationType={reduce ? 'none' : 'slide'} onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.55)', justifyContent: 'flex-end' }}>
-        <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} accessibilityLabel={t('Fermer', 'Fèmen')} />
+        <TouchableOpacity accessibilityRole="button" style={{ flex: 1 }} activeOpacity={1} onPress={onClose} accessibilityLabel={t('Fermer', 'Fèmen')} />
         <View
           accessibilityViewIsModal
           style={{

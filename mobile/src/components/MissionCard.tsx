@@ -45,7 +45,7 @@ export default function MissionCard({ onStart }: { onStart: () => void }) {
             alignItems: 'center', justifyContent: 'center',
           }}
         >
-          <Check color={colors.success} size={20} />
+          <Check color={colors.successInk} size={20} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={[typeScale.bodyMd, { color: colors.ink }]}>

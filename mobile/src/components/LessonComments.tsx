@@ -181,17 +181,17 @@ export default function LessonComments({ threadKey, isCreole }: { threadKey: str
                   <Text style={{ fontFamily: fonts.regular, fontSize: 16, lineHeight: 23, color: colors.ink, marginLeft: 40 }}>{c.text}</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18, marginLeft: 40, marginTop: 4 }}>
                     {isOwn ? (
-                      <TouchableOpacity onPress={() => handleDelete(c)} hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 32 }}>
+                      <TouchableOpacity accessibilityRole="button" onPress={() => handleDelete(c)} hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 32 }}>
                         <Trash2 color={colors.muted} size={14} />
                         <Text style={small}>{isCreole ? 'Efase' : 'Supprimer'}</Text>
                       </TouchableOpacity>
                     ) : (
                       <>
-                        <TouchableOpacity onPress={() => handleReport(c)} hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 32 }}>
+                        <TouchableOpacity accessibilityRole="button" onPress={() => handleReport(c)} hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 32 }}>
                           <Flag color={colors.muted} size={14} />
                           <Text style={small}>{isCreole ? 'Sinyale' : 'Signaler'}</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => handleBlock(c)} hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 32 }}>
+                        <TouchableOpacity accessibilityRole="button" onPress={() => handleBlock(c)} hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 32 }}>
                           <Ban color={colors.muted} size={14} />
                           <Text style={small}>{isCreole ? 'Bloke' : 'Bloquer'}</Text>
                         </TouchableOpacity>

@@ -19,6 +19,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { tapLight } from '../../utils/haptics';
+import { useReduceMotion } from '../../utils/motion';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -60,6 +61,9 @@ export default function PressableScale({
   ...rest
 }: Props) {
   const scale = useSharedValue(1);
+  // Reduce Motion: no spring scale. The haptic and the system press feedback
+  // still acknowledge the tap.
+  const reduce = useReduceMotion();
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
   return (
@@ -77,12 +81,12 @@ export default function PressableScale({
       onPressIn={(e) => {
         // No press scale (or haptic) while disabled — a disabled control must
         // not feel tappable.
-        if (!disabled) scale.value = withTiming(pressedScale, { duration: 90 });
+        if (!disabled && !reduce) scale.value = withTiming(pressedScale, { duration: 90 });
         if (haptic && !disabled) tapLight();
         onPressIn?.(e);
       }}
       onPressOut={(e) => {
-        if (!disabled) scale.value = withTiming(1, { duration: 120 });
+        if (!disabled && !reduce) scale.value = withTiming(1, { duration: 120 });
         onPressOut?.(e);
       }}
       // Disabled dim goes BEFORE `style` so a caller that sets its own opacity

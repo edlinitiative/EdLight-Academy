@@ -39,7 +39,7 @@ export default function ReviewCard({ onOpen }: { onOpen: () => void }) {
           alignItems: 'center', justifyContent: 'center',
         }}
       >
-        <Brain color={colors.warn} size={19} />
+        <Brain color={colors.warnInk} size={19} />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[typeScale.bodyMd, { color: colors.ink }]}>
