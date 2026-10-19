@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { signInRedirect } from '../utils/returnPath';
 import LearnSwitch from '../components/LearnSwitch';
 import {
   ChevronRight, ChevronDown, ArrowRight, Check, Search, X,
@@ -600,7 +601,9 @@ export default function Courses({ mode = 'catalog' }: { mode?: 'catalog' | 'work
     const preview = previewKey && courses.length > 0 ? buildHomePreview(previewKey, courses, courseLevel) : null;
     if (!signedIn && !preview) {
       if (previewKey && isLoading) return null;
-      return <Navigate to="/" replace />;
+      // Remember where the student was going (A-2): "/" sends them back
+      // here once they have signed in.
+      return <Navigate to={signInRedirect(window.location.pathname + window.location.search)} replace />;
     }
     return (
       <section className="section pf lrn lrn--workspace">

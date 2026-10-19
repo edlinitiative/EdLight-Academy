@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react';
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import useStore from '../../contexts/store';
 import HomeRoute from '../HomeRoute';
 
@@ -56,5 +56,33 @@ describe('HomeRoute (adaptive index route)', () => {
 
     expect(await screen.findByText('LEARNER_DASHBOARD')).toBeInTheDocument();
     expect(screen.queryByText('MARKETING_HOME')).not.toBeInTheDocument();
+  });
+
+  it('after sign-in, continues to the page that sent the student here (A-2)', async () => {
+    useStore.setState({ isAuthenticated: true, authConfirmed: true, user: { uid: 'u1' } });
+    const Where = () => { const l = useLocation(); return <div>AT {l.pathname}{l.search}</div>; };
+    render(
+      <MemoryRouter initialEntries={['/?next=%2Fdashboard%3Ftab%3Dexams']}>
+        <Suspense fallback={<div>loading</div>}>
+          <Routes>
+            <Route path="/" element={<HomeRoute />} />
+            <Route path="*" element={<Where />} />
+          </Routes>
+        </Suspense>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText('AT /dashboard?tab=exams')).toBeInTheDocument();
+  });
+
+  it('ignores an off-site destination', async () => {
+    useStore.setState({ isAuthenticated: true, authConfirmed: true, user: { uid: 'u1' } });
+    render(
+      <MemoryRouter initialEntries={['/?next=%2F%2Fevil.com']}>
+        <Suspense fallback={<div>loading</div>}>
+          <HomeRoute />
+        </Suspense>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText('LEARNER_DASHBOARD')).toBeInTheDocument();
   });
 });

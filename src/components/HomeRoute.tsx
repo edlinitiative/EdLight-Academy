@@ -1,5 +1,7 @@
 import React from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 import useStore from '../contexts/store';
+import { readNextParam } from '../utils/returnPath';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
 
 // Both targets stay lazy so the index route only ships the bundle the current
@@ -42,6 +44,7 @@ const Workspace = lazyWithRetry(() => import('../pages/Courses'));
 export default function HomeRoute() {
   const isAuthenticated = useStore((s) => s.isAuthenticated);
   const authConfirmed = useStore((s) => s.authConfirmed);
+  const location = useLocation();
 
   // Wait for Firebase to confirm before trusting persisted isAuthenticated.
   if (isAuthenticated && !authConfirmed) {
@@ -52,6 +55,12 @@ export default function HomeRoute() {
     );
   }
 
-  if (isAuthenticated) return <Workspace mode="workspace" />;
+  if (isAuthenticated) {
+    // A signed-out visit to a signed-in page came here as "/?next=<path>":
+    // continue there now that the session is confirmed (validated, same-site).
+    const next = readNextParam(location.search);
+    if (next) return <Navigate to={next} replace />;
+    return <Workspace mode="workspace" />;
+  }
   return LoadedHome ? <LoadedHome /> : <Home />;
 }
