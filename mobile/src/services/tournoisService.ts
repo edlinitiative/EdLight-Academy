@@ -447,6 +447,11 @@ export function errorMessage(
         'École contre école : indiquez votre école.',
         'Lekòl kont lekòl : di ki lekòl ou.',
       );
+    case 'class_required':
+      return t(
+        'Classe vérifiée : rejoins d’abord ta classe dans Mes classes, avec l’accord de ton professeur.',
+        'Klas verifye : antre nan klas ou nan Klas mwen yo dabò, avèk dakò pwofesè ou.',
+      );
     case 'grade_required':
       return t(
         'Classe contre classe : indiquez votre classe.',

@@ -44,6 +44,7 @@
  *     already says it is.
  */
 
+import { createHash } from 'crypto';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import type { DocumentData, DocumentReference, Firestore, Transaction } from 'firebase-admin/firestore';
 import { checkRateLimit } from '../_lib/rateLimit';
@@ -102,6 +103,11 @@ export interface TournamentDoc extends TournamentConfig {
   standingsDirty: boolean;
   createdAt: number;
   updatedAt: number;
+  /** Class-vs-class fixture (api/_lib/classSpaces): only these verified classes may enter. */
+  classFixtureId?: string;
+  classIds?: string[];
+  /** Both fixture teachers may watch the private room; neither plays. */
+  classTeacherUids?: string[];
 }
 
 /** Stored per player, server-only. `rounds` keys are round indexes as strings. */
@@ -117,6 +123,12 @@ export interface PlayerDoc {
   rounds: Record<string, RoundScore & { answered: number }>;
   /** Sanitized chosen avatar, copied at registration for competition events. */
   avatar?: string | null;
+  /** teamRule 'class': the verified class (server-only id), its public team key and label. */
+  classId?: string | null;
+  classKey?: string | null;
+  classLabel?: string | null;
+  /** Set when the player left or was removed from that class: they no longer count for it. */
+  classDetached?: boolean;
 }
 
 export const tRef = (db: Firestore, tid: string) => db.doc(`${COLLECTION}/${tid}`);
@@ -181,6 +193,7 @@ export async function canSee(db: Firestore, t: TournamentDoc, uid: string | null
   if (t.visibility !== 'private') return true;
   if (!uid) return false;
   if (t.creatorUid === uid) return true;
+  if (t.classTeacherUids?.includes(uid)) return true;
   if (t.schemaVersion === 2 && t.competitionEventId) {
     const e = (await db.doc(`competitionEvents/${t.competitionEventId}`).get()).data();
     if (['manage', 'checkin'].includes(e?.cohosts?.[uid])) return true;
@@ -230,6 +243,8 @@ export async function recomputeStandings(db: Firestore, tid: string, now: number
   if (!tSnap.exists) return;
   const t = tSnap.data() as TournamentDoc;
   const snap = await tx.get(subCol(db, tid, 'players'));
+  // Verified classes: a player counts for a class only while still an approved member of an active class.
+  const stillInClass = await classMembership(tx, db, t, snap.docs.map((d) => d.data() as PlayerDoc));
   const avatars = new Map<string, string>();
   const rows: PlayerRow[] = snap.docs.map((d) => {
     const p = d.data() as PlayerDoc;
@@ -239,6 +254,8 @@ export async function recomputeStandings(db: Firestore, tid: string, now: number
       displayName: p.displayName,
       school: p.school,
       grade: p.grade,
+      classKey: stillInClass(p) ? p.classKey ?? null : null,
+      classLabel: stillInClass(p) ? p.classLabel ?? null : null,
       points: p.points || 0,
       correct: p.correct || 0,
       answered: p.answered || 0,
@@ -256,7 +273,7 @@ export async function recomputeStandings(db: Firestore, tid: string, now: number
     rank: r.rank,
     ...(avatars.has(r.uid) ? { avatar: avatars.get(r.uid) } : {}),
   }));
-  const teams = rankTournamentTeams(t.teamRule, t.teamSize, rows).slice(0, 50).map((s) => ({
+  const teams = rankTournamentTeams(t.teamRule, t.teamSize, rows, t.teamAggregate).slice(0, 50).map((s) => ({
     key: s.key,
     label: s.label,
     rank: s.rank,
@@ -605,11 +622,88 @@ export interface JoinIdentity {
   displayName: string;
   school: string | null;
   grade: string | null;
+  /** teamRule 'class' only, from resolveVerifiedClass. Re-verified inside the join transaction. */
+  classId?: string | null;
+  classKey?: string | null;
+  classLabel?: string | null;
+}
+
+/** Bounded: a class tournament groups at most this many distinct classes for standings. */
+export const CLASS_GROUP_READS = 60;
+
+/**
+ * Which players still belong to the class they joined under. Reads each distinct
+ * class once (inside the caller's transaction, before any write). Never edits a
+ * score: a player who left, was removed, or whose class was archived simply stops
+ * counting for that class.
+ */
+export async function classMembership(
+  tx: { get: (ref: DocumentReference) => Promise<any> }, db: Firestore,
+  t: Pick<TournamentDoc, 'teamRule'>, players: Array<Pick<PlayerDoc, 'uid' | 'classId'>>,
+): Promise<(p: Pick<PlayerDoc, 'uid' | 'classId'>) => boolean> {
+  if (t.teamRule !== 'class') return () => true;
+  const ids = [...new Set(players.map((p) => p.classId).filter((v): v is string => typeof v === 'string'))].slice(0, CLASS_GROUP_READS);
+  const classes = new Map<string, any>();
+  for (const id of ids) classes.set(id, (await tx.get(db.doc(`classes/${id}`))).data());
+  return (p) => {
+    const c = p.classId ? classes.get(p.classId) : undefined;
+    return !!c && !c.archived && !!c.members?.[p.uid];
+  };
+}
+
+/** Play gate for class tournaments: the player's class membership must still stand. */
+export async function classPlayAllowed(db: Firestore, t: Pick<TournamentDoc, 'id' | 'teamRule'>, uid: string): Promise<boolean> {
+  if (t.teamRule !== 'class') return true;
+  const p = (await sub(db, t.id, `players/${uid}`).get()).data() as PlayerDoc | undefined;
+  if (!p) return true; // not joined: the round handlers answer not_joined
+  const ok = await classMembership({ get: (ref) => ref.get() }, db, t, [p]);
+  return ok(p);
+}
+
+/**
+ * After a student leaves or is removed from a class (or deletes their account):
+ * detach them from that class's group in every class tournament they entered and
+ * rebuild the standings. Their own points are untouched. Best-effort and bounded;
+ * recomputeStandings re-checks membership anyway.
+ */
+export async function detachFromClassTournaments(db: Firestore, uid: string, classIdValue: string, now: number): Promise<void> {
+  const mine = await db.collection(`users/${uid}/myTournaments`).limit(100).get();
+  for (const d of mine.docs) {
+    const tid = d.id;
+    const t = (await tRef(db, tid).get()).data() as TournamentDoc | undefined;
+    if (!t || t.teamRule !== 'class') continue;
+    const playerRef = sub(db, tid, `players/${uid}`);
+    const p = (await playerRef.get()).data() as PlayerDoc | undefined;
+    if (!p || p.classId !== classIdValue) continue;
+    const detached = { classKey: null, classLabel: null, classDetached: true };
+    await playerRef.set(detached, { merge: true });
+    const rosterRef = sub(db, tid, `roster/${uid}`);
+    if ((await rosterRef.get()).exists) await rosterRef.set(detached, { merge: true });
+    if (t.state !== 'cancelled') await recomputeStandings(db, tid, now);
+  }
+}
+
+/** The public team key of a verified class: the class id itself never reaches a roster. */
+export const classTeamKey = (classId: string) => `c_${createHash('sha256').update(`class-team:${classId}`).digest('hex').slice(0, 16)}`;
+
+/**
+ * The teacher-approved class this student plays for. A requested class wins when
+ * it is eligible; otherwise the earliest-joined one. `allowed` narrows to a fixture's
+ * two classes. Null when the student has no active verified membership there.
+ */
+export async function resolveVerifiedClass(db: Firestore, uid: string, requested: unknown, allowed?: string[] | null) {
+  const snap = await db.collection('classes').where('memberUids', 'array-contains', uid).limit(5).get();
+  const eligible = snap.docs.map((d) => d.data() as { id: string; title: string; school: string; archived?: boolean; members?: Record<string, { joinedAt?: number }> })
+    .filter((c) => !c.archived && c.members?.[uid] && (!allowed || allowed.includes(c.id)))
+    .sort((a, b) => (a.members![uid].joinedAt || 0) - (b.members![uid].joinedAt || 0));
+  const pick = eligible.find((c) => c.id === requested) || eligible[0];
+  if (!pick) return null;
+  return { classId: pick.id, classKey: classTeamKey(pick.id), classLabel: cleanText(`${pick.title} · ${pick.school}`, 80) };
 }
 
 export type JoinOutcome =
   | { ok: true; already: boolean; seed: number }
-  | { ok: false; error: 'not_found' | 'closed' | 'full' | 'school_required' | 'grade_required' | 'managed_entry_required' };
+  | { ok: false; error: 'not_found' | 'closed' | 'full' | 'school_required' | 'grade_required' | 'class_required' | 'managed_entry_required' };
 
 /** Can a new player still come in? A knockout is drawn at the start; the rest take late arrivals. */
 export function joinOpen(t: Pick<TournamentDoc, 'state' | 'format'>): boolean {
@@ -635,16 +729,27 @@ export async function joinTournament(db: Firestore, tid: string, who: JoinIdenti
     if ((t.playerCount || 0) >= t.maxPlayers) return { ok: false, error: 'full' };
     if (t.teamRule === 'school' && !who.school) return { ok: false, error: 'school_required' };
     if (t.teamRule === 'grade' && !who.grade) return { ok: false, error: 'grade_required' };
+    if (t.teamRule === 'class') {
+      // Server-authoritative: the membership is re-read in this transaction, never taken from the request.
+      if (!who.classId || (t.classIds && !t.classIds.includes(who.classId))) return { ok: false, error: 'class_required' };
+      const c = (await tx.get(db.doc(`classes/${who.classId}`))).data();
+      if (!c || c.archived || !c.members?.[who.uid]) return { ok: false, error: 'class_required' };
+    }
+    const team = t.teamRule === 'class' ? { classKey: who.classKey ?? null, classLabel: who.classLabel ?? null } : {};
     const seed = (t.playerCount || 0) + 1;
     tx.set(rosterRef, {
       uid: who.uid,
       displayName: who.displayName,
       school: who.school,
       grade: who.grade,
+      ...team,
       seed,
       joinedAt: now,
     });
-    tx.set(sub(db, tid, `players/${who.uid}`), emptyPlayer(who.uid, who.displayName, who.school, who.grade));
+    tx.set(sub(db, tid, `players/${who.uid}`), {
+      ...emptyPlayer(who.uid, who.displayName, who.school, who.grade),
+      ...(t.teamRule === 'class' ? { ...team, classId: who.classId } : {}),
+    });
     tx.set(db.doc(`users/${who.uid}/myTournaments/${tid}`), {
       tid,
       title: t.title,

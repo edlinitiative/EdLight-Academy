@@ -1,4 +1,5 @@
 import { ClassDb } from './helpers/classDb';
+jest.mock('../_lib/firebaseAdmin', () => ({ getDb: () => null, getAuthAdmin: () => null }));
 import { classHome, completeAssignment, createClass, eraseClassAccount, joinClass, mutateClass, prepareClassXp, readClass, syncExamClasses } from '../_lib/classSpaces';
 import { classWeek } from '../../shared/classes';
 

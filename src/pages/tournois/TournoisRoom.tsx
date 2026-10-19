@@ -16,7 +16,7 @@ import { ArrowLeft, Eye, Play, RotateCcw, Users, X } from '../../components/icon
 import useStore from '../../contexts/store';
 import { useTrivia } from '../../hooks/useTrivia';
 import { GRADES } from '../../../shared/trackConfig';
-import { formatPin } from '../../../shared/tournois/config';
+import { formatPin, teamRuleLabel } from '../../../shared/tournois/config';
 import { roundAt } from '../../../shared/tournois/schedule';
 import type { PublicQuestion } from '../../../shared/tournois/questions';
 import type { Match } from '../../../shared/tournois/bracket';
@@ -366,14 +366,14 @@ function PhaseLine({ tour, live, now }: { tour: Tournament; live: LiveState | nu
 }
 
 function StandingsCard({ tour, standings, me, revealDelay = 0 }: { tour: Tournament; standings: Standings | null; me: string | null; revealDelay?: number }) {
-  const { t } = useLang();
+  const { t, isCreole } = useLang();
   const rows = standings?.rows || [];
   return (
     <aside style={{ display: 'grid', gap: '1rem' }}>
       {tour.teamRule !== 'solo' && (
         <div className="tn-card">
           <div className="tn-section__head">
-            <h2>{tour.teamRule === 'school' ? t('École contre école', 'Lekòl kont lekòl') : t('Classe contre classe', 'Klas kont klas')}</h2>
+            <h2>{teamRuleLabel(tour.teamRule, isCreole)}</h2>
           </div>
           <SquadBars teams={standings?.teams || []} teamSize={tour.teamSize} schools={tour.teamRule === 'school'} revealDelay={revealDelay} />
         </div>
@@ -611,6 +611,7 @@ function JoinPanel({ tour, pin }: { tour: Tournament; pin?: string }) {
           </select>
         </div>
       )}
+      {tour.teamRule === 'class' && <p className="tn-muted">{tour.classFixtureId ? t('Match entre classes : entre depuis Mes classes.', 'Match ant klas : antre nan Klas mwen yo.') : t('Tu joues pour ta classe vérifiée dans Mes classes.', 'Ou jwe pou klas verifye ou nan Klas mwen yo.')}</p>}
       <div>
         <button type="button" className="button button--primary" disabled={busy} onClick={join}>
           {busy ? t('Inscription…', 'Ap enskri…') : t('Rejoindre', 'Antre')}
@@ -750,6 +751,7 @@ export function RoomView({ tour, roster, live, progress, standings, matches, me,
             {tour.gameMode === 'shared' && <span className="tn-chip">{t('Réponse commune', 'Repons komen')}</span>}
             {tour.gameMode === 'relay' && <span className="tn-chip">{t('Relais', 'Relè')}</span>}
             {tour.teamRule === 'grade' && <span className="tn-chip">{t('Classe vs classe', 'Klas vs klas')}</span>}
+            {tour.teamRule === 'class' && <span className="tn-chip">{t('Classe vérifiée', 'Klas verifye')}</span>}
             <span className="tn-chip">{tour.visibility === 'public' ? t('Public', 'Piblik') : tour.visibility === 'unlisted' ? t('Non listé', 'Pa nan lis') : t('Privé', 'Prive')}</span>
           </div>
           <h1>{tour.title}</h1>
