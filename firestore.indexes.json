@@ -159,20 +159,6 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "startsAt",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "__name__",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "competitionDirectory",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
           "fieldPath": "schoolKey",
           "order": "ASCENDING"
         },
