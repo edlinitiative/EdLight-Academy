@@ -21,11 +21,14 @@
     {
       "id": "MAP-01",
       "requirement": "Every exposed or promised capability belongs to the frozen scope or an explicit removed/deferred claim",
-      "status": "Not implemented",
+      "status": "Failed",
       "owner": null,
-      "implementation": [],
+      "implementation": [
+        "docs/design/release-readiness/advertised-capabilities.md",
+        "scripts/release_readiness.mjs"
+      ],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Source-level advertised-capability audit (advertisedCapabilities, ADV-01–ADV-33, 2026-10-19) found 9 open mismatches between advertised copy and the code/flags (ADV-05, 08, 10, 13, 17, 23, 27, 28, 33). Failed until each is resolved and a rendered navigation/help/marketing audit on the candidate builds confirms no unmapped promise. Learning/exam/Sandra capabilities are not yet in this audit (competition/Arène only)."
     },
     {
       "id": "MAP-02",
@@ -34,7 +37,7 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Competition/Arène capabilities now map to requirement IDs, journeys, implementation files and automated tests (advertisedCapabilities). Owners, acceptance scenario IDs, rendered-state review and installed-build evidence are still blank for every row; core learning capabilities are unmapped. Coverage audit pending; this status does not assert that all existing functionality is absent."
     },
     {
       "id": "MAP-03",
@@ -61,7 +64,13 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-01",
+        "ADV-09",
+        "ADV-12",
+        "ADV-26"
+      ]
     },
     {
       "id": "PUR-03",
@@ -70,7 +79,11 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-02",
+        "ADV-12"
+      ]
     },
     {
       "id": "PUR-04",
@@ -79,7 +92,10 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-18"
+      ]
     },
     {
       "id": "PUR-05",
@@ -88,7 +104,11 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-05",
+        "ADV-18"
+      ]
     },
     {
       "id": "PUR-06",
@@ -106,7 +126,11 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-17",
+        "ADV-19"
+      ]
     },
     {
       "id": "PUR-08",
@@ -115,7 +139,13 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-01",
+        "ADV-12",
+        "ADV-30",
+        "ADV-33"
+      ]
     },
     {
       "id": "CON-01",
@@ -124,7 +154,12 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-03",
+        "ADV-15",
+        "ADV-27"
+      ]
     },
     {
       "id": "CON-02",
@@ -178,7 +213,10 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-08"
+      ]
     },
     {
       "id": "CON-08",
@@ -191,7 +229,13 @@
         "shared/competition/workspace.ts"
       ],
       "evidence": [],
-      "notes": "Pilot implementation and focused automated regression checks exist. Installed-device, production and acceptance evidence remain required. This is not a release pass."
+      "notes": "Pilot implementation and focused automated regression checks exist. Installed-device, production and acceptance evidence remain required. This is not a release pass.",
+      "capabilityRefs": [
+        "ADV-13",
+        "ADV-14",
+        "ADV-15",
+        "ADV-18"
+      ]
     },
     {
       "id": "CON-09",
@@ -200,7 +244,11 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-04",
+        "ADV-11"
+      ]
     },
     {
       "id": "CON-10",
@@ -209,7 +257,12 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-01",
+        "ADV-11",
+        "ADV-12"
+      ]
     },
     {
       "id": "CON-11",
@@ -218,7 +271,14 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-04",
+        "ADV-24",
+        "ADV-26",
+        "ADV-27",
+        "ADV-32"
+      ]
     },
     {
       "id": "CON-12",
@@ -227,7 +287,14 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-10",
+        "ADV-16",
+        "ADV-17",
+        "ADV-19",
+        "ADV-29"
+      ]
     },
     {
       "id": "CON-13",
@@ -236,7 +303,11 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-20",
+        "ADV-21"
+      ]
     },
     {
       "id": "CON-14",
@@ -245,7 +316,13 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-02",
+        "ADV-06",
+        "ADV-22",
+        "ADV-28"
+      ]
     },
     {
       "id": "CON-15",
@@ -254,7 +331,13 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-24",
+        "ADV-25",
+        "ADV-32",
+        "ADV-33"
+      ]
     },
     {
       "id": "PAR-01",
@@ -275,7 +358,11 @@
         "mobile/src/services/tournoisService.ts"
       ],
       "evidence": [],
-      "notes": "Pilot implementation and focused automated regression checks exist. Installed-device, production and acceptance evidence remain required. This is not a release pass."
+      "notes": "Pilot implementation and focused automated regression checks exist. Installed-device, production and acceptance evidence remain required. This is not a release pass.",
+      "capabilityRefs": [
+        "ADV-10",
+        "ADV-11"
+      ]
     },
     {
       "id": "PAR-03",
@@ -287,7 +374,13 @@
         "mobile/src/screens/arena/CompetitionWorkspaceScreen.tsx"
       ],
       "evidence": [],
-      "notes": "Pilot implementation and focused automated regression checks exist. Installed-device, production and acceptance evidence remain required. This is not a release pass."
+      "notes": "Pilot implementation and focused automated regression checks exist. Installed-device, production and acceptance evidence remain required. This is not a release pass.",
+      "capabilityRefs": [
+        "ADV-13",
+        "ADV-14",
+        "ADV-15",
+        "ADV-18"
+      ]
     },
     {
       "id": "PAR-04",
@@ -299,7 +392,14 @@
         "api/_lib/competition.ts"
       ],
       "evidence": [],
-      "notes": "Pilot implementation and focused automated regression checks exist. Installed-device, production and acceptance evidence remain required. This is not a release pass."
+      "notes": "Pilot implementation and focused automated regression checks exist. Installed-device, production and acceptance evidence remain required. This is not a release pass.",
+      "capabilityRefs": [
+        "ADV-10",
+        "ADV-16",
+        "ADV-17",
+        "ADV-19",
+        "ADV-20"
+      ]
     },
     {
       "id": "PAR-05",
@@ -308,7 +408,13 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-03",
+        "ADV-04",
+        "ADV-12",
+        "ADV-22"
+      ]
     },
     {
       "id": "PAR-06",
@@ -317,7 +423,13 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-03",
+        "ADV-08",
+        "ADV-24",
+        "ADV-27"
+      ]
     },
     {
       "id": "PAR-07",
@@ -335,7 +447,12 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-06",
+        "ADV-07",
+        "ADV-21"
+      ]
     },
     {
       "id": "PAR-09",
@@ -344,7 +461,14 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-05",
+        "ADV-07",
+        "ADV-09",
+        "ADV-10",
+        "ADV-17"
+      ]
     },
     {
       "id": "TRU-01",
@@ -353,7 +477,13 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-15",
+        "ADV-24",
+        "ADV-25",
+        "ADV-28"
+      ]
     },
     {
       "id": "TRU-02",
@@ -362,7 +492,11 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-03",
+        "ADV-16"
+      ]
     },
     {
       "id": "TRU-03",
@@ -371,7 +505,13 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-04",
+        "ADV-08",
+        "ADV-10",
+        "ADV-11"
+      ]
     },
     {
       "id": "TRU-04",
@@ -383,7 +523,13 @@
         "api/__tests__/competitionEmulator.test.ts"
       ],
       "evidence": [],
-      "notes": "Pilot implementation and focused automated regression checks exist. Installed-device, production and acceptance evidence remain required. This is not a release pass."
+      "notes": "Pilot implementation and focused automated regression checks exist. Installed-device, production and acceptance evidence remain required. This is not a release pass.",
+      "capabilityRefs": [
+        "ADV-13",
+        "ADV-14",
+        "ADV-15",
+        "ADV-18"
+      ]
     },
     {
       "id": "TRU-05",
@@ -396,7 +542,12 @@
         "api/competition.ts"
       ],
       "evidence": [],
-      "notes": "Pilot implementation and focused automated regression checks exist. Installed-device, production and acceptance evidence remain required. This is not a release pass."
+      "notes": "Pilot implementation and focused automated regression checks exist. Installed-device, production and acceptance evidence remain required. This is not a release pass.",
+      "capabilityRefs": [
+        "ADV-11",
+        "ADV-12",
+        "ADV-20"
+      ]
     },
     {
       "id": "TRU-06",
@@ -409,7 +560,13 @@
         "api/tournois/_shared.ts"
       ],
       "evidence": [],
-      "notes": "Pilot implementation and focused automated regression checks exist. Installed-device, production and acceptance evidence remain required. This is not a release pass."
+      "notes": "Pilot implementation and focused automated regression checks exist. Installed-device, production and acceptance evidence remain required. This is not a release pass.",
+      "capabilityRefs": [
+        "ADV-02",
+        "ADV-04",
+        "ADV-19",
+        "ADV-22"
+      ]
     },
     {
       "id": "TRU-07",
@@ -418,7 +575,11 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-04",
+        "ADV-24"
+      ]
     },
     {
       "id": "TRU-08",
@@ -430,7 +591,11 @@
         "shared/competition/workspace.ts"
       ],
       "evidence": [],
-      "notes": "Pilot implementation and focused automated regression checks exist. Installed-device, production and acceptance evidence remain required. This is not a release pass."
+      "notes": "Pilot implementation and focused automated regression checks exist. Installed-device, production and acceptance evidence remain required. This is not a release pass.",
+      "capabilityRefs": [
+        "ADV-06",
+        "ADV-21"
+      ]
     },
     {
       "id": "TRU-09",
@@ -439,7 +604,10 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-31"
+      ]
     },
     {
       "id": "TRU-10",
@@ -448,7 +616,15 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-06",
+        "ADV-16",
+        "ADV-19",
+        "ADV-21",
+        "ADV-23",
+        "ADV-29"
+      ]
     },
     {
       "id": "TRU-11",
@@ -457,7 +633,11 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-27",
+        "ADV-29"
+      ]
     },
     {
       "id": "PRE-01",
@@ -493,7 +673,10 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-30"
+      ]
     },
     {
       "id": "PRE-05",
@@ -502,7 +685,10 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-30"
+      ]
     },
     {
       "id": "PRE-06",
@@ -538,7 +724,10 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-04"
+      ]
     },
     {
       "id": "PRE-10",
@@ -547,7 +736,10 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-20"
+      ]
     },
     {
       "id": "PRE-11",
@@ -565,7 +757,10 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-28"
+      ]
     },
     {
       "id": "E2E-02",
@@ -592,7 +787,10 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-08"
+      ]
     },
     {
       "id": "E2E-05",
@@ -601,7 +799,12 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-11",
+        "ADV-18",
+        "ADV-32"
+      ]
     },
     {
       "id": "E2E-06",
@@ -610,7 +813,11 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-14",
+        "ADV-18"
+      ]
     },
     {
       "id": "E2E-07",
@@ -619,7 +826,12 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-03",
+        "ADV-04",
+        "ADV-06"
+      ]
     },
     {
       "id": "E2E-08",
@@ -628,7 +840,10 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-19"
+      ]
     },
     {
       "id": "E2E-09",
@@ -646,7 +861,11 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-20",
+        "ADV-21"
+      ]
     },
     {
       "id": "E2E-11",
@@ -655,7 +874,10 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-22"
+      ]
     },
     {
       "id": "E2E-12",
@@ -664,7 +886,10 @@
       "owner": null,
       "implementation": [],
       "evidence": [],
-      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent."
+      "notes": "Coverage audit pending; this status does not assert that all existing functionality is absent.",
+      "capabilityRefs": [
+        "ADV-27"
+      ]
     }
   ],
   "inventory": [
@@ -1836,6 +2061,1863 @@
       "owner": null,
       "scenarioIds": [],
       "statesReviewed": [],
+      "evidence": []
+    }
+  ],
+  "advertisedCapabilities": [
+    {
+      "id": "ADV-01",
+      "kind": "claim",
+      "capability": "Arène entry points: web nav tab, landing pane, native Home tile and Jeux-tab panel",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "src/components/Navbar.tsx",
+          "match": "{ to: '/arena', labelKey: 'nav.arena', icon: Swords }",
+          "line": 45
+        },
+        {
+          "source": "src/components/BottomNav.tsx",
+          "match": "{ to: '/arena', labelKey: 'nav.arena', icon: Swords }",
+          "line": 24
+        },
+        {
+          "source": "src/pages/home/ShowcaseSection.tsx",
+          "match": "Entrer dans l’Arène",
+          "line": 118
+        },
+        {
+          "source": "mobile/src/components/home/TodayPair.tsx",
+          "match": "{t('Arène', 'Arèn')}</Text>",
+          "line": 127
+        }
+      ],
+      "requirementIds": [
+        "PUR-02",
+        "PUR-08",
+        "CON-10"
+      ],
+      "journeys": [
+        "J01"
+      ],
+      "implementation": [
+        "src/pages/arena/ArenaArcade.tsx",
+        "mobile/src/components/arena/ArenaHubPanel.tsx",
+        "mobile/src/components/games/JeuxHub.tsx",
+        "mobile/src/components/home/homeLayout.ts"
+      ],
+      "automatedEvidence": [
+        "src/components/arena/lobby/__tests__/lobby.test.tsx",
+        "mobile/src/components/home/__tests__/homeLayout.test.ts",
+        "src/hooks/__tests__/useOpenArena.test.ts"
+      ],
+      "flags": [],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Installed release-equivalent iOS and Android run of the advertised path",
+        "Browser run on the declared matrix (desktop + 360/390 px phone)",
+        "Rendered-state review: loading, empty, denied, failure, long FR/HT copy"
+      ],
+      "mismatch": null,
+      "notes": "Native has no Arène tab: the Arène lives inside the Jeux tab (ArenaHubPanel) and the Home tile. The web nav lights /arena for jeux/tournois/classement/defi.",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-02",
+      "kind": "claim",
+      "capability": "School race: every correct answer / game counts for your school; weekly and all-time boards",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "src/pages/home/ShowcaseSection.tsx",
+          "match": "Chaque bonne réponse fait monter ton école.",
+          "line": 117
+        },
+        {
+          "source": "src/components/arena/lobby/LobbyLanes.tsx",
+          "match": "Chaque partie compte · remis à zéro le lundi",
+          "line": 67
+        },
+        {
+          "source": "mobile/src/components/arena/ArenaHubPanel.tsx",
+          "match": "Chaque partie fait monter ton école",
+          "line": 107
+        },
+        {
+          "source": "mobile/store/app-store-metadata.md",
+          "match": "Classement hebdomadaire et de tous les temps",
+          "line": 73
+        }
+      ],
+      "requirementIds": [
+        "PUR-03",
+        "TRU-06",
+        "CON-14"
+      ],
+      "journeys": [
+        "J06"
+      ],
+      "implementation": [
+        "src/pages/Classement.tsx",
+        "src/components/arena/lobby/LobbyLanes.tsx",
+        "api/leaderboard/award.ts",
+        "api/leaderboard/collectives.ts"
+      ],
+      "automatedEvidence": [
+        "src/components/arena/lobby/__tests__/rival.test.ts",
+        "src/components/arena/lobby/__tests__/podium.test.ts",
+        "src/components/arena/lobby/__tests__/lobby.test.tsx"
+      ],
+      "flags": [],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Installed release-equivalent iOS and Android run of the advertised path",
+        "Browser run on the declared matrix (desktop + 360/390 px phone)",
+        "Rendered-state review: loading, empty, denied, failure, long FR/HT copy"
+      ],
+      "mismatch": null,
+      "notes": "Weekly XP race, user-tournament results and official championship rank must stay distinct (J06 evidence). The store listing mentions only the leaderboard/games, not Arène competitions — no store claim to reconcile.",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-03",
+      "kind": "claim",
+      "capability": "Official inter-school championship: register your school",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "src/components/ArenaBanner.tsx",
+          "match": "Inscris ton école dès maintenant",
+          "line": 59
+        },
+        {
+          "source": "src/pages/Dashboard.tsx",
+          "match": "Championnat interscolaire",
+          "line": 731
+        },
+        {
+          "source": "src/components/arena/lobby/LobbyLanes.tsx",
+          "match": "Inscrire mon école",
+          "line": 121
+        },
+        {
+          "source": "mobile/src/components/arena/arenaHubCopy.ts",
+          "match": "Inscriptions ouvertes. Inscris-toi avec ton école.",
+          "line": 80
+        }
+      ],
+      "requirementIds": [
+        "CON-01",
+        "PAR-05",
+        "PAR-06",
+        "TRU-02",
+        "E2E-07"
+      ],
+      "journeys": [
+        "J06"
+      ],
+      "implementation": [
+        "src/pages/Arena.tsx",
+        "src/components/arena/ArenaRegisterForm.tsx",
+        "api/arena/register.ts",
+        "mobile/src/screens/arena/ArenaLobbyScreen.tsx"
+      ],
+      "automatedEvidence": [
+        "api/__tests__/arenaSchoolIdentity.test.ts",
+        "api/__tests__/arenaSchoolLocation.test.ts",
+        "api/__tests__/arenaState.test.ts",
+        "src/utils/__tests__/arenaState.test.ts",
+        "mobile/src/utils/__tests__/arenaLobby.test.ts"
+      ],
+      "flags": [],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Installed release-equivalent iOS and Android run of the advertised path",
+        "Browser run on the declared matrix (desktop + 360/390 px phone)",
+        "Rendered-state review: loading, empty, denied, failure, long FR/HT copy",
+        "Signed-out cold/warm registration link returns to registration after login (CON-01)",
+        "Real school pilot run (contract §10)"
+      ],
+      "mismatch": null,
+      "notes": "",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-04",
+      "kind": "claim",
+      "capability": "Official championship: enter the room, play live, watch and results (web play room + native screens)",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "src/pages/Arena.tsx",
+          "match": "Entrer dans la salle",
+          "line": 139
+        },
+        {
+          "source": "src/pages/ArenaPlay.tsx",
+          "match": "Regarder en direct",
+          "line": 201
+        },
+        {
+          "source": "mobile/src/components/arena/arenaHubCopy.ts",
+          "match": "Suis ton école en direct.",
+          "line": 64
+        }
+      ],
+      "requirementIds": [
+        "CON-09",
+        "CON-11",
+        "PAR-05",
+        "TRU-03",
+        "TRU-06",
+        "TRU-07",
+        "PRE-09",
+        "E2E-07"
+      ],
+      "journeys": [
+        "J06",
+        "J08"
+      ],
+      "implementation": [
+        "src/pages/ArenaPlay.tsx",
+        "shared/arena/webPlay.ts",
+        "src/pages/Direct.tsx",
+        "mobile/src/screens/arena/ArenaDoorsScreen.tsx",
+        "mobile/src/screens/arena/ArenaLiveScreen.tsx",
+        "mobile/src/screens/arena/ArenaWatchScreen.tsx",
+        "mobile/src/screens/arena/ArenaResultScreen.tsx",
+        "api/arena/answer.ts",
+        "api/arena/state.ts"
+      ],
+      "automatedEvidence": [
+        "src/pages/__tests__/arenaPlay.test.tsx",
+        "src/utils/__tests__/arenaPlay.test.ts",
+        "api/__tests__/arenaAnswer.test.ts",
+        "api/__tests__/arenaDoorsClose.test.ts",
+        "api/__tests__/arenaAggregate.test.ts",
+        "api/__tests__/arenaRateLimitRace.test.ts",
+        "mobile/src/utils/__tests__/arenaAnswerReceipt.test.ts",
+        "mobile/src/utils/__tests__/arenaWatch.test.ts",
+        "mobile/src/utils/__tests__/arenaViewState.test.ts",
+        "mobile/src/utils/__tests__/arenaStatus.test.ts"
+      ],
+      "flags": [
+        "ARENA_WEB_PLAY=true (shared/arena/webPlay.ts) enables the web play room"
+      ],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Installed release-equivalent iOS and Android run of the advertised path",
+        "Browser run on the declared matrix (desktop + 360/390 px phone)",
+        "Rendered-state review: loading, empty, denied, failure, long FR/HT copy",
+        "Network loss / background / restart during a live question yields the same server attempt (CON-09)",
+        "Real school pilot run (contract §10)"
+      ],
+      "mismatch": null,
+      "notes": "Arena device attestation stays disabled (contract §7).",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-05",
+      "kind": "claim",
+      "capability": "Claim that the championship is played only in the app",
+      "platforms": [
+        "web"
+      ],
+      "advertisedAt": [
+        {
+          "source": "src/pages/Download.tsx",
+          "match": "Le championnat se joue dans l’application",
+          "line": 44
+        },
+        {
+          "source": "src/components/RouteMeta.tsx",
+          "match": "puis affrontez les autres établissements d’Haïti dans l’application",
+          "line": 33
+        }
+      ],
+      "requirementIds": [
+        "PAR-09",
+        "PUR-05"
+      ],
+      "journeys": [
+        "J06"
+      ],
+      "implementation": [
+        "shared/arena/webPlay.ts",
+        "src/pages/Download.tsx",
+        "src/components/RouteMeta.tsx"
+      ],
+      "automatedEvidence": [],
+      "flags": [],
+      "status": "Failed",
+      "pendingEvidence": [
+        "Copy fix, then browser review of /download?from=arena and the /arena meta description"
+      ],
+      "mismatch": {
+        "severity": "major",
+        "status": "Open",
+        "finding": "ARENA_WEB_PLAY is true and /arena/jouer is a working web play room, but /download?from=arena (linked from Arena.tsx and ArenaPlay.tsx as \"Jouer dans l’application\") says the day-J questions are played in the app, and the /arena route description (FR/HT/EN) says to compete in the app.",
+        "recommendation": "Hide/correct copy: make the Download \"arena\" variant and the RouteMeta arena description conditional on ARENA_WEB_PLAY (browser or app, same account). If web play is not in the frozen scope, set ARENA_WEB_PLAY=false instead. No engine change."
+      },
+      "notes": "",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-06",
+      "kind": "claim",
+      "capability": "Official prize claim (72 h) and guardian consent",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "mobile/src/screens/arena/ArenaResultScreen.tsx",
+          "match": "Réclamer mon prix",
+          "line": 232
+        },
+        {
+          "source": "mobile/src/screens/arena/ArenaResultScreen.tsx",
+          "match": "Tu as 72 heures pour réclamer",
+          "line": 337
+        }
+      ],
+      "requirementIds": [
+        "TRU-08",
+        "TRU-10",
+        "PAR-08",
+        "CON-14",
+        "E2E-07"
+      ],
+      "journeys": [
+        "J14",
+        "J06"
+      ],
+      "implementation": [
+        "src/pages/ArenaClaim.tsx",
+        "src/pages/ArenaConsentForm.tsx",
+        "api/arena/claim.ts",
+        "api/arena/consent.ts",
+        "api/arena/review.ts"
+      ],
+      "automatedEvidence": [
+        "api/__tests__/arenaConsent.test.ts",
+        "api/__tests__/arenaFinalGate.test.ts",
+        "api/__tests__/arenaReview.test.ts",
+        "src/utils/__tests__/arenaReview.test.ts"
+      ],
+      "flags": [],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Installed release-equivalent iOS and Android run of the advertised path",
+        "Browser run on the declared matrix (desktop + 360/390 px phone)",
+        "Rendered-state review: loading, empty, denied, failure, long FR/HT copy",
+        "Native → browser claim/consent handoff and return (PAR-08)",
+        "Named fulfillment/support owner and one support drill (TRU-10, §11)"
+      ],
+      "mismatch": null,
+      "notes": "",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-07",
+      "kind": "claim",
+      "capability": "Championship demo (web simulation with fictional schools)",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "mobile/src/screens/arena/ArenaHubScreen.tsx",
+          "match": "La démo du championnat",
+          "line": 65
+        }
+      ],
+      "requirementIds": [
+        "PAR-08",
+        "PAR-09"
+      ],
+      "journeys": [
+        "J01"
+      ],
+      "implementation": [
+        "src/pages/arena/ArenaDemo.tsx",
+        "shared/arena/demo.ts",
+        "mobile/src/screens/arena/ArenaHubScreen.tsx"
+      ],
+      "automatedEvidence": [
+        "src/utils/__tests__/arenaDemo.test.ts"
+      ],
+      "flags": [],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Installed release-equivalent iOS and Android run of the advertised path",
+        "Browser run on the declared matrix (desktop + 360/390 px phone)",
+        "Rendered-state review: loading, empty, denied, failure, long FR/HT copy",
+        "Native → browser demo handoff identifies destination and returns (PAR-08)"
+      ],
+      "mismatch": null,
+      "notes": "",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-08",
+      "kind": "claim",
+      "capability": "Challenge a friend (1v1 duel link, same questions, one try each)",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "src/components/arena/lobby/LobbyLanes.tsx",
+          "match": "t('Défier un ami', 'Defye yon zanmi')",
+          "line": 50
+        },
+        {
+          "source": "mobile/src/components/arena/ArenaHubPanel.tsx",
+          "match": "label={t('Défier un ami'",
+          "line": 121
+        },
+        {
+          "source": "mobile/src/components/games/JeuxHub.tsx",
+          "match": "Défier un ami",
+          "line": 335
+        },
+        {
+          "source": "src/pages/Download.tsx",
+          "match": "Les défis se lancent depuis l’application",
+          "line": 59
+        }
+      ],
+      "requirementIds": [
+        "CON-07",
+        "PAR-06",
+        "TRU-03",
+        "E2E-04"
+      ],
+      "journeys": [
+        "J01"
+      ],
+      "implementation": [
+        "src/pages/Defi.tsx",
+        "src/components/games/Duels.tsx",
+        "mobile/src/screens/ChallengeScreen.tsx",
+        "api/challenges/create.ts",
+        "api/challenges/accept.ts"
+      ],
+      "automatedEvidence": [
+        "src/pages/__tests__/Defi.test.tsx",
+        "src/pages/__tests__/Defi.submission.test.tsx",
+        "src/utils/__tests__/duels.test.ts",
+        "mobile/src/utils/__tests__/duels.test.ts",
+        "src/components/games/__tests__/Duels.test.tsx",
+        "src/services/__tests__/challengeWebService.test.ts",
+        "src/components/arena/trust/__tests__/DuelsTrust.test.tsx"
+      ],
+      "flags": [],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Installed release-equivalent iOS and Android run of the advertised path",
+        "Browser run on the declared matrix (desktop + 360/390 px phone)",
+        "Rendered-state review: loading, empty, denied, failure, long FR/HT copy",
+        "Two-account cross-client run with a signed-out recipient and later retrieval (E2E-04)"
+      ],
+      "mismatch": {
+        "severity": "minor",
+        "status": "Open",
+        "finding": "The /download?from=defi variant says duels can only be launched from the app, but the web launches duels from /arena (LobbyLanes \"Lancer un défi\"). No in-repo link reaches that variant; it is reachable by URL only.",
+        "recommendation": "Hide copy: delete the unused \"defi\" Download variant or reword it to \"the link opens everywhere\". No engine change."
+      },
+      "notes": "",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-09",
+      "kind": "claim",
+      "capability": "Mode Histoire practice campaign (Le tour d’Ayiti)",
+      "platforms": [
+        "web"
+      ],
+      "advertisedAt": [
+        {
+          "source": "src/pages/arena/ArenaArcade.tsx",
+          "match": "Le tour d’Ayiti",
+          "line": 333
+        }
+      ],
+      "requirementIds": [
+        "PUR-02",
+        "PAR-09"
+      ],
+      "journeys": [],
+      "implementation": [
+        "src/pages/arena/ArenaStory.tsx",
+        "src/hooks/useStoryProgress.ts"
+      ],
+      "automatedEvidence": [
+        "src/utils/__tests__/arenaArcade.test.ts"
+      ],
+      "flags": [],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Installed release-equivalent iOS and Android run of the advertised path",
+        "Browser run on the declared matrix (desktop + 360/390 px phone)",
+        "Rendered-state review: loading, empty, denied, failure, long FR/HT copy"
+      ],
+      "mismatch": null,
+      "notes": "Web-only and not advertised in the native app (native reserves the /arena/histoire link segment). Record the web-only limitation explicitly under PAR-09 or port it.",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-10",
+      "kind": "claim",
+      "capability": "Create a tournament for your class (private room, PIN, live or multi-day)",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "src/pages/arena/ArenaArcade.tsx",
+          "match": "Crée une salle, partage le code, jouez ensemble — en direct ou sur plusieurs jours.",
+          "line": 356
+        },
+        {
+          "source": "src/pages/tournois/TournoisCreate.tsx",
+          "match": "Monte un tournoi pour ta classe",
+          "line": 110
+        },
+        {
+          "source": "mobile/src/screens/arena/TournoisScreen.tsx",
+          "match": "Créer un tournoi individuel",
+          "line": 328
+        }
+      ],
+      "requirementIds": [
+        "PAR-02",
+        "PAR-04",
+        "PAR-09",
+        "CON-12",
+        "TRU-03"
+      ],
+      "journeys": [
+        "J07",
+        "J02",
+        "J03"
+      ],
+      "implementation": [
+        "src/pages/tournois/TournoisCreate.tsx",
+        "mobile/src/screens/arena/TournoisScreen.tsx",
+        "api/tournois/create.ts",
+        "shared/tournois/config.ts"
+      ],
+      "automatedEvidence": [
+        "api/__tests__/tournoisEngine.test.ts",
+        "api/__tests__/tournoisLogic.test.ts"
+      ],
+      "flags": [],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Installed release-equivalent iOS and Android run of the advertised path",
+        "Browser run on the declared matrix (desktop + 360/390 px phone)",
+        "Rendered-state review: loading, empty, denied, failure, long FR/HT copy"
+      ],
+      "mismatch": {
+        "severity": "major",
+        "status": "Open",
+        "finding": "Native creation is a fixed preset: public visibility, solo, first trivia category, start in 10 minutes, 30 places (TournoisScreen.tsx createTournament call with visibility: 'public'). Private PIN rooms, school/grade team rules, category choice and scheduling are web-only, while the web arcade advertises private class rooms and PAR-04 expects phone organizers.",
+        "recommendation": "Implement private/PIN visibility and a start-time choice in native creation (preferred: PAR-02/PAR-04), or declare native creation as \"quick public tournament\" in the PAR-09 limitations and link to the web form for private rooms."
+      },
+      "notes": "",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-11",
+      "kind": "claim",
+      "capability": "User tournaments: join with a PIN, public discovery, live/window/rounds/bracket play and personal history",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "src/pages/arena/ArenaArcade.tsx",
+          "match": "Rejoindre avec un code",
+          "line": 359
+        },
+        {
+          "source": "src/pages/TriviaGames.tsx",
+          "match": "Les tournois",
+          "line": 932
+        },
+        {
+          "source": "mobile/src/screens/arena/TournoisScreen.tsx",
+          "match": "Tournois publics",
+          "line": 415
+        },
+        {
+          "source": "mobile/src/screens/arena/TournoisScreen.tsx",
+          "match": "Mes tournois et résultats",
+          "line": 400
+        },
+        {
+          "source": "mobile/src/screens/arena/CompetitionWorkspaceScreen.tsx",
+          "match": "Tournois entre amis",
+          "line": 457
+        }
+      ],
+      "requirementIds": [
+        "PAR-02",
+        "CON-09",
+        "CON-10",
+        "TRU-03",
+        "TRU-05",
+        "E2E-05"
+      ],
+      "journeys": [
+        "J01",
+        "J02",
+        "J03"
+      ],
+      "implementation": [
+        "src/pages/tournois/TournoisHub.tsx",
+        "src/pages/tournois/TournoisJoin.tsx",
+        "src/pages/tournois/TournoisRoom.tsx",
+        "mobile/src/screens/arena/TournoisScreen.tsx",
+        "mobile/src/services/tournoisService.ts",
+        "api/tournois/join.ts",
+        "api/tournois/play.ts",
+        "api/tournois/tick.ts"
+      ],
+      "automatedEvidence": [
+        "api/__tests__/tournoisAttempt.test.ts",
+        "api/__tests__/tournoisEngine.test.ts",
+        "api/__tests__/tournoisLogic.test.ts",
+        "src/services/__tests__/tournoisDiagnostics.test.ts",
+        "mobile/src/services/__tests__/tournoisDiagnostics.test.ts",
+        "mobile/src/utils/__tests__/tournament.test.ts",
+        "mobile/src/utils/__tests__/arenaOpenTournament.test.ts",
+        "mobile/src/utils/__tests__/arenaLinks.test.ts"
+      ],
+      "flags": [],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Installed release-equivalent iOS and Android run of the advertised path",
+        "Browser run on the declared matrix (desktop + 360/390 px phone)",
+        "Rendered-state review: loading, empty, denied, failure, long FR/HT copy",
+        "Each format completed on a phone with interruption and restart (PAR-02, CON-09)",
+        "Real school pilot run (contract §10)"
+      ],
+      "mismatch": null,
+      "notes": "Native discovery is two levels deep (Jeux → Mon activité → Tournois entre amis) with no direct entry on the Jeux panel; check discoverability under PUR-03.",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-12",
+      "kind": "claim",
+      "capability": "Unified competitions hub: Mon activité, discovery of official/user/organizer events and leagues",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "src/pages/arena/ArenaArcade.tsx",
+          "match": "Mon activité · Équipes et compétitions",
+          "line": 201
+        },
+        {
+          "source": "mobile/src/components/arena/ArenaHubPanel.tsx",
+          "match": "Mon activité · Équipes et compétitions",
+          "line": 133
+        },
+        {
+          "source": "shared/competition/workspace.ts",
+          "match": "Découvrir une compétition",
+          "line": 406
+        },
+        {
+          "source": "shared/competition/workspace.ts",
+          "match": "Aucun événement disponible dans cette page",
+          "line": 438
+        }
+      ],
+      "requirementIds": [
+        "PUR-02",
+        "PUR-03",
+        "PUR-08",
+        "PAR-05",
+        "CON-10",
+        "TRU-05"
+      ],
+      "journeys": [
+        "J01",
+        "J08"
+      ],
+      "implementation": [
+        "src/pages/competition/CompetitionWorkspace.tsx",
+        "mobile/src/screens/arena/CompetitionWorkspaceScreen.tsx",
+        "shared/competition/workspace.ts",
+        "api/competition.ts"
+      ],
+      "automatedEvidence": [
+        "api/__tests__/competitionWorkspace.test.ts",
+        "api/__tests__/competitionPolicy.test.ts",
+        "api/__tests__/competitionEmulator.test.ts",
+        "scripts/test_competition_rules.cjs",
+        "mobile/src/utils/__tests__/competitionContinuity.test.ts",
+        "src/pages/competition/__tests__/TaskForm.test.tsx"
+      ],
+      "flags": [
+        "COMPETITION_DISCOVERY_ENABLED=false empties managed event and league listings (api/competition.ts); the panel then shows its truthful empty state — consistent"
+      ],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Installed release-equivalent iOS and Android run of the advertised path",
+        "Browser run on the declared matrix (desktop + 360/390 px phone)",
+        "Rendered-state review: loading, empty, denied, failure, long FR/HT copy",
+        "Eligible and ineligible accounts browse the same public event (PUR-03)",
+        "Back/refresh/native back keep filters and scroll (CON-10)"
+      ],
+      "mismatch": null,
+      "notes": "",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-13",
+      "kind": "claim",
+      "capability": "Personal invite code to give to a captain",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "shared/competition/workspace.ts",
+          "match": "Mon code d’invitation",
+          "line": 199
+        }
+      ],
+      "requirementIds": [
+        "CON-08",
+        "PAR-03",
+        "TRU-04"
+      ],
+      "journeys": [
+        "J05"
+      ],
+      "implementation": [
+        "api/competition.ts",
+        "api/_lib/competition.ts"
+      ],
+      "automatedEvidence": [
+        "api/__tests__/competitionWorkspace.test.ts",
+        "api/__tests__/competitionEngine.test.ts"
+      ],
+      "flags": [
+        "Shown regardless of COMPETITION_CREATION_ENABLED"
+      ],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Installed release-equivalent iOS and Android run of the advertised path",
+        "Browser run on the declared matrix (desktop + 360/390 px phone)",
+        "Rendered-state review: loading, empty, denied, failure, long FR/HT copy"
+      ],
+      "mismatch": {
+        "severity": "minor",
+        "status": "Open",
+        "finding": "The code is advertised (\"give it to the captain who wants to invite you\") to every signed-in user even while COMPETITION_CREATION_ENABLED=false, when no new team (and so no new captain) can exist; only pre-existing teams can use it.",
+        "recommendation": "Hide copy when creation is disabled and the user has no team, pending invitation or recruitment request; keep it once the pilot is enabled."
+      },
+      "notes": "",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-14",
+      "kind": "claim",
+      "capability": "Create a team (persistent, up to twelve members)",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "shared/competition/workspace.ts",
+          "match": "label: c('Créer une équipe', 'Kreye yon ekip')",
+          "line": 249
+        }
+      ],
+      "requirementIds": [
+        "CON-08",
+        "PAR-03",
+        "TRU-04",
+        "E2E-06"
+      ],
+      "journeys": [
+        "J04"
+      ],
+      "implementation": [
+        "shared/competition/workspace.ts",
+        "api/_lib/competition.ts",
+        "shared/teams/policy.ts"
+      ],
+      "automatedEvidence": [
+        "api/__tests__/competitionEngine.test.ts",
+        "api/__tests__/competitionEmulator.test.ts",
+        "api/__tests__/competitionPolicy.test.ts"
+      ],
+      "flags": [
+        "COMPETITION_CREATION_ENABLED (default off): task hidden in workspace.ts and refused server-side with pilot_not_enabled — consistent"
+      ],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Installed release-equivalent iOS and Android run of the advertised path",
+        "Browser run on the declared matrix (desktop + 360/390 px phone)",
+        "Rendered-state review: loading, empty, denied, failure, long FR/HT copy",
+        "Captain plus two initially signed-out teammates form, enter, play and retrieve the result (CON-08, E2E-06)",
+        "Real school pilot run (contract §10)"
+      ],
+      "mismatch": null,
+      "notes": "",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-15",
+      "kind": "claim",
+      "capability": "Team invitations, recruitment requests, captain transfer and leaving",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "shared/competition/workspace.ts",
+          "match": "Invitation d’équipe",
+          "line": 567
+        },
+        {
+          "source": "shared/competition/notifications.ts",
+          "match": "Tu es invité·e à rejoindre cette équipe.",
+          "line": 72
+        }
+      ],
+      "requirementIds": [
+        "CON-01",
+        "CON-08",
+        "PAR-03",
+        "TRU-01",
+        "TRU-04"
+      ],
+      "journeys": [
+        "J05"
+      ],
+      "implementation": [
+        "api/_lib/competition.ts",
+        "shared/teams/policy.ts",
+        "mobile/src/navigation/arenaLinks.ts",
+        "mobile/src/onboarding/coordinator.ts"
+      ],
+      "automatedEvidence": [
+        "api/__tests__/competitionEmulator.test.ts",
+        "api/__tests__/competitionEngine.test.ts",
+        "mobile/src/utils/__tests__/arenaLinks.test.ts",
+        "mobile/src/utils/__tests__/competitionContinuity.test.ts"
+      ],
+      "flags": [],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Installed release-equivalent iOS and Android run of the advertised path",
+        "Browser run on the declared matrix (desktop + 360/390 px phone)",
+        "Rendered-state review: loading, empty, denied, failure, long FR/HT copy",
+        "Wrong-account, revoked, full and concurrent acceptance on real clients (J05)",
+        "iOS universal-link path coverage (see ADV-27)",
+        "Real school pilot run (contract §10)"
+      ],
+      "mismatch": null,
+      "notes": "",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-16",
+      "kind": "claim",
+      "capability": "School membership requests, host verification and organizer authority",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "shared/competition/workspace.ts",
+          "match": "Vérifier une affiliation scolaire",
+          "line": 319
+        },
+        {
+          "source": "shared/competition/workspace.ts",
+          "match": "Autoriser un organisateur scolaire",
+          "line": 383
+        },
+        {
+          "source": "shared/competition/notifications.ts",
+          "match": "Tu peux organiser pour ton école.",
+          "line": 104
+        }
+      ],
+      "requirementIds": [
+        "TRU-02",
+        "TRU-10",
+        "PAR-04",
+        "CON-12"
+      ],
+      "journeys": [
+        "J06",
+        "J07"
+      ],
+      "implementation": [
+        "shared/competition/workspace.ts",
+        "api/_lib/competition.ts",
+        "firestore.rules"
+      ],
+      "automatedEvidence": [
+        "api/__tests__/competitionEngine.test.ts",
+        "api/__tests__/competitionPolicy.test.ts",
+        "api/__tests__/competitionEmulator.test.ts"
+      ],
+      "flags": [],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Installed release-equivalent iOS and Android run of the advertised path",
+        "Browser run on the declared matrix (desktop + 360/390 px phone)",
+        "Rendered-state review: loading, empty, denied, failure, long FR/HT copy",
+        "Named platform-admin owner for host verification (TRU-10)",
+        "Forged role / wrong school mutations rejected against deployed rules (TRU-02)"
+      ],
+      "mismatch": null,
+      "notes": "No dedicated automated test found for the school-host-review action itself.",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-17",
+      "kind": "claim",
+      "capability": "Organize an event (\"Organiser\" panel, \"Préparer un événement\")",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "shared/competition/workspace.ts",
+          "match": "Les nouveaux événements sont limités à 60 joueurs",
+          "line": 302
+        },
+        {
+          "source": "shared/competition/workspace.ts",
+          "match": "Préparer un événement",
+          "line": 310
+        }
+      ],
+      "requirementIds": [
+        "CON-12",
+        "PAR-04",
+        "PAR-09",
+        "PUR-07"
+      ],
+      "journeys": [
+        "J07"
+      ],
+      "implementation": [
+        "shared/competition/workspace.ts",
+        "api/_lib/competition.ts"
+      ],
+      "automatedEvidence": [
+        "api/__tests__/competitionEngine.test.ts",
+        "api/__tests__/competitionWorkspace.test.ts",
+        "src/pages/competition/__tests__/TaskForm.test.tsx"
+      ],
+      "flags": [
+        "COMPETITION_CREATION_ENABLED (default off) removes the event-save task but not the panel"
+      ],
+      "status": "Failed",
+      "pendingEvidence": [
+        "Installed release-equivalent iOS and Android run of the advertised path",
+        "Browser run on the declared matrix (desktop + 360/390 px phone)",
+        "Rendered-state review: loading, empty, denied, failure, long FR/HT copy"
+      ],
+      "mismatch": {
+        "severity": "major",
+        "status": "Open",
+        "finding": "With COMPETITION_CREATION_ENABLED=false (the default) the event-save task is filtered out (workspace.ts creationEnabled filter), but the \"Organiser\" panel and its paragraph describing new events (60 players, three starters) still render for every signed-in user. A non-host sees a capability with no action; a host sees only membership review under that promise.",
+        "recommendation": "Hide copy: drop the paragraph (and the panel when it has no remaining tasks) while creation is disabled, or replace it with an explicit \"not open yet\" line. No engine change."
+      },
+      "notes": "",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-18",
+      "kind": "claim",
+      "capability": "Event entry: preview, follow without registering, register individually or as a team, starter confirmation, approval, withdrawal",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "shared/competition/workspace.ts",
+          "match": "Suivre sans s’inscrire",
+          "line": 1071
+        },
+        {
+          "source": "mobile/src/screens/arena/TournoisScreen.tsx",
+          "match": "Inscription et équipe de cet événement",
+          "line": 471
+        },
+        {
+          "source": "shared/competition/notifications.ts",
+          "match": "Tous les titulaires ont confirmé : termine l’inscription.",
+          "line": 127
+        }
+      ],
+      "requirementIds": [
+        "PUR-04",
+        "PUR-05",
+        "CON-08",
+        "PAR-03",
+        "TRU-04",
+        "E2E-05",
+        "E2E-06"
+      ],
+      "journeys": [
+        "J01",
+        "J04",
+        "J08"
+      ],
+      "implementation": [
+        "shared/competition/workspace.ts",
+        "api/_lib/competition.ts",
+        "api/competition.ts"
+      ],
+      "automatedEvidence": [
+        "api/__tests__/competitionEngine.test.ts",
+        "api/__tests__/competitionEmulator.test.ts",
+        "api/__tests__/competitionWorkspace.test.ts"
+      ],
+      "flags": [],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Installed release-equivalent iOS and Android run of the advertised path",
+        "Browser run on the declared matrix (desktop + 360/390 px phone)",
+        "Rendered-state review: loading, empty, denied, failure, long FR/HT copy",
+        "Following is never shown as entry (PUR-05) in rendered states",
+        "Real school pilot run (contract §10)"
+      ],
+      "mismatch": null,
+      "notes": "",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-19",
+      "kind": "claim",
+      "capability": "Organizer operations: publish, announce, postpone with reconfirmation, co-hosts, close, cancel, no-contest, disputes",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "shared/competition/workspace.ts",
+          "match": "Console organisateur",
+          "line": 1510
+        },
+        {
+          "source": "shared/competition/workspace.ts",
+          "match": "Contester un résultat",
+          "line": 1248
+        }
+      ],
+      "requirementIds": [
+        "CON-12",
+        "PUR-07",
+        "PAR-04",
+        "TRU-06",
+        "TRU-10",
+        "E2E-08"
+      ],
+      "journeys": [
+        "J07"
+      ],
+      "implementation": [
+        "shared/competition/workspace.ts",
+        "api/_lib/competition.ts"
+      ],
+      "automatedEvidence": [
+        "api/__tests__/competitionEngine.test.ts",
+        "api/__tests__/competitionWorkspace.test.ts",
+        "api/__tests__/competitionEmulator.test.ts"
+      ],
+      "flags": [],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Installed release-equivalent iOS and Android run of the advertised path",
+        "Browser run on the declared matrix (desktop + 360/390 px phone)",
+        "Rendered-state review: loading, empty, denied, failure, long FR/HT copy",
+        "Full event closure from a phone without database intervention (J07, PAR-04)",
+        "Dispute triage owner (TRU-10)",
+        "Real school pilot run (contract §10)"
+      ],
+      "mismatch": null,
+      "notes": "",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-20",
+      "kind": "claim",
+      "capability": "Physical events: private check-in and a public projector screen",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "shared/competition/workspace.ts",
+          "match": "Accueil des inscrits",
+          "line": 1269
+        },
+        {
+          "source": "shared/competition/workspace.ts",
+          "match": "Ouvrir l’écran public sans commandes privées",
+          "line": 1520
+        }
+      ],
+      "requirementIds": [
+        "CON-13",
+        "PRE-10",
+        "PAR-04",
+        "TRU-05",
+        "E2E-10"
+      ],
+      "journeys": [
+        "J10"
+      ],
+      "implementation": [
+        "shared/competition/workspace.ts",
+        "src/pages/competition/CompetitionProjector.tsx"
+      ],
+      "automatedEvidence": [
+        "api/__tests__/competitionEngine.test.ts",
+        "api/__tests__/competitionWorkspace.test.ts"
+      ],
+      "flags": [
+        "physical delivery is offered only to hosts inside event-save, so it is hidden while COMPETITION_CREATION_ENABLED=false"
+      ],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Installed release-equivalent iOS and Android run of the advertised path",
+        "Browser run on the declared matrix (desktop + 360/390 px phone)",
+        "Rendered-state review: loading, empty, denied, failure, long FR/HT copy",
+        "1920×1080 projector review; host/participant/projector role separation on real devices (J10)",
+        "Real school pilot run (contract §10)"
+      ],
+      "mismatch": null,
+      "notes": "No automated rendering test for CompetitionProjector. The native app opens the projector link in the browser (web role per PAR-04).",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-21",
+      "kind": "claim",
+      "capability": "External activities with declared results and optional external rewards",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "shared/competition/workspace.ts",
+          "match": "Activité avec résultat déclaré",
+          "line": 881
+        },
+        {
+          "source": "shared/competition/workspace.ts",
+          "match": "Prix externe facultatif",
+          "line": 911
+        }
+      ],
+      "requirementIds": [
+        "CON-13",
+        "PAR-08",
+        "TRU-08",
+        "TRU-10",
+        "E2E-10"
+      ],
+      "journeys": [
+        "J11",
+        "J14"
+      ],
+      "implementation": [
+        "shared/competition/workspace.ts",
+        "api/_lib/competition.ts"
+      ],
+      "automatedEvidence": [
+        "api/__tests__/competitionWorkspace.test.ts",
+        "api/__tests__/competitionEngine.test.ts"
+      ],
+      "flags": [
+        "host-only fields inside event-save; hidden while COMPETITION_CREATION_ENABLED=false"
+      ],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Installed release-equivalent iOS and Android run of the advertised path",
+        "Browser run on the declared matrix (desktop + 360/390 px phone)",
+        "Rendered-state review: loading, empty, denied, failure, long FR/HT copy",
+        "External handoff is never shown as registration (CON-13)",
+        "Reward fulfillment owner and drill (TRU-10)",
+        "Real school pilot run (contract §10)"
+      ],
+      "mismatch": null,
+      "notes": "",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-22",
+      "kind": "claim",
+      "capability": "League pilot: seasons, enrollment, fixtures and standings",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "shared/competition/workspace.ts",
+          "match": "Créer une saison pilote",
+          "line": 339
+        },
+        {
+          "source": "shared/competition/workspace.ts",
+          "match": "Règles de la division",
+          "line": 1636
+        }
+      ],
+      "requirementIds": [
+        "CON-14",
+        "PAR-05",
+        "TRU-06",
+        "E2E-11"
+      ],
+      "journeys": [
+        "J09"
+      ],
+      "implementation": [
+        "shared/competition/workspace.ts",
+        "api/_lib/competition.ts",
+        "api/competition.ts"
+      ],
+      "automatedEvidence": [
+        "api/__tests__/competitionEngine.test.ts",
+        "api/__tests__/competitionPolicy.test.ts"
+      ],
+      "flags": [
+        "league-create hidden and refused while COMPETITION_CREATION_ENABLED=false; league listings removed while COMPETITION_DISCOVERY_ENABLED=false — consistent"
+      ],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Installed release-equivalent iOS and Android run of the advertised path",
+        "Browser run on the declared matrix (desktop + 360/390 px phone)",
+        "Rendered-state review: loading, empty, denied, failure, long FR/HT copy",
+        "Two-fixture sequence with postponement and corrected/disputed result (E2E-11)",
+        "Real school pilot run (contract §10)"
+      ],
+      "mismatch": null,
+      "notes": "",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-23",
+      "kind": "claim",
+      "capability": "Report a problem on an event, team or league (private moderation)",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "shared/competition/workspace.ts",
+          "match": "Signaler un problème",
+          "line": 925
+        }
+      ],
+      "requirementIds": [
+        "TRU-10"
+      ],
+      "journeys": [
+        "J07",
+        "J08"
+      ],
+      "implementation": [
+        "shared/competition/workspace.ts",
+        "api/_lib/competition.ts"
+      ],
+      "automatedEvidence": [
+        "api/__tests__/competitionAccountDeletion.test.ts"
+      ],
+      "flags": [],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Named moderation owner, runbook and one real report triaged end to end (TRU-10, §11)"
+      ],
+      "mismatch": {
+        "severity": "major",
+        "status": "Open",
+        "finding": "Reporting is advertised to every viewer, but reports land in an admin-only \"Modération privée\" panel with no named owner, triage target or escalation path; only the account-deletion test exercises report-content.",
+        "recommendation": "Implement the operational side: assign the operations owner and runbook before enabling the pilot; no copy change needed once owned."
+      },
+      "notes": "",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-24",
+      "kind": "claim",
+      "capability": "Competition push notifications (PR #115): invitations, confirmations, approvals, announcements, postponements, cancellations, results, disputes, league fixtures",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "shared/competition/notifications.ts",
+          "match": "export const INBOX_ACTIONS",
+          "line": 64
+        },
+        {
+          "source": "src/components/NotificationCenter.tsx",
+          "match": "Invitations, changements d’horaire, annulations et résultats.",
+          "line": 491
+        }
+      ],
+      "requirementIds": [
+        "CON-11",
+        "CON-15",
+        "TRU-01",
+        "TRU-07",
+        "PAR-06"
+      ],
+      "journeys": [
+        "J05",
+        "J07",
+        "J08",
+        "J09"
+      ],
+      "implementation": [
+        "shared/competition/notifications.ts",
+        "api/_lib/competitionNotify.ts",
+        "api/_lib/expoPush.ts",
+        "api/_lib/push.ts",
+        "mobile/src/navigation/competitionContinuity.ts"
+      ],
+      "automatedEvidence": [
+        "api/__tests__/competitionEngine.test.ts",
+        "mobile/src/utils/__tests__/competitionNotificationTarget.test.ts",
+        "mobile/src/utils/__tests__/competitionContinuity.test.ts"
+      ],
+      "flags": [],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Installed iOS/Android tap while closed/open, signed out, after cancellation, after deadline and after account switch (CON-11)",
+        "Web push delivery on the declared browsers",
+        "Dedicated unit test for competitionNotify cap/time-box/dedupe (currently exercised through competitionEngine.test.ts with a mocked Expo sender)"
+      ],
+      "mismatch": null,
+      "notes": "",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-25",
+      "kind": "claim",
+      "capability": "Competition notification opt-out switch, web and app (PR #115)",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "src/components/NotificationCenter.tsx",
+          "match": "['competitionUpdates'",
+          "line": 491
+        },
+        {
+          "source": "mobile/src/screens/ProfileScreen.tsx",
+          "match": "label={t('Compétitions et équipes'",
+          "line": 768
+        }
+      ],
+      "requirementIds": [
+        "CON-15",
+        "TRU-01"
+      ],
+      "journeys": [],
+      "implementation": [
+        "src/components/NotificationCenter.tsx",
+        "mobile/src/screens/ProfileScreen.tsx",
+        "api/_lib/competitionNotify.ts"
+      ],
+      "automatedEvidence": [
+        "src/components/__tests__/NotificationCenter.test.tsx",
+        "mobile/src/services/__tests__/notificationPrefs.test.ts",
+        "api/__tests__/competitionEngine.test.ts"
+      ],
+      "flags": [],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Grant/deny/disable/sign-out/account-switch run on installed builds (CON-15)"
+      ],
+      "mismatch": null,
+      "notes": "Supersedes the implementation record's \"still open: a settings control for competitionUpdates\".",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-26",
+      "kind": "claim",
+      "capability": "Mon activité inbox with unread markers and \"mark all read\" (PR #115)",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "shared/competition/workspace.ts",
+          "match": "Tout marquer comme lu",
+          "line": 227
+        }
+      ],
+      "requirementIds": [
+        "CON-11",
+        "PUR-02"
+      ],
+      "journeys": [
+        "J05",
+        "J07"
+      ],
+      "implementation": [
+        "shared/competition/workspace.ts",
+        "shared/competition/notifications.ts",
+        "api/_lib/competition.ts"
+      ],
+      "automatedEvidence": [
+        "api/__tests__/competitionEngine.test.ts",
+        "api/__tests__/competitionWorkspace.test.ts"
+      ],
+      "flags": [],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Installed release-equivalent iOS and Android run of the advertised path",
+        "Browser run on the declared matrix (desktop + 360/390 px phone)",
+        "Rendered-state review: loading, empty, denied, failure, long FR/HT copy"
+      ],
+      "mismatch": null,
+      "notes": "",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-27",
+      "kind": "claim",
+      "capability": "Shared competition links open the right place in the app (tournaments, events, teams, invitations, leagues, schools)",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "mobile/app.json",
+          "match": "\"pathPrefix\": \"/arena/invitations\"",
+          "line": 124
+        },
+        {
+          "source": "public_original/.well-known/apple-app-site-association",
+          "match": "\"/arena/jouer*\"",
+          "line": 13
+        }
+      ],
+      "requirementIds": [
+        "PAR-06",
+        "CON-01",
+        "CON-11",
+        "TRU-11",
+        "E2E-12"
+      ],
+      "journeys": [
+        "J01",
+        "J05"
+      ],
+      "implementation": [
+        "mobile/src/navigation/arenaLinks.ts",
+        "mobile/app.json",
+        "public_original/.well-known/apple-app-site-association"
+      ],
+      "automatedEvidence": [
+        "mobile/src/utils/__tests__/arenaLinks.test.ts"
+      ],
+      "flags": [],
+      "status": "Failed",
+      "pendingEvidence": [
+        "Cold/warm/refresh link runs on installed iOS and Android binaries (PAR-06)"
+      ],
+      "mismatch": {
+        "severity": "major",
+        "status": "Open",
+        "finding": "Android intent filters (mobile/app.json) and the in-app parser handle /tournois and /arena/competitions|evenements|equipes|invitations|ligues|ecoles, but the iOS AASA served from public_original/.well-known lists only /defi/*, /arena, /arena/, /arena/championnat*, /arena/demo*, /arena/jouer*. On iOS, invitation, event, team, league and tournament links open the website. No assetlinks.json is in the repo for Android autoVerify (it may be hosted elsewhere; unverified).",
+        "recommendation": "Implement: add the competition paths to the AASA, confirm assetlinks.json hosting with the release signing fingerprint, and verify with the exact binaries (implementation record, enablement step 3)."
+      },
+      "notes": "",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-28",
+      "kind": "claim",
+      "capability": "Account deletion removes your data, including competition records (PR #115)",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "mobile/src/screens/ProfileScreen.tsx",
+          "match": "Ton compte et toutes tes données (progression, XP, résultats) seront supprimés",
+          "line": 265
+        },
+        {
+          "source": "src/pages/DeleteAccount.tsx",
+          "match": "nous supprimons l’ensemble des données associées à votre compte",
+          "line": 52
+        }
+      ],
+      "requirementIds": [
+        "TRU-01",
+        "CON-14",
+        "E2E-01"
+      ],
+      "journeys": [],
+      "implementation": [
+        "api/users/delete.ts",
+        "api/_lib/competitionAccountDeletion.ts",
+        "api/_lib/competitionOrphans.ts"
+      ],
+      "automatedEvidence": [
+        "api/__tests__/competitionAccountDeletion.test.ts",
+        "api/__tests__/accountDelete.test.ts"
+      ],
+      "flags": [],
+      "status": "Failed",
+      "pendingEvidence": [
+        "ACCOUNT_DELETION_SALT set in the deployment environment",
+        "Actual deletion outcome on installed builds and the website (E2E-01)",
+        "Privacy/legal review of the disclosure"
+      ],
+      "mismatch": {
+        "severity": "major",
+        "status": "Open",
+        "finding": "The app confirmation and the /supprimer-compte page promise deletion of all data including results. The implementation deletes pending personal competition records but keeps locked rosters, results, standings, audit, disputes, rewards and reports pseudonymized as deleted_<hex> / \"Compte supprimé · Kont efase\" (required by CON-14).",
+        "recommendation": "Hide/correct copy, keep the implementation: disclose in the deletion dialog, the deletion page and the privacy policy that competition results are kept under an anonymous \"Compte supprimé\" name. Needs privacy/legal sign-off."
+      },
+      "notes": "",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-29",
+      "kind": "supporting",
+      "capability": "Ownerless-event sweep: heir ladder, automatic close/confirm/no-contest, admin owner_missing alert (PR #115)",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "shared/competition/notifications.ts",
+          "match": "ownership_received: {",
+          "line": 155
+        }
+      ],
+      "requirementIds": [
+        "CON-12",
+        "TRU-10",
+        "TRU-11"
+      ],
+      "journeys": [
+        "J07"
+      ],
+      "implementation": [
+        "api/_lib/competitionOrphans.ts",
+        "api/tournois/tick.ts",
+        "api/_lib/competitionAccountDeletion.ts"
+      ],
+      "automatedEvidence": [
+        "api/__tests__/competitionAccountDeletion.test.ts"
+      ],
+      "flags": [],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Production cron schedule verified for the tournois tick",
+        "owner_missing alert reaches a named administrator (TRU-10)",
+        "Organizer-deletion drill on the deployed API"
+      ],
+      "mismatch": null,
+      "notes": "",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-30",
+      "kind": "supporting",
+      "capability": "French and Kreyòl state labels and API error messages for competition surfaces (PR #115)",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "shared/competition/errors.ts",
+          "match": "export const COMPETITION_ERROR_MESSAGES",
+          "line": 12
+        }
+      ],
+      "requirementIds": [
+        "PUR-08",
+        "PRE-04",
+        "PRE-05"
+      ],
+      "journeys": [],
+      "implementation": [
+        "shared/competition/errors.ts",
+        "shared/competition/labels.ts"
+      ],
+      "automatedEvidence": [
+        "api/__tests__/competitionWorkspace.test.ts"
+      ],
+      "flags": [],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Native-speaker FR/HT copy review",
+        "Long text / 200% text rendering review (PRE-05)"
+      ],
+      "mismatch": null,
+      "notes": "A test fails when a new server error code lacks a message.",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-31",
+      "kind": "supporting",
+      "capability": "Tournament diagnostics: privacy-filtered attempt/receipt/failure/recovery events (PR #115)",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [],
+      "requirementIds": [
+        "TRU-09"
+      ],
+      "journeys": [
+        "J02",
+        "J03"
+      ],
+      "implementation": [
+        "src/services/tournoisService.ts",
+        "mobile/src/services/tournoisService.ts"
+      ],
+      "automatedEvidence": [
+        "src/services/__tests__/tournoisDiagnostics.test.ts",
+        "mobile/src/services/__tests__/tournoisDiagnostics.test.ts",
+        "src/utils/__tests__/diagnosticTransport.test.ts"
+      ],
+      "flags": [],
+      "status": "Implemented/unverified",
+      "pendingEvidence": [
+        "Controlled production diagnostic with exact client build and backend identifiers (TRU-09, §11)"
+      ],
+      "mismatch": null,
+      "notes": "Not user-visible; recorded so the diagnostics claim in the implementation record has a ledger row.",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-32",
+      "kind": "supporting",
+      "capability": "Scheduled competition reminders (start/deadline) — in progress on a parallel branch",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [],
+      "requirementIds": [
+        "CON-15",
+        "CON-11",
+        "E2E-05"
+      ],
+      "journeys": [
+        "J02",
+        "J03",
+        "J04"
+      ],
+      "implementation": [],
+      "automatedEvidence": [],
+      "flags": [],
+      "status": "Not implemented",
+      "pendingEvidence": [
+        "Merge the reminder work, then map its copy here and run E2E-05 \"register → reminder\""
+      ],
+      "mismatch": null,
+      "notes": "No current competition copy promises start/deadline reminders. When the reminder work lands, add its user-facing copy as advertisedAt entries and its tests.",
+      "owner": null,
+      "scenarioIds": [],
+      "evidence": []
+    },
+    {
+      "id": "ADV-33",
+      "kind": "claim",
+      "capability": "Alerts when a championship is announced or opens",
+      "platforms": [
+        "ios",
+        "android"
+      ],
+      "advertisedAt": [
+        {
+          "source": "mobile/src/components/arena/ArenaHubPanel.tsx",
+          "match": "On te prévient dès qu’un championnat est annoncé.",
+          "line": 266
+        },
+        {
+          "source": "mobile/src/settings/notificationPermission.ts",
+          "match": "On te prévient quand l’Arène ouvre et quand ton école joue",
+          "line": 78
+        }
+      ],
+      "requirementIds": [
+        "CON-15",
+        "PUR-08"
+      ],
+      "journeys": [
+        "J06"
+      ],
+      "implementation": [
+        "api/send-broadcast.ts",
+        "mobile/src/settings/notificationPermission.ts"
+      ],
+      "automatedEvidence": [
+        "mobile/src/settings/__tests__/notificationPermission.test.ts"
+      ],
+      "flags": [],
+      "status": "Failed",
+      "pendingEvidence": [
+        "Decision: automatic announcement push vs manual broadcast runbook"
+      ],
+      "mismatch": {
+        "severity": "major",
+        "status": "Open",
+        "finding": "The empty championship card promises an alert when a championship is announced, but no automatic announcement or doors-open push exists; only a manual admin broadcast to all subscribed devices (api/send-broadcast.ts). The 'arena-event' permission reason (and its \"when the Arène opens and your school plays\" text) has no caller.",
+        "recommendation": "Implement through the scheduled-reminder work (ADV-32) with an announcement/doors-open push, or hide copy: reword the card to not promise an alert and make the manual broadcast a named runbook step with an owner."
+      },
+      "notes": "",
+      "owner": null,
+      "scenarioIds": [],
       "evidence": []
     }
   ]
