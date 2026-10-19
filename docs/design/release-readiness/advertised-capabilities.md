@@ -51,6 +51,8 @@ This is a source audit. Nobody exercised the rendered website or installed build
 | ADV-31 | Tournament diagnostics (#115, supporting) | — | W I A | TRU-09 · J02 J03 | tournoisDiagnostics (web+native), diagnosticTransport | Impl/unverified |
 | ADV-32 | Scheduled competition reminders (1 h / 10 min before start, registration closing) | `shared/competition/notifications.ts` push copy | W I A | CON-15, CON-11, E2E-05 · J02 J03 J04 | `api/__tests__/competitionReminders.test.ts` | Implemented/unverified |
 | ADV-33 | Alerts when a championship is announced | `ArenaHubPanel.tsx:266`, `notificationPermission.ts:78` | I A | CON-15, PUR-08 · J06 | notificationPermission | **Failed** |
+| ADV-34 | Shared-answer team play (Slice E) | `labels.ts` GAME_MODE, `teams/client.ts` rules | W I A | MAP-01, PAR-09, TRU-03/06/07, CON-09 · J12 | teamModes (authority races, failover, legacy refusal), teamModesPolicy, TeamPlay, teamModePanel | Impl/unverified |
+| ADV-35 | Relay team play (Slice E) | `labels.ts` GAME_MODE, `teams/client.ts` rules | W I A | MAP-01, PAR-09, TRU-03/06/07, CON-09 · J13 | teamModes (ownership, expired turns, forfeit, reconnect), teamModesPolicy, teamModePanel | Impl/unverified |
 
 Full file paths, implementation files, flag behavior and the pending evidence for each row are in `candidate.json`.
 
@@ -76,7 +78,7 @@ Full file paths, implementation files, flag behavior and the pending evidence fo
 - **League creation (ADV-22):** same as team creation.
 - **Physical, external and reward fields (ADV-20/21):** while creation is off, they are hidden inside event creation.
 - **Discovery:** `COMPETITION_DISCOVERY_ENABLED=false` empties managed event and league listings, and the discovery panel then shows its truthful empty state (ADV-12).
-- **Unsupported modes:** shared-answer and relay modes appear nowhere as selectable options. Event entry offers only individual entry and three-player teams.
+- **Shared-answer and relay modes (ADV-34/35, Slice E):** selectable only when both `COMPETITION_CREATION_ENABLED` and `COMPETITION_TEAM_MODES_ENABLED` are true (default false). With the second switch off the choice is hidden and the server refuses it with `team_modes_not_enabled`; existing team-mode events keep their play, review and results. Named-team elimination remains unavailable everywhere.
 
 ## Recent additions (PR #115) and pending work
 
