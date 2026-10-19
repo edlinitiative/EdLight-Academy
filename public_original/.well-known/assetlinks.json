@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.edlightacademy",
+      "sha256_cert_fingerprints": [
+        "2F:3E:55:77:B3:6A:8B:34:1B:CA:73:60:BA:0F:FF:7B:EF:99:68:BB:BD:C0:AF:BC:54:F6:7F:A7:F5:6C:88:E6",
+        "B4:D1:9D:6E:71:F2:03:68:35:1C:E5:66:FF:D8:C1:FF:DA:C7:C0:63:F7:CA:0E:CD:5A:20:3E:03:C3:09:1B:91"
+      ]
+    }
+  }
+]
