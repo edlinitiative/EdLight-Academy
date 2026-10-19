@@ -479,7 +479,7 @@ export function QuizPlayer({
   isCreole: boolean;
   /** `picks`: the French option text chosen per question (null = timeout) —
    *  what the server grades a duel from (shared/duelGrading). */
-  onFinish: (score: number, total: number, mistakes: RoundMistake[], picks: Array<string | null>) => void;
+  onFinish: (score: number, total: number, mistakes: RoundMistake[], picks: (string | null)[]) => void;
   /**
    * What leaving the app does to the 15s question clock — see the TIMING
    * POLICY in utils/deadlineTimer.ts. 'pause' for solo practice (default),
@@ -506,7 +506,7 @@ export function QuizPlayer({
   // answer throws. Reset on a miss, so the build is something to protect.
   const [run, setRun] = useState(0);
   const mistakesRef = useRef<RoundMistake[]>([]);
-  const picksRef = useRef<Array<string | null>>([]);
+  const picksRef = useRef<(string | null)[]>([]);
 
   const q = questions[idx];
   // Language-resolved view: Kreyòl options only when the pair exists (the
@@ -909,7 +909,7 @@ export default function TriviaScreen() {
   const [selectedCategory, setSelectedCategory] = useState<any>(null);
   const [roundSize, setRoundSize] = useState(10);
   const [questions, setQuestions] = useState<PreparedQuestion[]>([]);
-  const [finalScore, setFinalScore] = useState<{ score: number; total: number; picks?: Array<string | null> }>({ score: 0, total: 0 });
+  const [finalScore, setFinalScore] = useState<{ score: number; total: number; picks?: (string | null)[] }>({ score: 0, total: 0 });
   // True while the active round is today's Daily Challenge (drives the +50 XP
   // bonus + completedToday tracking, via recordResult({ isDaily: true })).
   const [isDailyRound, setIsDailyRound] = useState(false);
@@ -1065,7 +1065,7 @@ export default function TriviaScreen() {
   );
 
   const handleGameFinish = useCallback(
-    (score: number, total: number, mistakes: RoundMistake[] = [], picks: Array<string | null> = []) => {
+    (score: number, total: number, mistakes: RoundMistake[] = [], picks: (string | null)[] = []) => {
       // Captured BEFORE recording flips completedToday, so the results screen
       // knows whether this round was a 0-XP replay of a finished daily.
       const dailyReplay = isDailyRound && !!daily?.completedToday;

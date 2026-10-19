@@ -94,7 +94,7 @@ export async function createChallenge(opts: {
   questionIdxs: number[];
   score: number;
   /** FR option text picked per question (null = timeout): graded server-side. */
-  answers?: Array<string | null>;
+  answers?: (string | null)[];
   /** shared/duelGrading bankHash of the category bank this build plays. */
   bankHash?: string | null;
 }): Promise<CreatedChallenge | null> {
@@ -107,7 +107,7 @@ export async function createChallenge(opts: {
 export async function acceptChallenge(opts: {
   code: string;
   score: number;
-  answers?: Array<string | null>;
+  answers?: (string | null)[];
   bankHash?: string | null;
 }): Promise<AcceptOutcome | { error: string } | null> {
   const data = await authedPost(ACCEPT_URL, opts);

@@ -62,9 +62,9 @@ export default function ChallengeScreen({ code, onClose }: { code: string; onClo
   }, [challenge]);
 
   // The finished round's picks, kept for a resend after a network failure.
-  const picksRef = useRef<Array<string | null> | null>(null);
+  const picksRef = useRef<(string | null)[] | null>(null);
   const handleFinish = useCallback(
-    async (score: number, picks?: Array<string | null>) => {
+    async (score: number, picks?: (string | null)[]) => {
       setMyLocalScore(score);
       if (picks) picksRef.current = picks;
       setPhase('done');

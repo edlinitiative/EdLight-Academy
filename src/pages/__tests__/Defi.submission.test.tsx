@@ -90,7 +90,8 @@ it('a network failure is "not saved yet" with a retry, never "saved"', async () 
   expect(screen.queryByText('Manche enregistrée ✓')).toBeNull();
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Réessayer/ })); });
   expect(mockAccept).toHaveBeenCalledTimes(2);
-  expect(mockAccept.mock.calls[1][0]).toEqual({ code: 'AB2CD3EF', score: 1 });
+  // The resend carries the same picks, so the server grades the same attempt.
+  expect(mockAccept.mock.calls[1][0]).toEqual({ code: 'AB2CD3EF', score: 1, answers: ['A1'], bankHash: expect.stringMatching(/^b[0-9a-f]{8}$/) });
   expect(await screen.findByText('Manche enregistrée ✓')).toBeInTheDocument();
 });
 

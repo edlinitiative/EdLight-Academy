@@ -15,7 +15,10 @@ export function safeInternalPath(raw: unknown): string | null {
   const p = raw.trim();
   if (!p || p.length > MAX_LEN) return null;
   if (!p.startsWith('/') || p.startsWith('//') || p.startsWith('/\\')) return null;
-  if (/[\u0000-\u001f\u007f\\]/.test(p)) return null;
+  for (let i = 0; i < p.length; i += 1) {
+    const c = p.charCodeAt(i);
+    if (c < 0x20 || c === 0x7f || c === 0x5c /* backslash */) return null;
+  }
   if (/^\/+[a-z][a-z0-9+.-]*:/i.test(p)) return null;
   // "/" itself is where the student already is.
   if (p === '/' || p.startsWith('/?') || p.startsWith('/#')) return null;
