@@ -1,5 +1,6 @@
 /** Shared French/Creole task composition; renderers retain platform conventions. */
 import { TRIVIA_CATEGORY_IDS } from './workspaceCategories';
+import { identityText as who } from './deletedAccount';
 export type Copy = [string, string];
 export type Field = {
   key: string;
@@ -281,7 +282,8 @@ export function workspacePage(
       links: [
         ...(data.events || []).map((e: any) => ({
           label: c(
-            `${e.title} · ${e.hostName} · ${e.entryMode === 'named_team' ? '3 joueurs / équipe' : 'individuel'} · ${date(e.startsAt)}`,
+            `${e.title} · ${who(e.hostName, 0)} · ${e.entryMode === 'named_team' ? '3 joueurs / équipe' : 'individuel'} · ${date(e.startsAt)}`,
+            `${e.title} · ${who(e.hostName, 1)} · ${e.entryMode === 'named_team' ? '3 joueurs / équipe' : 'individuel'} · ${date(e.startsAt)}`,
           ),
           path: eventPath(e.id),
         })),
@@ -786,7 +788,8 @@ function eventPage(
       paragraphs: [
         c(e.description),
         c(
-          `${e.hostName} · ${e.hostKind === 'school' ? 'Organisateur scolaire approuvé' : 'Organisé par des étudiants'}`,
+          `${who(e.hostName, 0)} · ${e.hostKind === 'school' ? 'Organisateur scolaire approuvé' : 'Organisé par des étudiants'}`,
+          `${who(e.hostName, 1)} · ${e.hostKind === 'school' ? 'Organisateur scolaire approuvé' : 'Organisé par des étudiants'}`,
         ),
         c(
           e.delivery === 'external'
@@ -980,14 +983,15 @@ function eventPage(
         ),
       });
     panels.push({
-      title: c(entry.label),
+      title: c(who(entry.label, 0), who(entry.label, 1)),
       rows: [
         c(
           `${entry.state} · ${entry.confirmed.length}/${entry.starters.length} confirmations`,
         ),
         ...entry.starters.map((s: string) =>
           c(
-            `${s} · ${entry.confirmed.includes(s) ? 'Confirmé / Konfime' : 'À confirmer / Pou konfime'}`,
+            `${who(s, 0)} · ${entry.confirmed.includes(s) ? 'Confirmé / Konfime' : 'À confirmer / Pou konfime'}`,
+            `${who(s, 1)} · ${entry.confirmed.includes(s) ? 'Confirmé / Konfime' : 'À confirmer / Pou konfime'}`,
           ),
         ),
       ],
@@ -1000,7 +1004,12 @@ function eventPage(
         `Résultat déclaré par l’organisateur · ${e.resultStatus}`,
         `Rezilta òganizatè deklare · ${e.resultStatus}`,
       ),
-      rows: e.resultRows.map((r: any) => c(`${r.label || r.entryId} · ${r.score} pts`)),
+      rows: e.resultRows.map((r: any) =>
+        c(
+          `${who(r.label || r.entryId, 0)} · ${r.score} pts`,
+          `${who(r.label || r.entryId, 1)} · ${r.score} pts`,
+        ),
+      ),
     });
   if (mine && data.role === 'participant')
     panels.push({
