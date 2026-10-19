@@ -400,8 +400,8 @@ export default function ExamLandingScreen() {
                 </View>
               ) : null}
               <Button
-                label={t('Continuer', 'Kontinye')}
-                accessibilityLabel={t(`Continuer l'examen en cours : ${resume.title}`, `Kontinye egzamen an kou a: ${resume.title}`)}
+                label={t('Reprendre', 'Kontinye')}
+                accessibilityLabel={t(`Reprendre l'examen en cours : ${resume.title}`, `Kontinye egzamen an kou a: ${resume.title}`)}
                 onPress={() => continueExam(resume)}
                 size="lg"
                 fullWidth
