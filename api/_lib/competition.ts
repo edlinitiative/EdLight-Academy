@@ -40,6 +40,7 @@ import {
   deliverCompetitionNotices,
   type CompetitionNotice,
 } from './competitionNotify';
+import { clearReminders, scheduleReminders } from './competitionReminders';
 
 export class CompetitionError extends Error {
   constructor(
@@ -955,6 +956,7 @@ export async function mutateCompetition(
         };
         tx.set(eventRef(db, e.id), updated);
         publishProjection(tx, db, updated);
+        scheduleReminders(tx, db, updated, now);
         note(e.ownerUid, `event_${e.id}`, 'event', e.id, e.title, 'published');
         result = { ok: true, eventId: e.id };
         break;
@@ -1456,6 +1458,9 @@ export async function mutateCompetition(
         }
         tx.set(eventRef(db, e.id), updated);
         publishProjection(tx, db, updated);
+        // Reminders follow the schedule: rewritten on postpone, removed once the event can no longer start.
+        if (action === 'event-postpone') scheduleReminders(tx, db, updated, now);
+        else if (updated.state !== 'published') clearReminders(tx, db, e.id);
         tx.create(db.doc(`competitionEvents/${e.id}/audit/${generatedId}`), {
           action,
           actorUid: uid,

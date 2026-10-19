@@ -12,8 +12,9 @@
  *
  *   GET (cron, CRON_SECRET) — the per-minute fallback in vercel.json for
  *                    rooms nobody has open: sweeps every tournament whose
- *                    `nextDeadlineAt` has passed.
- *                    → { ok, swept, advanced }
+ *                    `nextDeadlineAt` has passed, then sends due competition
+ *                    reminders (competitionReminders).
+ *                    → { ok, swept, advanced, orphans, reminders }
  *
  * Lazy advancing is why a live room is exact to the second while the cron is
  * only exact to the minute: the clients in the room tick it on time, and the
@@ -24,6 +25,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getDb, isAdminConfigured } from '../_lib/firebaseAdmin';
 import { isValidTid } from '../../shared/tournois/config';
 import { sweepOrphans } from '../_lib/competitionOrphans';
+import { sweepReminders } from '../_lib/competitionReminders';
 import { COLLECTION, advanceTournament, clientKey, cronAuthorized, enforceRateLimit, parseBody } from './_shared';
 
 const SWEEP_LIMIT = 40;
@@ -62,7 +64,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         console.error('[tournois/tick] orphan sweep failed', err);
         return null;
       });
-    res.status(200).json({ ok: true, swept: due.size, advanced, orphans });
+    // Scheduled competition reminders: one indexed query when nothing is due, never failing the tick.
+    const reminders = await sweepReminders(db, now).catch((err) => {
+      console.error('[tournois/tick] reminder sweep failed', err);
+      return null;
+    });
+    res.status(200).json({ ok: true, swept: due.size, advanced, orphans, reminders });
     return;
   }
 
