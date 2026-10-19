@@ -92,11 +92,15 @@ export function deletedAccountTombstone(
   return `deleted_${createHmac('sha256', secret).update(uid).digest('hex').slice(0, 16)}`;
 }
 
-/** Without the secret: a random tombstone, parked on the user doc (deleted last) so a rerun reuses it. */
+/**
+ * Without the secret: a random tombstone, parked in server-only
+ * `accountDeletions/{uid}` (clients can't write it, so nobody can plant another
+ * account's tombstone) so a rerun reuses it; removed once the Auth account is gone.
+ */
 async function tombstoneFor(db: Firestore, uid: string): Promise<string> {
   const keyed = deletedAccountTombstone(uid);
   if (keyed) return keyed;
-  const ref = db.doc(`users/${uid}`);
+  const ref = db.doc(`accountDeletions/${uid}`);
   const kept = (await ref.get()).data()?.deletionTombstone;
   if (typeof kept === 'string' && /^deleted_[0-9a-f]{16}$/.test(kept)) return kept;
   const fresh = `deleted_${randomBytes(8).toString('hex')}`;

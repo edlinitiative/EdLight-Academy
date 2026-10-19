@@ -3,7 +3,7 @@ const empty = { get: async () => ({ docs: [] }) };
 const mockDb = {
   recursiveDelete: async (ref: { path: string }) => { calls.push(`recursiveDelete:${ref.path}`); },
   collection: (name: string) => ({
-    doc: (id: string) => ({ path: `${name}/${id}` }),
+    doc: (id: string) => ({ path: `${name}/${id}`, delete: async () => { calls.push(`delete:${name}/${id}`); } }),
     listDocuments: async () => [],
     where: () => empty,
   }),
@@ -42,6 +42,8 @@ it('erases competition records before the user tree and the Auth account, surfac
   await handler({ method: 'POST', headers: {} } as any, r);
   expect(mockErase).toHaveBeenCalledWith(mockDb, 'u1', expect.any(Number));
   expect(calls.slice(0, 3)).toEqual(['competition', 'recursiveDelete:users/u1', 'auth']);
+  // The server-only tombstone outlives everything else, so a retried deletion reuses it.
+  expect(calls[calls.length - 1]).toBe('delete:accountDeletions/u1');
   expect(out.status).toBe(200);
   expect(out.body.warnings).toEqual(['competition_discover_audit: index missing']);
 });

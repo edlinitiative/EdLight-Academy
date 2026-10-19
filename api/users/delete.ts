@@ -121,5 +121,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     }
   }
 
+  // 8. The server-only deletion tombstone (only written when no ACCOUNT_DELETION_SALT is set).
+  await step('deletion_tombstone', () => db.collection('accountDeletions').doc(uid).delete().then(() => undefined));
+
   res.status(200).json({ ok: true, deleted: uid, warnings });
 }

@@ -343,16 +343,19 @@ describe('tombstones', () => {
     expect(deletedAccountTombstone('a', 'one')).not.toEqual(deletedAccountTombstone('a', 'two'));
     expect(deletedAccountTombstone('a', '')).toBeNull();
   });
-  it('fall back to a random tombstone kept on the user doc until the account is gone', async () => {
+  it('fall back to a random tombstone kept server-side, never read from the client-writable user doc', async () => {
     delete process.env.ACCOUNT_DELETION_SALT;
     const eventId = await publishedEvent('host');
     await registerIndividual(eventId, 'a');
+    // A planted value on the user doc is ignored.
+    Object.assign(mockDb.store.get('users/a')!, { deletionTombstone: 'deleted_0000000000000000' });
     await erase('a', later);
-    const tomb = doc('users/a')!.deletionTombstone;
+    const tomb = doc('accountDeletions/a')!.deletionTombstone;
+    expect(tomb).not.toBe('deleted_0000000000000000');
     expect(tomb).toMatch(/^deleted_[0-9a-f]{16}$/);
     expect(tomb).not.toEqual(tombA);
     expect(doc(`competitionEvents/${eventId}/entries/a`)!.captainUid).toBe(tomb);
     await erase('a', later);
-    expect(doc('users/a')!.deletionTombstone).toBe(tomb);
+    expect(doc('accountDeletions/a')!.deletionTombstone).toBe(tomb);
   });
 });
