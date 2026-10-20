@@ -30,7 +30,7 @@ export type ExamsParamList = {
   ExamOverview: { level: string; examId: string };
   /** `autostart` skips the in-screen intro (set when coming from ExamOverview
    *  or a resume card); a plain deep link still gets the intro. */
-  ExamTake: { level: string; examId: string; autostart?: boolean };
+  ExamTake: { level: string; examId: string; autostart?: boolean; feedbackMode?: 'immediate' | 'end' };
   ExamResults: { level: string; examId: string };
   /** "Mes résultats" — every submitted exam, newest first. */
   ExamHistory: undefined;

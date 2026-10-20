@@ -144,11 +144,21 @@ export function ungradedEntry(q: any, answer: unknown) {
  * Mobile submit uses this instead of `gradeExam(questions, answers, {})`,
  * which scored every essay as `manual` (0 points, counted) or text-matched it.
  */
-export function gradeExamPendingEssays(questions: any[], answers: Record<string | number, unknown>, options: Record<string, any> = {}) {
-  const local = gradeExam(questions, answers, {}, options);
-  const pending = pendingEssayIndices(questions, answers, local.results);
+/**
+ * `preGraded`: results already decided during the paper — the "Résultat
+ * immédiat" mode grades and locks each answer as it is checked. They are kept
+ * as-is and never sent to the grader again.
+ */
+export function gradeExamPendingEssays(
+  questions: any[],
+  answers: Record<string | number, unknown>,
+  options: Record<string, any> = {},
+  preGraded: Record<number, any> = {},
+) {
+  const local = gradeExam(questions, answers, preGraded, options);
+  const pending = pendingEssayIndices(questions, answers, local.results).filter((i) => !preGraded[i]);
   if (pending.length === 0) return { ...local, pending };
-  const pre: Record<number, any> = {};
+  const pre: Record<number, any> = { ...preGraded };
   for (const i of pending) pre[i] = ungradedEntry(questions[i], answers[i]);
   return { ...gradeExam(questions, answers, pre, options), pending };
 }

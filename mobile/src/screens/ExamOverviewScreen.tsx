@@ -56,6 +56,9 @@ export default function ExamOverviewScreen() {
 
   const [slim, setSlim] = useState<any | null>(null);
   const [full, setFull] = useState<any | null>(null);
+  // The web's "Mode de correction": see each answer's correction right away
+  // (and lock it), or everything after handing the paper in.
+  const [feedbackMode, setFeedbackMode] = useState<'immediate' | 'end'>('end');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
@@ -190,7 +193,8 @@ export default function ExamOverviewScreen() {
 
   const start = () => {
     tapMedium();
-    navigation.navigate('ExamTake', { level, examId, autostart: true });
+    // A paper in progress keeps the mode it was started with (from its draft).
+    navigation.navigate('ExamTake', { level, examId, autostart: true, ...(hasDraft ? {} : { feedbackMode }) });
   };
 
   const levelLabel = normalizeLevel(String(slim?.level ?? full?.level ?? ''));
@@ -395,6 +399,39 @@ export default function ExamOverviewScreen() {
             </View>
           </View>
         )}
+
+        {/* Mode de correction (web parity) — only for a fresh start */}
+        {!hasDraft ? (
+          <View style={{ marginTop: 28, gap: 10 }}>
+            <Text style={[typeScale.cardTitle, { color: colors.ink }]}>{t('Mode de correction', 'Mòd koreksyon')}</Text>
+            {([
+              { key: 'immediate', title: t('Résultat immédiat', 'Rezilta touswit'), sub: t('Vois la correction après chaque question. Une réponse vérifiée est verrouillée.', 'Wè koreksyon an apre chak kesyon. Yon repons ou verifye pa ka chanje.') },
+              { key: 'end', title: t('Résultat à la fin', 'Rezilta alafen'), sub: t("Vois tous les résultats après avoir remis l'examen. Tu peux modifier tes réponses jusqu'à la remise.", 'Wè tout rezilta yo apre ou remèt egzamen an. Ou ka chanje repons ou jiskaske ou remèt.') },
+            ] as const).map((m) => {
+              const on = feedbackMode === m.key;
+              return (
+                <TouchableOpacity
+                  key={m.key}
+                  onPress={() => { tapLight(); setFeedbackMode(m.key); }}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: on }}
+                  accessibilityLabel={`${m.title}. ${m.sub}`}
+                  style={{
+                    flexDirection: 'row', gap: 12, padding: 16, borderRadius: 20,
+                    backgroundColor: on ? colors.azureSoft : colors.surface,
+                    borderWidth: on ? 1.5 : 1, borderColor: on ? colors.azure : colors.border,
+                  }}
+                >
+                  <View style={{ width: 20, height: 20, marginTop: 2, borderRadius: 999, borderWidth: on ? 6 : 1.5, borderColor: on ? colors.azure : colors.border, backgroundColor: colors.surface }} />
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={[typeScale.bodyMd, { fontFamily: fonts.bold, color: colors.ink }]}>{m.title}</Text>
+                    <Text style={[typeScale.meta, { color: colors.muted }]}>{m.sub}</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : null}
 
         {/* Ta dernière tentative */}
         {best && (
