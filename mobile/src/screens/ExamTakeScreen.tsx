@@ -703,6 +703,8 @@ export default function ExamTakeScreen() {
   }
 
   function setAnswer(idx: number, value: Answer) {
+    // A checked answer in "Résultat immédiat" is final.
+    if (feedbackModeRef.current === 'immediate' && questionResultsRef.current[idx]) return;
     // An emptied answer is not an answer. `answeredCount` counts KEYS, so
     // leaving the key behind after a student clears a field inflates the
     // header count, under-reports the "N unanswered" warning on submit, and
@@ -1108,6 +1110,9 @@ export default function ExamTakeScreen() {
   // Derived from the stored answer on every render, so there is one source of
   // truth and no second copy of the answer to keep in step.
   const response = usesEngine && compiled ? storedToResponse(compiled, rawAnswer) : {};
+  const immediateResult = feedbackMode === 'immediate' ? questionResults[safeIdx] ?? null : null;
+  const locked = !!immediateResult;
+
   const setWidgetValue = (id: string, value: string) => {
     if (!compiled) return;
     setAnswer(safeIdx, responseToStored(compiled, { ...response, [id]: value }));
@@ -1241,7 +1246,8 @@ export default function ExamTakeScreen() {
             </View>
           )}
 
-          {/* Answer area */}
+          {/* Answer area — locked once checked in "Résultat immédiat". */}
+          <View pointerEvents={locked ? 'none' : 'auto'} style={locked ? { opacity: 0.75 } : undefined}>
           {Array.isArray(q?.conditions) && q.conditions.length > 0 ? (
             // Guided condition builder (domain / sign / inequality) — pre-filled
             // left expr + operator picker + value; graded by gradeConditionsAnswer.
@@ -1362,6 +1368,32 @@ export default function ExamTakeScreen() {
               }
             />
           )}
+          </View>
+
+          {/* Résultat immédiat: check this answer now, then show its correction.
+              Essays have their own feedback loop in the workshop. */}
+          {feedbackMode === 'immediate' && qType !== 'essay' ? (
+            immediateResult ? (
+              <View style={{ marginTop: 16 }}>
+                <ImmediateFeedback result={immediateResult} question={q} />
+              </View>
+            ) : (
+              <View style={{ marginTop: 16, gap: 6 }}>
+                <Button
+                  onPress={() => checkAnswer(safeIdx, questionSubject, scaffolded)}
+                  disabled={!isAnswerFilled(answers[safeIdx]) || checking != null}
+                  loading={checking === safeIdx}
+                  variant="secondary"
+                  icon={<Check color={colors.azureInk} size={16} />}
+                  label={t('Vérifier ma réponse', 'Verifye repons mwen')}
+                  accessibilityLabel={t('Vérifier ma réponse', 'Verifye repons mwen')}
+                />
+                <Text style={[typeScale.caption, { color: colors.muted }]}>
+                  {t('Une réponse vérifiée est verrouillée.', 'Yon repons ou verifye pa ka chanje ankò.')}
+                </Text>
+              </View>
+            )
+          ) : null}
 
           {/* Progressive hints (the authored "démarche" as on-demand help).
               Keyed distinctly from ExamSectionContext (same parent) + per
