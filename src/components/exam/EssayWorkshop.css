@@ -50,7 +50,7 @@
 .ew-problem { font-style: italic; }
 .ew-num { display: inline-grid; place-items: center; width: 22px; height: 22px; margin-right: 8px; border-radius: 6px; background: var(--xp-azure-soft); color: var(--xp-azure-ink); font-family: var(--xp-display); font-size: 12px; font-weight: 700; }
 .ew-essay { width: 100%; box-sizing: border-box; min-height: 300px; margin-top: 10px; border: 0; resize: vertical; background: transparent; color: var(--xp-ink); font: inherit; font-size: 17px; line-height: 1.6; }
-.ew-essay:focus { outline: none; }
+.ew-essay:focus { outline: none; box-shadow: 0 0 0 3px rgba(27, 111, 224, 0.12); border-radius: 10px; }
 .ew-meter { display: flex; justify-content: space-between; font-size: 13px; color: var(--xp-muted); padding-top: 10px; border-top: 1px solid var(--xp-track); }
 .ew-meter b { color: var(--xp-azure-ink); font-family: var(--xp-display); }
 .ew-track { height: 4px; border-radius: 999px; background: var(--xp-well); overflow: hidden; margin-top: 6px; }
