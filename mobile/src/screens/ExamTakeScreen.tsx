@@ -10,7 +10,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { ChevronLeft, ChevronRight, Lightbulb, Check, Clock, LayoutGrid } from 'lucide-react-native';
 import { fetchSingleExam } from '../utils/examCatalog';
-import { flattenQuestions, normalizeLevel, normalizeSubject, normalizeExamTitle, normalizeYear, stripExamHallBoilerplate, subjectFromText, parseConsignes } from '../utils/examUtils';
+import { flattenQuestions, normalizeLevel, normalizeSubject, normalizeExamTitle, normalizeYear, stripExamHallBoilerplate, subjectFromText, parseConsignes, gradeSingleQuestion } from '../utils/examUtils';
 import { gradeExamPendingEssays } from '../../../shared/essayRegrade';
 import { startEssayGrading } from '../services/essayGrading';
 import { loadExamAttemptDraft, saveExamAttemptDraft, commitExamSubmission } from '../services/examAttempts';
@@ -42,6 +42,9 @@ import ExamSectionContext from '../components/ExamSectionContext';
 import ExamQuestionGrid from '../components/ExamQuestionGrid';
 import { MultiSelectAnswer, MatchingAnswer, hasStructuredMatching } from '../components/ExamChoiceInputs';
 import ProofAnswer from '../components/ProofAnswer';
+import ImmediateFeedback from '../components/ImmediateFeedback';
+import { buildEssayGradeBody } from '../../../shared/essayRegrade';
+import { postEssayForGrading } from '../services/essayGrading';
 import EssayWorkshop, { emptyWorkshop, type WorkshopState } from '../components/essay/EssayWorkshop';
 import { isProofQuestion } from '../../../shared/proofQuestion';
 import { isAnswerFilled } from '../utils/answerFilled';
@@ -431,6 +434,16 @@ export default function ExamTakeScreen() {
   );
   const [hasDraft, setHasDraft] = useState(false);
   const [gridOpen, setGridOpen] = useState(false);
+  // "Résultat immédiat" (web parity): each answer is checked and LOCKED as the
+  // student goes; the results are kept and reused at submission. 'end' is the
+  // classic paper. Chosen on the overview, restored from a draft.
+  const [feedbackMode, setFeedbackMode] = useState<'immediate' | 'end'>(route.params?.feedbackMode ?? 'end');
+  const feedbackModeRef = useRef(feedbackMode);
+  feedbackModeRef.current = feedbackMode;
+  const [questionResults, setQuestionResults] = useState<Record<number, any>>({});
+  const questionResultsRef = useRef(questionResults);
+  questionResultsRef.current = questionResults;
+  const [checking, setChecking] = useState<number | null>(null);
   // Essay workshop state per question (plan, step, practice feedback). Process,
   // not answer: saved with the draft as `essayWorkshop`, never graded.
   const [essayWork, setEssayWork] = useState<Record<number, WorkshopState>>({});
@@ -500,6 +513,8 @@ export default function ExamTakeScreen() {
       questionCount: questionCountRef.current,
       ...(secondsLeftRef.current != null ? { secondsLeft: secondsLeftRef.current } : {}),
       ...(Object.keys(essayWorkRef.current).length ? { essayWorkshop: essayWorkRef.current } : {}),
+      feedbackMode: feedbackModeRef.current,
+      questionResults: feedbackModeRef.current === 'immediate' ? questionResultsRef.current : {},
       status: 'in_progress',
       updated_at_ms: Date.now(),
     };
@@ -514,9 +529,10 @@ export default function ExamTakeScreen() {
       ...(secondsLeftRef.current != null ? { secondsLeft: secondsLeftRef.current } : {}),
       // Same field as the web's essay workshop (plan + practice rounds).
       ...(Object.keys(essayWorkRef.current).length ? { essayWorkshop: essayWorkRef.current } : {}),
-      // The web's immediate-mode grades belong to the answers it graded; the
-      // answers just changed here, so they must not be reused at submit.
-      questionResults: {},
+      // Immediate mode: checked answers are locked, so their grades stay valid
+      // (same field + compact shape as the web). Otherwise none are kept.
+      feedbackMode: feedbackModeRef.current,
+      questionResults: feedbackModeRef.current === 'immediate' ? questionResultsRef.current : {},
     })
       .then(() => setSaveState({ kind: 'saved', at: Date.now() }))
       .catch(() => setSaveState({ kind: 'failed' }));
@@ -588,6 +604,10 @@ export default function ExamTakeScreen() {
               // Restore the saved position even with no answers yet (e.g. read
               // ahead on essay questions), so Reprendre lands on the right one.
               // draftPosition also reads the web's `currentQ`.
+              if (draft.feedbackMode === 'immediate' || draft.feedbackMode === 'end') setFeedbackMode(draft.feedbackMode);
+              if (draft.feedbackMode === 'immediate' && draft.questionResults && typeof draft.questionResults === 'object') {
+                setQuestionResults(draft.questionResults as Record<number, any>);
+              }
               if (draft.essayWorkshop && typeof draft.essayWorkshop === 'object') {
                 setEssayWork(draft.essayWorkshop as Record<number, WorkshopState>);
               }
@@ -624,7 +644,7 @@ export default function ExamTakeScreen() {
     if (!user?.uid || questions.length === 0 || phase !== 'questions') return;
     draftTimer.current = setTimeout(flushDraft, 10000);
     return () => { if (draftTimer.current) clearTimeout(draftTimer.current); };
-  }, [answers, currentIdx, essayWork, user?.uid, examId, questions.length, phase, flushDraft]);
+  }, [answers, currentIdx, essayWork, questionResults, user?.uid, examId, questions.length, phase, flushDraft]);
 
   // The clock runs only while the questions are on screen.
   const timed = secondsLeft != null;
@@ -683,6 +703,8 @@ export default function ExamTakeScreen() {
   }
 
   function setAnswer(idx: number, value: Answer) {
+    // A checked answer in "Résultat immédiat" is final.
+    if (feedbackModeRef.current === 'immediate' && questionResultsRef.current[idx]) return;
     // An emptied answer is not an answer. `answeredCount` counts KEYS, so
     // leaving the key behind after a student clears a field inflates the
     // header count, under-reports the "N unanswered" warning on submit, and
@@ -749,7 +771,10 @@ export default function ExamTakeScreen() {
       // of the score) instead of `manual` with 0 points: they are graded right
       // after the paper is saved (startEssayGrading below), never before, so a
       // slow or absent grader can never block the submission.
-      const graded = gradeExamPendingEssays(questions, answers, { subject, track: track ?? undefined });
+      const graded = gradeExamPendingEssays(
+        questions, answers, { subject, track: track ?? undefined },
+        feedbackMode === 'immediate' ? questionResults : {},
+      );
 
       // Persist a lean per-question result (indexed by question order) so the
       // results screen can render correctness from the grader instead of
@@ -873,6 +898,29 @@ export default function ExamTakeScreen() {
   }
 
   doSubmitRef.current = doSubmit;
+
+  /** "Vérifier" in immediate mode: grade this one answer now, then lock it. */
+  async function checkAnswer(idx: number, qSubject: string, scaffolded: boolean) {
+    const q = questions[idx];
+    const ans = answers[idx];
+    if (!q || ans == null || ans === '' || questionResults[idx] || checking != null) return;
+    tapMedium();
+    const lean = (r: any) => { const { question: _q, ...rest } = r ?? {}; return rest; };
+    if (q.type === 'short_answer' && !scaffolded) {
+      // A written answer needs the AI grader, like the web.
+      setChecking(idx);
+      let essayResp: any;
+      try {
+        essayResp = await postEssayForGrading(buildEssayGradeBody(q, String(ans), { subject: qSubject, level: normalizeLevel(String(exam?.level ?? '')) }));
+      } catch {
+        essayResp = { isCorrect: false, graded: false, score: 'N/A', feedback: t('Erreur de connexion : la correction pourra être relancée après la remise.', 'Erè koneksyon : w ap ka relanse koreksyon an apre ou fin remèt.') };
+      }
+      setQuestionResults((prev) => ({ ...prev, [idx]: lean(gradeSingleQuestion(q, ans, essayResp, { subject: qSubject })) }));
+      setChecking(null);
+      return;
+    }
+    setQuestionResults((prev) => ({ ...prev, [idx]: lean(gradeSingleQuestion(q, ans, null, { subject: qSubject })) }));
+  }
 
   // Normalized subject drives the scaffold / math-input routing (PWA parity).
   const subject = useMemo(() => normalizeSubject(exam?.subject ?? ''), [exam?.subject]);
@@ -1062,6 +1110,9 @@ export default function ExamTakeScreen() {
   // Derived from the stored answer on every render, so there is one source of
   // truth and no second copy of the answer to keep in step.
   const response = usesEngine && compiled ? storedToResponse(compiled, rawAnswer) : {};
+  const immediateResult = feedbackMode === 'immediate' ? questionResults[safeIdx] ?? null : null;
+  const locked = !!immediateResult;
+
   const setWidgetValue = (id: string, value: string) => {
     if (!compiled) return;
     setAnswer(safeIdx, responseToStored(compiled, { ...response, [id]: value }));
@@ -1195,7 +1246,8 @@ export default function ExamTakeScreen() {
             </View>
           )}
 
-          {/* Answer area */}
+          {/* Answer area — locked once checked in "Résultat immédiat". */}
+          <View pointerEvents={locked ? 'none' : 'auto'} style={locked ? { opacity: 0.75 } : undefined}>
           {Array.isArray(q?.conditions) && q.conditions.length > 0 ? (
             // Guided condition builder (domain / sign / inequality) — pre-filled
             // left expr + operator picker + value; graded by gradeConditionsAnswer.
@@ -1316,6 +1368,32 @@ export default function ExamTakeScreen() {
               }
             />
           )}
+          </View>
+
+          {/* Résultat immédiat: check this answer now, then show its correction.
+              Essays have their own feedback loop in the workshop. */}
+          {feedbackMode === 'immediate' && qType !== 'essay' ? (
+            immediateResult ? (
+              <View style={{ marginTop: 16 }}>
+                <ImmediateFeedback result={immediateResult} question={q} />
+              </View>
+            ) : (
+              <View style={{ marginTop: 16, gap: 6 }}>
+                <Button
+                  onPress={() => checkAnswer(safeIdx, questionSubject, scaffolded)}
+                  disabled={!isAnswerFilled(answers[safeIdx]) || checking != null}
+                  loading={checking === safeIdx}
+                  variant="secondary"
+                  icon={<Check color={colors.azureInk} size={16} />}
+                  label={t('Vérifier ma réponse', 'Verifye repons mwen')}
+                  accessibilityLabel={t('Vérifier ma réponse', 'Verifye repons mwen')}
+                />
+                <Text style={[typeScale.caption, { color: colors.muted }]}>
+                  {t('Une réponse vérifiée est verrouillée.', 'Yon repons ou verifye pa ka chanje ankò.')}
+                </Text>
+              </View>
+            )
+          ) : null}
 
           {/* Progressive hints (the authored "démarche" as on-demand help).
               Keyed distinctly from ExamSectionContext (same parent) + per
