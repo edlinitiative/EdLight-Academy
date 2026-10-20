@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { expectedIdeas } from '../../shared/essayWorkshop';
 import './ExamResults.css';
 import './examPremium.css';
 import './examResultsPremium.css';
@@ -1099,6 +1100,9 @@ const ExamResults = () => {
                 <EssayFeedbackNote feedback={r.essayFeedback} />
               )}
 
+              {/* The essay workshop's last step: the key ideas, only now */}
+              {r.question?.type === 'essay' && <ExpectedIdeasNote question={r.question} />}
+
               {/* Explique-moi: Sandra works through the missed question */}
               {(r.status === 'incorrect' || r.status === 'partial') && (() => {
                 const ctx = examQuestionContext({
@@ -1250,6 +1254,24 @@ function ProofOrPlainAnswer({ answer, correctAnswer }) {
 }
 
 /** The AI grade of a written answer, labelled as an estimate (never an official mark). */
+/** The essay's expected ideas, revealed after submission (shared/essayWorkshop). */
+function ExpectedIdeasNote({ question }) {
+  const language = useStore((s) => s.language);
+  const t = (fr, ht) => (language === 'ht' ? ht : fr);
+  const ideas = expectedIdeas(question);
+  if (!ideas.length) return null;
+  return (
+    <div className="exam-results__essay exam-results__essay--ideas">
+      <strong>{t('Les idées attendues', 'Lide yo te atann yo')}</strong>
+      <ol>
+        {ideas.map((x, i) => (
+          <li key={i}>{x.label ? <b>{x.label} : </b> : null}{x.idea}</li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
 function EssayFeedbackNote({ feedback }) {
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';

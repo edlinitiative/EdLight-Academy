@@ -32,7 +32,7 @@ import { normalizeOptions } from '../utils/examOptions';
 import { LoadingState, ErrorState } from '../components/StateViews';
 import MathText from '../components/MathText';
 import ExamFigure from '../components/ExamFigure';
-import ExamAnswerInput, { WordCountAnswer, looksMathy } from '../components/ExamAnswerInput';
+import ExamAnswerInput, { looksMathy } from '../components/ExamAnswerInput';
 import ScaffoldAnswer, { usesScaffold, scaffoldNeedsMath, MATH_SUBJECTS } from '../components/ScaffoldAnswer';
 import FillBlankAnswer, { InlineFillBlank, countBlanks, numberBlanks } from '../components/FillBlankAnswer';
 import ConditionBuilder from '../components/ConditionBuilder';
@@ -42,6 +42,7 @@ import ExamSectionContext from '../components/ExamSectionContext';
 import ExamQuestionGrid from '../components/ExamQuestionGrid';
 import { MultiSelectAnswer, MatchingAnswer, hasStructuredMatching } from '../components/ExamChoiceInputs';
 import ProofAnswer from '../components/ProofAnswer';
+import EssayWorkshop, { emptyWorkshop, type WorkshopState } from '../components/essay/EssayWorkshop';
 import { isProofQuestion } from '../../../shared/proofQuestion';
 import { isAnswerFilled } from '../utils/answerFilled';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
@@ -430,6 +431,11 @@ export default function ExamTakeScreen() {
   );
   const [hasDraft, setHasDraft] = useState(false);
   const [gridOpen, setGridOpen] = useState(false);
+  // Essay workshop state per question (plan, step, practice feedback). Process,
+  // not answer: saved with the draft as `essayWorkshop`, never graded.
+  const [essayWork, setEssayWork] = useState<Record<number, WorkshopState>>({});
+  const essayWorkRef = useRef(essayWork);
+  essayWorkRef.current = essayWork;
   // The countdown, as on the web (ExamTake `secondsLeft`): it starts at the
   // paper's duration, travels with the draft so a resume (on either device)
   // continues it, and submits the paper at 0:00. Null = untimed paper.
@@ -493,6 +499,7 @@ export default function ExamTakeScreen() {
       // (the Home "Examen en cours" card reads this).
       questionCount: questionCountRef.current,
       ...(secondsLeftRef.current != null ? { secondsLeft: secondsLeftRef.current } : {}),
+      ...(Object.keys(essayWorkRef.current).length ? { essayWorkshop: essayWorkRef.current } : {}),
       status: 'in_progress',
       updated_at_ms: Date.now(),
     };
@@ -505,6 +512,8 @@ export default function ExamTakeScreen() {
       questionCount: questionCountRef.current,
       // Same field name as the web, so the clock resumes on either device.
       ...(secondsLeftRef.current != null ? { secondsLeft: secondsLeftRef.current } : {}),
+      // Same field as the web's essay workshop (plan + practice rounds).
+      ...(Object.keys(essayWorkRef.current).length ? { essayWorkshop: essayWorkRef.current } : {}),
       // The web's immediate-mode grades belong to the answers it graded; the
       // answers just changed here, so they must not be reused at submit.
       questionResults: {},
@@ -579,6 +588,9 @@ export default function ExamTakeScreen() {
               // Restore the saved position even with no answers yet (e.g. read
               // ahead on essay questions), so Reprendre lands on the right one.
               // draftPosition also reads the web's `currentQ`.
+              if (draft.essayWorkshop && typeof draft.essayWorkshop === 'object') {
+                setEssayWork(draft.essayWorkshop as Record<number, WorkshopState>);
+              }
               if (typeof draft.secondsLeft === 'number' && draft.secondsLeft >= 0 && Number(e?.duration_minutes) > 0) {
                 setSecondsLeft(draft.secondsLeft);
               }
@@ -612,7 +624,7 @@ export default function ExamTakeScreen() {
     if (!user?.uid || questions.length === 0 || phase !== 'questions') return;
     draftTimer.current = setTimeout(flushDraft, 10000);
     return () => { if (draftTimer.current) clearTimeout(draftTimer.current); };
-  }, [answers, currentIdx, user?.uid, examId, questions.length, phase, flushDraft]);
+  }, [answers, currentIdx, essayWork, user?.uid, examId, questions.length, phase, flushDraft]);
 
   // The clock runs only while the questions are on screen.
   const timed = secondsLeft != null;
@@ -1173,7 +1185,7 @@ export default function ExamTakeScreen() {
           {/* Question card: header row + stem in one card (the web's
               exam-take__question-card). Engine questions draw the same card
               themselves, with their blanks inside the sentence. */}
-          {usesEngine || regexBlanks ? null : (
+          {usesEngine || regexBlanks || qType === 'essay' ? null : (
             <View style={{ ...cardSurface, padding: 20, gap: 14, marginBottom: 16 }}>
               {questionHeader}
               <MathText text={questionText} style={{ fontSize: 18, color: colors.ink, lineHeight: 27 }} />
@@ -1252,14 +1264,17 @@ export default function ExamTakeScreen() {
               mathMode={scaffoldNeedsMath(q, questionSubject)}
             />
           ) : qType === 'essay' ? (
-            <View style={{ gap: 8 }}>
-              <Text style={[typeScale.label, { color: colors.muted }]}>{t('Rédige ta réponse', 'Ekri repons ou an')}</Text>
-              <WordCountAnswer
-                value={answerText}
-                onChangeText={(v) => setAnswer(safeIdx, v)}
-                type="essay"
-              />
-            </View>
+            // The essay workshop: plan → write → practice feedback + rewrite.
+            <EssayWorkshop
+              header={questionHeader}
+              question={q}
+              subject={questionSubject}
+              level={normalizeLevel(String(exam?.level ?? ''))}
+              value={answerText}
+              onChange={(v) => setAnswer(safeIdx, v)}
+              state={essayWork[safeIdx] ?? emptyWorkshop()}
+              onState={(st) => setEssayWork((prev) => ({ ...prev, [safeIdx]: st }))}
+            />
           ) : usesEngine && compiled ? (
             // The prompt and its inputs come from the compiled question: a
             // blank mid-sentence is answered in the sentence, and a numeric
