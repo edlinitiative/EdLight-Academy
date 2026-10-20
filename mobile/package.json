@@ -16,7 +16,6 @@
     "@expo-google-fonts/instrument-serif": "^0.4.1",
     "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
     "@expo-google-fonts/source-sans-3": "^0.4.1",
-    "@expo/app-integrity": "^57.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/netinfo": "11.4.1",
     "@react-navigation/bottom-tabs": "^7",

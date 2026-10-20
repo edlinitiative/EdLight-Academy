@@ -93,19 +93,21 @@ let failedUntil = 0;
 let inFlight: Promise<string | null> | null = null;
 
 /**
- * The native module, loaded lazily and never at import time.
+ * The native module — REMOVED, so this is always null.
  *
- * A build that predates this dependency still receives JS over the air, and
- * an import at module scope would take the whole bundle down on it. Inside a
- * try/catch, an older binary simply has no attestation and says so.
+ * `@expo/app-integrity` 57.x is built for Expo SDK 57; on this SDK 54 app its
+ * Android module references a class (expo.modules.kotlin.types.AnyTypeCache)
+ * that expo-modules-core 3.0 does not have. Autolinking registers every native
+ * module at startup, so EVERY Android build that carried it (versionCodes
+ * 46–49, Sept 20 → Oct 20 2026) crashed on launch with NoClassDefFoundError —
+ * Android's "this app contains a bug". Being switched off here was not enough:
+ * the crash is in native registration, before any JS runs.
+ *
+ * Re-adding attestation needs an SDK-54-compatible module (or the SDK upgrade
+ * it was built for), verified on an Android device before release.
  */
-function nativeModule(): typeof import('@expo/app-integrity') | null {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
-    return require('@expo/app-integrity');
-  } catch {
-    return null;
-  }
+function nativeModule(): any | null {
+  return null;
 }
 
 const appId = () => firebaseConfig.appId;
@@ -156,7 +158,7 @@ async function iosToken(native: NonNullable<ReturnType<typeof nativeModule>>): P
 
   let keyId = await AsyncStorage.getItem(KEY_ID_STORAGE);
   if (!keyId) {
-    keyId = await native.generateKeyAsync();
+    keyId = String(await native.generateKeyAsync());
     await AsyncStorage.setItem(KEY_ID_STORAGE, keyId);
     // A new key has never been attested, so any stored artifact belongs to a
     // key that no longer exists.
