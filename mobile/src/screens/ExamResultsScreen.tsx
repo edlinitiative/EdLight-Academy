@@ -11,6 +11,7 @@ import { fetchSingleExam } from '../utils/examCatalog';
 import { flattenQuestions, normalizeLevel, normalizeSubject } from '../utils/examUtils';
 import { essayJobsFromDoc, type EssayGradingOutcome } from '../../../shared/essayRegrade';
 import { classifyEssayResponse } from '../../../shared/essayGradeCore';
+import { expectedIdeas } from '../../../shared/essayWorkshop';
 import { examQuestionContext } from '../../../shared/explainContext';
 import { essayGradingKey, essayGradingRegistry, startEssayGrading } from '../services/essayGrading';
 import { ExplainProvider } from '../components/sandra/ExplainSheet';
@@ -204,6 +205,7 @@ function QuestionReviewItem({ question, index, answer, result, subject, level, e
             </View>
           )}
           {essay ? <EssayFeedbackBlock feedback={essay} t={t} /> : null}
+          {question.type === 'essay' ? <ExpectedIdeas question={question} t={t} /> : null}
           {isPending && !essay && (question.type === 'essay' || question.type === 'short_answer') ? (
             <Text style={[typeScale.body, { color: colors.muted }]}>
               {t('Ta rédaction n’est pas encore corrigée : elle ne compte pas encore dans ton score.', 'Redaksyon ou poko korije : li poko konte nan nòt ou.')}
@@ -217,6 +219,32 @@ function QuestionReviewItem({ question, index, answer, result, subject, level, e
 }
 
 /** The AI grade of a written answer: an estimate, labelled as one. */
+/**
+ * The essay's key ideas, revealed only now that the paper is handed in — the
+ * last step of the essay workshop (shared/essayWorkshop expectedIdeas). Side
+ * by side with what the student wrote, this is where they learn what a full
+ * answer covered.
+ */
+function ExpectedIdeas({ question, t }: { question: any; t: (fr: string, ht: string) => string }) {
+  const colors = useColors();
+  const ideas = expectedIdeas(question);
+  if (!ideas.length) return null;
+  return (
+    <View style={{ gap: 8, padding: 16, borderRadius: 14, backgroundColor: colors.azureSoft }}>
+      <Text style={[typeScale.label, { color: colors.ink, fontFamily: fonts.headingBold }]}>{t('Les idées attendues', 'Lide yo te atann yo')}</Text>
+      {ideas.map((x, i) => (
+        <View key={i} style={{ flexDirection: 'row', gap: 8 }}>
+          <Text style={{ fontFamily: fonts.headingBold, color: colors.azureInk }}>{i + 1}.</Text>
+          <Text style={[typeScale.body, { flex: 1, color: colors.ink }]}>
+            {x.label ? <Text style={{ fontFamily: fonts.bold }}>{x.label} : </Text> : null}
+            {x.idea}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function EssayFeedbackBlock({ feedback, t }: { feedback: any; t: (fr: string, ht: string) => string }) {
   const colors = useColors();
   const { isDark } = useTheme();

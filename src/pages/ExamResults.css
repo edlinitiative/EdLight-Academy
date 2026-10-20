@@ -736,3 +736,7 @@
   color: inherit;
 }
 .section.exam-results .exam-results__tally { border-top: 0; padding-top: 0; }
+
+/* Essay workshop: the key ideas, revealed after submission. */
+.exam-results__essay--ideas { background: var(--xp-azure-soft, #EAF2FE); border-radius: 14px; padding: 14px 16px; margin-top: 10px; }
+.exam-results__essay--ideas ol { margin: 8px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; line-height: 1.5; }

@@ -35,6 +35,7 @@ import './ExamTake.css';
 import { balanceMathAcrossBlanks } from '../utils/mathBlanks';
 import { scaffoldRevealsAnswer } from '../../shared/scaffoldReveal';
 import { detectProofSubtype, isProofQuestion, JUSTIFICATION_OPTIONS } from '../../shared/proofQuestion';
+import EssayWorkshop, { EssayWorkshopContext, emptyWorkshop } from '../components/exam/EssayWorkshop';
 import { ChevronLeft, ChevronRight, Clock, X, Check, Lock, Lightbulb } from '../components/icons';
 import './examPremium.css';
 import './examTakePremium.css';
@@ -295,6 +296,9 @@ const ExamTake = () => {
   // ── State ──────────────────────────────────────────────────────────────────
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState({});
+  // Essay workshop state per question (plan, step, practice feedback) — the
+  // phone's field name, so a plan started on one device continues on the other.
+  const [essayWork, setEssayWork] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -354,7 +358,7 @@ const ExamTake = () => {
   const saveSeqRef = useRef(0);
   // Last content handed to a write — lets the save effect tell a real answer
   // change from the periodic timer-only re-save.
-  const lastSavedContentRef = useRef<{ answers: any; questionResults: any; currentQ: number; feedbackMode: string }>({
+  const lastSavedContentRef = useRef<{ answers: any; questionResults: any; currentQ: number; feedbackMode: string; essayWork?: any }>({
     answers: null, questionResults: null, currentQ: -1, feedbackMode: '',
   });
   const [isOnline, setIsOnline] = useState(
@@ -483,6 +487,7 @@ const ExamTake = () => {
     setSubmitted(false);
     setAnswers(resumeDraft.answers || {});
     setQuestionResults(resumeDraft.questionResults || {});
+    if (resumeDraft.essayWorkshop && typeof resumeDraft.essayWorkshop === 'object') setEssayWork(resumeDraft.essayWorkshop);
     if (resumeDraft.feedbackMode) setFeedbackMode(resumeDraft.feedbackMode);
     const pos = draftPosition(resumeDraft);
     if (pos != null && pos < questions.length) setCurrentQ(pos);
@@ -645,6 +650,7 @@ const ExamTake = () => {
       currentIdx: currentQ,
       secondsLeft,
       answers,
+      ...(Object.keys(essayWork).length ? { essayWorkshop: essayWork } : {}),
       // Only persist compacted pre-graded results (optional, mainly for immediate mode)
       questionResults: feedbackMode === 'immediate' ? compactQuestionResults : {},
       started_at_ms: startedAtMsRef.current,
@@ -667,8 +673,9 @@ const ExamTake = () => {
       prev.answers !== answers ||
       prev.questionResults !== compactQuestionResults ||
       prev.currentQ !== currentQ ||
-      prev.feedbackMode !== feedbackMode;
-    lastSavedContentRef.current = { answers, questionResults: compactQuestionResults, currentQ, feedbackMode };
+      prev.feedbackMode !== feedbackMode ||
+      prev.essayWork !== essayWork;
+    lastSavedContentRef.current = { answers, questionResults: compactQuestionResults, currentQ, feedbackMode, essayWork };
     if (contentChanged) setSaveState('pending');
     saveDraftTimerRef.current = setTimeout(() => {
       saveExamAttemptDraft(userId, examKey, payload)
@@ -705,6 +712,7 @@ const ExamTake = () => {
     // answers/questionResults are the big ones; they change often
     answers,
     compactQuestionResults,
+    essayWork,
   ]);
 
   // Retry a failed draft write on demand (§8: errors offer a recovery action).
@@ -1592,7 +1600,15 @@ const ExamTake = () => {
   const passageMissing = !sectionPassage && !!currentSection?.passage_missing;
   const passageReference = currentSection?.passage_reference || '';
 
+  const essayCtx = {
+    get: (i) => essayWork[i] ?? emptyWorkshop(),
+    set: (i, st) => setEssayWork((prev) => ({ ...prev, [i]: st })),
+    subject,
+    level: normalizeLevel(exam.level),
+  };
+
   return (
+    <EssayWorkshopContext.Provider value={essayCtx}>
     <section className="section exam-take xp xp-take">
       <div className="container">
         {/* Sticky header block: identity, progress, the timer (only when the
@@ -2270,6 +2286,7 @@ const ExamTake = () => {
       {resumeOverlays}
       </div>
       </section>
+    </EssayWorkshopContext.Provider>
   );
 };
 
@@ -3504,6 +3521,9 @@ function ImmediateFeedback({ result, question, color }) {
  */
 function isLadderQuestion(question, subject) {
   if (!question || usesScaffold(question, subject)) return false;
+  // An essay stays an essay (the workshop): its ladder labels are model
+  // answers in 91 papers, and a ladder grades an essay as one-line matches.
+  if (question.type === 'essay') return false;
   if (Array.isArray(question.conditions) && question.conditions.length > 0) return false;
   try {
     const compiled = compileQuestion(question, { subject });
@@ -3548,7 +3568,7 @@ function QuestionInput({ question, index, value, onChange, disabled, subject }) 
     case 'short_answer':
       return <ShortAnswerInput question={question} index={index} value={value} onChange={onChange} disabled={disabled} />;
     case 'essay':
-      return <EssayInput question={question} index={index} value={value} onChange={onChange} disabled={disabled} />;
+      return <EssayWorkshop question={question} index={index} value={value} onChange={onChange} disabled={disabled} />;
     case 'matching':
       return <MatchingInput question={question} index={index} value={value} onChange={onChange} disabled={disabled} />;
     default:
