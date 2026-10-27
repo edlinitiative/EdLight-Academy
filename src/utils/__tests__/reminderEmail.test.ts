@@ -3,7 +3,7 @@
  * and the Resend sender used by the send-reminders cron.
  *
  * `buildReminderEmailHtml` is pure; `sendReminderEmail` is exercised with a
- * mocked global fetch and controlled RESEND_API_KEY / EMAIL_FROM env vars.
+ * mocked global fetch and controlled RESEND_API_KEY / UPDATES_EMAIL_FROM env vars.
  */
 
 import {
@@ -133,7 +133,7 @@ describe('buildReminderEmailHtml', () => {
 
 describe('sendReminderEmail', () => {
   const savedKey = process.env.RESEND_API_KEY;
-  const savedFrom = process.env.EMAIL_FROM;
+  const savedFrom = process.env.UPDATES_EMAIL_FROM;
   let fetchMock: jest.Mock;
 
   beforeEach(() => {
@@ -143,8 +143,8 @@ describe('sendReminderEmail', () => {
   afterEach(() => {
     if (savedKey === undefined) delete process.env.RESEND_API_KEY;
     else process.env.RESEND_API_KEY = savedKey;
-    if (savedFrom === undefined) delete process.env.EMAIL_FROM;
-    else process.env.EMAIL_FROM = savedFrom;
+    if (savedFrom === undefined) delete process.env.UPDATES_EMAIL_FROM;
+    else process.env.UPDATES_EMAIL_FROM = savedFrom;
     jest.restoreAllMocks();
   });
 
@@ -158,7 +158,7 @@ describe('sendReminderEmail', () => {
 
   it('POSTs to Resend with auth + payload and returns sent on 200', async () => {
     process.env.RESEND_API_KEY = 'test-key';
-    process.env.EMAIL_FROM = 'EdLight <sandra@edlight.org>';
+    process.env.UPDATES_EMAIL_FROM = 'EdLight <sandra@updates.edlight.org>';
     fetchMock.mockResolvedValue({ ok: true, text: async () => '' });
 
     const r = await sendReminderEmail({ ...BASE, to: 'student@example.com' });
@@ -169,7 +169,8 @@ describe('sendReminderEmail', () => {
     expect(opts.headers.Authorization).toBe('Bearer test-key');
     const body = JSON.parse(opts.body);
     expect(body.to).toBe('student@example.com');
-    expect(body.from).toBe('EdLight <sandra@edlight.org>');
+    expect(body.from).toBe('EdLight <sandra@updates.edlight.org>');
+    expect(body.reply_to).toBe('sandra@edlight.org');
     expect(body.subject).toContain('EdLight Academy');
     expect(body.html).toContain('Continuer à apprendre');
   });

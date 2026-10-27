@@ -36,7 +36,7 @@ import { decideAlert, buildAlertEmail, INITIAL_STATE, type HealthState } from '.
 
 const STATE_DOC = 'internalCache/sandraHealth';
 const RESEND_URL = 'https://api.resend.com/emails';
-const DEFAULT_FROM = 'EdLight Monitor <sandra@edlight.org>';
+const DEFAULT_FROM = 'EdLight Monitor <sandra@academy.edlight.org>';
 const DEFAULT_TO = 'ted.jacquet@edlight.org';
 
 /**
