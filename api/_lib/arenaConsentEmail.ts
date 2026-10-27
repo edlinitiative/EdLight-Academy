@@ -20,7 +20,9 @@
  */
 
 const RESEND_URL = 'https://api.resend.com/emails';
-const DEFAULT_FROM = 'EdLight Academy <sandra@edlight.org>';
+const DEFAULT_FROM = 'EdLight Academy <sandra@academy.edlight.org>';
+// Replies still reach the Sandra inbox on the root domain, which only people use.
+const REPLY_TO = 'sandra@edlight.org';
 
 import { APP_URL, C, FONT_BODY, FONT_DISPLAY, button, buttonOutline, emailDocument, h1, hello, para, row, small } from './emailShell';
 
@@ -169,6 +171,7 @@ export async function sendConsentEmail(
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         from: process.env.EMAIL_FROM || DEFAULT_FROM,
+        reply_to: REPLY_TO,
         to,
         subject: t.subject(args.tournamentTitle),
         html: buildConsentEmailHtml(args),

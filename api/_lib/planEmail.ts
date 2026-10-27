@@ -28,7 +28,9 @@ export type PlanEmailInput = PlanIcsInput;
 
 const PLAN_URL = 'https://academy.edlight.org/study-plan';
 const RESEND_URL = 'https://api.resend.com/emails';
-const DEFAULT_FROM = 'Sandra · EdLight Academy <sandra@edlight.org>';
+const DEFAULT_FROM = 'Sandra · EdLight Academy <sandra@academy.edlight.org>';
+// Replies still reach the Sandra inbox on the root domain, which only people use.
+const REPLY_TO = 'sandra@edlight.org';
 const ICS_FILENAME = 'plan-etude-edlight.ics';
 
 const NOT_CONFIGURED_ERROR = "l'envoi d'email n'est pas encore configuré";
@@ -204,6 +206,7 @@ export async function sendPlanEmail(args: {
 
   const payload = {
     from: process.env.EMAIL_FROM || DEFAULT_FROM,
+    reply_to: REPLY_TO,
     to,
     subject: t.subject(plan.title || "Plan d'étude"),
     html: buildPlanEmailHtml(plan, lang),

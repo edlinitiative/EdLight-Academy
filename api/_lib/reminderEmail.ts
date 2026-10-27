@@ -65,7 +65,10 @@ export interface ReminderTeaser {
 }
 
 const RESEND_URL = 'https://api.resend.com/emails';
-const DEFAULT_FROM = 'EdLight Academy <sandra@edlight.org>';
+// Study reminders are nudges, not transactional mail: they send from the updates
+// subdomain so their reputation never touches account or plan emails.
+const DEFAULT_FROM = 'EdLight Academy <sandra@updates.edlight.org>';
+const REPLY_TO = 'sandra@edlight.org';
 
 const SEND_FAILED_ERROR = "l'email n'a pas pu être envoyé";
 const NOT_CONFIGURED_ERROR = "l'envoi d'email n'est pas configuré";
@@ -292,7 +295,8 @@ export async function sendReminderEmail(args: {
   if (!apiKey) return { error: NOT_CONFIGURED_ERROR };
 
   const payload = {
-    from: process.env.EMAIL_FROM || DEFAULT_FROM,
+    from: process.env.UPDATES_EMAIL_FROM || DEFAULT_FROM,
+    reply_to: REPLY_TO,
     to: args.to,
     subject: `${plainSubject(args.title)} — EdLight Academy`,
     html: buildReminderEmailHtml(args),

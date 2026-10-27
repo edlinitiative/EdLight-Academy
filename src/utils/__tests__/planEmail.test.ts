@@ -124,7 +124,7 @@ describe('sendPlanEmail', () => {
       html: string;
       attachments: Array<{ filename: string; content: string }>;
     };
-    expect(body.from).toBe('Sandra · EdLight Academy <sandra@edlight.org>'); // default sender
+    expect(body.from).toBe('Sandra · EdLight Academy <sandra@academy.edlight.org>'); // default sender
     expect(body.to).toBe('jean@gmail.com');
     expect(body.subject).toContain('Plan Chimie 4 semaines');
     expect(body.html).toBe(buildPlanEmailHtml(PLAN, 'fr'));
