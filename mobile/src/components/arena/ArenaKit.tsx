@@ -18,6 +18,7 @@ import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 import { Check, CircleSlash, RefreshCw, ShieldAlert, WifiOff } from 'lucide-react-native';
 import PressableScale from '../ui/PressableScale';
 import { arenaColors as C, arenaType, arenaRadius, ARENA_TOUCH } from '../../theme/arenaTheme';
+import { fonts } from '../../theme/theme';
 import ArenaWorld from './art/environment/ArenaWorld';
 import type { Occasion } from './art/environment/ArenaWorld';
 import type { EventStatus, LivePhase } from '../../utils/arenaViewState';
@@ -120,11 +121,9 @@ export function ArenaButton({
       style={[{
         minHeight: ARENA_TOUCH,
         flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-        paddingHorizontal: 20, paddingVertical: 10,
-        // Half the touch height, not 999: a one-line button is the same pill,
-        // but a label wrapped by large text stays a rounded rectangle instead
-        // of ballooning into an oval that clips its first and last lines.
-        borderRadius: ARENA_TOUCH / 2,
+        paddingHorizontal: 18, paddingVertical: 10,
+        // A rounded rectangle, never a capsule (no pills anywhere).
+        borderRadius: arenaRadius.control,
         // Opaque grounds only — a translucent fill under a hairline read as generic.
         backgroundColor: primary ? (off ? '#76362D' : C.coral) : C.secondary,
       }, style]}
@@ -169,14 +168,11 @@ export function StatusPill({ kind, t, style }: { kind: StatusLabel; t: T; style?
       accessibilityRole="text"
       accessibilityLabel={text}
       accessibilityLiveRegion={kind === 'reconnecting' ? 'polite' : 'none'}
-      style={[{
-        flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
-        paddingHorizontal: 10, paddingVertical: 4, borderRadius: arenaRadius.chip,
-        backgroundColor: C.surfaceRaised,
-      }, style]}
+      // A word in its colour after a dot — not a capsule (no pills).
+      style={[{ flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' }, style]}
     >
-      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: tone }} />
-      <Text maxFontSizeMultiplier={1.5} style={[arenaType.status, { color: C.inkSoft }]}>{text}</Text>
+      <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: tone }} />
+      <Text maxFontSizeMultiplier={1.5} style={[arenaType.status, { fontFamily: fonts.bold, color: C.inkSoft }]}>{text}</Text>
     </View>
   );
 }

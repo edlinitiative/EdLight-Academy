@@ -53,7 +53,7 @@ function Stat({ icon, value, label }: { icon: React.ReactNode; value: string; la
       }}
     >
       {icon}
-      <Text style={[arenaType.num, { color: C.ink, fontSize: 18 }]}>{value}</Text>
+      <Text style={[arenaType.num, { color: C.ink, fontSize: 16 }]}>{value}</Text>
       <Text style={[arenaType.status, { color: C.muted }]}>{label}</Text>
     </View>
   );

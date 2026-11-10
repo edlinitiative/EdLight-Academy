@@ -228,7 +228,7 @@ export default function ArenaWatchScreen() {
               <Text style={[arenaType.name, { fontSize: 15, color: liveTone }]}>{statusLabelText(livePill, t)}</Text>
               {roundMeta ? <Text style={[arenaType.status, { color: C.muted }]}>· {roundMeta}</Text> : null}
             </View>
-            <Text accessibilityRole="header" numberOfLines={1} style={{ fontFamily: fonts.heading, fontSize: 20, lineHeight: 25, letterSpacing: -0.3, color: C.ink }}>
+            <Text accessibilityRole="header" numberOfLines={1} style={{ fontFamily: fonts.heading, fontSize: 18, lineHeight: 23, letterSpacing: -0.3, color: C.ink }}>
               {tournament?.title || t('Championnat EdLight', 'Chanpyona EdLight')}
             </Text>
           </View>
@@ -283,7 +283,7 @@ export default function ArenaWatchScreen() {
               <View
                 accessible
                 accessibilityLabel={`${storyCopy.title}. ${storyCopy.line}`}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 64, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 20, backgroundColor: C.surfaceRaised }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 64, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 16, backgroundColor: C.surfaceRaised }}
               >
                 {story.s.kind === 'PLAYER_ENTERS_TOP_5' && story.s.player ? (
                   <Avatar seed={story.s.player.uid} config={avatarOf(story.s.player.uid)} size={36} />
@@ -304,7 +304,7 @@ export default function ArenaWatchScreen() {
               </View>
             </PopIn>
           ) : (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 20, backgroundColor: C.surface }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 16, backgroundColor: C.surface }}>
               <TrendingUp color={C.muted} size={18} />
               <Text style={[arenaType.status, { color: C.muted, flex: 1 }]}>
                 {t('Les moments du match apparaîtront ici après chaque question.', 'Gwo moman match la ap parèt isit la apre chak kesyon.')}
@@ -321,7 +321,7 @@ export default function ArenaWatchScreen() {
             </Text>
           </ArenaPanel>
         ) : question && (phase === 'question' || phase === 'interval') ? (
-          <Animated.View key={`q-${question.index}`} entering={motion.enter} style={{ padding: 20, gap: 14, borderRadius: 24, backgroundColor: C.surface }}>
+          <Animated.View key={`q-${question.index}`} entering={motion.enter} style={{ padding: 20, gap: 14, borderRadius: 16, backgroundColor: C.surface }}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Text style={[arenaType.status, { color: C.muted, flex: 1 }]}>{t('Question en cours', 'Kesyon k ap jwe a')}</Text>
               {secondsLeft != null ? (
@@ -336,7 +336,7 @@ export default function ArenaWatchScreen() {
                 <MathText text={prompt} style={{ fontSize: 16, lineHeight: 23 }} />
               </View>
             ) : (
-              <Text style={{ fontFamily: fonts.headingBold, fontSize: 20, lineHeight: 27, color: C.ink }}>{prompt}</Text>
+              <Text style={{ fontFamily: fonts.headingBold, fontSize: 18, lineHeight: 25, color: C.ink }}>{prompt}</Text>
             )}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
               {options.map((opt, i) => {
@@ -398,7 +398,7 @@ export default function ArenaWatchScreen() {
         ) : null}
 
         {/* ── The board, collapsed: top three + the followed school ── */}
-        <View style={{ padding: 8, gap: 4, borderRadius: 20, backgroundColor: C.surface }}>
+        <View style={{ padding: 8, gap: 4, borderRadius: 16, backgroundColor: C.surface }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingTop: 6, paddingBottom: 4 }}>
             <Text style={[arenaType.name, { fontSize: 15, color: C.ink, flex: 1 }]}>{t('Classement des écoles', 'Klasman lekòl yo')}</Text>
             {state === 'live' ? <Text style={[arenaType.status, { color: C.muted }]}>{t('après chaque question', 'apre chak kesyon')}</Text> : null}
@@ -458,7 +458,7 @@ export default function ArenaWatchScreen() {
 
         {/* ── Who is playing for the followed school (the real five) ── */}
         {followed && followed.top5.length > 0 ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 20, backgroundColor: C.surface }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 16, backgroundColor: C.surface }}>
             <Users color={C.muted} size={18} />
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={[arenaType.name, { fontSize: 15, color: C.ink }]}>{t('Ceux qui comptent pour l’école', 'Sa yo ki konte pou lekòl la')}</Text>

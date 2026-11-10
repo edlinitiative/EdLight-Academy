@@ -158,7 +158,7 @@ export default function ArenaWarmUp({ isCreole, onExit }: { isCreole: boolean; o
               pressedScale={0.98}
               accessibilityRole="button"
               style={{
-                minHeight: 44, justifyContent: 'center', paddingHorizontal: 16, borderRadius: 999,
+                minHeight: 44, justifyContent: 'center', paddingHorizontal: 16, borderRadius: 12,
                 backgroundColor: colors.surfaceAlt,
               }}
             >
@@ -170,7 +170,7 @@ export default function ArenaWarmUp({ isCreole, onExit }: { isCreole: boolean; o
             pressedScale={0.98}
             accessibilityRole="button"
             style={{
-              flex: 1, paddingVertical: 14, borderRadius: 999,
+              flex: 1, paddingVertical: 14, borderRadius: 12,
               backgroundColor: colors.coral, alignItems: 'center',
             }}
           >

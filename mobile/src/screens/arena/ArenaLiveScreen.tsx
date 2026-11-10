@@ -236,7 +236,7 @@ export default function ArenaLiveScreen() {
       <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 12 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <View style={{ flex: 1, gap: 4 }}>
-            <Text style={[arenaType.name, { fontSize: 17, color: colors.ink, fontVariant: ['tabular-nums'] }]}>
+            <Text style={[arenaType.name, { color: colors.ink, fontVariant: ['tabular-nums'] }]}>
               {t('Question', 'Kesyon')} {(index ?? 0) + 1} / {tournament?.questionCount ?? '—'}
             </Text>
             {question?.category ? (
@@ -254,7 +254,7 @@ export default function ArenaLiveScreen() {
           {me ? (
             <View style={{
               flexDirection: 'row', alignItems: 'center', gap: 6, height: 40,
-              backgroundColor: C.surface, borderRadius: 999, paddingHorizontal: 14,
+              backgroundColor: C.surface, borderRadius: 12, paddingHorizontal: 14,
             }}>
               <Zap color={C.ink} size={16} />
               <ScoreCounter value={me.score} style={{ ...arenaType.num, color: C.ink }} />
@@ -302,14 +302,14 @@ export default function ArenaLiveScreen() {
             <StageEnter playKey={index ?? 0} index={0} springy style={{ marginBottom: 16 }}>
               {HAS_MATH.test(prompt) ? (
                 // KaTeX stays on the calm reading surface (legible math).
-                <View style={{ borderRadius: 24, padding: 20, backgroundColor: calm.surface }}>
+                <View style={{ borderRadius: 16, padding: 20, backgroundColor: calm.surface }}>
                   <MathText text={prompt} />
                 </View>
               ) : (
-                <View style={{ borderRadius: 24, padding: 22, gap: 10, backgroundColor: C.surfaceRaised }}>
+                <View style={{ borderRadius: 16, padding: 18, gap: 10, backgroundColor: C.surfaceRaised }}>
                   {/* The category already sits under "Question n / N" in the
                       head, so the card carries the prompt alone. */}
-                  <Text accessibilityRole="header" style={{ fontFamily: fonts.heading, fontSize: 22, lineHeight: 30, letterSpacing: -0.3, color: C.ink }}>{prompt}</Text>
+                  <Text accessibilityRole="header" style={{ fontFamily: fonts.heading, fontSize: 19, lineHeight: 26, letterSpacing: -0.3, color: C.ink }}>{prompt}</Text>
                 </View>
               )}
             </StageEnter>
@@ -502,7 +502,7 @@ function AnswerReceiptLine({ receipt, onRetry, t }: {
         onPress={onRetry}
         accessibilityRole="button"
         style={{
-          paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999,
+          paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12,
           backgroundColor: colors.dangerSoft,
         }}
       >
@@ -582,7 +582,7 @@ function AnswerOption({
         accessibilityState={{ disabled: locked, selected: isSelected }}
         style={{
           flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 72,
-          paddingHorizontal: 14, paddingVertical: 12, backgroundColor: bgColor, borderRadius: 18,
+          paddingHorizontal: 14, paddingVertical: 12, backgroundColor: bgColor, borderRadius: 14,
           opacity: locked && !isSelected && !revealed ? 0.6 : 1,
         }}
       >
@@ -590,9 +590,9 @@ function AnswerOption({
           width: 44, height: 44, borderRadius: 12,
           alignItems: 'center', justifyContent: 'center', backgroundColor: labelBg,
         }}>
-          <Text style={{ fontFamily: fonts.heading, fontSize: 17, color: labelText }}>{label}</Text>
+          <Text style={{ fontFamily: fonts.heading, fontSize: 15, color: labelText }}>{label}</Text>
         </View>
-        <Text style={{ fontFamily: fonts.medium, fontSize: 18, lineHeight: 24, color: textColor, flex: 1 }}>
+        <Text style={{ fontFamily: fonts.medium, fontSize: 16, lineHeight: 22, color: textColor, flex: 1 }}>
           {opt}
         </Text>
         {revealed && isCorrectOpt ? <Check color={C.success} size={22} /> : null}
@@ -635,7 +635,7 @@ function SchoolPosition({ line, isCreole }: {
 
   return (
     <View style={{
-      gap: 10, padding: 22, borderRadius: 24,
+      gap: 10, padding: 18, borderRadius: 16,
       backgroundColor: colors.surface, alignItems: 'center',
     }}>
       <Text style={[arenaType.label, { color: colors.muted }]}>
