@@ -113,7 +113,13 @@ export function compileQuestion(raw: any, ctx: { subject?: string; id?: string }
   const widgets: Record<string, Widget> = {};
   const steps: string[] = [];
 
-  const text = str(raw?.question) || str(raw?.text);
+  // A question that carries its figure also describes it inline as
+  // "[Figure: …]"; the figure block below draws it, so the sentence must not
+  // read it out a second time (281 questions; cleanQuestionText strips it on
+  // the other paths).
+  const figureDrawn = !!(raw?.has_figure && str(raw?.figure_description));
+  const rawText = str(raw?.question) || str(raw?.text);
+  const text = figureDrawn ? rawText.replace(/\s*\[Figure:\s*[^\]]*\]\s*(?=(?:[a-z]|\d+)\s?[).])/g, '\n').replace(/\s*\[Figure:\s*[^\]]*\]\s*/g, ' ').trim() : rawText;
   const prompt: Block[] = [];
 
   // ── The prompt, as a document with holes ────────────────────────────────

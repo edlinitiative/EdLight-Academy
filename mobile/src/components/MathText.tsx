@@ -41,6 +41,9 @@ const KATEX_HTML = (text: string, display: boolean, ink: string) => `
     font-size: 16px; line-height: 1.5; color: ${ink};
     background: transparent;
   }
+  /* The text's own line breaks ("a) …\nb) …") are kept; HTML would run the
+     sub-questions of a paper into one paragraph. */
+  #math { white-space: pre-line; }
   /* KaTeX inherits currentColor, so themed body color carries into the math. */
   .katex { font-size: ${display ? '1.15em' : '1.05em'}; color: ${ink}; }
 </style>

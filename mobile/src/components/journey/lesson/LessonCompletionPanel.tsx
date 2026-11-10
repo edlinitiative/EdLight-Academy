@@ -56,13 +56,16 @@ export default function LessonCompletionPanel({
   const tonal = { ...base, backgroundColor: colors.azureSoft };
   const primaryText = { fontFamily: fonts.bold, fontSize: 17, lineHeight: 22, color: '#ffffff', textAlign: 'center' as const, flexShrink: 1 };
   const tonalText = { ...primaryText, color: colors.azureInk };
-  const nextLabel = nextTitle ? `${t('Leçon suivante', 'Pwochen leson')} : ${nextTitle}` : null;
+  // The button says what it does; the next title is read out in its label
+  // ("simply please, too long", TestFlight Nov 2026).
+  const nextLabel = nextTitle ? t('Leçon suivante', 'Pwochen leson') : null;
+  const nextA11y = nextTitle ? `${t('Leçon suivante', 'Pwochen leson')} : ${nextTitle}` : undefined;
 
   const NextTonal = !isLast && nextLabel ? (
     <PressableScale
       onPress={() => { tapLight(); onNext(); }}
       accessibilityRole="button"
-      accessibilityLabel={nextLabel}
+      accessibilityLabel={nextA11y}
       style={{ ...tonal, marginTop: 12 }}
     >
       <Text style={tonalText} numberOfLines={2}>{nextLabel}</Text>
@@ -171,7 +174,7 @@ export default function LessonCompletionPanel({
           <PressableScale
             onPress={() => { tapLight(); onNext(); }}
             accessibilityRole="button"
-            accessibilityLabel={nextLabel}
+            accessibilityLabel={nextA11y}
             style={{ ...primary, marginTop: 20 }}
           >
             <Text style={primaryText} numberOfLines={2}>{nextLabel}</Text>

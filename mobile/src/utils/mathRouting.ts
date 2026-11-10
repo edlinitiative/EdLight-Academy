@@ -81,6 +81,9 @@ function repairFormula(f: string): string {
     }).join('');
   });
   s = s.replace(/\\([Ce])(?![a-zA-Z])/g, '$1');
+  // A function name typed without its backslash ("ln(x)", "e^{x} + cos x") is
+  // set in italics like a product of variables; give it back its \ln.
+  s = s.replace(/(?<![\\A-Za-z])(ln|log|exp|sin|cos|tan|cot|lim|arcsin|arccos|arctan|sinh|cosh|tanh)(?![A-Za-z])/g, '\\$1');
   s = s.replace(/\\text\s*\{([^{}]*\\[a-zA-Z][^{}]*)\}/g, '\\mathrm{$1}');
   return s;
 }

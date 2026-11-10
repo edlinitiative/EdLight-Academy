@@ -918,7 +918,7 @@ export function cleanQuestionText(text: any, number: any, isFirstInGroup: any) {
   }
 
   // ── 3. Strip [Figure: ...] tags (rendered separately by FigureRenderer) ──
-  t = t.replace(/\s*\[Figure:\s*[^\]]*\]\s*/g, ' ').trim();
+  t = t.replace(/\s*\[Figure:\s*[^\]]*\]\s*(?=(?:[a-z]|\d+)\s?[).])/g, '\n').replace(/\s*\[Figure:\s*[^\]]*\]\s*/g, ' ').trim();
 
   // ── 4. Strip redundant leading sub-number or sub-letter ──
   // "1. She has been..." → "She has been..."

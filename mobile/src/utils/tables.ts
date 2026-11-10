@@ -84,8 +84,11 @@ export function splitTables(text: string): TextBlock[] {
   const lines = s.split('\n');
   let prose: string[] = [];
   const flush = () => {
-    const t = prose.join('\n');
-    if (t.trim()) out.push({ kind: 'text', text: t.replace(/^\n+|\n+$/g, '') });
+    let t = prose.join('\n').replace(/^\n+|\n+$/g, '');
+    // Text that resumes after a table drops what the sentence left behind
+    // ("]. a) Combien…" → "a) Combien…").
+    if (out.length && out[out.length - 1].kind !== 'text') t = t.replace(/^[\s.,;:]+/, '');
+    if (t.trim()) out.push({ kind: 'text', text: t });
     prose = [];
   };
   for (let i = 0; i < lines.length;) {
