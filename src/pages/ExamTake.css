@@ -523,7 +523,9 @@ body.exam-take-live .section.exam-take { padding-top: 0 !important; }
 }
 .exam-take .exam-take__inline-blank {
   min-height: 46px;
-  margin: 0 0.35rem;
+  /* No left margin: the sentence's own space separates it mid-line, and a
+     blank that wraps to a new line starts flush with the text. */
+  margin: 0.2rem 0.35rem 0.2rem 0;
   padding: 0 0.9rem;
   border: 1.5px solid var(--border-strong, #c9d4e3);
   border-radius: 12px;

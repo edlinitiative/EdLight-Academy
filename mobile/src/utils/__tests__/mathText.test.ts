@@ -24,8 +24,9 @@ describe('mathToText', () => {
     expect(mathToText('$H_2O$')).toBe('H₂O');
   });
 
-  it('falls back for non-numeric scripts', () => {
-    expect(mathToText('$x^{a+b}$')).toBe('x^(a+b)');
+  it('writes letter scripts with Unicode letter forms in plain text, ^(…) beyond them', () => {
+    expect(mathToText('$x^{a+b}$')).toBe('xᵃ⁺ᵇ');
+    expect(mathToText('$x^{Q}$')).toBe('x^Q');
   });
 
   it('converts sqrt and common symbols', () => {

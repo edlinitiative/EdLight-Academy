@@ -26,6 +26,10 @@ import { proseSegments, stripProseMarks } from '../mobile/src/utils/proseMarks';
 import { balanceMathAcrossBlanks } from '../shared/mathBlanks';
 import { workedPart } from '../mobile/src/utils/scaffoldText';
 import { hasTable, splitTables } from '../mobile/src/utils/tables';
+import { examTextHtml } from '../src/utils/examTextHtml';
+
+/** --web: audit what the website shows (src/utils/examTextHtml) instead. */
+const WEB = process.argv.includes('--web');
 import { compileQuestion } from '../shared/question/compile';
 import { flattenQuestions, normalizeSubject } from '../shared/examUtils';
 
@@ -45,7 +49,8 @@ export function residue(shown: string): string | null {
   if (/\\[^a-zA-Z\s]/.test(shown) || /\\\s/.test(shown) || /\\$/.test(shown)) return 'backslash';
   // Braces around a set are content ("{0, 1, 2}", "ℝ ∖ {0}"); braces glued to
   // a symbol, or empty, are leftover LaTeX.
-  if (/[\w^_]\{|\{\s*\}/.test(shown)) return 'brace';
+  // "bar{(A;1),(B;1)}" is the French barycentre notation, content not markup.
+  if (/[\w^_]\{|\{\s*\}/.test(shown.replace(/\bbar\{/g, 'bar ('))) return 'brace';
   if (/(^|[^\s_])[\^_](?=[\w(])/.test(shown.replace(/_{2,}/g, ' '))) return 'script';
   return null;
 }
@@ -68,6 +73,7 @@ function katexSplit(text: string): { math: string[]; prose: string } {
 function checkMathText(ctx: Omit<Finding, 'surface' | 'problem' | 'shown'>, raw: string) {
   const text = String(raw ?? '');
   if (!text.trim()) return;
+  if (WEB) { checkWeb(ctx, text); return; }
   // MathText draws tables as grids: prose blocks as usual, each cell as runs.
   if (hasTable(text)) {
     for (const b of splitTables(text)) {
@@ -115,7 +121,23 @@ function checkMathTextBody(ctx: Omit<Finding, 'surface' | 'problem' | 'shown'>, 
   if (r) findings.push({ ...ctx, surface: 'plain', problem: r, shown: shown.slice(0, 200), source: text.slice(0, 300) });
 }
 
+/** The web's visible text: KaTeX's MathML source dropped, tags stripped. */
+function checkWeb(ctx: Omit<Finding, 'surface' | 'problem' | 'shown'>, text: string) {
+  const html = examTextHtml(text);
+  if (/katex-error/.test(html)) findings.push({ ...ctx, surface: 'web-katex', problem: 'katex-error', shown: (html.match(/katex-error[^>]*>([^<]*)/)?.[1] ?? '').slice(0, 160), source: text.slice(0, 300) });
+  const visible = html
+    .replace(/<annotation[\s\S]*?<\/annotation>/g, '')
+    .replace(/<span class="katex-mathml">[\s\S]*?<\/math><\/span>/g, '')
+    .replace(/<pre class="exam-code">[\s\S]*?<\/pre>/g, ' ')
+    .replace(/<\/?(?:sup|sub)>/g, ' ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+  const r = residue(visible) ?? (/^\s*\|.*\|\s*$/m.test(visible) && /^\s*\|?\s*:?-{2,}/m.test(visible) ? 'raw-table' : null);
+  if (r) findings.push({ ...ctx, surface: 'web', problem: r, shown: visible.slice(0, 200), source: text.slice(0, 300) });
+}
+
 function checkFlow(ctx: Omit<Finding, 'surface' | 'problem' | 'shown'>, runs: string[]) {
+  if (WEB) { balanceMathAcrossBlanks(runs).forEach((r, i) => checkWeb(ctx, i > 0 ? r.replace(/^\s*\(([^)]+)\)/, '') : r)); return; }
   const balanced = balanceMathAcrossBlanks(runs);
   balanced.forEach((run, i) => {
     let clean = run;
@@ -169,6 +191,7 @@ for (const file of fs.readdirSync(DIR).filter((f) => f.endsWith('.json'))) {
     }
     for (const w of Object.values<any>(compiled?.widgets ?? {})) {
       if (w?.label) {
+        if (WEB) { checkWeb(ctx('widget.label'), String(w.label)); continue; }
         const shown = runsShown(mathToRuns(String(w.label)));
         const r = residue(shown);
         if (r) findings.push({ ...ctx('widget.label'), surface: 'plain', problem: r, shown, source: String(w.label) });

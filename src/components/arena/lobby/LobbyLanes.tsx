@@ -1,12 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Swords, Users, Trophy, ChevronRight, Clock, Gift, CalendarCheck } from '../../icons';
+import { Swords, Users, Trophy, ChevronRight } from '../../icons';
 import SchoolCrest, { schoolColors } from '../../../arena-art/crest/SchoolCrest';
 import Avatar from '../../../arena-art/avatars/Avatar';
 import { DUEL_ROUND } from '../../../utils/duels';
 import { TEAM_SIZE } from '../../../../shared/leaderboardAgg';
 import type { OpenArena } from '../../../hooks/useOpenArena';
-import { DUEL_SECONDS_PER_QUESTION, DUEL_TIE_XP, DUEL_TTL_DAYS, DUEL_WIN_XP, type WeeklyEntry } from './rival';
+import { DUEL_SECONDS_PER_QUESTION, DUEL_WIN_XP, type WeeklyEntry } from './rival';
 import type { LobbySchool } from './LobbyStrip';
 
 /**
@@ -37,7 +37,6 @@ export default function LobbyLanes({
   const top = ladder.slice(0, 3);
   const meIdx = uid ? ladder.findIndex((e) => e.id === uid) : -1;
   const shown = meIdx >= 3 ? [...top, ladder[meIdx]] : top;
-  const Key = ({ n }: { n: number }) => <kbd className="ah-key" aria-hidden="true">{n}</kbd>;
 
   return (
     <section className="lb-lanes" aria-labelledby="lb-lanes-title">
@@ -46,14 +45,8 @@ export default function LobbyLanes({
         <div className="lb-lanes__grid">
           {/* 1 · Défier un ami */}
           <article className="lb-lane lb-lane--duel">
-            <p className="lb-lane__over"><Key n={1} /> <Swords size={18} aria-hidden="true" /> {t('1 contre 1', '1 kont 1')}</p>
-            <h3>{t('Défier un ami', 'Defye yon zanmi')}</h3>
-            <ul className="lb-facts">
-              <li><Clock size={16} aria-hidden="true" /> {t(`${DUEL_ROUND} questions, ${DUEL_SECONDS_PER_QUESTION} s chacune · ${duelMinutes} min`, `${DUEL_ROUND} kesyon, ${DUEL_SECONDS_PER_QUESTION} s chak · ${duelMinutes} min`)}</li>
-              <li><Gift size={16} aria-hidden="true" /> {t(`Le gagnant prend +${DUEL_WIN_XP} XP · égalité +${DUEL_TIE_XP} chacun`, `Gayan an pran +${DUEL_WIN_XP} XP · egalego +${DUEL_TIE_XP} chak`)}</li>
-              <li><CalendarCheck size={16} aria-hidden="true" /> {t(`Ton ami a ${DUEL_TTL_DAYS} jours pour répondre`, `Zanmi ou gen ${DUEL_TTL_DAYS} jou pou reponn`)}</li>
-            </ul>
-            <p className="lb-lane__text">{t('Tu joues d’abord, puis tu envoies le lien : mêmes questions, un seul essai chacun.', 'Ou jwe anvan, apre w voye lyen an : menm kesyon yo, yon sèl chans chak.')}</p>
+            <h3><Swords size={18} aria-hidden="true" /> {t('Défier un ami', 'Defye yon zanmi')}</h3>
+            <p className="lb-lane__text">{t(`${DUEL_ROUND} questions · ${duelMinutes} min · +${DUEL_WIN_XP} XP au gagnant`, `${DUEL_ROUND} kesyon · ${duelMinutes} min · +${DUEL_WIN_XP} XP pou gayan an`)}</p>
             <Link to={targets.duel.to} state={targets.duel.state} className="ah-cta ah-cta--btn lb-lane__go">
               {t('Lancer un défi', 'Lanse yon defi')} <ChevronRight size={18} aria-hidden="true" />
             </Link>
@@ -61,12 +54,7 @@ export default function LobbyLanes({
 
           {/* 2 · Dans mon école */}
           <article className="lb-lane lb-lane--school">
-            <p className="lb-lane__over"><Key n={2} /> <Users size={18} aria-hidden="true" /> {t('Ton école', 'Lekòl ou')}</p>
-            <h3>{t('Dans mon école', 'Nan lekòl mwen')}</h3>
-            <ul className="lb-facts">
-              <li><Clock size={16} aria-hidden="true" /> {t('Chaque partie compte · remis à zéro le lundi', 'Chak pati konte · rekòmanse chak lendi')}</li>
-              <li><Gift size={16} aria-hidden="true" /> {t(`Les ${TEAM_SIZE} meilleurs font le score de l’école`, `${TEAM_SIZE} pi bon yo fè nòt lekòl la`)}</li>
-            </ul>
+            <h3><Users size={18} aria-hidden="true" /> {t('Dans mon école', 'Nan lekòl mwen')}</h3>
             {school ? (
               shown.length > 0 ? (
                 <ol className="lb-ladder" aria-label={t(`Cette semaine à ${school.name}`, `Semèn sa a nan ${school.name}`)}>
@@ -80,10 +68,10 @@ export default function LobbyLanes({
                   ))}
                 </ol>
               ) : (
-                <p className="lb-lane__text">{t(`Personne de ${school.name} n’a encore joué cette semaine. Sois le premier.`, `Pèsonn nan ${school.name} poko jwe semèn sa a. Se ou ki pou premye.`)}</p>
+                <p className="lb-lane__text">{t('Personne n’a encore joué cette semaine.', 'Pèsonn poko jwe semèn sa a.')}</p>
               )
             ) : (
-              <p className="lb-lane__text">{t('Choisis ton école pour voir ton classement face à tes camarades.', 'Chwazi lekòl ou pou wè klasman ou devan kamarad ou yo.')}</p>
+              <p className="lb-lane__text">{t(`Les ${TEAM_SIZE} meilleurs font le score de l’école.`, `${TEAM_SIZE} pi bon yo fè nòt lekòl la.`)}</p>
             )}
             <Link to={targets.school.to} state={targets.school.state} className="ah-cta ah-cta--btn lb-lane__go">
               {t('Le classement', 'Klasman an')} <ChevronRight size={18} aria-hidden="true" />
@@ -92,18 +80,10 @@ export default function LobbyLanes({
 
           {/* 3 · Représenter mon école */}
           <article className={`lb-lane lb-lane--champ${open ? ' is-open' : ''}`}>
-            <p className="lb-lane__over">
-              <Key n={3} /> <Trophy size={18} aria-hidden="true" />
-              {open ? <><span className="ah-live" aria-hidden="true" />{t('Championnat ouvert', 'Chanpyona ouvè')}</> : t('National', 'Nasyonal')}
+            <h3><Trophy size={18} aria-hidden="true" /> {t('Représenter mon école', 'Reprezante lekòl mwen')}</h3>
+            <p className="lb-lane__text">
+              {open ? <><span className="ah-live" aria-hidden="true" />{t('Championnat ouvert', 'Chanpyona ouvè')}{open.schools > 0 ? ` · ${t(`${open.schools} école${open.schools > 1 ? 's' : ''} inscrite${open.schools > 1 ? 's' : ''}`, `${open.schools} lekòl enskri`)}${open.players > 0 ? ` · ${open.players} ${t('joueurs', 'jwè')}` : ''}` : ''}</> : champLine}
             </p>
-            <h3>{t('Représenter mon école', 'Reprezante lekòl mwen')}</h3>
-            <ul className="lb-facts">
-              <li><CalendarCheck size={16} aria-hidden="true" /> {champLine}</li>
-              {open && open.schools > 0 && (
-                <li><Users size={16} aria-hidden="true" /> {t(`${open.schools} école${open.schools > 1 ? 's' : ''} inscrite${open.schools > 1 ? 's' : ''}`, `${open.schools} lekòl enskri`)}{open.players > 0 ? ` · ${open.players} ${t('joueurs', 'jwè')}` : ''}</li>
-              )}
-              <li><Gift size={16} aria-hidden="true" /> {t(`Les ${TEAM_SIZE} meilleurs élèves portent l’école dans la course`, `${TEAM_SIZE} pi bon elèv yo pote lekòl la nan kous la`)}</li>
-            </ul>
             {school && (
               <div className="lb-lane__school">
                 <SchoolCrest name={school.name} size={36} />

@@ -1,5 +1,10 @@
 import React, { useMemo, useEffect, useRef, useState } from 'react';
 import 'katex/dist/katex.min.css';
+import { examTextHtml } from '../utils/examTextHtml';
+import { mathToText } from '../../shared/display/mathText';
+
+/** SVG <text> cannot hold markup: LaTeX-ish labels become readable text. */
+const svgText = (v: React.ReactNode): React.ReactNode => (typeof v === 'string' ? mathToText(v) : v);
 
 // ─── Lazy KaTeX ─────────────────────────────────────────────────────────────
 let katexModule = null;
@@ -124,35 +129,9 @@ function looksLikeProse(desc) {
 
 // ─── Utility: render inline math ────────────────────────────────────────────
 
+/** Figure text through the shared exam renderer (repairs, scripts, KaTeX). */
 function InlineMath({ text }) {
-  const ref = useRef(null);
-  const [, setReady] = useState(false);
-
-  useEffect(() => {
-    ensureKaTeX(() => setReady(true));
-  }, []);
-
-  useEffect(() => {
-    if (!ref.current || !katexModule) return;
-    // Split text on $...$ and render math segments
-    const parts = text.split(/(\$[^$]+\$)/g);
-    ref.current.innerHTML = '';
-    parts.forEach((part) => {
-      if (part.startsWith('$') && part.endsWith('$')) {
-        const span = document.createElement('span');
-        try {
-          katexModule.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false, output: 'htmlAndMathml' });
-        } catch {
-          span.textContent = part;
-        }
-        ref.current.appendChild(span);
-      } else {
-        ref.current.appendChild(document.createTextNode(part));
-      }
-    });
-  }, [text, katexModule]);
-
-  return <span ref={ref}>{text.replace(/\$[^$]+\$/g, '…')}</span>;
+  return <span dangerouslySetInnerHTML={{ __html: examTextHtml(String(text ?? '')) }} />;
 }
 
 // ─── Table Renderer ─────────────────────────────────────────────────────────
@@ -581,8 +560,8 @@ function GraphFigure({ description }) {
         <text x="32" y="205" fontSize="11" textAnchor="end" fill="#666">O</text>
 
         {/* Axis labels */}
-        {labels.x && <text x="270" y="210" fontSize="10" fill="#333" textAnchor="end">{labels.x}</text>}
-        {labels.y && <text x="15" y="18" fontSize="10" fill="#333" textAnchor="start">{labels.y}</text>}
+        {labels.x && <text x="270" y="210" fontSize="10" fill="#333" textAnchor="end">{svgText(labels.x)}</text>}
+        {labels.y && <text x="15" y="18" fontSize="10" fill="#333" textAnchor="start">{svgText(labels.y)}</text>}
 
         {/* Curves */}
         {curves.length === 0 && (
@@ -596,7 +575,7 @@ function GraphFigure({ description }) {
             <g key={i}>
               <path d={path} fill="none" stroke={color} strokeWidth="2" />
               {curve.name && (
-                <text x={250} y={30 + i * 18} fontSize="10" fill={color} fontWeight="600">{curve.name}</text>
+                <text x={250} y={30 + i * 18} fontSize="10" fill={color} fontWeight="600">{svgText(curve.name)}</text>
               )}
             </g>
           );
@@ -880,9 +859,9 @@ function CoordinateSVG({ description }) {
         {[-3, -2, -1, 1, 2, 3].map(n => (
           <g key={n}>
             <line x1={120 + n * 22} y1="117" x2={120 + n * 22} y2="123" stroke="#333" strokeWidth="1" />
-            <text x={120 + n * 22} y="135" fontSize="8" textAnchor="middle" fill="#666">{n}</text>
+            <text x={120 + n * 22} y="135" fontSize="8" textAnchor="middle" fill="#666">{svgText(n)}</text>
             <line x1="117" y1={120 - n * 22} x2="123" y2={120 - n * 22} stroke="#333" strokeWidth="1" />
-            <text x="110" y={123 - n * 22} fontSize="8" textAnchor="end" fill="#666">{n}</text>
+            <text x="110" y={123 - n * 22} fontSize="8" textAnchor="end" fill="#666">{svgText(n)}</text>
           </g>
         ))}
       </svg>
@@ -1044,7 +1023,7 @@ function TriangleSVG({ description }) {
               fill="none" stroke="#333" strokeWidth="1" />
             {/* H point */}
             <circle cx={Hx} cy={Hy} r="3" fill="#e63946" />
-            <text x={Hx + 2} y={Hy + 16} fontSize="13" fontWeight="600" fill="#e63946">{footLabel}</text>
+            <text x={Hx + 2} y={Hy + 16} fontSize="13" fontWeight="600" fill="#e63946">{svgText(footLabel)}</text>
           </g>
         )}
 
@@ -1084,9 +1063,9 @@ function TriangleSVG({ description }) {
         )}
 
         {/* Vertex labels */}
-        <text x={Ax - 16} y={Ay + 6} fontSize="14" fontWeight="600" fill="#333">{vA}</text>
-        <text x={Bx + 6} y={By + 6} fontSize="14" fontWeight="600" fill="#333">{vB}</text>
-        <text x={Cx + 6} y={Cy - 6} fontSize="14" fontWeight="600" fill="#333">{vC}</text>
+        <text x={Ax - 16} y={Ay + 6} fontSize="14" fontWeight="600" fill="#333">{svgText(vA)}</text>
+        <text x={Bx + 6} y={By + 6} fontSize="14" fontWeight="600" fill="#333">{svgText(vB)}</text>
+        <text x={Cx + 6} y={Cy - 6} fontSize="14" fontWeight="600" fill="#333">{svgText(vC)}</text>
 
         {/* Vertex dots */}
         <circle cx={Ax} cy={Ay} r="3" fill="#333" />
@@ -1173,7 +1152,7 @@ function PlaneMirrorSVG({ description }) {
 
         {/* Angle value if known */}
         {angle && (
-          <text x={mx - 54} y={hitY + 18} fontSize="10" fill="#333">{angle}</text>
+          <text x={mx - 54} y={hitY + 18} fontSize="10" fill="#333">{svgText(angle)}</text>
         )}
 
         {/* Labels */}
@@ -1239,7 +1218,7 @@ function TwoMirrorsSVG({ description }) {
         <path d={`M${apex.x - 22},${apex.y - 18} A28,28 0 0,1 ${apex.x + 22},${apex.y - 18}`}
           fill="none" stroke="#f59e0b" strokeWidth="1.2" />
         <text x={apex.x - 6} y={apex.y - 24} fontSize="11" fill="#f59e0b"
-          fontWeight="600" textAnchor="middle">{angleBetween}</text>
+          fontWeight="600" textAnchor="middle">{svgText(angleBetween)}</text>
 
         {/* Incident ray → hit1 on M1 */}
         <line x1={30} y1={90} x2={hit1.x} y2={hit1.y}
@@ -1264,8 +1243,8 @@ function TwoMirrorsSVG({ description }) {
         <circle cx={hit2.x} cy={hit2.y} r="2.5" fill="#333" />
 
         {/* Mirror labels */}
-        <text x={m1End.x - 8} y={m1End.y - 6} fontSize="12" fontWeight="600" fill="#333">{m1Label}</text>
-        <text x={m2End.x - 2} y={m2End.y - 6} fontSize="12" fontWeight="600" fill="#333">{m2Label}</text>
+        <text x={m1End.x - 8} y={m1End.y - 6} fontSize="12" fontWeight="600" fill="#333">{svgText(m1Label)}</text>
+        <text x={m2End.x - 2} y={m2End.y - 6} fontSize="12" fontWeight="600" fill="#333">{svgText(m2Label)}</text>
 
         {/* Ray labels */}
         <text x={22} y={82} fontSize="9" fill="#e63946">incident</text>
@@ -1327,7 +1306,7 @@ function RefractionSVG({ description }) {
 
           {/* Media labels */}
           <text x={240} y={surfY1 - 8} fontSize="10" fill="#333">Air</text>
-          <text x={240} y={surfY1 + 20} fontSize="10" fill="#457b9d" fontWeight="600">{bottomMedium}</text>
+          <text x={240} y={surfY1 + 20} fontSize="10" fill="#457b9d" fontWeight="600">{svgText(bottomMedium)}</text>
           <text x={240} y={surfY2 + 18} fontSize="10" fill="#333">Air</text>
 
           {/* Lateral displacement indicator */}
@@ -1387,8 +1366,8 @@ function RefractionSVG({ description }) {
         <circle cx={hitX} cy={surfY} r="2.5" fill="#333" />
 
         {/* Media labels */}
-        <text x={230} y={surfY - 14} fontSize="11" fill="#333" fontWeight="600">{topMedium}</text>
-        <text x={230} y={surfY + 18} fontSize="11" fill="#457b9d" fontWeight="600">{bottomMedium}</text>
+        <text x={230} y={surfY - 14} fontSize="11" fill="#333" fontWeight="600">{svgText(topMedium)}</text>
+        <text x={230} y={surfY + 18} fontSize="11" fill="#457b9d" fontWeight="600">{svgText(bottomMedium)}</text>
 
         {/* Ray labels */}
         <text x={52} y={36} fontSize="9" fill="#e63946">incident</text>
@@ -1542,7 +1521,7 @@ function InclinedPlaneSVG({ description }) {
         <path d={`M${Bx - 40},${By} A40,40 0 0,1 ${Bx - 30},${By - 30}`}
           fill="none" stroke="#e63946" strokeWidth="1.3" />
         <text x={Bx - 52} y={By - 14} fontSize="12" fill="#e63946"
-          fontWeight="600">{angleLabel}</text>
+          fontWeight="600">{svgText(angleLabel)}</text>
 
         {/* Object on slope (small box) */}
         <rect
@@ -1640,7 +1619,7 @@ function CircleSVG({ description }) {
 
         {/* Center point */}
         <circle cx={cx} cy={cy} r="2.5" fill="#333" />
-        <text x={cx + 6} y={cy - 6} fontSize="13" fontWeight="600" fill="#333">{centerLabel}</text>
+        <text x={cx + 6} y={cy - 6} fontSize="13" fontWeight="600" fill="#333">{svgText(centerLabel)}</text>
 
         {/* Radius line */}
         <line x1={cx} y1={cy} x2={p1.x} y2={p1.y}
@@ -1671,7 +1650,7 @@ function CircleSVG({ description }) {
 
         {/* Third point on circle (for inscribed angles, etc.) */}
         <circle cx={p3.x} cy={p3.y} r="3" fill="#333" />
-        <text x={p3.x - 14} y={p3.y - 6} fontSize="13" fontWeight="600" fill="#333">{p3Label}</text>
+        <text x={p3.x - 14} y={p3.y - 6} fontSize="13" fontWeight="600" fill="#333">{svgText(p3Label)}</text>
 
         {/* Lines from P3 to P1 and P2 (inscribed angle) */}
         {hasInscribedAngle && (
@@ -1685,9 +1664,9 @@ function CircleSVG({ description }) {
 
         {/* P1 and P2 points */}
         <circle cx={p1.x} cy={p1.y} r="3" fill="#333" />
-        <text x={p1.x + 6} y={p1.y + 4} fontSize="13" fontWeight="600" fill="#333">{p1Label}</text>
+        <text x={p1.x + 6} y={p1.y + 4} fontSize="13" fontWeight="600" fill="#333">{svgText(p1Label)}</text>
         <circle cx={p2.x} cy={p2.y} r="3" fill="#333" />
-        <text x={p2.x - 16} y={p2.y + 4} fontSize="13" fontWeight="600" fill="#333">{p2Label}</text>
+        <text x={p2.x - 16} y={p2.y + 4} fontSize="13" fontWeight="600" fill="#333">{svgText(p2Label)}</text>
       </svg>
       <div className="figure-render__geo-desc"><InlineMath text={description} /></div>
     </div>
@@ -1762,14 +1741,14 @@ function RightTriangleSVG({ description }) {
           <g>
             <circle cx={(RVx + TLx) / 2} cy={(RVy + TLy) / 2} r="3" fill="#457b9d" />
             <text x={(RVx + TLx) / 2 - 16} y={(RVy + TLy) / 2 + 4}
-              fontSize="12" fontWeight="600" fill="#457b9d">{midpoints[0]}</text>
+              fontSize="12" fontWeight="600" fill="#457b9d">{svgText(midpoints[0])}</text>
           </g>
         )}
         {midpoints.length >= 2 && (
           <g>
             <circle cx={(TLx + BRx) / 2} cy={(TLy + BRy) / 2} r="3" fill="#457b9d" />
             <text x={(TLx + BRx) / 2 + 6} y={(TLy + BRy) / 2 - 4}
-              fontSize="12" fontWeight="600" fill="#457b9d">{midpoints[1]}</text>
+              fontSize="12" fontWeight="600" fill="#457b9d">{svgText(midpoints[1])}</text>
             <line x1={(RVx + TLx) / 2} y1={(RVy + TLy) / 2}
               x2={(TLx + BRx) / 2} y2={(TLy + BRy) / 2}
               stroke="#457b9d" strokeWidth="1" strokeDasharray="5,3" />
@@ -1777,9 +1756,9 @@ function RightTriangleSVG({ description }) {
         )}
 
         {/* Vertex labels */}
-        <text x={RVx - 5} y={RVy + 18} fontSize="14" fontWeight="600" fill="#333">{labelBL}</text>
-        <text x={BRx + 6} y={BRy + 6} fontSize="14" fontWeight="600" fill="#333">{labelBR}</text>
-        <text x={TLx - 16} y={TLy - 6} fontSize="14" fontWeight="600" fill="#333">{labelTL}</text>
+        <text x={RVx - 5} y={RVy + 18} fontSize="14" fontWeight="600" fill="#333">{svgText(labelBL)}</text>
+        <text x={BRx + 6} y={BRy + 6} fontSize="14" fontWeight="600" fill="#333">{svgText(labelBR)}</text>
+        <text x={TLx - 16} y={TLy - 6} fontSize="14" fontWeight="600" fill="#333">{svgText(labelTL)}</text>
 
         {/* Vertex dots */}
         <circle cx={RVx} cy={RVy} r="3" fill="#333" />
@@ -1902,7 +1881,7 @@ function MatrixSVG({ description }) {
     <div className="figure-render figure-render--geometry">
       <svg viewBox={`0 0 ${matW + 140} ${matH + 60}`} className="figure-render__geo-svg">
         {/* Matrix name */}
-        <text x={ox - 30} y={oy + matH / 2 + 6} fontSize="16" fontWeight="700" fill="#457b9d" fontStyle="italic">{matName}</text>
+        <text x={ox - 30} y={oy + matH / 2 + 6} fontSize="16" fontWeight="700" fill="#457b9d" fontStyle="italic">{svgText(matName)}</text>
         <text x={ox - 10} y={oy + matH / 2 + 6} fontSize="13" fill="#333">=</text>
         {/* Left bracket */}
         <path d={`M${ox + 12},${oy} L${ox + 2},${oy} L${ox + 2},${oy + matH} L${ox + 12},${oy + matH}`}
@@ -2114,7 +2093,7 @@ function PedigreeSVG({ description }) {
         <g key={ind.label}>
           <rect x={ind.x - sz} y={ind.y - sz} width={sz * 2} height={sz * 2}
             fill={fill} stroke={stroke} strokeWidth="1.5" />
-          <text x={ind.x} y={ind.y + sz + 14} fontSize="9" textAnchor="middle" fill="#666">{ind.label}</text>
+          <text x={ind.x} y={ind.y + sz + 14} fontSize="9" textAnchor="middle" fill="#666">{svgText(ind.label)}</text>
         </g>
       );
     }
@@ -2122,7 +2101,7 @@ function PedigreeSVG({ description }) {
       <g key={ind.label}>
         <circle cx={ind.x} cy={ind.y} r={sz}
           fill={fill} stroke={stroke} strokeWidth="1.5" />
-        <text x={ind.x} y={ind.y + sz + 14} fontSize="9" textAnchor="middle" fill="#666">{ind.label}</text>
+        <text x={ind.x} y={ind.y + sz + 14} fontSize="9" textAnchor="middle" fill="#666">{svgText(ind.label)}</text>
       </g>
     );
   }
@@ -2132,7 +2111,7 @@ function PedigreeSVG({ description }) {
       <svg viewBox="0 0 320 230" className="figure-render__geo-svg">
         {/* Generation labels */}
         {['I', 'II', 'III'].map((g, i) => (
-          <text key={g} x={12} y={34 + i * rowH} fontSize="12" fontWeight="700" fill="#457b9d">{g}</text>
+          <text key={g} x={12} y={34 + i * rowH} fontSize="12" fontWeight="700" fill="#457b9d">{svgText(g)}</text>
         ))}
 
         {/* Mating lines Gen I */}
@@ -2207,7 +2186,7 @@ function VennSVG({ description }) {
       <svg viewBox="0 0 300 240" className="figure-render__geo-svg">
         {/* Title */}
         {title && (
-          <text x={cx} y={18} fontSize="12" fontWeight="700" textAnchor="middle" fill="#333">{title}</text>
+          <text x={cx} y={18} fontSize="12" fontWeight="700" textAnchor="middle" fill="#333">{svgText(title)}</text>
         )}
         {/* Circles */}
         {circles.map((c, i) => (
@@ -2271,7 +2250,7 @@ function BenzeneSVG({ description }) {
         {subLabel && (
           <g>
             <line x1={pts[0][0]} y1={pts[0][1]} x2={pts[0][0]} y2={pts[0][1] - 25} stroke="#e63946" strokeWidth="1.5" />
-            <text x={pts[0][0]} y={pts[0][1] - 30} fontSize="11" textAnchor="middle" fill="#e63946" fontWeight="600">{subLabel}</text>
+            <text x={pts[0][0]} y={pts[0][1] - 30} fontSize="11" textAnchor="middle" fill="#e63946" fontWeight="600">{svgText(subLabel)}</text>
           </g>
         )}
       </svg>
@@ -2667,7 +2646,7 @@ function MusicFigure({ description }) {
             <line key={y} x1="0" y1={y} x2="400" y2={y} stroke="currentColor" strokeWidth="0.8" opacity="0.35" />
           ))}
           {clef && (
-            <text x="8" y="32" fontSize="28" fill="currentColor" opacity="0.25">{clef}</text>
+            <text x="8" y="32" fontSize="28" fill="currentColor" opacity="0.25">{svgText(clef)}</text>
           )}
         </svg>
       </div>

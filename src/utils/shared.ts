@@ -1,14 +1,13 @@
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
+import { examTextHtml } from './examTextHtml';
+export { examTextHtml };
 
 /** React hook — returns true once KaTeX is available. Always true since KaTeX is bundled. */
 export function useKatex(): boolean {
   return true;
 }
 
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
 
 /**
  * Render text containing LaTeX math to an HTML string for dangerouslySetInnerHTML.
@@ -23,28 +22,7 @@ function escapeHtml(s: string): string {
  */
 export function renderWithKatex(text: string, _katexReady?: boolean) {
   if (!text) return { __html: '' };
-  const src = String(text);
-  // A single regex matching any supported math span; alternatives capture the
-  // expression: $$display$$ (g1), \(inline\) (g2), $inline$ (g3).
-  const mathRe = /\$\$([\s\S]+?)\$\$|\\\((.+?)\\\)|(?<!\$)\$(?!\$)(.+?)(?<!\$)\$(?!\$)/g;
-  const opts = { throwOnError: false, output: 'htmlAndMathml' as const };
-
-  let out = '';
-  let last = 0;
-  let m: RegExpExecArray | null;
-  while ((m = mathRe.exec(src)) !== null) {
-    out += escapeHtml(src.slice(last, m.index));          // plain text before math → escaped
-    const display = m[1] !== undefined;
-    const expr = m[1] ?? m[2] ?? m[3] ?? '';
-    try {
-      out += katex.renderToString(expr, display ? { ...opts, displayMode: true } : opts);
-    } catch {
-      out += escapeHtml(m[0]);                            // bad LaTeX → show literally, escaped
-    }
-    last = mathRe.lastIndex;
-  }
-  out += escapeHtml(src.slice(last));                     // trailing plain text → escaped
-  return { __html: out };
+  return { __html: examTextHtml(String(text)) };
 }
 
 // ─── Subject colours / icons ─────────────────────────────────────────────────

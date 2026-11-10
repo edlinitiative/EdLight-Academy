@@ -92,11 +92,10 @@ export default function ArenaJoin({
         <div className="aj-card">
           <header className="aj-head">
             <div>
-              <p className="aj-over">{t('Rejoins l’Arène', 'Antre nan Arèn nan')}</p>
               <h2 id="aj-title" className="aj-title">
                 {step === 3
                   ? t(`Encore ${missing} pour que ${school} entre au classement`, `Ankò ${missing} pou ${school} antre nan klasman an`)
-                  : t('Ton école dans la course, en trois étapes', 'Lekòl ou nan kous la, an twa etap')}
+                  : t('Mets ton école dans la course', 'Mete lekòl ou nan kous la')}
               </h2>
             </div>
             <ol className="aj-steps" aria-label={t('Étapes', 'Etap yo')}>
@@ -112,7 +111,7 @@ export default function ArenaJoin({
           {step === 1 && (
             <div className="aj-body aj-body--row">
               <div className="aj-copy">
-                <p>{t('Tu peux jouer sans compte. Pour que tes points montent ton école dans la ville, connecte-toi : ça prend dix secondes avec Google.', 'Ou ka jwe san kont. Pou pwen ou fè lekòl ou monte nan vil la, konekte : sa pran dis segonn ak Google.')}</p>
+                <p>{t('Tes points comptent pour ton école.', 'Pwen ou konte pou lekòl ou.')}</p>
               </div>
               <button type="button" className="aj-go" onClick={onSignIn}>
                 <LogIn size={18} aria-hidden="true" /> {t('Se connecter', 'Konekte')}
@@ -123,7 +122,7 @@ export default function ArenaJoin({
           {step === 2 && (
             <div className="aj-body aj-body--pick">
               <div className="aj-copy">
-                <p>{t('Cherche ton école. Si elle n’y est pas encore, ajoute-la : son bâtiment apparaîtra dans la ville.', 'Chèche lekòl ou. Si l poko la, ajoute l : batiman l ap parèt nan vil la.')}</p>
+                <p>{t('Cherche-la, ou ajoute-la.', 'Chèche l, oswa ajoute l.')}</p>
                 {saving && <p className="aj-saving">{t('Enregistrement…', 'N ap anrejistre…')}</p>}
                 {changing && school && (
                   <button type="button" className="aj-link" onClick={() => setChanging(false)}>{t(`Garder ${school}`, `Kenbe ${school}`)}</button>

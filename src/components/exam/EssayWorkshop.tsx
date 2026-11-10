@@ -6,6 +6,7 @@ import {
 } from '../../../shared/essayWorkshop';
 import { buildEssayGradeBody } from '../../../shared/essayRegrade';
 import { classifyEssayResponse, leanEssayFeedback, ESSAY_GRADE_TIMEOUT_MS } from '../../../shared/essayGradeCore';
+import { mathToText } from '../../../shared/display/mathText';
 import './EssayWorkshop.css';
 
 /**
@@ -156,14 +157,14 @@ export default function EssayWorkshop({ question, index, value, onChange, disabl
                 <span className="ew-node" aria-hidden="true">{ok ? '✓' : i + 1}</span>
                 <div className="ew-card ew-slot__card">
                   <div className="ew-slot__top">
-                    <span className="ew-h3">{`${i + 1}. ${tr(s.label)}`}</span>
+                    <span className="ew-h3">{`${i + 1}. ${mathToText(tr(s.label))}`}</span>
                     {ok ? <span className="ew-valid">{t('Validé', 'Valide')}</span> : (
                       <button type="button" className="ew-stuck" onClick={() => setStuck(stuck === s.key ? null : s.key)} aria-expanded={stuck === s.key}>
                         {t('Je bloque', 'Mwen bloke')}
                       </button>
                     )}
                   </div>
-                  <p className="ew-hint">{tr(s.hint)}</p>
+                  <p className="ew-hint">{mathToText(tr(s.hint))}</p>
                   {stuck === s.key && slotStarter(s.key) ? (
                     <button
                       type="button"
@@ -213,7 +214,7 @@ export default function EssayWorkshop({ question, index, value, onChange, disabl
               <div className="ew-planlist">
                 {state.plan.problematique.trim() ? <p className="ew-problem">{state.plan.problematique.trim()}</p> : null}
                 {planned.map((s, i) => (
-                  <p key={s.key}><span className="ew-num">{i + 1}</span><b>{tr(s.label)} :</b> {String(state.plan.ideas[s.key]).trim()}</p>
+                  <p key={s.key}><span className="ew-num">{i + 1}</span><b>{mathToText(tr(s.label))} :</b> {String(state.plan.ideas[s.key]).trim()}</p>
                 ))}
               </div>
             ) : null}
@@ -241,7 +242,7 @@ export default function EssayWorkshop({ question, index, value, onChange, disabl
             {checklist.map((c) => (
               <li key={c.key} className={c.ok ? 'is-ok' : ''}>
                 <span className="ew-dot" aria-hidden="true">{c.ok ? '✓' : ''}</span>
-                {tr(c.label)}<span className="ew-sr">{c.ok ? t(' — fait', ' — fèt') : t(' — pas encore', ' — poko')}</span>
+                {mathToText(tr(c.label))}<span className="ew-sr">{c.ok ? t(' — fait', ' — fèt') : t(' — pas encore', ' — poko')}</span>
               </li>
             ))}
           </ul>

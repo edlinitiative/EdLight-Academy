@@ -4,6 +4,10 @@ import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
+import { katexSource, prose } from '../../shared/display/mathRouting';
+import { repairLatex } from '../../shared/display/mathText';
+import { hasTable } from '../../shared/display/tables';
+import { examTextHtml } from '../utils/examTextHtml';
 
 /**
  * Deduplicate consecutive identical lines in text.
@@ -34,7 +38,12 @@ function formatSubParts(text) {
   // Only insert a newline when the marker is preceded by non-whitespace
   // (i.e., it's embedded in a run of text, not already on its own line).
   // Use a lookbehind for a non-newline character before the marker.
-  return text.replace(/([^\n])\s+(?=(?:[a-z]|[0-9]{1,2})\)\s)/gi, '$1\n\n');
+  // Never inside a formula: "\\cos y) = 1" and "\\ln x) dx" are not sub-parts,
+  // and a paragraph break there split the formula in two.
+  return text
+    .split(/(\$\$[\s\S]*?\$\$|\$[^$\n]*\$)/)
+    .map((part, i) => (i % 2 === 1 ? part : part.replace(/([^\n])\s+(?=(?:[a-z]|[0-9]{1,2})\)\s)/gi, '$1\n\n')))
+    .join('');
 }
 
 /**
@@ -57,16 +66,30 @@ export default function InstructionRenderer({ text, inline }: InstructionRendere
   // 1. Deduplicate consecutive identical lines (e.g., repeated instructions)
   processed = deduplicateLines(processed);
 
-  // 2. Format sub-part markers (a), b), c), etc.) onto their own lines
+  const Wrapper = inline ? 'span' : 'div';
+
+  // 2. Tables (pipe, bracketed "[Table: …]" or described in words) and drawn
+  //    structures: the shared exam renderer draws them, as on the phone.
+  //    Before the sub-part rule below, which would split "| a) … |" rows.
+  if (hasTable(processed)) {
+    return <Wrapper className="instruction-renderer" dangerouslySetInnerHTML={{ __html: examTextHtml(processed) }} />;
+  }
+
+  // 3. Format sub-part markers (a), b), c), etc.) onto their own lines
   processed = formatSubParts(processed);
 
-  const Wrapper = inline ? 'span' : 'div';
+  // 4. The same repairs as every other exam surface (shared/display): JSON-
+  //    damaged \frac, orphaned or missing `$`, bare formulas, prose words in
+  //    formulas, chemistry double indices, `\ldots` blanks. Markdown and
+  //    remark-math then render the repaired source.
+  // Text with no formula still gets its prose repaired (\\ldots blanks, x_G).
+  processed = katexSource(processed) ?? prose(repairLatex(processed));
 
   return (
     <Wrapper className="instruction-renderer">
       <ReactMarkdown 
         remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[rehypeKatex]}
+        rehypePlugins={[[rehypeKatex, { strict: 'ignore', throwOnError: false, macros: { '\\frac': '\\dfrac' } }]]}
         components={{
           // When inline, render <p> as <span> to avoid block-level nesting issues
           p: ({node, ...props}) => inline

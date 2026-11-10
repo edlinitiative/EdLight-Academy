@@ -595,3 +595,105 @@
 .xp.xp-take .exam-take__nav-gap-label,
 .xp.xp-take .exam-take__nav-gap-label small { color: var(--xp-amber-ink); }
 .xp.xp-take .exam-take__modal-jump-more { color: var(--xp-muted); font-size: 14px; }
+
+/* ── No pills (Ted, Nov 2026): status reads as text, notices as boxes ──────
+   Counts, points, the timer and cover tags were 999px capsules; they are now
+   words in their colour. The anonymous-save notice keeps its tint as a box. */
+.exam-take .exam-take__timer-badge,
+.exam-take .exam-take__timer,
+.exam-take .exam-take__nav-section-badge,
+.exam-take .exam-take__question-points,
+.exam-take .exam-cover__badge,
+.exam-take .exam-cover__section-qty,
+.xp.xp-take .exam-take__timer-badge,
+.xp.xp-take .exam-take__timer,
+.xp.xp-take .exam-take__nav-section-badge,
+.xp.xp-take .exam-take__question-points,
+.xp.xp-take .exam-cover__badge,
+.xp.xp-take .exam-cover__section-qty {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  min-height: 0;
+  height: auto;
+}
+.xp.xp-take .exam-take__timer-badge,
+.xp.xp-take .exam-take__timer {
+  color: var(--xp-ink);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.xp.xp-take .exam-take__question-points { color: var(--xp-muted); font-weight: 700; }
+.xp.xp-take .exam-take__nav-section-badge,
+.xp.xp-take .exam-cover__section-qty { color: var(--xp-muted); font-weight: 700; font-variant-numeric: tabular-nums; }
+.xp.xp-take .exam-cover__badge { color: var(--xp-azure); font-weight: 700; }
+.exam-take .exam-take__save,
+.xp.xp-take .exam-take__save { border-radius: 12px; }
+[data-theme="dark"] .xp.xp-take .exam-take__timer,
+[data-theme="dark"] .xp.xp-take .exam-take__timer-badge,
+.xp.xp-take .exam-take__timer.exam-take__timer--warning,
+.exam-take .exam-take__timer.exam-take__timer--warning { background: none; }
+/* Low time: the figure itself turns rose, no capsule behind it. */
+.xp.xp-take .exam-take__timer.exam-take__timer--warning { color: var(--xp-rose-ink); }
+/* The "‹ Examen" back control is a link, not a tinted capsule. */
+.xp.xp-take .exam-take__back-btn,
+.xp.xp-take .exam-take__back-btn:hover,
+.exam-take .exam-take__back-btn {
+  background: none;
+  border: 0;
+  box-shadow: none;
+  padding-left: 0;
+  padding-right: 4px;
+}
+.xp.xp-take .exam-take__back-btn:hover { color: var(--xp-azure); text-decoration: underline; text-underline-offset: 3px; }
+
+/* Navigator header, compact (Ted, Nov 2026: "too big", "repetition"): one row,
+   title left and count right, a thin bar, then the unanswered count as a link
+   rather than a second tinted box restating it. */
+.xp.xp-take .exam-take__nav-progress {
+  display: grid; grid-template-columns: 1fr auto; align-items: baseline;
+  column-gap: 8px; row-gap: 8px;
+}
+.xp.xp-take .exam-take__nav-progress-title { grid-column: 1; color: var(--xp-ink); font: 700 15px/1.3 var(--xp-body); }
+.xp.xp-take .exam-take__nav-progress-num { grid-column: 2; font: 600 15px/1.3 var(--xp-body); color: var(--xp-muted); font-variant-numeric: tabular-nums; }
+.xp.xp-take .exam-take__nav-progress-num b { font-size: 15px; font-weight: 800; letter-spacing: 0; }
+.xp.xp-take .exam-take__nav-progress-detail { display: none; }
+.xp.xp-take .exam-take__nav-progress .xp-bar { grid-column: 1 / -1; }
+.xp.xp-take .exam-take__nav-gap {
+  display: flex; align-items: baseline; gap: 6px; width: auto; min-height: 36px;
+  margin: 6px 0 4px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none;
+  color: var(--xp-muted); text-align: left;
+}
+.xp.xp-take .exam-take__nav-gap-count { padding: 0; min-width: 0; height: auto; background: none; border-radius: 0; color: var(--xp-ink); font-weight: 800; box-shadow: none; }
+.xp.xp-take .exam-take__nav-gap-label { flex-direction: row; flex-wrap: wrap; gap: 6px; color: var(--xp-muted); font-weight: 600; }
+.xp.xp-take .exam-take__nav-gap-label small { color: var(--xp-azure); text-decoration: none; }
+.xp.xp-take .exam-take__nav-gap:hover .exam-take__nav-gap-label small { text-decoration: underline; }
+
+/* Cover facts as one quiet line ("180 min · 100 points · 15 questions ·
+   2 sections"), not four 90px tiles; the top bar no longer repeats the
+   duration beside it. */
+.xp.xp-take .exam-take__topbar--preview .exam-take__timer-badge { display: none; }
+.xp.xp-take .exam-cover__stats {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 0;
+  margin-top: 10px; padding: 0; background: none; box-shadow: none;
+}
+.xp.xp-take .exam-cover__stat {
+  display: inline-flex; flex-direction: row; align-items: baseline; gap: 5px;
+  flex: none; min-width: 0; width: auto;
+  min-height: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none;
+}
+.xp.xp-take .exam-cover__stat:not(:last-child)::after {
+  content: '·'; margin: 0 10px 0 5px; color: var(--xp-muted); font-weight: 700;
+}
+.xp.xp-take .exam-cover__stat-value { font: 800 16px/1.3 var(--xp-body); color: var(--xp-ink); letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.xp.xp-take .exam-cover__stat-label { font: 500 16px/1.3 var(--xp-body); color: var(--xp-muted); margin: 0; }
+
+/* Cover panels sit inside the cover card: no second shadow around them (the
+   Structure rows ran past its edges, TestFlight/web review Nov 2026). */
+.xp.xp-take .exam-cover__panel,
+.xp.xp-take .exam-cover__panel--sections { box-shadow: none !important; border: 0; background: none; padding: 0; } /* beats the global .card shadow */
+.xp.xp-take .exam-cover__section-row { border-radius: 12px; }
+/* Long question labels ("A- COMPREHENSION 1") wrap instead of running off. */
+.xp.xp-take .exam-take__preview-question-number { white-space: normal; overflow-wrap: anywhere; min-width: 0; max-width: 100%; flex-shrink: 1; }

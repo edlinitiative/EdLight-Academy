@@ -4230,7 +4230,7 @@ textarea.input-field {
 	gap: 0.5rem;
 	max-width: calc(100vw - 2rem);
 	padding: 0.6rem 1.1rem;
-	border-radius: 999px;
+	border-radius: 12px; /* a box, never a capsule */
 	font-size: 0.8rem;
 	font-weight: 600;
 	color: #fff;
@@ -18073,3 +18073,27 @@ button.card:hover,
 [data-theme="dark"] .footer__lang button.is-on { background: #1558B8; color: #fff; }
 [data-theme="dark"] .bottom-nav__item.is-active,
 [data-theme="dark"] .bottom-nav__item.is-active .bottom-nav__icon { color: #8EC0FF; }
+
+/* ── Exam text: tables, drawn structures (src/utils/examTextHtml.ts) ──
+   A quiet grid like the phone's ExamTable: tinted header band, hairline rules
+   between rows only, sideways scroll when wide. */
+.exam-text-block { display: block; }
+.exam-text-block + .exam-text-block { margin-top: 0.75em; }
+.exam-table-wrap {
+  display: block; max-width: 100%; overflow-x: auto; margin: 0.75em 0;
+  border-radius: 12px; background: var(--surface-muted);
+  -webkit-overflow-scrolling: touch;
+}
+.exam-table { border-collapse: collapse; min-width: 100%; font-size: 0.95em; line-height: 1.35; }
+.exam-table th, .exam-table td {
+  padding: 0.6em 0.9em; text-align: center; vertical-align: middle; white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.exam-table th { background: var(--border); font-weight: 700; color: var(--text-900); }
+.exam-table tbody tr + tr td { border-top: 1px solid var(--border); }
+.exam-table th:first-child, .exam-table td:first-child { text-align: left; font-weight: 700; }
+.exam-code {
+  display: block; margin: 0.75em 0; padding: 0.9em 1em; overflow-x: auto;
+  border-radius: 12px; background: var(--surface-muted); color: var(--text-900);
+  font: 0.9em/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre;
+}

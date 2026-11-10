@@ -148,8 +148,8 @@ body.arena-night :is(.ah-ghost, .an-ghost, .gx-btn--ghost, .duel-pill--soft, .gx
   border: 0 !important;
   border-radius: var(--r-btn, 12px) !important;
   font-family: var(--font-heading, sans-serif);
-  font-size: 0.975rem !important;
-  font-weight: 750 !important;
+  font-size: 0.9rem !important;   /* one step down, Nov 2026: "text too big" */
+  font-weight: 650 !important;
   letter-spacing: -0.005em;
   text-decoration: none;
   transform: none;
@@ -191,7 +191,8 @@ body.arena-night :is(.ah-start, .aj-go, .an-go, .demo-go, .arc-btn--lg, .arc-btn
 body.arena-night :is(.ah-start:not(.ah-start--sm), .demo-go, .arc-btn--lg) {
   min-height: var(--btn-h-lg, 52px) !important;
   padding: 0.65rem 1.6rem !important;
-  font-size: 1.05rem !important;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
 }
 body.arena-night :is(.ah-start, .aj-go, .an-go, .gx-btn, .duel-pill, .ah-cta, .ah-ghost, .an-ghost, .gx-duel):focus-visible {
   outline: 3px solid #FFC24A;
@@ -366,3 +367,16 @@ body.arena-night .state-view { box-shadow: none; }
 body.arena-night .state-view__icon { background: rgba(77, 143, 240, 0.16); color: #9DC2FA; }
 body.arena-night .state-view__icon--error { background: rgba(248, 113, 113, 0.16); color: #F7A8A8; }
 body.arena-night .state-loading__row { background: var(--surface); box-shadow: none; }
+
+/* "Mon activité · Équipes et compétitions" is a way out, not an action: a
+   quiet link above the title, not a full-width marine bar (Nov 2026). */
+body.arena-night nav .an-ghost {
+  min-height: 36px !important;
+  padding: 0 !important;
+  background: none !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  color: #A9C6FF !important;
+  justify-content: flex-start;
+}
+body.arena-night nav .an-ghost:hover { background: none !important; color: #fff !important; }

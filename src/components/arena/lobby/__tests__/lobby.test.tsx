@@ -181,8 +181,7 @@ describe('lanes and keys', () => {
     expect(screen.getByRole('heading', { name: 'Défier un ami' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Dans mon école' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Représenter mon école' })).toBeInTheDocument();
-    expect(screen.getByText(/10 questions, 15 s chacune · 3 min/)).toBeInTheDocument();
-    expect(screen.getByText(/Le gagnant prend \+20 XP · égalité \+10 chacun/)).toBeInTheDocument();
+    expect(screen.getByText(/10 questions · 3 min · \+20 XP au gagnant/)).toBeInTheDocument();
   });
 
   it('shows an open championship with its real state', () => {

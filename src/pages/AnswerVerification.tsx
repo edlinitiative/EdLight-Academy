@@ -20,7 +20,9 @@ import { fetchFullCatalog } from '../utils/examCatalog';
 function MathText({ text }) {
   const katexReady = useKatex();
   if (!text) return null;
-  if (!/\$/.test(text) && !/\\\(/.test(text)) return <>{text}</>;
+  // Plain prose stays a text node; anything with LaTeX-ish markup (delimited
+  // or not, "x_G", a table) goes through the shared renderer.
+  if (!/[$\\^_{}|`*]|\[Table:/i.test(String(text))) return <>{text}</>;
   return <span dangerouslySetInnerHTML={renderWithKatex(text, katexReady)} />;
 }
 
