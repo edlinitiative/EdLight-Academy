@@ -28,6 +28,7 @@ import Segmented from '../components/ui/Segmented';
 import { useReduceMotion } from '../utils/motion';
 import { success as hapticSuccess, tapMedium, tapLight } from '../utils/haptics';
 import { mathToText } from '../utils/mathText';
+import MathRunsText from '../components/MathRunsText';
 import MathText from '../components/MathText';
 import DefiHandoffCard from '../components/DefiHandoffCard';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
@@ -146,7 +147,8 @@ function QuestionReviewItem({ question, index, answer, result, subject, level, e
   const explainCtx = !isPending && !isUnanswered && !isCorrect
     ? examQuestionContext({ question, answer: given, status: isPartial ? 'partial' : 'incorrect', subject, level, examId, questionIndex: index })
     : undefined;
-  const questionText = mathToText(String(question._displayText ?? question.question ?? ''));
+  const rawQuestionText = String(question._displayText ?? question.question ?? '');
+  const questionText = mathToText(rawQuestionText);
 
   return (
     <PressableScale
@@ -169,9 +171,11 @@ function QuestionReviewItem({ question, index, answer, result, subject, level, e
               : <XCircle color={colors.danger} size={18} strokeWidth={2.4} />}
         </View>
         <View style={{ flex: 1, gap: 2 }}>
-          <Text style={[typeScale.bodyMd, { color: colors.ink }]} numberOfLines={expanded ? undefined : 1}>
-            {questionText}
-          </Text>
+          <MathRunsText
+            text={rawQuestionText}
+            style={[typeScale.bodyMd, { color: colors.ink }]}
+            numberOfLines={expanded ? undefined : 1}
+          />
           <Text style={[typeScale.meta, { color: colors.muted }]}>{t(`Question ${index + 1}`, `Kesyon ${index + 1}`)} · {statusLabel}</Text>
         </View>
         {expanded
@@ -183,16 +187,17 @@ function QuestionReviewItem({ question, index, answer, result, subject, level, e
           <View style={{ gap: 6 }}>
             <Text style={[typeScale.body, { color: colors.muted }]}>{t('Ta réponse :', 'Repons ou :')}</Text>
             <View style={{ backgroundColor: neutral ? colors.surfaceAlt : isCorrect ? colors.successSoft : colors.dangerSoft, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 }}>
-              <Text style={{ fontFamily: fonts.medium, fontSize: 16, lineHeight: 23, color: isUnanswered ? colors.muted : isPending ? colors.ink : isCorrect ? okInk : colors.danger }}>
-                {isUnanswered ? t('Sans réponse', 'San repons') : String(given)}
-              </Text>
+              <MathRunsText
+                text={isUnanswered ? t('Sans réponse', 'San repons') : String(given)}
+                style={{ fontFamily: fonts.medium, fontSize: 16, lineHeight: 23, color: isUnanswered ? colors.muted : isPending ? colors.ink : isCorrect ? okInk : colors.danger }}
+              />
             </View>
           </View>
           {!isCorrect && correctAnswer != null && (
             <View style={{ gap: 6 }}>
               <Text style={[typeScale.body, { color: colors.muted }]}>{t('Bonne réponse :', 'Bon repons :')}</Text>
               <View style={{ backgroundColor: colors.successSoft, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 }}>
-                <Text style={{ fontFamily: fonts.medium, fontSize: 16, lineHeight: 23, color: okInk }}>{String(correctAnswer)}</Text>
+                <MathText text={String(correctAnswer)} style={{ fontFamily: fonts.medium, fontSize: 16, lineHeight: 23, color: okInk }} />
               </View>
             </View>
           )}

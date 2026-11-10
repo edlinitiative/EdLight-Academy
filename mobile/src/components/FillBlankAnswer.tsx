@@ -3,6 +3,7 @@ import { Text, TextInput, View } from 'react-native';
 import { useColors, useTheme, typeScale } from '../theme/theme';
 import useStore from '../contexts/store';
 import { flowPieces } from '../utils/flowPieces';
+import { renderRuns } from './MathRunsText';
 import { balanceMathAcrossBlanks } from '../../../shared/mathBlanks';
 
 /**
@@ -197,7 +198,7 @@ export function InlineFillBlank({ text, value, onChange, header }: {
               ) : null}
               {flowPieces(clean).map((p, j) => (p.kind === 'break'
                 ? <View key={`${i}-${j}`} style={{ width: '100%', height: 0 }} />
-                : <Text key={`${i}-${j}`} style={word}>{p.text}</Text>))}
+                : <Text key={`${i}-${j}`} style={word}>{renderRuns(p.runs, word.fontSize, { color: word.color })}</Text>))}
             </React.Fragment>
           );
         })}

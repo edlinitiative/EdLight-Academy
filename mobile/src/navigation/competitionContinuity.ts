@@ -52,13 +52,22 @@ export function savedCompetitionTarget(
       : resolveAppPath('/tournois');
   return null;
 }
+/**
+ * How long a competition place stays worth reopening. A student who closed the
+ * app mid-tournament comes back to it; one who left days ago does not. Records
+ * without `savedAt` (written before this rule) are ignored, which also frees
+ * phones stuck on Tournois by the old never-cleared key (TestFlight, Nov 2026).
+ */
+export const COMPETITION_PLACE_MAX_AGE_MS = 6 * 3_600_000;
 export function restoreCompetitionTarget(
   raw: unknown,
   uid: string | null,
+  now: number = Date.now(),
 ): LinkTarget | null {
   if (!raw || typeof raw !== 'object') return null;
-  const record = raw as { uid?: unknown; target?: any };
+  const record = raw as { uid?: unknown; target?: any; savedAt?: unknown };
   if (record.uid !== null && record.uid !== uid) return null;
+  if (typeof record.savedAt !== 'number' || now - record.savedAt > COMPETITION_PLACE_MAX_AGE_MS || record.savedAt - now > 60_000) return null;
   const target = record.target;
   return target && typeof target === 'object'
     ? savedCompetitionTarget({ name: target.screen, params: target.params })
