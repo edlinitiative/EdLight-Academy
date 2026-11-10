@@ -44,7 +44,7 @@ export function MoveBadge({ move, t }: { move: RowMove | undefined; t: T }) {
     <View
       accessible
       accessibilityLabel={up ? t(`gagne ${n} place${n > 1 ? 's' : ''}`, `monte ${n} plas`) : t(`perd ${n} place${n > 1 ? 's' : ''}`, `desann ${n} plas`)}
-      style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, backgroundColor: up ? C.successSoft : C.surfaceAlt }}
+      style={{}}
     >
       <Text maxFontSizeMultiplier={1.5} style={[arenaType.label, { color: up ? C.success : C.muted, fontVariant: ['tabular-nums'] }]}>
         {up ? '▲' : '▼'} {n}
@@ -79,7 +79,7 @@ export function TournoisPhaseBar({ state, live, now, t }: { state: string | null
         accessible
         accessibilityLiveRegion="polite"
         accessibilityLabel={label}
-        style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999, backgroundColor: tone.bg }}
+        style={{}}
       >
         <Text maxFontSizeMultiplier={1.5} style={[arenaType.action, { fontSize: 15, color: tone.ink }]}>{label}</Text>
       </Animated.View>

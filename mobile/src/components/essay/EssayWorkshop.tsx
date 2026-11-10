@@ -146,7 +146,7 @@ export default function EssayWorkshop({ question, subject, level, value, onChang
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
           <Text style={[typeScale.caption, { color: colors.muted, alignSelf: 'center' }]}>{t('Mots-clés :', 'Mo kle :')}</Text>
           {terms.map((w) => (
-            <View key={w} style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, backgroundColor: colors.azureSoft }}>
+            <View key={w} style={{}}>
               <Text style={{ fontFamily: fonts.headingBold, fontSize: 13, color: colors.azureInk }}>{w}</Text>
             </View>
           ))}
@@ -178,7 +178,7 @@ export default function EssayWorkshop({ question, subject, level, value, onChang
 
         <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
           <Text style={{ flex: 1, fontFamily: fonts.headingBold, fontSize: 20, color: colors.ink }}>{t('Ton plan', 'Plan ou')}</Text>
-          <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, backgroundColor: colors.surfaceAlt }}>
+          <View style={{}}>
             <Text style={{ fontFamily: fonts.headingBold, fontSize: 12, color: colors.muted }}>{t(`${filled} sur ${slots.length}`, `${filled} sou ${slots.length}`)}</Text>
           </View>
         </View>

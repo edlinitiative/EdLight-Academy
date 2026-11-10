@@ -87,7 +87,7 @@ export default function ChallengeCard({
               <Text style={[arenaType.num, { fontSize: 20, lineHeight: 24, color: C.ink }]}>{challenge.challengerScore}/{challenge.total}</Text>
             </View>
           </View>
-          <View style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: C.secondary }}>
+          <View style={{}}>
             <Text style={[arenaType.status, { fontWeight: '700', color: C.inkSoft }]}>VS</Text>
           </View>
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 10 }}>

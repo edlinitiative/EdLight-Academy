@@ -62,7 +62,6 @@ export function AnswerStatus({ kind, t, label }: { kind: AnswerStatusKind; t: Tx
       accessibilityLabel={words}
       style={{
         flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
-        backgroundColor: tone.bg, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5,
       }}
     >
       <Icon color={tone.fg} size={16} strokeWidth={2.6} />

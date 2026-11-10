@@ -379,7 +379,7 @@ function HubRow({ icon, title, sub, badge, onPress }: { icon: React.ReactNode; t
         {sub ? <Text numberOfLines={1} style={[arenaType.status, { color: C.muted }]}>{sub}</Text> : null}
       </View>
       {badge ? (
-        <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: '#3A2530' }}>
+        <View style={{}}>
           <Text style={[arenaType.status, { fontFamily: fonts.bold, color: C.coral }]}>{badge}</Text>
         </View>
       ) : null}

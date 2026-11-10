@@ -57,7 +57,7 @@ export default function ProofAnswer({ questionText, value, onChange }: {
   return (
     <View style={{ gap: 14 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: colors.azureSoft }}>
+        <View style={{}}>
           <Text style={{ fontFamily: fonts.headingBold, fontSize: 13, color: colors.azureInk }}>{subtype.label}</Text>
         </View>
         <View style={{ flex: 1, height: 6, borderRadius: 999, backgroundColor: colors.surfaceAlt, overflow: 'hidden' }}>

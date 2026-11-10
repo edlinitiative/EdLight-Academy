@@ -116,7 +116,7 @@ export default function LessonComments({ threadKey, isCreole }: { threadKey: str
           {isCreole ? 'Diskisyon & kòmantè' : 'Discussion & commentaires'}
         </Text>
         {visibleComments.length > 0 ? (
-          <View style={{ backgroundColor: colors.azureSoft, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 2 }}>
+          <View style={{ }}>
             <Text style={{ fontFamily: fonts.bold, fontSize: 14, lineHeight: 19, color: colors.azureInk }}>{visibleComments.length}</Text>
           </View>
         ) : null}

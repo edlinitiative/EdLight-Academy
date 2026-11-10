@@ -151,7 +151,7 @@ function Tower({ s, mine, animate, t }: { s: CityTower; mine: boolean; animate: 
       <View
         style={{
           maxWidth: 112, flexDirection: 'row', alignItems: 'center', gap: 5,
-          paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999,
+          paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
           backgroundColor: mine ? C.coral : 'rgba(19,36,63,0.92)',
         }}
       >

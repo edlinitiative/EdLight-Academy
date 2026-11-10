@@ -173,7 +173,7 @@ export default function LessonPlayer({
         {resumeAt > 0 ? (
           <View
             pointerEvents="none"
-            style={{ position: 'absolute', left: 12, bottom: 12, backgroundColor: PILL_BG, borderRadius: 999, paddingVertical: 4, paddingHorizontal: 12 }}
+            style={{ position: 'absolute', left: 12, bottom: 12, backgroundColor: PILL_BG, borderRadius: 8, paddingVertical: 4, paddingHorizontal: 12 }}
           >
             <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: fonts.headingBold, fontSize: 14, lineHeight: 18, color: '#ffffff' }}>
               {t(`Reprendre à ${formatResume(resumeAt)}`, `Kontinye nan ${formatResume(resumeAt)}`)}
@@ -183,7 +183,7 @@ export default function LessonPlayer({
         {durationLabel ? (
           <View
             pointerEvents="none"
-            style={{ position: 'absolute', right: 12, bottom: 12, backgroundColor: PILL_BG, borderRadius: 999, paddingVertical: 4, paddingHorizontal: 12 }}
+            style={{ position: 'absolute', right: 12, bottom: 12, backgroundColor: PILL_BG, borderRadius: 8, paddingVertical: 4, paddingHorizontal: 12 }}
           >
             <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: fonts.headingBold, fontSize: 14, lineHeight: 18, color: '#ffffff' }}>
               {durationLabel}

@@ -660,7 +660,7 @@ function SchoolPosition({ line, isCreole }: {
 
       <View style={{
         flexDirection: 'row', alignItems: 'center', gap: 7,
-        paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999,
+        paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12,
         backgroundColor: line.inFive ? colors.successSoft : colors.warnSoft,
       }}>
         {line.inFive ? <Check color={colors.success} size={16} /> : <Zap color={colors.warn} size={16} />}

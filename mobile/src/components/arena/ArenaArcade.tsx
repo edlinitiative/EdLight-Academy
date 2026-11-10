@@ -270,7 +270,7 @@ function Marquee({ title, accent, live = false, t }: { title: string; accent: st
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <Text accessibilityRole="header" style={[arenaType.title, { color: C.ink }]}>{title}</Text>
         {live ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: '#3A2530' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.live }} />
             <Text style={[arenaType.status, { fontFamily: fonts.bold, color: C.coral }]}>{t('Ouvert', 'Louvri')}</Text>
           </View>

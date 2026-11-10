@@ -64,7 +64,7 @@ export default function DailyChallengeBanner({
             {t('10 questions · Toutes les matières', '10 kesyon · Tout matyè yo')}
           </Text>
         </View>
-        <View style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: C.surface }}>
+        <View style={{}}>
           <Text style={[arenaType.status, { color: C.inkSoft }]} maxFontSizeMultiplier={1.3}>+50 XP</Text>
         </View>
       </View>

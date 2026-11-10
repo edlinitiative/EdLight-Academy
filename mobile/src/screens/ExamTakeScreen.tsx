@@ -1125,7 +1125,7 @@ export default function ExamTakeScreen() {
         <Text style={[typeScale.meta, { color: colors.muted }]}> / {questions.length}</Text>
       </Text>
       {points > 0 ? (
-        <View style={{ backgroundColor: colors.surfaceAlt, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
+        <View style={{ }}>
           <Text style={{ fontFamily: fonts.headingBold, fontSize: 13, lineHeight: 18, color: colors.muted }}>{points} pt{points > 1 ? 's' : ''}</Text>
         </View>
       ) : null}

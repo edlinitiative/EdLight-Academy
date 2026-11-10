@@ -169,7 +169,7 @@ function ConsoleButton({
       <View style={{ width: BTN, height: BTN, borderRadius: BTN / 2, backgroundColor: C.surfaceRaised, alignItems: 'center', justifyContent: 'center' }}>
         <Icon color={C.ink} size={BTN_ICON} strokeWidth={2.2} />
         {weekly ? (
-          <View style={{ position: 'absolute', top: -6, right: -14, backgroundColor: C.gold, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
+          <View style={{ position: 'absolute', top: -6, right: -14, backgroundColor: C.gold, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 }}>
             <Text style={{ fontFamily: fonts.bold, fontSize: 14, lineHeight: 18, color: C.onGold }} maxFontSizeMultiplier={1.2}>×{WEEKLY_GAME_XP_MULTIPLIER}</Text>
           </View>
         ) : null}

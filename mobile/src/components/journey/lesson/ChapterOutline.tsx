@@ -89,7 +89,7 @@ export default function ChapterOutline({
               {sub ? <Text style={[typeScale.caption, { color: colors.muted, marginTop: 1 }]}>{sub}</Text> : null}
             </View>
             {current ? (
-              <View style={{ backgroundColor: colors.surface, borderRadius: 999, paddingVertical: 4, paddingHorizontal: 12 }}>
+              <View style={{ }}>
                 <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: fonts.bold, fontSize: 14, lineHeight: 18, color: colors.azureInk }}>
                   {t('En cours', 'An kou')}
                 </Text>
@@ -132,7 +132,7 @@ export default function ChapterOutline({
         </View>
         {testReady ? (
           <>
-            <View style={{ backgroundColor: colors.azureSoft, borderRadius: 999, paddingVertical: 4, paddingHorizontal: 12 }}>
+            <View style={{ }}>
               <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: fonts.bold, fontSize: 14, lineHeight: 18, color: colors.azureInk }}>
                 {t('Évaluation', 'Evalyasyon')}
               </Text>

@@ -261,7 +261,7 @@ export default function ArenaWatchScreen() {
           >
             <SchoolCrest name={followed.label || followed.shortName} size={28} />
             <Text numberOfLines={1} style={[arenaType.name, { fontSize: 15, color: C.ink, flex: 1 }]}>{followed.shortName || followed.label}</Text>
-            <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, backgroundColor: C.surface }}>
+            <View style={{}}>
               <Text style={[arenaType.status, { fontFamily: fonts.bold, color: C.ink }]}>
                 {followed.rank > 0 && followed.qualified ? ordinal(followed.rank) : t('non classée', 'pa klase')}
               </Text>

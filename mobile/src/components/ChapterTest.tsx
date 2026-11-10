@@ -217,7 +217,7 @@ export default function ChapterTest({
             <Text style={{ fontFamily: fonts.heading, fontSize: 56, lineHeight: 60, letterSpacing: -2, color: isDark ? '#FFB92E' : '#B7791F' }}>{outcome.score}</Text>
             <Text style={{ fontFamily: fonts.headingBold, fontSize: 22, lineHeight: 28, color: colors.muted }}>/ {total}</Text>
           </View>
-          <View style={{ alignSelf: 'flex-start', marginTop: 12, backgroundColor: colors.azureSoft, borderRadius: 999, paddingVertical: 5, paddingHorizontal: 12 }}>
+          <View style={{ alignSelf: 'flex-start', marginTop: 12 }}>
             <Text style={{ fontFamily: fonts.bold, fontSize: 14, lineHeight: 19, color: colors.azureInk }}>
               {pct} % · {promoted.length > 0
                 ? (isCreole ? `${promoted.length} leson monte nivo` : `${promoted.length} leçon${promoted.length > 1 ? 's ont' : ' a'} progressé`)

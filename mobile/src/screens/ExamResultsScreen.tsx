@@ -111,7 +111,7 @@ function ScoreCard({ percentage, scoreLine, pendingOnly = false }: { percentage:
           </Text>
           {scoreLine ? <Text style={[typeScale.meta, { color: colors.muted }]}>{scoreLine}</Text> : null}
         </View>
-        <View importantForAccessibility="no" style={{ backgroundColor: colors.azureSoft, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6, marginTop: 4, flexShrink: 1 }}>
+        <View importantForAccessibility="no" style={{ marginTop: 4, flexShrink: 1 }}>
           <Text style={{ fontFamily: fonts.headingBold, fontSize: 14, lineHeight: 18, color: colors.azureInk }}>{phrase}</Text>
         </View>
       </View>
