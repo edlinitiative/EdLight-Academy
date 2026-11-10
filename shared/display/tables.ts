@@ -43,6 +43,7 @@ function parseRows(lines: string[]): { header: string[] | null; rows: string[][]
  */
 export function describedTable(inner: string): string[][] | null {
   const rows: string[][] = [];
+  // eslint-disable-next-line no-useless-escape
   const re = /(?:(?:Premi[eè]re|Deuxi[eè]me|Troisi[eè]me|Quatri[eè]me)\s+ligne\s*)?(?:'([^']+)'|"([^"]+)"|\(([^)]+)\)|([^.;:|\[\]]+?))\s*(?:avec (?:les )?valeurs\s*:?|values\s*:?|:)\s*((?:\[[^\[\]]*[\[\]]|\][^\[\]]*[\[\]]|[^.;\[\]]|\.(?=\d)|;(?=[^;]*[\[\]]))+?)(?=\s*(?:[.;](?:\s+[A-ZÀ-Ý]|\s*$)|$))/gi;
   for (let m = re.exec(inner); m; m = re.exec(inner)) {
     const label = (m[1] ?? m[2] ?? m[3] ?? m[4] ?? '')
@@ -52,6 +53,7 @@ export function describedTable(inner: string): string[][] | null {
       .replace(/^(['"(])(.*)(['")])$/, (w, a, mid, b) => ((a === '(' ? ')' : a) === b ? mid : w))
       .trim();
     // Values split on ", " — except inside an interval "[0 ; 4[" or "]2 ; 5]".
+    // eslint-disable-next-line no-useless-escape
     const values = (m[5].match(/[\[\]][^\[\]]*?[\[\]]|(?:[^,;\s]|,(?!\s))+(?:[ \t]+(?:[^,;\s]|,(?!\s))+)*/g) ?? []).map((v) => v.trim()).filter(Boolean);
     if (label && values.length >= 2) rows.push([label, ...values]);
   }
@@ -145,6 +147,7 @@ export function splitTables(text: string): TextBlock[] {
     prose = [];
   };
   for (let i = 0; i < lines.length;) {
+    // eslint-disable-next-line no-control-regex
     const fence = /^\u0000(\d+)\u0000$/.exec(lines[i]);
     if (fence) {
       flush();

@@ -70,8 +70,10 @@ function repairFormula(f: string): string {
   let s = f.replace(/(?<![\\A-Za-z])([A-Za-z0-9)'])([_^])([A-Za-z]{2,10})(?![A-Za-z{(])/g, (m, base, k, w) => `${base}${k}{${w}}`);
   // A chain of scripts on one base ("_3^{2-}_{(aq)}"): KaTeX takes one of each
   // kind, so a repeated kind starts again on an empty base.
+  // eslint-disable-next-line no-useless-escape
   s = s.replace(/(?:[_^](?:\{[^{}]*\}|\\[A-Za-z]+|[A-Za-z0-9+\-])){2,}/g, (chain) => {
     const seen = new Set<string>();
+    // eslint-disable-next-line no-useless-escape
     return (chain.match(/[_^](?:\{[^{}]*\}|\\[A-Za-z]+|[A-Za-z0-9+\-])/g) ?? []).map((tok) => {
       const kind = tok[0];
       const restart = seen.has(kind);
@@ -97,6 +99,7 @@ export function prose(p: string): string {
   // A symbol with an index or exponent written in the prose ("I_{eff}",
   // "x_G", "e^{2x}") becomes a formula of its own, so KaTeX draws the script.
   const ascii = blanks.replace(/([A-Za-z0-9)])\^\(([^()]*)\)/g, '$1^{$2}');
+  // eslint-disable-next-line no-useless-escape
   const scripted = ascii.replace(/(?<![\\\w$])((?:[A-Za-zα-ωΑ-Ω][A-Za-z]{0,3}(?:[_^](?:\{[^{}\n]*\}|\d+(?:[.,]\d+)?|[A-Za-z+\-](?![A-Za-z0-9])|[A-Za-z]{2,10}(?![A-Za-z0-9])))+)+)(?![\w$])/g, (tok) => `$${tok.replace(/([_^])(\d+(?:[.,]\d+)?|[A-Za-z]{2,10}(?![A-Za-z0-9]))/g, (m0, k, v) => (v.length > 1 ? `${k}{${v}}` : m0))}$`);
   return scripted.split(/(\$[^$]+\$)/).map((part) => (part.startsWith('$') || !/[\\^{}$]|(?<!_)_(?!_)/.test(part) ? part : mathToText(part))).join('');
 }
@@ -118,6 +121,7 @@ export function katexSource(text: string | null | undefined): string | null {
     raw = raw.split('\n').map((line) => {
       const dollars = line.replace(/\\\$/g, '').match(/\$/g)?.length ?? 0;
       const lastAt = line.lastIndexOf('$');
+      // eslint-disable-next-line no-useless-escape
       const opens = lastAt >= 0 && !/\d\s?$/.test(line.slice(0, lastAt)) && /[\\^_=+\-\]\[(){}<>∪∩∞∈]/.test(line.slice(lastAt + 1));
       return dollars % 2 === 1 && opens ? line.replace(/(\s*[.;:!?]?\s*)$/, '$$$1') : line;
     }).join('\n');

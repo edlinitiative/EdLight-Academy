@@ -108,6 +108,7 @@ export function repairLatex(input: string): string {
     .replace(/( )\n(e)(?= [-\d])/g, '$1\\n$2')
     .replace(/\t(imes|ext\s*\{|heta|au|o\b|riangle)/g, '\\t$1')
     .replace(/\r(ightarrow|ho\b|angle)/g, '\\r$1')
+    // eslint-disable-next-line no-control-regex
     .replace(/\u0008(eta|ar\s*\{|inom|egin|oxed)/g, '\\b$1');
 }
 
@@ -204,6 +205,7 @@ function core(input: string): string {
   // Exponents typed in ASCII: "m^(1/n)", "10^(-5)", "(0.9)^(n+1)".
   s = asciiExponents(s, (x) => toScript(x, SUP) ?? `${SUP_OPEN}${x}${CLOSE}`);
   s = s.replace(/\^\s*(-?\d+(?:[.,]\d+)?|[A-Za-zα-ω*′]|[+\-−](?![\d\w]))/g, (_, x) => toScript(x, SUP) ?? `${SUP_OPEN}${x}${CLOSE}`);
+  // eslint-disable-next-line no-misleading-character-class
   s = s.replace(/(?<=^|[A-Za-z0-9À-ÿα-ωΑ-Ω)\]′'\u0305\u20D7₀-₉])(?<!_)_(?!_)\s*([A-Za-z0-9α-ω])/g, (_, x) => toScript(x, SUB) ?? `${SUB_OPEN}${x}${CLOSE}`);
 
   // \begin{env}…\end{env}: a matrix reads as bracketed rows; any other
