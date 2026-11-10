@@ -125,7 +125,7 @@ export default function ArenaArcade({ onPractice, onDuel, onMiniGames }: ArenaAr
         {/* The lobby: who you are, for whom, against whom, in one compact
             card. It was three stacked blocks with a 56pt face and a boxed
             school ("too big, I don't like the style", TestFlight Nov 2026). */}
-        <View style={{ paddingHorizontal: 14, paddingVertical: 12, gap: 10, borderRadius: 20, backgroundColor: C.surfaceRaised }}>
+        <View style={{ paddingHorizontal: 14, paddingVertical: 12, gap: 10, borderRadius: 16, backgroundColor: C.surfaceRaised }}>
           {signedIn ? (
             <View
               accessible
@@ -193,9 +193,9 @@ export default function ArenaArcade({ onPractice, onDuel, onMiniGames }: ArenaAr
         </View>
 
         {/* ═══ The championship cabinet ════════════════════════════════ */}
-        <View style={{ padding: 16, gap: 14, borderRadius: 24, backgroundColor: C.surfaceAlt }}>
+        <View style={{ padding: 16, gap: 14, borderRadius: 16, backgroundColor: C.surfaceAlt }}>
           <Marquee title={cabinetCopy('champ', t).title} accent={C.coral} live={eventOpen} t={t} />
-          <View style={{ borderRadius: 16, backgroundColor: '#081226', overflow: 'hidden' }}>
+          <View style={{ borderRadius: 12, backgroundColor: '#081226', overflow: 'hidden' }}>
             <CabinetArt kind="champ" accent={C.coral} width={300} />
           </View>
           <ArenaHubPanel variant="arcade" onPractice={onPractice} onDuel={onDuel} />
@@ -232,7 +232,7 @@ export default function ArenaArcade({ onPractice, onDuel, onMiniGames }: ArenaAr
         </View>
 
         <Row
-          icon={<Users color={C.signal} size={20} />}
+          icon={<Users color={C.signal} size={18} />}
           title={t('Mon activité', 'Aktivite mwen')}
           sub={t('Équipes, invitations et compétitions', 'Ekip, envitasyon ak konpetisyon')}
           onPress={() => open('activity')}
@@ -258,24 +258,21 @@ function schoolPlaceLine(s: TeamStanding | null, qualified: number, t: T): strin
 
 /* ── Pieces ─────────────────────────────────────────────────────────────── */
 
-/** An arcade marquee: a row of bulbs in the mode's colour, then its name. */
-function Marquee({ title, accent, live = false, t }: { title: string; accent: string; live?: boolean; t: T }) {
+/**
+ * A mode's name with one dot in its colour. (It was a row of five marquee
+ * bulbs over a 20pt title — Ted, Nov 2026: "text too big, shapes are weird".)
+ */
+function Marquee({ title, accent, live = false, small = false, t }: { title: string; accent: string; live?: boolean; small?: boolean; t: T }) {
   return (
-    <View style={{ gap: 8 }}>
-      <View style={{ flexDirection: 'row', gap: 5 }} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-        {[0, 1, 2, 3, 4].map((i) => (
-          <View key={i} style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: accent, opacity: i % 2 ? 0.55 : 1 }} />
-        ))}
-      </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <Text accessibilityRole="header" style={[arenaType.title, { color: C.ink }]}>{title}</Text>
-        {live ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.live }} />
-            <Text style={[arenaType.status, { fontFamily: fonts.bold, color: C.coral }]}>{t('Ouvert', 'Louvri')}</Text>
-          </View>
-        ) : null}
-      </View>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <View importantForAccessibility="no-hide-descendants" accessibilityElementsHidden style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: accent }} />
+      <Text accessibilityRole="header" numberOfLines={small ? 1 : 2} style={[small ? arenaType.name : arenaType.title, { color: C.ink, flexShrink: 1 }]}>{title}</Text>
+      {live ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: C.live }} />
+          <Text style={[arenaType.status, { fontFamily: fonts.bold, color: C.coral }]}>{t('Ouvert', 'Louvri')}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -298,10 +295,10 @@ function Cabinet({
       accessibilityRole="button"
       accessibilityLabel={[copy.title, copy.sub, badge ? t(`${badge} étoiles`, `${badge} zetwal`) : null].filter(Boolean).join('. ')}
       accessibilityHint={copy.cta}
-      style={{ flexGrow: 1, flexBasis: '46%', minHeight: 44, padding: 14, gap: 10, borderRadius: 22, backgroundColor: C.surface }}
+      style={{ flexGrow: 1, flexBasis: '46%', minHeight: 44, padding: 12, gap: 10, borderRadius: 16, backgroundColor: C.surface }}
     >
-      <Marquee title={copy.title} accent={copy.accent} t={t} />
-      <View style={{ borderRadius: 14, backgroundColor: '#081226', overflow: 'hidden' }}>
+      <Marquee title={copy.title} accent={copy.accent} small t={t} />
+      <View style={{ borderRadius: 10, backgroundColor: '#081226', overflow: 'hidden' }}>
         <CabinetArt kind={kind} accent={copy.accent} width={150} progress={progress} />
       </View>
       <Text style={[arenaType.status, { color: C.muted }]}>{copy.sub}</Text>
@@ -312,7 +309,7 @@ function Cabinet({
             <Text style={[arenaType.status, { fontFamily: fonts.bold, color: C.inkSoft, fontVariant: ['tabular-nums'] }]}>{badge}</Text>
           </View>
         ) : null}
-        <Text style={[arenaType.action, { fontSize: 15, color: copy.accent, marginLeft: badge ? 0 : 'auto' }]}>{copy.cta}</Text>
+        <Text style={[arenaType.action, { fontSize: 14, color: copy.accent, marginLeft: badge ? 0 : 'auto' }]}>{copy.cta}</Text>
         <ChevronRight color={copy.accent} size={16} />
       </View>
     </PressableScale>
@@ -326,9 +323,9 @@ function Row({ icon, title, sub, onPress }: { icon: React.ReactNode; title: stri
       pressedScale={0.98}
       accessibilityRole="button"
       accessibilityLabel={`${title} — ${sub}`}
-      style={{ flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 64, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 20, backgroundColor: C.surface }}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 16, backgroundColor: C.surface }}
     >
-      <View style={{ width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surfaceRaised }}>{icon}</View>
+      <View style={{ width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surfaceRaised }}>{icon}</View>
       <View style={{ flex: 1, gap: 2 }}>
         <Text style={[arenaType.name, { color: C.ink }]}>{title}</Text>
         <Text style={[arenaType.status, { color: C.muted }]}>{sub}</Text>
@@ -368,7 +365,7 @@ function Podium({ board, myKey, onAll, t }: { board: ReturnType<typeof splitPodi
                 <View
                   style={{
                     alignSelf: 'stretch', alignItems: 'center', gap: 2, paddingVertical: 10, paddingHorizontal: 6,
-                    minHeight: [86, 112, 70][i], borderRadius: 14,
+                    minHeight: [80, 100, 66][i], borderRadius: 12,
                     backgroundColor: myKey === s.key ? C.signalSoft : C.surfaceRaised,
                   }}
                 >
@@ -392,7 +389,7 @@ function Podium({ board, myKey, onAll, t }: { board: ReturnType<typeof splitPodi
               key={s.key}
               accessible
               accessibilityLabel={`${s.rank}. ${s.label}, ${groupDigits(s.teamXp)} XP`}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16, backgroundColor: myKey === s.key ? C.signalSoft : C.surface }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, backgroundColor: myKey === s.key ? C.signalSoft : C.surface }}
             >
               <Text style={[arenaType.num, { color: C.muted, minWidth: 24 }]}>{s.rank}</Text>
               <SchoolBuilding name={s.label} floors={3} night cell={2} />
@@ -420,7 +417,7 @@ function Podium({ board, myKey, onAll, t }: { board: ReturnType<typeof splitPodi
               key={s.key}
               accessible
               accessibilityLabel={t(`${s.label}, ${Math.min(s.members, TEAM_SIZE)} joueurs sur ${TEAM_SIZE}, il en manque ${s.needed}`, `${s.label}, ${Math.min(s.members, TEAM_SIZE)} jwè sou ${TEAM_SIZE}, manke ${s.needed}`)}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16, backgroundColor: myKey === s.key ? C.signalSoft : C.surface }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, backgroundColor: myKey === s.key ? C.signalSoft : C.surface }}
             >
               <SchoolCrest name={s.label} size={32} />
               <Text numberOfLines={1} style={[arenaType.name, { flex: 1, color: C.ink }]}>{s.label}</Text>

@@ -61,7 +61,7 @@ export default function ArenaHubScreen() {
       </View>
       <ScrollView contentContainerStyle={{ paddingBottom: 48 }} showsVerticalScrollIndicator={false}>
         {section === 'demo' || section === 'championnat' ? (
-          <View accessible={false} style={{ margin: 16, marginBottom: 0, padding: 20, gap: 10, borderRadius: 24, backgroundColor: C.surface }}>
+          <View accessible={false} style={{ margin: 16, marginBottom: 0, padding: 20, gap: 10, borderRadius: 16, backgroundColor: C.surface }}>
             {section === 'demo' ? (
               <>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>

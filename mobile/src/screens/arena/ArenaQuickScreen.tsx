@@ -89,7 +89,7 @@ export default function ArenaQuickScreen() {
         <Text accessibilityRole="header" style={[arenaType.hero, { color: C.ink, textAlign: 'center' }]}>
           {good ? t('Bien joué !', 'Byen jwe !') : t('Rejoue, les questions changent', 'Rejwe, kesyon yo chanje')}
         </Text>
-        <Text style={{ fontFamily: fonts.heading, fontSize: 40, lineHeight: 46, color: C.ink, fontVariant: ['tabular-nums'] }}>
+        <Text style={{ fontFamily: fonts.heading, fontSize: 32, lineHeight: 38, color: C.ink, fontVariant: ['tabular-nums'] }}>
           {score}<Text style={[arenaType.title, { color: C.muted }]}> / {total}</Text>
         </Text>
         {isAuthed ? (

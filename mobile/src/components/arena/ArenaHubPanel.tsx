@@ -124,9 +124,9 @@ export default function ArenaHubPanel({ onPractice, onDuel, variant = 'full' }: 
   // the school context, then the honest "nothing scheduled".
   const noEvent = hub.status !== 'loading' && !fault && !tour;
   const playCard = (
-    <View style={{ padding: 22, gap: 12, borderRadius: 24, backgroundColor: C.surfaceRaised }}>
+    <View style={{ padding: 18, gap: 12, borderRadius: 16, backgroundColor: C.surfaceRaised }}>
       <Text style={[arenaType.label, { fontSize: 15, color: C.muted }]}>{t('Jouer maintenant', 'Jwe kounye a')}</Text>
-      <Text style={{ fontFamily: fonts.heading, fontSize: 22, lineHeight: 27, letterSpacing: -0.4, color: C.ink }}>
+      <Text style={{ fontFamily: fonts.heading, fontSize: 18, lineHeight: 23, letterSpacing: -0.4, color: C.ink }}>
         {schoolName
           ? t('Chaque partie fait monter ton école', 'Chak pati fè lekòl ou monte')
           : t('Une partie de trivia, tout de suite', 'Yon pati trivia, touswit')}
@@ -166,13 +166,13 @@ export default function ArenaHubPanel({ onPractice, onDuel, variant = 'full' }: 
           standing && standing.rank > 0 ? t(`${standing.rank}e sur ${qualifiedCount} écoles cette semaine`, `${standing.rank}yèm sou ${qualifiedCount} lekòl semèn sa a`) : null,
           standing ? `${standing.teamXp} XP` : null,
         ].filter(Boolean).join(' · ')}
-        style={{ padding: 22, gap: 18, borderRadius: 24, backgroundColor: C.surfaceRaised }}
+        style={{ padding: 18, gap: 18, borderRadius: 16, backgroundColor: C.surfaceRaised }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
           {schoolName ? (
             <SchoolCrest name={schoolName} size={64} />
           ) : (
-            <View style={{ width: 64, height: 64, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surface }}>
+            <View style={{ width: 64, height: 64, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surface }}>
               <SchoolIcon color={C.muted} size={26} />
             </View>
           )}
@@ -180,7 +180,7 @@ export default function ArenaHubPanel({ onPractice, onDuel, variant = 'full' }: 
             <Text style={[arenaType.label, { fontSize: 15, color: C.muted }]}>
               {levelLabel ? t(`${levelLabel} · tu joues pour`, `${levelLabel} · w ap jwe pou`) : t('Tu joues pour', 'W ap jwe pou')}
             </Text>
-            <Text numberOfLines={2} style={{ fontFamily: fonts.heading, fontSize: 22, lineHeight: 27, letterSpacing: -0.4, color: C.ink }}>
+            <Text numberOfLines={2} style={{ fontFamily: fonts.heading, fontSize: 18, lineHeight: 23, letterSpacing: -0.4, color: C.ink }}>
               {schoolName || t('Aucune école pour l’instant', 'Poko gen lekòl')}
             </Text>
           </View>
@@ -191,7 +191,7 @@ export default function ArenaHubPanel({ onPractice, onDuel, variant = 'full' }: 
             <View style={{ flex: 1, padding: 14, gap: 2, borderRadius: 16, backgroundColor: C.surface }}>
               <Text style={[arenaType.status, { color: C.muted }]}>{t('Position', 'Pozisyon')}</Text>
               {standing && standing.rank > 0 ? (
-                <Text style={{ fontFamily: fonts.heading, fontSize: 22, lineHeight: 27, color: C.ink }}>
+                <Text style={{ fontFamily: fonts.heading, fontSize: 18, lineHeight: 23, color: C.ink }}>
                   {standing.rank}{t('e', 'yèm')}
                   <Text style={[arenaType.status, { color: C.inkSoft }]}>{t(` sur ${qualifiedCount}`, ` sou ${qualifiedCount}`)}</Text>
                 </Text>
@@ -205,7 +205,7 @@ export default function ArenaHubPanel({ onPractice, onDuel, variant = 'full' }: 
             </View>
             <View style={{ flex: 1, padding: 14, gap: 2, borderRadius: 16, backgroundColor: C.surface }}>
               <Text style={[arenaType.status, { color: C.muted }]}>{t('Score d’équipe', 'Nòt ekip la')}</Text>
-              <Text style={{ fontFamily: fonts.heading, fontSize: 22, lineHeight: 27, color: C.ink, fontVariant: ['tabular-nums'] }}>
+              <Text style={{ fontFamily: fonts.heading, fontSize: 18, lineHeight: 23, color: C.ink, fontVariant: ['tabular-nums'] }}>
                 {standing ? groupDigits(standing.teamXp) : '0'}
                 <Text style={[arenaType.status, { color: C.inkSoft }]}> XP</Text>
               </Text>
@@ -246,24 +246,24 @@ export default function ArenaHubPanel({ onPractice, onDuel, variant = 'full' }: 
 
       {/* ── The one event action ──────────────────────────────────────── */}
       {hub.status === 'loading' ? (
-        <ArenaPanel style={{ padding: 20, borderRadius: 24 }}>
+        <ArenaPanel style={{ padding: 20, borderRadius: 16 }}>
           <Text style={[arenaType.status, { color: C.muted }]}>{t('Recherche des championnats…', 'N ap chèche chanpyona yo…')}</Text>
         </ArenaPanel>
       ) : fault ? (
         // A failed query is NEVER "nothing scheduled".
-        <ArenaPanel tone="warn" style={{ padding: 20, borderRadius: 24 }}>
+        <ArenaPanel tone="warn" style={{ padding: 20, borderRadius: 16 }}>
           <Text style={[arenaType.name, { color: C.ink }]}>{fault.title}</Text>
           <Text style={[arenaType.status, { color: C.inkSoft }]}>{fault.body}</Text>
           <ArenaButton label={t('Réessayer', 'Eseye ankò')} onPress={hub.retry} />
         </ArenaPanel>
       ) : tour && copy ? (
-        <View style={{ padding: 22, gap: 12, borderRadius: 24, backgroundColor: C.surface }}>
+        <View style={{ padding: 18, gap: 12, borderRadius: 16, backgroundColor: C.surface }}>
           {hub.stale ? <StaleBanner t={t} onRetry={hub.retry} /> : null}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Text style={[arenaType.name, { fontSize: 14, color: C.coral, flex: 1 }]}>{t('Tournoi inter-écoles', 'Tounwa ant lekòl')}</Text>
             {copy.pill ? <StatusPill kind={copy.pill} t={t} /> : null}
           </View>
-          <Text style={{ fontFamily: fonts.heading, fontSize: 20, lineHeight: 25, color: C.ink }} numberOfLines={2}>{tour.title || t('Championnat EdLight', 'Chanpyona EdLight')}</Text>
+          <Text style={{ fontFamily: fonts.heading, fontSize: 17, lineHeight: 22, color: C.ink }} numberOfLines={2}>{tour.title || t('Championnat EdLight', 'Chanpyona EdLight')}</Text>
           {tour.startsAt ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <CalendarDays color={C.muted} size={18} />
@@ -287,7 +287,7 @@ export default function ArenaHubPanel({ onPractice, onDuel, variant = 'full' }: 
         // notifications are allowed, so until then the card says so and asks —
         // through the 'arena-event' pre-prompt, never the OS dialog cold.
         alerts === 'granted' || alerts === null ? (
-          <View accessible style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 20, backgroundColor: C.surface }}>
+          <View accessible style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 16, backgroundColor: C.surface }}>
             <CalendarDays color={C.muted} size={20} />
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={[arenaType.name, { fontSize: 15, color: C.inkSoft }]}>
@@ -303,7 +303,7 @@ export default function ArenaHubPanel({ onPractice, onDuel, variant = 'full' }: 
             onPress={askArenaAlerts}
             accessibilityRole="button"
             accessibilityLabel={t('Activer les alertes championnat', 'Aktive alèt chanpyona yo')}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 20, backgroundColor: C.surface }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 16, backgroundColor: C.surface }}
           >
             <Bell color={C.coral} size={20} />
             <View style={{ flex: 1, gap: 2 }}>
@@ -367,7 +367,7 @@ function HubRow({ icon, title, sub, badge, onPress }: { icon: React.ReactNode; t
       accessibilityLabel={[title, badge, sub].filter(Boolean).join(' — ')}
       style={{
         flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 76,
-        paddingHorizontal: 16, paddingVertical: 12, borderRadius: 20,
+        paddingHorizontal: 16, paddingVertical: 12, borderRadius: 16,
         backgroundColor: C.surface,
       }}
     >
@@ -375,7 +375,7 @@ function HubRow({ icon, title, sub, badge, onPress }: { icon: React.ReactNode; t
         {icon}
       </View>
       <View style={{ flex: 1, gap: 2 }}>
-        <Text style={[arenaType.name, { fontSize: 17, color: C.ink }]}>{title}</Text>
+        <Text style={[arenaType.name, { color: C.ink }]}>{title}</Text>
         {sub ? <Text numberOfLines={1} style={[arenaType.status, { color: C.muted }]}>{sub}</Text> : null}
       </View>
       {badge ? (

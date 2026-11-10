@@ -94,29 +94,34 @@ export const arenaType: Record<
   TextStyle
 > = {
   /** The one big number on a screen: a countdown, a rank. */
-  score: { fontFamily: fonts.bold, fontSize: 48, lineHeight: 52, letterSpacing: -1.2, fontVariant: TABULAR },
-  hero: { fontFamily: fonts.bold, fontSize: 30, lineHeight: 35, letterSpacing: -0.6 },
-  title: { fontFamily: fonts.bold, fontSize: 20, lineHeight: 25, letterSpacing: -0.2 },
-  name: { fontFamily: fonts.bold, fontSize: 16, lineHeight: 21 },
-  body: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21 },
+  score: { fontFamily: fonts.bold, fontSize: 40, lineHeight: 44, letterSpacing: -1, fontVariant: TABULAR },
+  hero: { fontFamily: fonts.bold, fontSize: 24, lineHeight: 29, letterSpacing: -0.4 },
+  title: { fontFamily: fonts.bold, fontSize: 18, lineHeight: 23, letterSpacing: -0.2 },
+  name: { fontFamily: fonts.bold, fontSize: 15, lineHeight: 20 },
+  body: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 },
   /** Status, errors, rules. 14pt floor. */
   status: { fontFamily: fonts.medium, fontSize: 14, lineHeight: 19 },
-  action: { fontFamily: fonts.bold, fontSize: 16, lineHeight: 20 },
+  action: { fontFamily: fonts.bold, fontSize: 15, lineHeight: 19 },
   /** Small labels over a value ("Ton école"). Sentence case, never uppercase. */
-  label: { fontFamily: fonts.medium, fontSize: 14, lineHeight: 18 },
+  label: { fontFamily: fonts.medium, fontSize: 13, lineHeight: 17 },
   /** Tabular numbers in rows. */
-  num: { fontFamily: fonts.bold, fontSize: 16, lineHeight: 20, fontVariant: TABULAR },
+  num: { fontFamily: fonts.bold, fontSize: 15, lineHeight: 19, fontVariant: TABULAR },
 };
 
+/**
+ * One shape language (Ted, Nov 2026: "shapes are weird"): rounded
+ * rectangles everywhere — 16 for cards, 12 for controls and tiles. No
+ * capsules: status is a word, never a pill.
+ */
 export const arenaRadius = {
-  card: 20,
-  control: 999,
-  chip: 999,
-  tile: 14,
+  card: 16,
+  control: 12,
+  chip: 8,
+  tile: 12,
 } as const;
 
 /** Minimum touch height for Arena controls. */
-export const ARENA_TOUCH = 50;
+export const ARENA_TOUCH = 48;
 
 /**
  * The night, shaped like the app's Palette — so an existing competition

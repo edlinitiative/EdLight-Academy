@@ -65,26 +65,26 @@ export interface CabinetCopy {
 export function cabinetCopy(key: CabinetKey, t: T, extra: { storyNextDept?: string | null; storyStarted?: boolean } = {}): CabinetCopy {
   switch (key) {
     case 'champ':
-      return { title: t('Championnat', 'Chanpyona'), sub: t('Une soirée par mois, toutes les écoles en direct.', 'Yon swa chak mwa, tout lekòl yo an dirèk.'), cta: t('Voir', 'Gade'), accent: '#FF6A45' };
+      return { title: t('Championnat', 'Chanpyona'), sub: t('Toutes les écoles, en direct.', 'Tout lekòl yo, an dirèk.'), cta: t('Voir', 'Gade'), accent: '#FF6A45' };
     case 'story':
       return {
         title: t('Mode Histoire', 'Mòd Istwa'),
         sub: extra.storyNextDept
-          ? t(`Le tour d’Ayiti. Prochaine étape : ${extra.storyNextDept}.`, `Tou Ayiti a. Pwochen etap : ${extra.storyNextDept}.`)
-          : t('Campagne terminée — reviens chercher les étoiles.', 'Kanpay la fini — retounen chèche zetwal yo.'),
+          ? t(`Prochaine étape : ${extra.storyNextDept}`, `Pwochen etap : ${extra.storyNextDept}`)
+          : t('Campagne terminée', 'Kanpay la fini'),
         cta: extra.storyStarted ? t('Continuer', 'Kontinye') : t('Commencer', 'Kòmanse'),
         accent: '#2FD18C',
       };
     case 'duel':
-      return { title: t('Défi d’un ami', 'Defi yon zanmi'), sub: t('5 questions, un lien, le meilleur score gagne.', '5 kesyon, yon lyen, pi bon nòt la genyen.'), cta: t('Défier', 'Defye'), accent: '#5EA2FF' };
+      return { title: t('Défi d’un ami', 'Defi yon zanmi'), sub: t('Un lien, un gagnant.', 'Yon lyen, yon gayan.'), cta: t('Défier', 'Defye'), accent: '#5EA2FF' };
     case 'quick':
-      return { title: t('Partie rapide', 'Pati rapid'), sub: t('Une partie tout de suite. Tes points comptent.', 'Yon pati touswit. Pwen ou konte.'), cta: t('Jouer', 'Jwe'), accent: '#FFB547' };
+      return { title: t('Partie rapide', 'Pati rapid'), sub: t('Tout de suite.', 'Touswit.'), cta: t('Jouer', 'Jwe'), accent: '#FFB547' };
     case 'room':
-      return { title: t('Tournoi privé', 'Tounwa prive'), sub: t('Crée une salle, partage le code, jouez ensemble.', 'Kreye yon sal, pataje kòd la, jwe ansanm.'), cta: t('Créer ou rejoindre', 'Kreye oswa antre'), accent: '#B69CFF' };
+      return { title: t('Tournoi privé', 'Tounwa prive'), sub: t('Avec ta classe, par code.', 'Ak klas ou, ak yon kòd.'), cta: t('Ouvrir', 'Louvri'), accent: '#B69CFF' };
     case 'mini':
-      return { title: t('Mini-jeux', 'Mini jwèt'), sub: t('Vrai ou faux, Mémoire, Mo Kaché, Calcul, Suites.', 'Vre oswa fo, Memwa, Mo Kache, Kalkil, Swit.'), cta: t('Jouer', 'Jwe'), accent: '#3DDC97' };
+      return { title: t('Mini-jeux', 'Mini jwèt'), sub: t('Cinq jeux courts.', 'Senk ti jwèt.'), cta: t('Jouer', 'Jwe'), accent: '#3DDC97' };
     case 'board':
-      return { title: t('Classement', 'Klasman'), sub: t('Les écoles et les joueurs de la semaine.', 'Lekòl ak jwè semèn nan.'), cta: t('Voir', 'Gade'), accent: '#7FB2FF' };
+      return { title: t('Classement', 'Klasman'), sub: t('Écoles et joueurs.', 'Lekòl ak jwè.'), cta: t('Voir', 'Gade'), accent: '#7FB2FF' };
     case 'activity':
     default:
       return { title: t('Mon activité', 'Aktivite mwen'), sub: t('Équipes et compétitions', 'Ekip ak konpetisyon'), cta: t('Ouvrir', 'Louvri'), accent: '#A3B5DC' };

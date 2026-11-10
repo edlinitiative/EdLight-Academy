@@ -153,7 +153,7 @@ export default function ArenaStoryScreen() {
               return reduce || !on ? <View key={i}>{star}</View> : <PopIn key={i} delay={250 + i * 250} from={0.4}>{star}</PopIn>;
             })}
           </View>
-          <Text style={{ fontFamily: fonts.heading, fontSize: 40, lineHeight: 46, color: C.ink, fontVariant: ['tabular-nums'] }}>
+          <Text style={{ fontFamily: fonts.heading, fontSize: 32, lineHeight: 38, color: C.ink, fontVariant: ['tabular-nums'] }}>
             {result.score}<Text style={[arenaType.title, { color: C.muted }]}> / {result.total}</Text>
           </Text>
           <Text style={[arenaType.body, { color: C.inkSoft, textAlign: 'center' }]}>
@@ -227,7 +227,7 @@ export default function ArenaStoryScreen() {
           </Text>
         </View>
 
-        <View style={{ alignItems: 'center', paddingVertical: 4, borderRadius: 24, backgroundColor: C.surfaceAlt }}>
+        <View style={{ alignItems: 'center', paddingVertical: 4, borderRadius: 16, backgroundColor: C.surfaceAlt }}>
           <StoryMapArt progress={progress} selected={chapterIdx} width={mapW} />
         </View>
 
@@ -246,7 +246,7 @@ export default function ArenaStoryScreen() {
                 accessibilityState={{ selected: here }}
                 accessibilityLabel={`${i + 1}. ${c.dept}${open ? '' : ` — ${t('verrouillé', 'fèmen')}`}${done ? ` — ${t('conquis', 'konkeri')}` : ''}`}
                 style={{
-                  minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, borderRadius: 999,
+                  minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, borderRadius: 12,
                   backgroundColor: here ? C.ink : C.surface,
                 }}
               >
@@ -294,7 +294,7 @@ export default function ArenaStoryScreen() {
                   !open ? t('verrouillé', 'fèmen') : cleared ? t(`${row[i]} étoiles`, `${row[i]} zetwal`) : null,
                 ].filter(Boolean).join('. ')}
                 style={{
-                  flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 72, padding: 14, borderRadius: 20,
+                  flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 72, padding: 14, borderRadius: 16,
                   // Locked rows stay OPAQUE (the venue art must not show through); the lock icon and muted title carry the state.
                   backgroundColor: current ? C.surfaceRaised : open ? C.surface : C.surfaceAlt,
                 }}
@@ -322,7 +322,7 @@ export default function ArenaStoryScreen() {
         </View>
 
         {!chapterOpen ? (
-          <View style={{ gap: 10, padding: 16, borderRadius: 20, backgroundColor: C.surface }}>
+          <View style={{ gap: 10, padding: 16, borderRadius: 16, backgroundColor: C.surface }}>
             <Text style={[arenaType.body, { color: C.inkSoft }]}>{t(`Bats le boss de ${prevDept} pour ouvrir ce chapitre.`, `Bat bòs ${prevDept} pou w louvri chapit sa a.`)}</Text>
             {next ? <ArenaButton variant="secondary" label={t('Chapitre en cours', 'Chapit k ap fèt la')} onPress={() => setPicked(next.chapter)} style={{ backgroundColor: C.surfaceRaised }} /> : null}
           </View>
