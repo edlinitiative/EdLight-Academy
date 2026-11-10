@@ -114,3 +114,12 @@ body.arena-night .ah-mini-row, body.arena-night .ah-minis { flex-wrap: nowrap; g
 body.arena-night .ah-mini, body.arena-night .ah-mini--a, body.arena-night .ah-mini--b, body.arena-night .ah-mini--c, body.arena-night .ah-mini--d, body.arena-night .ah-mini--e { width: 48px; height: 48px; font-size: 13px; }
 body.arena-night .ah-art-mini { flex-wrap: nowrap; gap: 8px; justify-content: center; }
 body.arena-night .ah-game__art { max-height: 200px; overflow: hidden; }
+
+/* ── 5. Less to read (Ted, Nov 2026: "too much text, make it clean") ──────
+   Each card: an icon with its title, one line, one action. */
+body.arena-night .lb-lane h3 { display: flex; align-items: center; gap: 8px; margin: 0; }
+body.arena-night .lb-lane h3 svg { flex: none; color: #A9C6FF; }
+body.arena-night .lb-lane { gap: 8px; }
+body.arena-night .lb-lane__go { margin-top: auto; align-self: flex-start; }
+body.arena-night .lb-lane__text { margin: 0; color: #A3B5DC; }
+body.arena-night .ah-game__body > p:not(.ah-game__over) { color: #A3B5DC; margin: 0; }

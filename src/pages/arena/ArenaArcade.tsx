@@ -123,7 +123,7 @@ export default function ArenaArcade() {
         ? t(`Inscriptions ouvertes · ${new Date(open.startsAt).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}`,
           `Enskripsyon ouvè · ${new Date(open.startsAt).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}`)
         : t('Inscriptions ouvertes.', 'Enskripsyon ouvè.'))
-    : t('Une soirée par mois, toutes les écoles en direct. La prochaine finale sera annoncée ici.', 'Yon swa chak mwa, tout lekòl yo an dirèk. N ap anonse pwochen final la isit la.');
+    : t('Toutes les écoles en direct, une soirée par mois.', 'Tout lekòl yo an dirèk, yon swa chak mwa.');
 
   // ── Arcade keys: 1–3 the three lanes, 4–6 the supporting modes ──
   const champTo = open?.state === 'doors' ? '/arena/jouer' : '/arena/championnat';
@@ -165,11 +165,10 @@ export default function ArenaArcade() {
     return () => { el.removeEventListener('pointermove', onMove); cancelAnimationFrame(raf); };
   }, []);
 
-  const Key = ({ n }: { n: number }) => <kbd className="ah-key" aria-hidden="true">{n}</kbd>;
 
   return (
     <div className="ah">
-      <nav aria-label={t("Compétitions", "Konpetisyon")} style={{ padding: "12px 24px" }}><Link className="an-ghost" to="/arena/competitions">{t("Mon activité · Équipes et compétitions", "Aktivite mwen · Ekip ak konpetisyon")}</Link></nav>
+      <nav aria-label={t("Compétitions", "Konpetisyon")} className="container" style={{ paddingTop: 12, paddingBottom: 12 }}><Link className="an-ghost" to="/arena/competitions">{t("Mon activité · Équipes et compétitions", "Aktivite mwen · Ekip ak konpetisyon")}</Link></nav>
       {/* ═══ The city ═══════════════════════════════════════════════════════ */}
       <section ref={heroRef} className="ah-hero" aria-labelledby="ah-title">
         <div className="ah-sky" aria-hidden="true">
@@ -273,7 +272,6 @@ export default function ArenaArcade() {
             <div>
               <h2 id="ah-select-title" className="ah-h2">{t('Pour t’entraîner', 'Pou antrene')}</h2>
             </div>
-            <p className="ah-keys-hint">{t('Touches', 'Touch')} <kbd className="ah-key">1</kbd>–<kbd className="ah-key">6</kbd></p>
           </header>
 
           <div className="ah-bento lb-bento">
@@ -300,12 +298,11 @@ export default function ArenaArcade() {
                 </svg>
               </div>
               <div className="ah-game__body">
-                <p className="ah-game__over"><Key n={4} /> {t('Mode Histoire', 'Mòd Istwa')}</p>
                 <h3>{t('Le tour d’Ayiti', 'Tou Ayiti a')}</h3>
                 <p>
                   {storyChapter
-                    ? t(`Dix départements, un boss dans chacun. Prochaine étape : ${storyChapter.dept}.`, `Dis depatman, yon bòs nan chak. Pwochen etap : ${storyChapter.dept}.`)
-                    : t('Campagne terminée — reviens chercher les étoiles qui manquent.', 'Kanpay la fini — retounen chèche zetwal ki manke yo.')}
+                    ? t(`Prochaine étape : ${storyChapter.dept}`, `Pwochen etap : ${storyChapter.dept}`)
+                    : t('Campagne terminée', 'Kanpay la fini')}
                 </p>
                 <div className="ah-game__foot">
                   <span className="ah-stars-count"><Star size={18} aria-hidden="true" /> {storyStars}<small>/{MAX_STARS}</small></span>
@@ -322,12 +319,11 @@ export default function ArenaArcade() {
                 <span className="ah-pin__crowd"><Users size={22} /> <Users size={22} /> <Users size={22} /></span>
               </div>
               <div className="ah-game__body">
-                <p className="ah-game__over"><Key n={5} /> {t('Avec ta classe', 'Ak klas ou')}</p>
                 <h3>{t('Tournoi privé', 'Tounwa prive')}</h3>
-                <p>{t('Crée une salle, partage le code, jouez ensemble — en direct ou sur plusieurs jours.', 'Kreye yon sal, pataje kòd la, jwe ansanm — an dirèk oswa sou plizyè jou.')}</p>
+                <p>{t('Avec ta classe, par code.', 'Ak klas ou, ak yon kòd.')}</p>
                 <div className="ah-game__foot">
                   <Link to="/tournois/nouveau" className="ah-cta ah-cta--btn">{t('Créer', 'Kreye')} <ChevronRight size={18} aria-hidden="true" /></Link>
-                  <Link to="/tournois/rejoindre" className="ah-cta ah-cta--quiet">{t('Rejoindre avec un code', 'Antre ak yon kòd')}</Link>
+                  <Link to="/tournois/rejoindre" className="ah-cta ah-cta--quiet">{t('Rejoindre', 'Antre')}</Link>
                 </div>
               </div>
             </div>
@@ -342,9 +338,8 @@ export default function ArenaArcade() {
                 <span className="ah-mini ah-mini--e"><Sparkles size={22} /></span>
               </div>
               <div className="ah-game__body">
-                <p className="ah-game__over"><Key n={6} /> {t('5 jeux', '5 jwèt')}</p>
                 <h3>{t('Mini-jeux', 'Mini jwèt')}</h3>
-                <p>{t('Vrai ou faux, Mémoire, Mo Kaché, Calcul, Suites. Bats ton record.', 'Vre oswa fo, Memwa, Mo Kache, Kalkil, Swit. Bat rekò ou.')}</p>
+                <p>{t('Cinq jeux courts. Bats ton record.', 'Senk ti jwèt. Bat rekò ou.')}</p>
                 <span className="ah-cta">{t('Jouer', 'Jwe')} <ChevronRight size={18} aria-hidden="true" /></span>
               </div>
             </Link>
