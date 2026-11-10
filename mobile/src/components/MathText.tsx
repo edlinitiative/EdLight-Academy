@@ -70,6 +70,8 @@ const KATEX_HTML = (text: string, display: boolean, ink: string) => `
             { left: '\\\\[', right: '\\\\]', display: true },
           ],
           throwOnError: false,
+          // Inline \\frac is set at ~70%; keep fractions at text size.
+          macros: { '\\\\frac': '\\\\dfrac' },
         });
       } else {
         // Should not happen (KaTeX is bundled), but if the engine failed to

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { optionKeyLabel } from '../utils/examTextHtml';
 import { expectedIdeas } from '../../shared/essayWorkshop';
 import './ExamResults.css';
 import './examPremium.css';
@@ -1042,7 +1043,7 @@ const ExamResults = () => {
                         modelAnswer={r.question.model_answer}
                       />
                     : r.question.type === 'multiple_choice' && r.question.options
-                      ? <span>{r.userAnswer.toUpperCase()}) <InstructionRenderer text={r.question.options[r.userAnswer] || r.userAnswer} inline /></span>
+                      ? <span>{optionKeyLabel(r.userAnswer)}) <InstructionRenderer text={r.question.options[r.userAnswer] || r.userAnswer} inline /></span>
                       : <ProofOrPlainAnswer answer={r.userAnswer} correctAnswer={r.question.correct || r.question.final_answer} />
                   }
                 </div>
@@ -1053,7 +1054,7 @@ const ExamResults = () => {
                 <div className="exam-results__item-correct">
                   <strong>{t('Réponse correcte :', 'Bon repons :')}</strong>{' '}
                   {r.question.type === 'multiple_choice' && r.question.options
-                    ? <span>{(r.question.correct || '').toUpperCase()}) <InstructionRenderer text={r.question.options[r.question.correct] || r.question.correct} inline /></span>
+                    ? <span>{optionKeyLabel((r.question.correct || ''))}) <InstructionRenderer text={r.question.options[r.question.correct] || r.question.correct} inline /></span>
                     : <InstructionRenderer text={String(r.question.correct || r.question.final_answer)} inline />
                   }
                 </div>

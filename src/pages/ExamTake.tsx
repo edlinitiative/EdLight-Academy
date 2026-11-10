@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { optionKeyLabel } from '../utils/examTextHtml';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import useStore from '../contexts/store';
@@ -33,6 +34,7 @@ import { compileQuestion, isSerializable, responseToStored, storedToResponse } f
 import { Skeleton } from '../components/Skeleton';
 import './ExamTake.css';
 import { balanceMathAcrossBlanks } from '../utils/mathBlanks';
+import { workedPart } from '../../shared/display/scaffoldText';
 import { scaffoldRevealsAnswer } from '../../shared/scaffoldReveal';
 import { detectProofSubtype, isProofQuestion, JUSTIFICATION_OPTIONS } from '../../shared/proofQuestion';
 import EssayWorkshop, { EssayWorkshopContext, emptyWorkshop } from '../components/exam/EssayWorkshop';
@@ -98,7 +100,9 @@ function MathText({ text }) {
   const katexReady = useKatex();
   if (!text) return null;
   // If no math delimiters, render as plain text (avoids dangerouslySetInnerHTML)
-  if (!/\$/.test(text) && !/\\\(/.test(text)) return <>{text}</>;
+  // Plain prose stays a text node; anything with LaTeX-ish markup (delimited
+  // or not, "x_G", a table) goes through the shared renderer.
+  if (!/[$\\^_{}|`*]|\[Table:/i.test(String(text))) return <>{text}</>;
   return <span dangerouslySetInnerHTML={renderWithKatex(text, katexReady)} />;
 }
 
@@ -1287,11 +1291,20 @@ const ExamTake = () => {
             {/* Inline intro (former cover) for a more uniform, single-flow layout */}
             <div className="exam-take__preview-intro" style={{ '--cover-accent': color }}>
               <div className="exam-cover__hero">
-                <div className="exam-cover__badge">
-                  {subject}
-                </div>
-                <h1 className="exam-cover__title">{normalizeExamTitle(exam)}</h1>
-                {exam.year && <p className="exam-cover__year">{exam.year}</p>}
+                {/* Subject and year only where the title does not already say
+                    them ("Mathématiques · Bac régulier · Juillet 2025" was
+                    framed by "Mathématiques" above and "2025" below). */}
+                {(() => {
+                  const coverTitle = String(normalizeExamTitle(exam) ?? '');
+                  const has = (x: unknown) => !!x && coverTitle.toLowerCase().includes(String(x).toLowerCase());
+                  return (
+                    <>
+                      {subject && !has(subject) ? <div className="exam-cover__badge">{subject}</div> : null}
+                      <h1 className="exam-cover__title">{coverTitle}</h1>
+                      {exam.year && !has(exam.year) ? <p className="exam-cover__year">{exam.year}</p> : null}
+                    </>
+                  );
+                })()}
 
                 <div className="exam-cover__stats">
                   {durationMin > 0 && (
@@ -1521,7 +1534,7 @@ const ExamTake = () => {
                                     <div className="exam-take__preview-mcq-options">
                                       {optEntries.map(([key, text]) => (
                                         <div key={key} className="exam-take__preview-mcq-option">
-                                          <span className="exam-take__preview-mcq-letter">{key.toUpperCase()}.</span>
+                                          <span className="exam-take__preview-mcq-letter">{optionKeyLabel(key)}.</span>
                                           <span><MathText text={text} /></span>
                                         </div>
                                       ))}
@@ -2625,20 +2638,6 @@ function scaffoldNeedsMath(q, subject) {
 }
 
 /**
- * Trim a string back to balanced `$…$` math delimiters so a partial LaTeX
- * fragment (e.g. when a blank sits inside `$…$`) never reaches KaTeX.
- */
-function balanceMathDelimiters(s) {
-  if (!s) return s;
-  const dollars = (s.match(/(?<!\\)\$/g) || []).length;
-  if (dollars % 2 === 1) {
-    const last = s.lastIndexOf('$');
-    return s.slice(0, last).replace(/\s+$/, '');
-  }
-  return s;
-}
-
-/**
  * Accessible dropdown that renders each option as KaTeX math. Used for scaffold
  * blanks whose options are expressions (a native <select> can only show raw
  * LaTeX). Exposes focus() so the step dots and keyboard nav keep working.
@@ -3139,8 +3138,10 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false, 
   if (!template || totalBlanks === 0) return null;
 
   // Extract the solution text (everything before the first {{n}} marker)
-  const firstBlankPos = template.search(/\{\{\d+\}\}/);
-  const solutionText = balanceMathDelimiters(firstBlankPos > 0 ? template.slice(0, firstBlankPos).trim() : '');
+  // Whole lines before the first blank, and nothing when they only restate the
+  // question: the phone's rule (shared/display/scaffoldText). A char-level cut
+  // left half-formulas behind ("\\frac{1}{").
+  const solutionText = workedPart(template, String(question._displayText ?? question.question ?? ''));
 
   const allCorrect = checked && correctCount === totalBlanks;
   const allFilled = filledCount === totalBlanks;
@@ -3448,7 +3449,7 @@ function ImmediateFeedback({ result, question, color }) {
           <span className="exam-take__feedback-correct-label">{t('Réponse correcte :', 'Bon repons :')}</span>{' '}
           <strong><MathText text={
             question.type === 'multiple_choice' && question.options
-              ? `${question.correct.toUpperCase()}. ${question.options[question.correct] || question.correct}`
+              ? `${optionKeyLabel(question.correct)}. ${question.options[question.correct] || question.correct}`
               : question.correct
           } /></strong>
         </div>
@@ -3459,7 +3460,7 @@ function ImmediateFeedback({ result, question, color }) {
         <div className="exam-take__feedback-blanks">
           {result.result.blankResults.map((br, i) => (
             <div key={i} className={`exam-take__feedback-blank ${br.correct ? 'exam-take__feedback-blank--ok' : 'exam-take__feedback-blank--wrong'}`}>
-              <span>{br.correct ? '✓' : '✗'} {br.label}:</span>{' '}
+              <span>{br.correct ? '✓' : '✗'} <MathText text={br.label} />:</span>{' '}
               {!br.correct && <><span className="exam-take__feedback-blank-user">{br.userValue || '—'}</span> → <strong><MathText text={br.expectedAnswer} /></strong></>}
               {br.correct && <strong><MathText text={br.userValue} /></strong>}
             </div>
@@ -3616,7 +3617,7 @@ function LadderInput({ question, index, value, onChange, disabled, subject }) {
         const fieldId = `ladder-${index}-${id}`;
         return (
           <div className="exam-take__ladder-row" key={id}>
-            <label className="exam-take__ladder-label" htmlFor={fieldId}>{label}</label>
+            <label className="exam-take__ladder-label" htmlFor={fieldId}><MathText text={label} /></label>
             <input
               id={fieldId}
               className="exam-take__ladder-input"
@@ -3845,7 +3846,7 @@ function ProofInput({ question, index, value, onChange, disabled = false }) {
                 {hintVisible && hint && !isDone && (
                   <div className="ka-step__hint">
                     <span className="ka-step__hint-icon"><Lightbulb size={14} aria-hidden="true" /></span>
-                    {hint}
+                    <MathText text={hint} />
                   </div>
                 )}
 
@@ -4041,7 +4042,7 @@ export function MCQInput({ question, index, value, onChange, disabled }) {
               className="exam-take__mcq-radio"
               disabled={disabled}
             />
-            <span className="exam-take__mcq-key">{key.toUpperCase()}</span>
+            <span className="exam-take__mcq-key">{optionKeyLabel(key)}</span>
             <span className="exam-take__mcq-text"><MathText text={text} /></span>
           </label>
         );
@@ -4107,7 +4108,7 @@ function MultiSelectInput({ question, index, value, onChange, disabled }) {
               className="exam-take__mcq-checkbox"
               disabled={disabled}
             />
-            <span className="exam-take__mcq-key">{key.toUpperCase()}</span>
+            <span className="exam-take__mcq-key">{optionKeyLabel(key)}</span>
             <span className="exam-take__mcq-text"><MathText text={text} /></span>
           </label>
         );
@@ -4201,7 +4202,7 @@ function RubricGuide({ question }) {
       <ul className="exam-take__rubric-guide-list">
         {rubric.map((r, i) => (
           <li key={i}>
-            {r.label}
+            <MathText text={r.label} />
             {r.count > 1 && <span className="exam-take__rubric-guide-count"> ({r.count} {t('éléments', 'eleman')})</span>}
           </li>
         ))}
@@ -4324,7 +4325,7 @@ function MatchingInput({ question, index, value, onChange, disabled }) {
           <ul className="exam-take__matching-legend">
             {rightOptions.map((o) => (
               <li key={o.key}>
-                <strong>{o.key.toUpperCase()}.</strong> <MathText text={o.text || '—'} />
+                <strong>{optionKeyLabel(o.key)}.</strong> <MathText text={o.text || '—'} />
               </li>
             ))}
           </ul>
@@ -4333,7 +4334,7 @@ function MatchingInput({ question, index, value, onChange, disabled }) {
           {leftItems.map((it) => (
             <div className="exam-take__matching-pair" key={it.key}>
               <span className="exam-take__matching-item">
-                <strong>{String(it.key).toUpperCase()}.</strong>
+                <strong>{optionKeyLabel(String(it.key))}.</strong>
                 {it.text ? <> <MathText text={it.text} /></> : null}
               </span>
               <span className="exam-take__matching-arrow">→</span>
@@ -4347,7 +4348,7 @@ function MatchingInput({ question, index, value, onChange, disabled }) {
                 <option value="">{t('— Choisir —', '— Chwazi —')}</option>
                 {rightOptions.map((o) => (
                   <option key={o.key} value={o.key}>
-                    {o.text ? `${o.key.toUpperCase()}. ${o.text}` : o.key.toUpperCase()}
+                    {o.text ? `${optionKeyLabel(o.key)}. ${o.text}` : optionKeyLabel(o.key)}
                   </option>
                 ))}
               </select>
