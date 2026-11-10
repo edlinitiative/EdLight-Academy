@@ -122,27 +122,35 @@ export default function ArenaArcade({ onPractice, onDuel, onMiniGames }: ArenaAr
 
       <View style={{ paddingHorizontal: SIDE, paddingTop: 18, gap: 16 }}>
         {/* ═══ The lobby ═══════════════════════════════════════════════ */}
-        <View style={{ padding: 18, gap: 14, borderRadius: 24, backgroundColor: C.surfaceRaised }}>
+        {/* The lobby: who you are, for whom, against whom, in one compact
+            card. It was three stacked blocks with a 56pt face and a boxed
+            school ("too big, I don't like the style", TestFlight Nov 2026). */}
+        <View style={{ paddingHorizontal: 14, paddingVertical: 12, gap: 10, borderRadius: 20, backgroundColor: C.surfaceRaised }}>
           {signedIn ? (
             <View
               accessible
               accessibilityLabel={[
                 pseudo || t('Toi', 'Ou'),
                 t(`niveau ${level?.level || 1}`, `nivo ${level?.level || 1}`),
+                mySchool ? t(`tu joues pour ${mySchool}`, `w ap jwe pou ${mySchool}`) : null,
                 myRank ? t(`${myRank}e cette semaine`, `${myRank}yèm semèn sa a`) : null,
               ].filter(Boolean).join(', ')}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}
             >
-              <Avatar seed={user?.uid || 'toi'} config={myAvatar} size={56} />
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text numberOfLines={1} style={{ fontFamily: fonts.heading, fontSize: 20, lineHeight: 25, color: C.ink }}>
+              <Avatar seed={user?.uid || 'toi'} config={myAvatar} size={40} />
+              <View style={{ flex: 1, gap: 1 }}>
+                <Text numberOfLines={1} style={{ fontFamily: fonts.headingBold, fontSize: 16, lineHeight: 21, color: C.ink }}>
                   {pseudo || t('Toi', 'Ou')}
                 </Text>
-                <Text style={[arenaType.status, { color: C.muted }]}>
-                  {t(`Niveau ${level?.level || 1}`, `Nivo ${level?.level || 1}`)}
-                  {myRank ? t(` · ${myRank}e cette semaine`, ` · ${myRank}yèm semèn sa a`) : ''}
+                <Text numberOfLines={1} style={{ fontFamily: fonts.medium, fontSize: 14, lineHeight: 19, color: C.inkSoft }}>
+                  {[
+                    t(`Niveau ${level?.level || 1}`, `Nivo ${level?.level || 1}`),
+                    myRank ? t(`${myRank}ᵉ cette semaine`, `${myRank}yèm semèn sa a`) : null,
+                    mySchool,
+                  ].filter(Boolean).join(' · ')}
                 </Text>
               </View>
+              {mySchool ? <SchoolCrest name={mySchool} size={28} /> : null}
             </View>
           ) : (
             <View style={{ gap: 10 }}>
@@ -154,45 +162,32 @@ export default function ArenaArcade({ onPractice, onDuel, onMiniGames }: ArenaAr
             </View>
           )}
 
-          {signedIn && mySchool ? (
-            <View
-              accessible
-              accessibilityLabel={[
-                t(`Tu joues pour ${mySchool}`, `W ap jwe pou ${mySchool}`),
-                schoolPlaceLine(myWeek, qualifiedWeek, t),
-              ].join(', ')}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 16, backgroundColor: C.surface }}
-            >
-              <SchoolCrest name={mySchool} size={40} />
-              <View style={{ flex: 1, gap: 1 }}>
-                <Text numberOfLines={2} style={[arenaType.name, { color: C.ink }]}>{mySchool}</Text>
-                <Text style={[arenaType.status, { color: myWeek?.qualified ? C.inkSoft : C.warn }]}>{schoolPlaceLine(myWeek, qualifiedWeek, t)}</Text>
-              </View>
-            </View>
-          ) : signedIn ? (
-            <ArenaButton
-              variant="secondary"
-              label={t('Choisir mon école', 'Chwazi lekòl mwen')}
-              accessibilityHint={t('Son bâtiment apparaîtra dans la ville', 'Batiman l ap parèt nan vil la')}
+          {signedIn && !mySchool ? (
+            <PressableScale
               onPress={() => run({ kind: 'navigate', screen: 'Leaderboard' })}
-              icon={<SchoolIcon color={C.ink} size={16} />}
-              style={{ backgroundColor: C.surface }}
-            />
+              accessibilityRole="button"
+              accessibilityHint={t('Son bâtiment apparaîtra dans la ville', 'Batiman l ap parèt nan vil la')}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36 }}
+            >
+              <SchoolIcon color={C.inkSoft} size={16} />
+              <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: C.inkSoft }}>{t('Choisir mon école', 'Chwazi lekòl mwen')}</Text>
+            </PressableScale>
+          ) : null}
+
+          {signedIn && mySchool && myWeek ? (
+            <Text style={{ fontFamily: fonts.medium, fontSize: 14, lineHeight: 19, color: C.muted }} numberOfLines={1}>
+              {schoolPlaceLine(myWeek, qualifiedWeek, t)}
+            </Text>
           ) : null}
 
           {signedIn && rival.status === 'rival' ? (
-            <View accessible style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <Avatar seed={rival.entry.id} size={36} />
-              <Text style={[arenaType.status, { flex: 1, color: C.inkSoft }]}>
-                {rival.scope === 'school'
-                  ? t(`Ton rival dans ton école : ${rival.entry.displayName || 'un joueur'}, ${groupDigits(rival.gap)} XP devant toi.`, `Rival ou nan lekòl ou : ${rival.entry.displayName || 'yon jwè'}, ${groupDigits(rival.gap)} XP devan w.`)
-                  : t(`Ton rival : ${rival.entry.displayName || 'un joueur'}, ${groupDigits(rival.gap)} XP devant toi.`, `Rival ou : ${rival.entry.displayName || 'yon jwè'}, ${groupDigits(rival.gap)} XP devan w.`)}
-              </Text>
-            </View>
+            <Text accessible style={{ fontFamily: fonts.medium, fontSize: 14, lineHeight: 19, color: C.muted }} numberOfLines={1}>
+              {t(`Rival : ${rival.entry.displayName || 'un joueur'}, ${groupDigits(rival.gap)} XP devant`, `Rival : ${rival.entry.displayName || 'yon jwè'}, ${groupDigits(rival.gap)} XP devan`)}
+            </Text>
           ) : signedIn && rival.status === 'leader' ? (
-            <View accessible style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <Crown color={C.gold} size={20} />
-              <Text style={[arenaType.status, { flex: 1, color: C.inkSoft }]}>{t('Tu es en tête cette semaine. Garde ta place.', 'Ou an tèt semèn sa a. Kenbe plas ou.')}</Text>
+            <View accessible style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Crown color={C.gold} size={16} />
+              <Text style={{ fontFamily: fonts.medium, fontSize: 14, color: C.inkSoft }}>{t('En tête cette semaine', 'An tèt semèn sa a')}</Text>
             </View>
           ) : null}
         </View>

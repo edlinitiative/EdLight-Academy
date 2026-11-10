@@ -10,7 +10,6 @@ import useStore from '../contexts/store';
 import { useTheme, typeScale, fonts } from '../theme/theme';
 import { arenaColors as NC, arenaPalette } from '../theme/arenaTheme';
 import { Avatar as FaceAvatar, SchoolCrest } from './arena/art';
-import Segmented from './ui/Segmented';
 import { aggregateBy, normalizeName, type GroupField, type GroupRanking } from '../../../shared/leaderboardAgg';
 import { useReduceMotion } from '../utils/motion';
 import { tapLight } from '../utils/haptics';
@@ -86,12 +85,47 @@ function rankBadge(rank: number, isDark: boolean) {
   return { bg: isDark ? NC.secondary : '#EEF2F7', text: isDark ? NC.inkSoft : '#46587A' };
 }
 
+/**
+ * Quiet tabs: the active one in ink with a short underline, the rest muted.
+ * Two stacked pill tracks read as a control panel above a list of three.
+ */
+function TextTabs<K extends string>({ options, value, onChange, small = false }: {
+  options: { key: K; label: string }[];
+  value: K;
+  onChange: (k: K) => void;
+  small?: boolean;
+}) {
+  const { colors, night } = useBoard();
+  const on = night ? NC.ink : colors.ink;
+  const off = night ? NC.inkSoft : colors.muted;
+  return (
+    <View accessibilityRole="tablist" style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: small ? 16 : 20, marginBottom: small ? 10 : 6 }}>
+      {options.map((o) => {
+        const active = o.key === value;
+        return (
+          <TouchableOpacity
+            key={o.key}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            onPress={() => { if (!active) { tapLight(); onChange(o.key); } }}
+            hitSlop={{ top: 8, bottom: 8 }}
+            style={{ minHeight: 36, justifyContent: 'center' }}
+          >
+            <Text style={{ fontFamily: active ? fonts.bold : fonts.medium, fontSize: small ? 14 : 15, color: active ? on : off, opacity: active || !night ? 1 : 0.75 }}>{o.label}</Text>
+            <View style={{ height: 2, borderRadius: 1, marginTop: 3, backgroundColor: active ? (night ? NC.ink : colors.azure) : 'transparent' }} />
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
 function RankChip({ rank }: { rank: number }) {
   const { isDark } = useBoard();
   const b = rankBadge(rank, isDark);
   return (
-    <View style={{ width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: b.bg, marginRight: 12 }}>
-      <Text style={{ fontFamily: fonts.headingBold, fontSize: 16, color: b.text }} maxFontSizeMultiplier={1.3}>{rank}</Text>
+    <View style={{ width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: b.bg, marginRight: 10 }}>
+      <Text style={{ fontFamily: fonts.headingBold, fontSize: 14, color: b.text }} maxFontSizeMultiplier={1.3}>{rank}</Text>
     </View>
   );
 }
@@ -120,27 +154,27 @@ function EntryRow({ entry, isMe, compact = false, delta = 0 }: { entry: any; isM
       // Rows are plain inside the card; YOUR row is a tonal wash, never an
       // outline (no rings, no hairlines).
       style={{
-        flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 10,
-        borderRadius: 14, marginBottom: 4,
+        flexDirection: 'row', alignItems: 'center', paddingVertical: 7, paddingHorizontal: 8,
+        borderRadius: 12, marginBottom: 2,
         backgroundColor: isMe ? (night ? NC.surfaceRaised : colors.azureSoft) : 'transparent',
       }}
     >
       <RankChip rank={Number(entry.rank) || 0} />
 
       {/* Face — the generated arena face on the night, never bare initials. */}
-      <View style={{ marginRight: 12 }}>
-        <BoardAvatar entry={entry} size={40} />
+      <View style={{ marginRight: 10 }}>
+        <BoardAvatar entry={entry} size={32} />
       </View>
 
       {/* Name + city · school (parity with the web leaderboard) */}
       <View style={{ flex: 1 }}>
-        <Text style={{ fontFamily: fonts.bold, fontSize: 16, lineHeight: 21, color: colors.ink }} numberOfLines={1}>
+        <Text style={{ fontFamily: fonts.bold, fontSize: 15, lineHeight: 20, color: colors.ink }} numberOfLines={1}>
           {name}
           {isMe ? t(' (toi)', ' (ou)') : ''}
           {ambassador ? <Text style={{ fontFamily: fonts.bold, fontSize: 13, color: night ? NC.inkSoft : colors.azure }}>{`  ${t(AMBASSADOR_LABEL.fr, AMBASSADOR_LABEL.ht)}`}</Text> : null}
         </Text>
         {!compact && (entry.city || entry.school) && (
-          <Text style={[typeScale.caption, { color: colors.muted }]} numberOfLines={1}>
+          <Text style={[typeScale.caption, { color: night ? NC.inkSoft : colors.muted, opacity: night ? 0.8 : 1 }]} numberOfLines={1}>
             {[entry.school, entry.city].filter(Boolean).join(' · ')}
           </Text>
         )}
@@ -157,8 +191,8 @@ function EntryRow({ entry, isMe, compact = false, delta = 0 }: { entry: any; isM
       )}
 
       {/* XP */}
-      <Text style={{ fontFamily: fonts.headingBold, fontSize: 16, color: xpColor, fontVariant: ['tabular-nums'] }} maxFontSizeMultiplier={1.3}>
-        {entry.xp ?? 0} <Text style={{ fontFamily: fonts.medium, fontSize: 14, color: colors.muted }}>XP</Text>
+      <Text style={{ fontFamily: fonts.headingBold, fontSize: 15, color: xpColor, fontVariant: ['tabular-nums'] }} maxFontSizeMultiplier={1.3}>
+        {entry.xp ?? 0} <Text style={{ fontFamily: fonts.medium, fontSize: 13, color: colors.muted }}>XP</Text>
       </Text>
     </View>
   );
@@ -450,7 +484,7 @@ function BoardBody({ compact = false, maxRows = 10, onViewChange }: Omit<Leaderb
     onViewChange?.({ period, scope: next });
   };
 
-  const cardStyle = { ...cardSurface, padding: 16 };
+  const cardStyle = { ...cardSurface, padding: compact ? 8 : 14 };
 
   const joinFooter = isAuthed && !compact && (
     <>
@@ -563,29 +597,24 @@ function BoardBody({ compact = false, maxRows = 10, onViewChange }: Omit<Leaderb
       <ShareCardCapture ref={shareRef} />
       {championBanner}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-        <Text accessibilityRole="header" style={{ fontFamily: fonts.heading, fontSize: 19, lineHeight: 24, color: colors.ink, flex: 1 }}>
+        <Text accessibilityRole="header" style={{ fontFamily: fonts.heading, fontSize: 17, lineHeight: 22, color: colors.ink, flex: 1 }}>
           {period === 'all' ? t('Classement général', 'Klasman jeneral') : t('Classement de la semaine', 'Klasman semèn nan')}
         </Text>
         {myRank && (
-          <View style={{ paddingHorizontal: 12, paddingVertical: 4, borderRadius: 999, backgroundColor: night ? NC.surfaceRaised : colors.azureSoft }}>
-            <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: night ? NC.ink : colors.azure }}>{t(`Toi : ${myRank}e`, `Ou : ${myRank}yèm`)}</Text>
-          </View>
+          <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: night ? NC.inkSoft : colors.azure }}>{t(`Toi : ${myRank}ᵉ`, `Ou : ${myRank}yèm`)}</Text>
         )}
       </View>
-      <Segmented
-        tone={night ? 'night' : 'auto'}
+      <TextTabs
         options={[
           { key: 'week', label: t('Cette semaine', 'Semèn sa a') },
           { key: 'all', label: t('Tous les temps', 'Tout tan') },
         ]}
         value={period}
-        onChange={changePeriod}
-        style={{ marginBottom: 10 }}
+        onChange={changePeriod as any}
       />
       {/* Scope: National (individuals) · École · Ville · Département (collectives) */}
-      <Segmented
-        tone={night ? 'night' : 'auto'}
-        scroll
+      <TextTabs
+        small
         options={[
           { key: 'national', label: t('National', 'Nasyonal') },
           { key: 'school', label: t('École', 'Lekòl') },
@@ -593,8 +622,7 @@ function BoardBody({ compact = false, maxRows = 10, onViewChange }: Omit<Leaderb
           { key: 'department', label: t('Département', 'Depatman') },
         ]}
         value={scope}
-        onChange={changeScope}
-        style={{ marginBottom: 14 }}
+        onChange={changeScope as any}
       />
       {/* Week chip + reset countdown — makes the Monday reset legible before it
           happens instead of surprising everyone with a blank board. */}
@@ -605,13 +633,11 @@ function BoardBody({ compact = false, maxRows = 10, onViewChange }: Omit<Leaderb
           : t(`Fin dans ${hours} h`, `Fini nan ${hours} è`);
         return (
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <View style={{ backgroundColor: night ? NC.surfaceRaised : colors.azureSoft, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4 }}>
-              <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: night ? NC.ink : colors.azure }} maxFontSizeMultiplier={1.3}>
-                {t('Semaine', 'Semèn')} {weekNumber(weekId())}
-              </Text>
-            </View>
+            <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: night ? NC.inkSoft : colors.ink }} maxFontSizeMultiplier={1.3}>
+              {t('Semaine', 'Semèn')} {weekNumber(weekId())}
+            </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Timer size={16} color={colors.muted} />
+              <Timer size={14} color={colors.muted} />
               <Text style={{ fontFamily: fonts.medium, fontSize: 14, color: colors.muted }} maxFontSizeMultiplier={1.3}>
                 {countdown}
               </Text>

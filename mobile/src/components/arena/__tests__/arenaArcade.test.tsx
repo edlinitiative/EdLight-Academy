@@ -147,7 +147,7 @@ describe('ArenaArcade', () => {
     const text = textOf(root);
     expect(text).toContain('Moi');
     expect(text).toContain('2/5 joueurs · il en manque 3');
-    expect(text).toContain('Ton rival dans ton école : Ana, 280 XP devant toi.');
+    expect(text).toContain('Rival : Ana, 280 XP devant');
     // The school joins the street even though it is not in the top.
     expect(byTestId(root, 'city-beacon').length).toBeGreaterThan(0);
     tree.unmount();

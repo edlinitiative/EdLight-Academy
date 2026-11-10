@@ -298,7 +298,7 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily, onR
 
       {/* ── Jouer ── */}
       {tab === 'jouer' && (
-        <ScrollView contentContainerStyle={scrollPad} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={scrollPad} showsVerticalScrollIndicator={false} bounces={false} overScrollMode="never">
           {/* Défi du jour — first: the daily XP + streak protector. */}
           <DailyChallengeBanner daily={daily} isCreole={isCreole} onStart={onStartDaily} />
 
@@ -410,7 +410,7 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily, onR
       {/* ── Arène — the competition world ── */}
       {tab === 'arene' && (
         // Full-bleed: the Arène city runs edge to edge, the arcade pads itself.
-        <ScrollView contentContainerStyle={{ ...scrollPad, paddingHorizontal: 0, paddingTop: 12 }} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={{ ...scrollPad, paddingHorizontal: 0, paddingTop: 12 }} showsVerticalScrollIndicator={false} bounces={false} overScrollMode="never">
           <ArenaArcade
             onPractice={() => onStartTrivia('practice')}
             onDuel={() => onStartTrivia('challenge')}
@@ -421,22 +421,25 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily, onR
 
       {/* ── Records ── */}
       {tab === 'records' && (
-        <ScrollView contentContainerStyle={{ ...scrollPad, paddingTop: 0 }} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={{ ...scrollPad, paddingTop: 0 }} showsVerticalScrollIndicator={false} bounces={false} overScrollMode="never">
           <GameRecords isCreole={isCreole} records={records} loading={recordsLoading} highScores={highScores} />
         </ScrollView>
       )}
 
       {/* ── Classement — the race, then the shared board, embedded ── */}
       {tab === 'classement' && (
-        <ScrollView contentContainerStyle={scrollPad} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={scrollPad} showsVerticalScrollIndicator={false} bounces={false} overScrollMode="never">
           <View style={{ gap: 14 }}>
             <SchoolRace isCreole={isCreole} />
             <Leaderboard compact={false} maxRows={25} tone="night" />
-            <ArenaButton
-              variant="secondary"
-              label={t('Page complète : écoles, villes…', 'Paj konplè : lekòl, vil…')}
+            <PressableScale
               onPress={() => navigation.navigate('Leaderboard')}
-            />
+              accessibilityRole="link"
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 44 }}
+            >
+              <Text style={[arenaType.status, { fontFamily: fonts.bold, color: C.inkSoft }]}>{t('Tout le classement', 'Tout klasman an')}</Text>
+              <ChevronRight color={C.inkSoft} size={16} />
+            </PressableScale>
           </View>
         </ScrollView>
       )}

@@ -6,7 +6,6 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { Search as SearchIcon, RotateCcw } from 'lucide-react-native';
 import { courseVideoThumbs, lessonVideoThumbs } from '../utils/videoThumb';
 import { FollowInstagramPrompt } from '../components/FollowInstagram';
-import WeeklyGoalSheet from '../components/WeeklyGoalSheet';
 import SandraFab, { useSandraFabScroll, SANDRA_FAB_CLEARANCE } from '../components/SandraFab';
 import useStore from '../contexts/store';
 import { useCourses } from '../hooks/useData';
@@ -21,8 +20,7 @@ import SkeletonCover from '../components/ui/SkeletonCover';
 import PressableScale from '../components/ui/PressableScale';
 import { type ProgressMap } from '../utils/mastery';
 import ReadinessCard from '../components/ReadinessCard';
-import { countQuizzesThisWeek, WEEKLY_QUIZ_GOAL } from '../utils/weeklyActivity';
-import { gradeProfile, seasonAnchorYear } from '../config/trackConfig';
+import { gradeProfile } from '../config/trackConfig';
 import Leaderboard from '../components/Leaderboard';
 import ResumeBanner from '../components/ResumeBanner';
 import NextStepCard from '../components/NextStepCard';
@@ -36,9 +34,8 @@ import { useTheme } from '../theme/theme';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import { tapLight } from '../utils/haptics';
 import { displayLevel } from '../utils/courseName';
-import ProgressSummary from '../components/journey/home/ProgressSummary';
 import {
-  completedByCourse as toCompletedByCourse, progressCourses, locateLesson,
+  completedByCourse as toCompletedByCourse, locateLesson,
 } from '../components/journey/home/homeJourney';
 import TodayPair from '../components/home/TodayPair';
 import CourseRail, { CourseRailSkeleton } from '../components/home/CourseRail';
@@ -102,7 +99,6 @@ export default function DashboardScreen() {
   const centerColumn = useContentContainerStyle('readable'); // iPad: center a capped column
   const scrollRef = React.useRef<any>(null);
   useScrollToTop(scrollRef);
-  const [goalSheetOpen, setGoalSheetOpen] = React.useState(false);
   const [reviewOpen, setReviewOpen] = React.useState(false);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -115,9 +111,7 @@ export default function DashboardScreen() {
   // tournament they are in) — when present it is the FIRST content card.
   const spotlight = useHomeSpotlight();
 
-  const weeklyXp = (myEntry as any)?.xp ?? 0;
   const allAttemptsList = Object.values(quizAttempts as Record<string, any[]>).flat();
-  const quizzesThisWeek = countQuizzesThisWeek(allAttemptsList);
 
   // "Has used the app for a while" gate for the one-time Instagram prompt:
   // a 2-day streak, a few quizzes, or a few finished lessons all qualify.
@@ -178,12 +172,6 @@ export default function DashboardScreen() {
     }),
     [courses, enrolledCourses, lessonProgress, completedMap, grade],
   );
-  // Every course with evidence feeds the progression totals (not just 3).
-  const evidenceRows = React.useMemo(
-    () => progressCourses({ courses, mastery: lessonProgress as ProgressMap, completedByCourse: completedMap, grade, limit: 999 }),
-    [courses, lessonProgress, completedMap, grade],
-  );
-
   // ---------------------------------------------------------------------------
   // Guards
   // ---------------------------------------------------------------------------
@@ -225,15 +213,6 @@ export default function DashboardScreen() {
   // default, so a student who tapped "Passer" was shown Bac readiness.
   const isBacTrack = !!grade && gradeProfile(grade).examLevel === 'baccalaureat';
   const levelBadge = grade && /^NS[1-4]$/.test(grade) ? displayLevel(grade) : null;
-
-  // Momentum, as one quiet line under the weekly meter, only when there is
-  // something real to say (memory: no-hero-bands — never a stat strip).
-  const streakDays = streak?.currentStreak ?? 0;
-  const bacDays = Math.max(0, Math.ceil((new Date(seasonAnchorYear(new Date()), 6, 5).getTime() - Date.now()) / 86_400_000));
-  const momentumLine = [
-    streakDays > 0 ? t(`Série : ${streakDays} j`, `Seri : ${streakDays} j`) : null,
-    isBacTrack ? t(`Bac dans ${bacDays} j`, `Bak nan ${bacDays} j`) : null,
-  ].filter(Boolean).join(' · ') || null;
 
   // ---------------------------------------------------------------------------
   // Blocks
@@ -354,18 +333,6 @@ export default function DashboardScreen() {
               />
             </View>
 
-            {/* Evidence of progress (LJ-10) + this week's goal. */}
-            <View style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>
-              <ProgressSummary
-                rows={evidenceRows}
-                isCreole={isCreole}
-                weekDone={quizzesThisWeek}
-                weekGoal={WEEKLY_QUIZ_GOAL}
-                momentumLine={momentumLine}
-                onOpenGoal={() => setGoalSheetOpen(true)}
-              />
-            </View>
-
             {showCourseSection ? courseSection : null}
           </>
         )}
@@ -432,15 +399,6 @@ export default function DashboardScreen() {
         isCreole={isCreole}
       />
 
-      {/* Weekly goal detail — explains the goal + reward before acting */}
-      <WeeklyGoalSheet
-        visible={goalSheetOpen}
-        onClose={() => setGoalSheetOpen(false)}
-        quizzesThisWeek={quizzesThisWeek}
-        weeklyXp={weeklyXp}
-        onStartQuiz={startDaily}
-        onSeeLeaderboard={() => (navigation as any).navigate('Leaderboard')}
-      />
     </SafeAreaView>
   );
 }
