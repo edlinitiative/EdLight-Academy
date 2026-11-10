@@ -1,0 +1,116 @@
+/*
+ * Arène — premium pass (Ted, Nov 2026: "not user friendly, text too big,
+ * shapes are weird, bring more premiumness").
+ *
+ * Loaded last on /arena. Three rules, applied everywhere on the page:
+ *   1. A calmer type ramp: one page title, section heads at 1.3rem, card
+ *      titles at 1.1–1.2rem, body at 0.95rem; overlines are small, not shouted.
+ *   2. One shape language: 12px rounded rectangles for buttons and cards, no
+ *      capsules (no pills anywhere), no "pressed key" 3D shadows, no tilted
+ *      tiles. Status is a word in its colour.
+ *   3. Air over decoration: tighter padding inside cards, steady gaps between.
+ */
+
+/* ── 1. Type ─────────────────────────────────────────────────────────────── */
+.ah-hero .ah-title,
+.ah-hero .ah-title.lb-title { font-size: clamp(1.75rem, 1.4rem + 1.4vw, 2.5rem); line-height: 1.05; letter-spacing: -0.03em; }
+.ah-tag, .ah-hero .ah-tag { font-size: 0.95rem; }
+.ah-lede { font-size: 1rem; line-height: 1.55; }
+.ah-h2, .ah-h, .lb-lanes__title { font-size: clamp(1.2rem, 1.1rem + 0.4vw, 1.45rem); letter-spacing: -0.02em; line-height: 1.2; }
+.ah-over, .ah-game__over, .ah-player__label, .aj-over, .aj-school__label, .lb-lane__over, .lb-label {
+  font-size: 0.78rem; letter-spacing: 0.06em; font-weight: 800;
+}
+.ah-game h3, .lb-lane h3 { font-size: clamp(1.08rem, 1rem + 0.3vw, 1.25rem); letter-spacing: -0.015em; line-height: 1.2; }
+.ah-game--story h3 { font-size: clamp(1.2rem, 1.05rem + 0.6vw, 1.5rem); }
+.ah-game__body > p:not(.ah-game__over), .lb-lane__text, .lb-facts, .lb-facts li, .aj-copy p, .lb-hint, .lb-play__meta {
+  font-size: 0.95rem; line-height: 1.5;
+}
+.aj-title { font-size: clamp(1.25rem, 1.1rem + 0.6vw, 1.6rem); }
+.ah-player h2 { font-size: 1.15rem; }
+.ah-stars-count { font-size: 1.05rem; }
+.ah-stars-count small { font-size: 0.9rem; }
+.ah-step__block .ah-step__place { font-size: 1.6rem; }
+.ah-step--1 .ah-step__block .ah-step__place { font-size: 2rem; }
+.arc-result__score { font-size: clamp(2rem, 1.6rem + 1.6vw, 2.75rem); }
+
+/* ── 2. Shapes: buttons are rounded rectangles, flat ─────────────────────── */
+.ah-start, .ah-start--sm, .ah-ghost, .ah-cta--btn, .ah-game--story .ah-cta,
+.arc-btn, .arc-story .arc-btn, .arc-result .arc-btn,
+.aj-go, .aj-ghost, .an-ghost, .lb-defy, .lb-play, .lb-lane__go, .lb-quick__go {
+  border-radius: 12px;
+  box-shadow: none;
+}
+.ah-start, .lb-play { min-height: 52px; font-size: 1.05rem; }
+.ah-start:hover, .ah-start:active, .arc-btn--go:hover, .arc-btn--lg:hover,
+.ah-start--sm, .arc-btn--go, .arc-btn--lg { box-shadow: none; transform: none; }
+.ah-ghost, .lb-defy, .an-ghost { min-height: 44px; font-size: 0.95rem; }
+.ah-cta--btn, .lb-lane__go { min-height: 42px; padding: 0 1rem; font-size: 0.95rem; }
+
+/* Status and tags: words, not capsules. */
+.ah-chip, .ah-demo-flag, .arc-story__total, .aj-step, .lb-lane__over, .ah-live {
+  border-radius: 0; background: none; box-shadow: none; padding: 0;
+}
+.ah-chip strong, .ah-tower__tag strong { border-radius: 4px; }
+.aj-step { gap: 0.4rem; }
+.aj-step__n { width: 22px; height: 22px; border-radius: 6px; font-size: 0.8rem; }
+.aj-step__label { font-size: 0.85rem; }
+
+/* Labels drawn over the city keep a backing to stay legible: small boxes. */
+.ah-tower__tag, .arc-tower__tag, .arc-pin__label { border-radius: 6px; }
+
+/* Map pins and stage numbers: flat discs, no pressed-key shadow. */
+.arc-pin__dot, .arc-pin.is-done .arc-pin__dot, .arc-pin.is-next .arc-pin__dot, .arc-pin.is-locked .arc-pin__dot,
+.arc-stage__num, .arc-stage.is-locked .arc-stage__num, .arc-stage.is-cleared .arc-stage__num { box-shadow: none; }
+
+/* Mini-game tiles: one even row of rounded squares, no tilt. */
+.ah-mini, .ah-mini--a, .ah-mini--b, .ah-mini--c, .ah-mini--d, .ah-mini--e {
+  transform: none; border-radius: 12px; width: 56px; height: 56px; font-size: 0.9rem;
+}
+.ah-game--mini:hover .ah-mini { transform: translateY(-2px); }
+
+/* ── 3. Air: cards hold their content closer ─────────────────────────────── */
+.ah-game, .lb-lane, .lb, .ah-player, .aj-card { border-radius: 16px; }
+.lb-lane { padding: 1.1rem 1.15rem; gap: 0.6rem; }
+.ah-game__body { gap: 0.5rem; }
+.lb-face { width: 40px; height: 40px; }
+.lb-face--sm { width: 32px; height: 32px; }
+
+@media (max-width: 600px) {
+  .ah-hero .ah-title, .ah-hero .ah-title.lb-title { font-size: 1.8rem; }
+  .ah-mini, .ah-mini--a, .ah-mini--b, .ah-mini--c, .ah-mini--d, .ah-mini--e { width: 52px; height: 52px; }
+}
+
+/* ── 4. One step down, everywhere (second pass, measured on a 390px phone) ──
+   Body 14px, actions 15px, card titles 16px, section heads 18px; weights
+   700 for actions and titles, 400–500 for everything else. */
+body.arena-night .ah, body.arena-night .lb, body.arena-night .lb-lanes, body.arena-night .ah-select, body.arena-night .ah-podium-sec { font-size: 14px; }
+body.arena-night nav .an-ghost, body.arena-night .an-ghost {
+  display: inline-flex; align-items: center; min-height: 36px; padding: 0;
+  background: none; border: 0; box-shadow: none;
+  font-size: 14px; font-weight: 600; color: #A9C6FF;
+}
+body.arena-night nav .an-ghost::after { content: '›'; margin-left: 6px; font-size: 16px; line-height: 1; }
+body.arena-night .lb-tagline { font-size: 14px; font-weight: 600; }
+body.arena-night .lb-play, body.arena-night .ah-start { font-size: 16px; font-weight: 700; min-height: 50px; }
+body.arena-night .lb-play__meta { font-size: 13.5px; }
+body.arena-night .lb-quick__go, body.arena-night .ah-ghost, body.arena-night .lb-defy { font-size: 14.5px; font-weight: 650; min-height: 44px; }
+body.arena-night .lb-quiet { font-size: 14px; font-weight: 600; text-decoration: none; }
+body.arena-night .lb-lane h3, body.arena-night .lb-lanes h3, body.arena-night .ah-game h3 { font-size: 16px; font-weight: 750; }
+body.arena-night .ah-game--story h3 { font-size: 18px; }
+body.arena-night .lb-lanes__title, body.arena-night .ah-h2, body.arena-night .ah-h { font-size: 18px; font-weight: 750; }
+body.arena-night .lb-facts li, body.arena-night .lb-lane__text, body.arena-night .ah-game__body > p:not(.ah-game__over), body.arena-night .aj-copy p { font-size: 14px; line-height: 1.5; }
+body.arena-night .lb-facts { gap: 6px; }
+body.arena-night .lb-lane__over, body.arena-night .ah-game__over { font-size: 12px; letter-spacing: 0.04em; }
+body.arena-night .ah-cta, body.arena-night .ah-cta--btn, body.arena-night .lb-lane__go { font-size: 14.5px; font-weight: 650; }
+body.arena-night .ah-hero .ah-title, body.arena-night .ah-hero .ah-title.lb-title { font-size: 28px; }
+@media (min-width: 900px) {
+  body.arena-night .ah-hero .ah-title, body.arena-night .ah-hero .ah-title.lb-title { font-size: 36px; }
+  body.arena-night .lb-lanes__title, body.arena-night .ah-h2, body.arena-night .ah-h { font-size: 22px; }
+}
+
+/* Illustrations frame the content instead of dominating it. */
+body.arena-night .ah-game__art, body.arena-night .ah-game__visual, body.arena-night .ah-map, body.arena-night .ah-pinbox { max-height: 180px; }
+body.arena-night .ah-mini-row, body.arena-night .ah-minis { flex-wrap: nowrap; gap: 8px; justify-content: flex-start; }
+body.arena-night .ah-mini, body.arena-night .ah-mini--a, body.arena-night .ah-mini--b, body.arena-night .ah-mini--c, body.arena-night .ah-mini--d, body.arena-night .ah-mini--e { width: 48px; height: 48px; font-size: 13px; }
+body.arena-night .ah-art-mini { flex-wrap: nowrap; gap: 8px; justify-content: center; }
+body.arena-night .ah-game__art { max-height: 200px; overflow: hidden; }

@@ -23,6 +23,7 @@ import { pickRival, schoolLadder, type WeeklyEntry } from '../../components/aren
 import '../../components/arena/lobby/lobby.css';
 import './ArenaArcade.css';
 import './ArenaHome.css';
+import './arenaPremium.css';
 
 /**
  * /arena — the Arène as a night arcade (Ted, 2026-10-10: "it should almost
