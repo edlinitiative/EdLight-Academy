@@ -179,7 +179,7 @@ export default function OfflinePacksScreen() {
           <Text style={[typeScale.titleSm, { color: colors.ink }]}>{title}</Text>
           <Text style={[typeScale.meta, { color: colors.muted }]}>{count} · {size}</Text>
           {status !== 'absent' ? (
-            <View style={{ alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, backgroundColor: status === 'current' ? colors.successSoft : colors.warnSoft }}>
+            <View style={{ alignSelf: 'flex-start',}}>
               <Text style={[typeScale.label, { color: status === 'current' ? colors.successInk : colors.warnInk }]}>
                 {status === 'current' ? t('Sur ce téléphone', 'Sou telefòn sa a') : t('Mise à jour disponible', 'Mizajou disponib')}
               </Text>

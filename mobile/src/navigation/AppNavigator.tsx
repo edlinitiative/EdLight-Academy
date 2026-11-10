@@ -372,6 +372,8 @@ export default function AppNavigator() {
             return;
           }
         } catch { /* ignore invalid local navigation */ }
+        // Stale, foreign or unreadable: never try it again.
+        void AsyncStorage.removeItem('competition:last-destination').catch(() => undefined);
       }
       // No link and no competition place: reopen the learning place, if any.
       return restoreLearningPlace(useStore.getState().user?.uid ?? null).then(() => undefined);
@@ -381,8 +383,11 @@ export default function AppNavigator() {
   const rememberDestination = () => {
     if(!restorationComplete.current)return;
     const target = savedCompetitionTarget(navigationRef.getCurrentRoute());
-    if (target) void AsyncStorage.setItem('competition:last-destination', JSON.stringify({ uid, target })).catch(() => undefined);
-    else if (navigationRef.getCurrentRoute()?.name === 'Main') void AsyncStorage.removeItem('competition:last-destination').catch(() => undefined);
+    // Leaving the competition screens forgets them. (This used to clear only
+    // on a route named 'Main', but the focused route is always a tab or a
+    // stack screen, never 'Main', so the app reopened Tournois forever.)
+    if (target) void AsyncStorage.setItem('competition:last-destination', JSON.stringify({ uid, target, savedAt: Date.now() })).catch(() => undefined);
+    else void AsyncStorage.removeItem('competition:last-destination').catch(() => undefined);
     // The learning place (tab + validated stack). A root modal (Sandra,
     // Search, Arena…) returns null and keeps the place underneath it.
     const learning = snapshotLearningState(navigationRef.getRootState(), uid, Date.now());

@@ -617,7 +617,7 @@ export function QuizPlayer({
           </View>
           {opponent ? (
             <>
-              <View style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: C.secondary }}>
+              <View style={{}}>
                 <Text style={[arenaType.status, { fontFamily: fonts.bold, color: C.inkSoft }]}>VS</Text>
               </View>
               <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 12 }}>

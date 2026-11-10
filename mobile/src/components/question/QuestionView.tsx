@@ -8,6 +8,7 @@ import useStore from '../../contexts/store';
 import { useColors, useTheme, typeScale } from '../../theme/theme';
 import { mathToText } from '../../utils/mathText';
 import { flowPieces } from '../../utils/flowPieces';
+import MathRunsText, { renderRuns } from '../MathRunsText';
 import { balanceMathAcrossBlanks } from '../../../../shared/mathBlanks';
 
 /**
@@ -108,7 +109,7 @@ function WidgetInput({ widget, value, onChange, inline, mathy }: {
   return (
     <View style={{ gap: 6 }}>
       {widgetLabel(widget) ? (
-        <Text style={[typeScale.label, { color: colors.muted }]}>{widgetLabel(widget)}</Text>
+        <MathRunsText text={String((widget as any).label)} style={[typeScale.label, { color: colors.muted }]} />
       ) : null}
       {mathy && !numeric ? <MathChips onInsert={(c) => onChange(text + c)} /> : null}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -178,7 +179,7 @@ function Prompt({ blocks, widgets, response, onChange }: {
         if (block.type === 'text') {
           return flowPieces(runText.get(i) ?? block.content).map((p, j) => (p.kind === 'break'
             ? <View key={`t${i}-${j}`} style={{ width: '100%', height: 0 }} />
-            : <Text key={`t${i}-${j}`} style={word}>{p.text}</Text>));
+            : <Text key={`t${i}-${j}`} style={word}>{renderRuns(p.runs, word.fontSize, { color: word.color })}</Text>));
         }
         if (block.type === 'figure') {
           return (

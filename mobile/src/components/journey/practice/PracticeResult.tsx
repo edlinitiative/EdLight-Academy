@@ -165,7 +165,7 @@ export default function PracticeResult({
                   </Text>
                 </View>
                 {tl.scored > 0 ? (
-                  <View style={{ backgroundColor: colors.azureSoft, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6, marginTop: 4 }}>
+                  <View style={{ marginTop: 4 }}>
                     <Text style={{ fontFamily: fonts.headingBold, fontSize: 14, lineHeight: 18, color: colors.azureInk, fontVariant: ['tabular-nums'] }}>{`${pct} %`}</Text>
                   </View>
                 ) : null}

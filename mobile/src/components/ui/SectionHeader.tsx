@@ -29,7 +29,7 @@ export default function SectionHeader({ title, badge, actionLabel, onAction, sty
           {title}
         </Text>
         {badge ? (
-          <View style={{ backgroundColor: colors.surfaceAlt, borderRadius: radius.pill, paddingVertical: 4, paddingHorizontal: 10 }}>
+          <View style={{ }}>
             <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: fonts.headingBold, fontSize: 14, lineHeight: 18, color: colors.ink }}>
               {badge}
             </Text>

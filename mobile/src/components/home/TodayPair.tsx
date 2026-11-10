@@ -52,7 +52,7 @@ function DailyTile({ onStart }: { onStart: () => void }) {
   const streakDays = streak?.currentStreak ?? 0;
   const done = !!daily.completedToday;
 
-  const pill = done
+  const status = done
     ? { bg: colors.successSoft, fg: isDark ? colors.success : colors.successFill, label: t('Fait', 'Fini') }
     : { bg: colors.coralSoft, fg: isDark ? colors.coral : '#B5401F', label: t('À prendre', 'Pou pran') };
   const meta = done
@@ -64,15 +64,16 @@ function DailyTile({ onStart }: { onStart: () => void }) {
       onPress={() => { tapLight(); onStart(); }}
       pressedScale={0.98}
       accessibilityRole="button"
-      accessibilityLabel={`${t('Défi du jour', 'Defi jodi a')}. ${pill.label}. ${meta}${streakDays > 0 ? `. ${t('Série', 'Seri')} ${streakDays} j` : ''}`}
-      style={{ ...cardSurface, borderRadius: radius.hero - 4, flex: 1, minHeight: 168, padding: 16, justifyContent: 'space-between' }}
+      accessibilityLabel={`${t('Défi du jour', 'Defi jodi a')}. ${status.label}. ${meta}${streakDays > 0 ? `. ${t('Série', 'Seri')} ${streakDays} j` : ''}`}
+      style={{ ...cardSurface, borderRadius: radius.hero - 4, flex: 1, minHeight: 132, padding: 16, justifyContent: 'space-between' }}
     >
       <View>
-        <View style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: pill.bg, borderRadius: radius.pill, paddingVertical: 4, paddingHorizontal: 10 }}>
-          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: pill.fg }} />
-          <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: fonts.medium, fontSize: 14, lineHeight: 18, color: pill.fg }}>{pill.label}</Text>
+        {/* Status as a word in its colour, never a capsule (Ted: no pills). */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: status.fg }} />
+          <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: fonts.medium, fontSize: 14, lineHeight: 18, color: status.fg }}>{status.label}</Text>
         </View>
-        <Text style={[typeScale.cardTitle, { color: colors.ink, marginTop: 12 }]} numberOfLines={2}>
+        <Text style={[typeScale.cardTitle, { color: colors.ink, marginTop: 8 }]} numberOfLines={2}>
           {t('Défi du jour', 'Defi jodi a')}
         </Text>
         <Text style={[typeScale.meta, { color: colors.muted, marginTop: 4 }]} numberOfLines={3}>{meta}</Text>
@@ -123,7 +124,7 @@ function ArenaTile({ school }: { school: string | null }) {
       pressedScale={0.98}
       accessibilityRole="button"
       accessibilityLabel={`${t('Arène', 'Arèn')}. ${school ? `${school}. ` : ''}${tile.line}`}
-      style={{ flex: 1, minHeight: 168, padding: 16, borderRadius: radius.hero - 4, backgroundColor: NIGHT, justifyContent: 'space-between', ...elevation.card }}
+      style={{ flex: 1, minHeight: 132, padding: 16, borderRadius: radius.hero - 4, backgroundColor: NIGHT, justifyContent: 'space-between', ...elevation.card }}
     >
       <View>
         {school ? (

@@ -143,7 +143,7 @@ function ExamCard({
       {/* A finished exam shows the score: the number is the reason to come back. */}
       {done ? (
         pct !== null ? (
-          <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: good ? colors.successSoft : colors.warnSoft }}>
+          <View style={{}}>
             <Text style={{ fontFamily: fonts.headingBold, fontSize: 14, lineHeight: 18, color: good ? (isDark ? colors.success : colors.successFill) : (isDark ? colors.warn : '#9A5B00'), fontVariant: ['tabular-nums'] }}>
               {pct}%
             </Text>

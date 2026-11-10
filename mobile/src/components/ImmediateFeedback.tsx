@@ -5,6 +5,7 @@ import useStore from '../contexts/store';
 import { useColors, typeScale, fonts } from '../theme/theme';
 import { classifyEssayResponse } from '../../../shared/essayGradeCore';
 import MathText from './MathText';
+import MathRunsText from './MathRunsText';
 import PressableScale from './ui/PressableScale';
 
 /**
@@ -85,10 +86,10 @@ export default function ImmediateFeedback({ result, question }: { result: any; q
             {blanks.map((b, i) => (
               <View key={i} style={{ flexDirection: 'row', gap: 6 }}>
                 {b.correct ? <Check color={colors.successInk} size={15} style={{ marginTop: 3 }} /> : <X color={colors.dangerInk} size={15} style={{ marginTop: 3 }} />}
-                <Text style={[typeScale.bodyMd, { flex: 1, color: colors.ink }]}>
-                  {b.label ? `${b.label} : ` : ''}
-                  {b.correct ? String(b.userValue ?? '') : `${b.userValue || '—'} → ${b.expectedAnswer ?? ''}`}
-                </Text>
+                <MathRunsText
+                  text={`${b.label ? `${b.label} : ` : ''}${b.correct ? String(b.userValue ?? '') : `${b.userValue || '—'} → ${b.expectedAnswer ?? ''}`}`}
+                  style={[typeScale.bodyMd, { flex: 1, color: colors.ink }]}
+                />
               </View>
             ))}
           </View>

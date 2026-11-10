@@ -35,16 +35,13 @@ export const nightType: Record<'page' | 'section' | 'cardTitle' | 'feature' | 'm
   big: { fontFamily: fonts.heading, fontSize: 56, lineHeight: 60, letterSpacing: -1.6, fontVariant: ['tabular-nums'] },
 };
 
-/** 40h opaque pill with a leading icon — header totals (XP, série). */
+/** Header total (XP, série): icon + figure, set in the text, never a capsule. */
 export function StatChip({ icon, label, accessibilityLabel }: { icon: React.ReactNode; label: string; accessibilityLabel?: string }) {
   return (
     <View
       accessible
       accessibilityLabel={accessibilityLabel ?? label}
-      style={{
-        flexDirection: 'row', alignItems: 'center', gap: 6, height: 40,
-        paddingHorizontal: 14, borderRadius: 999, backgroundColor: C.surface,
-      }}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 32 }}
     >
       {icon}
       <Text style={[arenaType.name, { fontSize: 15, color: C.ink }]} maxFontSizeMultiplier={1.3}>{label}</Text>
@@ -52,17 +49,16 @@ export function StatChip({ icon, label, accessibilityLabel }: { icon: React.Reac
   );
 }
 
-/** A small opaque pill (status, category, "En direct"). */
+/**
+ * A status ("En direct", a category): a word in its colour, with an optional
+ * icon. It was a capsule; Ted's rule is no pills anywhere (Nov 2026).
+ */
 export function NightPill({
   label, tone = 'plain', icon, style,
 }: { label: string; tone?: 'plain' | 'coral' | 'gold' | 'success' | 'deep'; icon?: React.ReactNode; style?: StyleProp<ViewStyle> }) {
-  const bg = tone === 'coral' ? '#3A2530' : tone === 'gold' ? C.goldSoft : tone === 'success' ? C.successSoft : tone === 'deep' ? C.bg : C.surface;
-  const fg = tone === 'coral' ? C.coral : tone === 'gold' ? C.gold : tone === 'success' ? C.success : C.ink;
+  const fg = tone === 'coral' ? C.coral : tone === 'gold' ? C.gold : tone === 'success' ? C.success : tone === 'plain' || tone === 'deep' ? C.inkSoft ?? C.ink : C.ink;
   return (
-    <View style={[{
-      flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
-      paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: bg,
-    }, style]}>
+    <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' }, style]}>
       {icon}
       <Text style={[arenaType.status, { fontFamily: fonts.bold, color: fg }]} maxFontSizeMultiplier={1.3}>{label}</Text>
     </View>

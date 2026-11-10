@@ -91,7 +91,7 @@ export function ChapterCard({ card, isCreole, onPress }: { card: ChapterFacts; i
       style={[cardSurface, { width: CHAPTER_CARD_WIDTH }]}
     >
       <VideoCover uris={card.thumbs} play={false}>
-        <View style={{ position: 'absolute', left: 10, top: 10, backgroundColor: STILL_PILL, borderRadius: 999, paddingVertical: 4, paddingHorizontal: 12 }}>
+        <View style={{ position: 'absolute', left: 10, top: 10, backgroundColor: STILL_PILL, borderRadius: 8, paddingVertical: 4, paddingHorizontal: 12 }}>
           <Text maxFontSizeMultiplier={1.3} style={{ fontFamily: fonts.headingBold, fontSize: 14, lineHeight: 18, color: '#ffffff' }}>{chapter}</Text>
         </View>
       </VideoCover>

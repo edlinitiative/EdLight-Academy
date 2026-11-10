@@ -1,10 +1,13 @@
 import React, { useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { fonts, useColors } from '../theme/theme';
 import { KATEX_CSS, KATEX_JS } from './katexAssets';
-import { needsKatex } from '../utils/mathRouting';
-import { mathToText } from '../utils/mathText';
+import { katexSource } from '../utils/mathRouting';
+import { mathToRuns } from '../utils/mathText';
+import { renderRuns } from './MathRunsText';
+import ExamTable from './ExamTable';
+import { hasTable, splitTables } from '../utils/tables';
 import { proseSegments, stripProseMarks } from '../utils/proseMarks';
 
 /**
@@ -38,6 +41,9 @@ const KATEX_HTML = (text: string, display: boolean, ink: string) => `
     font-size: 16px; line-height: 1.5; color: ${ink};
     background: transparent;
   }
+  /* The text's own line breaks ("a) …\nb) …") are kept; HTML would run the
+     sub-questions of a paper into one paragraph. */
+  #math { white-space: pre-line; }
   /* KaTeX inherits currentColor, so themed body color carries into the math. */
   .katex { font-size: ${display ? '1.15em' : '1.05em'}; color: ${ink}; }
 </style>
@@ -94,33 +100,67 @@ interface MathTextProps {
   style?: any;
 }
 
-export function MathText({ text, display = false, style }: MathTextProps) {
+/**
+ * Text that carries a table ("| Prix | Quantité |…" or "[Table: …]") is drawn
+ * as prose blocks and real grids; everything else goes straight to the
+ * formula/prose renderer below.
+ */
+export function MathText(props: MathTextProps) {
+  const raw = String(props.text ?? '');
+  if (!hasTable(raw)) return <MathTextBody {...props} />;
+  const flat = StyleSheet.flatten(props.style) ?? {};
+  const fontSize = typeof flat.fontSize === 'number' ? Math.min(flat.fontSize, 16) : 15;
+  return (
+    <View style={{ gap: 12, alignSelf: 'stretch' }}>
+      {splitTables(raw).map((b, i) => (b.kind === 'table'
+        ? <ExamTable key={i} header={b.header} rows={b.rows} fontSize={fontSize - 1} />
+        : b.kind === 'code'
+          ? <CodeBlock key={i} text={b.text} />
+          : <MathTextBody key={i} {...props} text={b.text} />))}
+    </View>
+  );
+}
+
+/** A structural formula or diagram drawn in characters: monospaced, unwrapped. */
+function CodeBlock({ text }: { text: string }) {
+  const colors = useColors();
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false}
+      style={{ borderRadius: 12, backgroundColor: colors.surfaceAlt }}
+      contentContainerStyle={{ padding: 14 }}>
+      <Text style={{ fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 14, lineHeight: 18, color: colors.ink }}>{text}</Text>
+    </ScrollView>
+  );
+}
+
+function MathTextBody({ text, display = false, style }: MathTextProps) {
   const colors = useColors();
   const rawText = String(text ?? '');
   // KaTeX only typesets DELIMITED segments. Undelimited LaTeX — which exam
   // content ships constantly ("36\sqrt{\frac{2}{7}}") — used to reach the
   // WebView, match no delimiters, and leave raw source on screen. Route it
   // through mathToText instead, which renders readable Unicode.
-  const useKatex = needsKatex(rawText);
-  // KaTeX gets the prose marks stripped (it would print the asterisks); the
-  // plain path renders them as real bullets and bold runs below.
-  const safeText = useKatex ? stripProseMarks(rawText) : rawText;
+  // What KaTeX should typeset, or null for the plain path: delimited math,
+  // a bare formula given its delimiters, prose words wrapped in \text{} — see
+  // utils/mathRouting.
+  const katex = katexSource(stripProseMarks(rawText));
+  const useKatex = katex != null;
+  const safeText = useKatex ? katex : rawText;
   const [height, setHeight] = useState(display ? 44 : 28);
   const html = useMemo(() => KATEX_HTML(safeText, display, colors.ink), [safeText, display, colors.ink]);
 
   if (!safeText) return null;
-  // Themed ink is the default text color so plain prose is legible in dark mode
-  // too; callers can still override via `style`. mathToText is a no-op on text
-  // that carries no math at all.
+  // Plain path: prose with its bold runs, and every bit of LaTeX-ish markup
+  // turned into text with real exponents and indices (MathRunsText).
   if (!useKatex) {
-    const runs = proseSegments(safeText);
+    const flat = StyleSheet.flatten(style) ?? {};
+    const fontSize = typeof flat.fontSize === 'number' ? flat.fontSize : 16;
+    const inner = { color: flat.color ?? colors.ink, fontFamily: flat.fontFamily };
     return (
       <Text style={[{ color: colors.ink }, style]}>
-        {runs.length === 1 && !runs[0].bold
-          ? mathToText(runs[0].text)
-          : runs.map((r, i) => (r.bold
-            ? <Text key={i} style={{ fontFamily: fonts.bold }}>{mathToText(r.text)}</Text>
-            : mathToText(r.text)))}
+        {proseSegments(safeText).map((r, i) => (r.bold
+          ? <Text key={i} style={{ fontFamily: fonts.bold }}>{renderRuns(mathToRuns(r.text), fontSize, { ...inner, fontFamily: fonts.bold }, `b${i}-`)}</Text>
+          : <React.Fragment key={i}>{renderRuns(mathToRuns(r.text), fontSize, inner, `p${i}-`)}</React.Fragment>))}
       </Text>
     );
   }

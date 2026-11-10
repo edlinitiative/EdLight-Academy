@@ -29,7 +29,8 @@ describe('mathToText', () => {
   });
 
   it('converts sqrt and common symbols', () => {
-    expect(mathToText('$\\sqrt{2}$')).toBe('√(2)');
+    // A single symbol needs no parentheses: √2, not √(2).
+    expect(mathToText('$\\sqrt{2}$')).toBe('√2');
     expect(mathToText('$a \\times b \\leq c$')).toBe('a × b ≤ c');
     expect(mathToText('$\\pi$ and $\\Delta$')).toBe('π and Δ');
   });
@@ -51,7 +52,7 @@ describe('mathToText', () => {
     // The TestFlight "formatting issues" screenshot: raw \frac inside \sqrt.
     expect(mathToText('$\\sqrt{\\frac{2}{7}}$')).toBe('√(2/7)');
     expect(mathToText('$36\\sqrt{\\frac{2}{7}} - 50\\sqrt{\\frac{2}{7}}$')).toBe('36√(2/7) - 50√(2/7)');
-    expect(mathToText('$\\frac{18\\sqrt{2}}{7}$')).toBe('(18√(2))/7');
+    expect(mathToText('$\\frac{18\\sqrt{2}}{7}$')).toBe('(18√2)/7');
   });
 
   it('normalizes the pre-mixed Unicode form "√{…}" from the quiz bank', () => {
@@ -67,7 +68,8 @@ describe('mathToText', () => {
   });
 
   it('unwraps the other math-font commands rather than naming them', () => {
-    expect(mathToText('$\\mathcal{F}$ et $\\mathfrak{g}$')).toBe('F et g');
+    // \mathcal is a real letter form (the curve 𝒞), \mathfrak just unwraps.
+    expect(mathToText('$\\mathcal{F}$ et $\\mathfrak{g}$')).toBe('ℱ et g');
   });
 
   it('renders a matrix environment instead of spelling out "beginpmatrix"', () => {

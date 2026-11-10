@@ -69,6 +69,30 @@ export default function ReadinessCard({ onFocusPress }: { onFocusPress?: (subjec
   // Highest-coefficient subject — where a first mock exam is worth the most.
   const suggestedStart = (subjects || [])[0]?.subject ?? null;
 
+  // Nothing scored yet: one quiet row that starts a mock exam. A 104pt empty
+  // ring with a dash said nothing and took a third of the screen ("style is
+  // weird", TestFlight Nov 2026).
+  if (!hasData) {
+    return (
+      <TouchableOpacity
+        onPress={() => (onFocusPress && suggestedStart ? onFocusPress(suggestedStart) : undefined)}
+        activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel={`${t('Score de préparation', 'Nòt preparasyon')}. ${t('Commencer un examen blanc', 'Kòmanse yon egzamen blan')}`}
+        style={{ ...cardSurface, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+      >
+        <Target color={colors.azure} size={20} />
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={[typeScale.titleSm, { color: colors.ink }]}>{t('Score de préparation', 'Nòt preparasyon')}</Text>
+          <Text style={[typeScale.caption, { color: colors.muted }]} numberOfLines={2}>
+            {t('Un examen blanc te donne ton score, matière par matière.', 'Yon egzamen blan ba ou nòt ou, matyè pa matyè.')}
+          </Text>
+        </View>
+        <ChevronRight color={colors.muted} size={18} />
+      </TouchableOpacity>
+    );
+  }
+
   return (
     <View style={{ ...cardSurface, padding: 16 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>

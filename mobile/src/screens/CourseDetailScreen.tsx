@@ -691,8 +691,9 @@ export default function CourseDetailScreen() {
   }
 
   // ── Overview (DIRECTION §4, Stitch 04-course-overview) ───────────────────
+  // One word on the button; the lesson it opens is read out in its label.
   const startLabel = startTarget
-    ? `${startTarget.started ? t('Reprendre', 'Kontinye') : t('Commencer', 'Kòmanse')} : ${startTarget.ref.lesson.title}`
+    ? (startTarget.started ? t('Reprendre', 'Kontinye') : t('Commencer', 'Kòmanse'))
     : null;
   const openStart = (play: boolean) => {
     if (!startTarget) return;
@@ -739,12 +740,14 @@ export default function CourseDetailScreen() {
         />
 
         <View style={[cardSurface, { borderRadius: 20, padding: 20, marginTop: 16 }]}>
-          {levelLabel || subjectLabel ? (
-            <Text style={{ fontFamily: fonts.bold, fontSize: 15, lineHeight: 20, color: colors.azureInk }}>
+          {/* The eyebrow only when it adds to the title ("NS IV · Mathématiques"
+              over "Mathématiques NS IV" said it twice). */}
+          {(levelLabel || subjectLabel) && ![levelLabel, subjectLabel].filter(Boolean).every((x) => String(name).includes(String(x))) ? (
+            <Text style={{ fontFamily: fonts.bold, fontSize: 14, lineHeight: 19, color: colors.azureInk, marginBottom: 4 }}>
               {[levelLabel, subjectLabel].filter(Boolean).join(' · ')}
             </Text>
           ) : null}
-          <Text accessibilityRole="header" style={{ fontFamily: fonts.heading, fontSize: 28, lineHeight: 33, letterSpacing: -0.9, color: colors.ink, marginTop: 4 }}>
+          <Text accessibilityRole="header" style={{ fontFamily: fonts.heading, fontSize: 24, lineHeight: 29, letterSpacing: -0.7, color: colors.ink }}>
             {name}
           </Text>
           <Text style={[typeScale.meta, { color: colors.muted, marginTop: 4 }]}>{courseMeta}</Text>
@@ -768,7 +771,7 @@ export default function CourseDetailScreen() {
               fullWidth
               icon={<Play color="#ffffff" size={18} strokeWidth={2.4} fill="#ffffff" />}
               onPress={() => openStart(false)}
-              accessibilityLabel={`${startLabel}, ${t('chapitre', 'chapit')} ${startTarget.ref.unitIndex + 1}`}
+              accessibilityLabel={`${startLabel} : ${startTarget.ref.lesson.title}, ${t('chapitre', 'chapit')} ${startTarget.ref.unitIndex + 1}`}
               style={{ marginTop: 20 }}
             />
           ) : null}

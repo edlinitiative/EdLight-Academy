@@ -130,7 +130,7 @@ export default function NightResult({
               <Face person={{ ...me, avatar: me.avatar ?? myAvatar }} size={opponent ? 76 : 92} winner={winner === 'me'} />
               {opponent ? (
                 <>
-                  <View style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: C.secondary, marginBottom: 26 }}>
+                  <View style={{ marginBottom: 26 }}>
                     <Text style={[arenaType.status, { fontFamily: fonts.bold, color: C.inkSoft }]}>VS</Text>
                   </View>
                   <Face person={opponent} size={76} winner={winner === 'opponent'} dim={winner === 'me'} />

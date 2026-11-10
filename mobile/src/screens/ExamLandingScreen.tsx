@@ -410,7 +410,7 @@ export default function ExamLandingScreen() {
           {resume && (
             <View style={{ ...cardSurface, borderRadius: 24, padding: 20, marginTop: 20, gap: 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingRight: 32 }}>
-                <View style={{ backgroundColor: colors.azureSoft, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4 }}>
+                <View style={{ }}>
                   <Text style={{ fontFamily: fonts.bold, fontSize: 14, lineHeight: 19, color: colors.azureInk }}>
                     {t('En cours', 'An kou')}
                   </Text>

@@ -516,7 +516,7 @@ export default function SandraScreen({
           <Text accessibilityRole="header" maxFontSizeMultiplier={1.3} style={{ fontFamily: fonts.heading, fontSize: 20, lineHeight: 25, letterSpacing: -0.4, color: colors.ink }}>
             Sandra
           </Text>
-          <View style={{ backgroundColor: colors.azureSoft, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 2 }}>
+          <View style={{ }}>
             <Text style={{ fontFamily: fonts.headingBold, fontSize: 14, lineHeight: 18, color: isDark ? colors.ink : colors.azureInk }}>IA</Text>
           </View>
         </View>
@@ -596,7 +596,7 @@ export default function SandraScreen({
           onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={{ alignSelf: 'center', backgroundColor: colors.surface, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6, marginBottom: 16 }}>
+          <View style={{ alignSelf: 'center', marginBottom: 16 }}>
             <Text style={[typeScale.caption, { color: colors.muted }]}>{t('Aujourd’hui', 'Jodi a')}</Text>
           </View>
 

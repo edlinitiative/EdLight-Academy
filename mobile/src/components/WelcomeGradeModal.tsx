@@ -219,7 +219,7 @@ export default function WelcomeGradeModal() {
                 <View
                   accessible
                   accessibilityLabel={t('Étape 1 sur 2', 'Etap 1 sou 2')}
-                  style={{ backgroundColor: colors.surface, borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 5 }}
+                  style={{ }}
                 >
                   <Text style={{ fontFamily: fonts.headingBold, fontSize: 14, lineHeight: 18, color: colors.muted }}>1 / 2</Text>
                 </View>

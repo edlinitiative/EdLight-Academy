@@ -11,7 +11,8 @@ import {
   hasLatexMarkers,
   looksMathy,
 } from './ExamAnswerInput';
-import { mathToText } from '../utils/mathText';
+import MathRunsText from './MathRunsText';
+import { circled, workedPart } from '../utils/scaffoldText';
 
 /**
  * Simplified native port of the PWA's ScaffoldedAnswer (src/pages/ExamTake.tsx):
@@ -93,64 +94,6 @@ export function scaffoldNeedsMath(q: any, subject: string): boolean {
 
 // ── Marker rendering ─────────────────────────────────────────────────────────
 
-/** ① ② ③ … (falls back to (n) past ⑳). */
-function circled(i: number): string {
-  return i >= 0 && i < 20 ? String.fromCodePoint(0x2460 + i) : `(${i + 1})`;
-}
-
-const MARKER_RE = /(\{\{\d+\}\}|\[\[\d+\]\])/;
-
-/** Circled number for a single marker token, or null if not a marker. */
-function markerToCircle(token: string): string | null {
-  let m = /^\{\{(\d+)\}\}$/.exec(token);
-  if (m) return circled(Number(m[1])); // {{n}} is 0-indexed in real data
-  m = /^\[\[(\d+)\]\]$/.exec(token);
-  if (m) return circled(Number(m[1]) - 1); // [[n]] is 1-indexed
-  return null;
-}
-
-/**
- * Replace blank markers in the authored scaffold text with circled numbers.
- * Real data uses `{{n}}` (0-indexed), sometimes *inside* `$…$` segments — a
- * circled digit would make KaTeX choke, so markers are lifted out of the math
- * and the remaining fragments re-wrapped in delimiters. `[[n]]` (1-indexed)
- * and `___` runs are handled defensively.
- */
-function markScaffoldText(text: string): string {
-  const src = String(text ?? '');
-  const hasMarkers = MARKER_RE.test(src);
-  let seq = 0; // sequential counter for bare ___ blanks
-
-  const out = src
-    .split(/(\$\$[\s\S]*?\$\$|\$[^$\n]+\$)/g)
-    .map((seg) => {
-      const isMath = /^\$[\s\S]*\$$/.test(seg);
-      if (isMath) {
-        if (!MARKER_RE.test(seg)) return seg;
-        const delim = seg.startsWith('$$') ? '$$' : '$';
-        const inner = seg.slice(delim.length, seg.length - delim.length);
-        return inner
-          .split(new RegExp(MARKER_RE.source, 'g'))
-          .map((piece) => {
-            const circle = markerToCircle(piece);
-            if (circle) return ` ${circle} `;
-            return piece.trim() ? `${delim}${piece}${delim}` : '';
-          })
-          .join('');
-      }
-      // Plain prose: swap markers in place; treat ___ runs as sequential
-      // blanks only when the text has no explicit markers.
-      let plain = seg
-        .replace(/\{\{(\d+)\}\}/g, (_, n) => circled(Number(n)))
-        .replace(/\[\[(\d+)\]\]/g, (_, n) => circled(Number(n) - 1));
-      if (!hasMarkers) plain = plain.replace(/_{3,}/g, () => circled(seq++));
-      return plain;
-    })
-    .join('');
-
-  return out;
-}
-
 // ── Component ────────────────────────────────────────────────────────────────
 
 export default function ScaffoldAnswer({ question, value, onChange, mathMode = false }: {
@@ -203,70 +146,21 @@ export default function ScaffoldAnswer({ question, value, onChange, mathMode = f
   const [focused, setFocused] = useState(0);
   const [demarcheOpen, setDemarcheOpen] = useState(false);
 
-  const displayText = useMemo(
-    () => markScaffoldText(String(question?.scaffold_text ?? '')),
-    [question?.scaffold_text],
-  );
-
-  // When the authored scaffold text is just blank markers (e.g. "{{0}}") with no
-  // real prose — common for simple fill-in-the-blank questions — the "Complète
-  // la démarche" card is empty noise. Only show it when there's actual guidance
-  // text (strip circled markers ①..⑳ and "(n)" fallbacks, then check for prose).
-  // Past roughly a screenful, the derivation stops being context and becomes an
-  // obstacle between the question and the inputs.
-  const isLongDemarche = displayText.length > 320;
-
-  const hasDemarcheText = useMemo(
-    () => displayText.replace(/[①-⑳]/g, '').replace(/\(\d+\)/g, '').trim().length > 0,
-    [displayText],
+  // The web's order (ExamTake ScaffoldedAnswer): the question once, one row
+  // per blank, and the worked reasoning (the template BEFORE its first blank)
+  // behind "Voir la démarche". The phone used to print the whole template with
+  // ①②③ in it, which for most questions repeats the question's own sentences,
+  // and the row labels said them a third time ("repeated three times… do like
+  // on the website", TestFlight Oct 2026).
+  const demarche = useMemo(
+    () => workedPart(String(question?.scaffold_text ?? ''), String(question?._displayText ?? question?.question ?? '')),
+    [question?.scaffold_text, question?._displayText, question?.question],
   );
 
   if (blanks.length === 0) return null; // usesScaffold() guards this upstream
 
   return (
     <View style={{ gap: 12 }}>
-      {/* Authored solution text with ①②③ markers — omitted when it's marker-only. */}
-      {hasDemarcheText ? (
-        <View style={[card, cardShadow, { padding: 16 }]}>
-          {/* Collapsible when long. Some authored solutions are a FULL
-              derivation — one exam question's ran to a screen and a half of
-              dense LaTeX before the student reached a single input ("this is
-              hard to even read and go through"). The steps below are the
-              actual task; the derivation is reference, so it opens on demand.
-              Short ones stay open, because hiding three lines helps nobody. */}
-          <TouchableOpacity
-            onPress={() => (isLongDemarche ? setDemarcheOpen((v) => !v) : undefined)}
-            activeOpacity={isLongDemarche ? 0.7 : 1}
-            accessibilityRole={isLongDemarche ? 'button' : undefined}
-            accessibilityState={isLongDemarche ? { expanded: demarcheOpen } : undefined}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}
-          >
-            <Text
-              style={{
-                flex: 1,
-                fontSize: 14,
-                fontWeight: '600',
-                color: colors.muted,
-              }}
-            >
-              {t('Complète la démarche', 'Konplete demach la')}
-            </Text>
-            {isLongDemarche ? (
-              demarcheOpen
-                ? <ChevronUp color={colors.muted} size={16} />
-                : <ChevronDown color={colors.muted} size={16} />
-            ) : null}
-          </TouchableOpacity>
-          {(!isLongDemarche || demarcheOpen) ? (
-            <MathText text={displayText} style={{ fontSize: 15, lineHeight: 23, color: colors.ink }} />
-          ) : (
-            <Text style={{ fontSize: 14, color: colors.muted }}>
-              {t('Touche pour voir la démarche complète.', 'Tape pou wè tout demach la.')}
-            </Text>
-          )}
-        </View>
-      ) : null}
-
       {/* One row per blank */}
       {blanks.map((blank, i) => {
         const part = parts[i] && typeof parts[i] === 'object' ? parts[i] : {};
@@ -309,19 +203,18 @@ export default function ScaffoldAnswer({ question, value, onChange, mathMode = f
                         paddingHorizontal: 14,
                         minHeight: 40,
                         justifyContent: 'center',
-                        borderRadius: 999,
+                        borderRadius: 10,
                         backgroundColor: selected ? colors.azureFill : colors.surfaceAlt,
                       }}
                     >
-                      <Text
+                      <MathRunsText
+                        text={optValue}
                         style={{
                           fontSize: 15,
                           color: selected ? '#ffffff' : colors.ink,
                           fontWeight: selected ? '700' : '400',
                         }}
-                      >
-                        {mathToText(optValue) || optValue}
-                      </Text>
+                      />
                     </TouchableOpacity>
                   );
                 })}
@@ -362,6 +255,28 @@ export default function ScaffoldAnswer({ question, value, onChange, mathMode = f
       {/* ONE keypad for the whole question, typing into the focused blank. */}
       {mathMode ? (
         <MathChips onInsert={(c) => setBlank(focused, (values[focused] ?? '') + c)} />
+      ) : null}
+
+      {/* The worked reasoning, on demand — as on the web. */}
+      {demarche ? (
+        <View style={{ gap: 8 }}>
+          <TouchableOpacity
+            onPress={() => setDemarcheOpen((v) => !v)}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: demarcheOpen }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', minHeight: 44 }}
+          >
+            <Text style={{ fontSize: 15, fontWeight: '600', color: colors.azureInk }}>
+              {demarcheOpen ? t('Masquer la démarche', 'Kache demach la') : t('Voir la démarche', 'Wè demach la')}
+            </Text>
+            {demarcheOpen ? <ChevronUp color={colors.azureInk} size={16} /> : <ChevronDown color={colors.azureInk} size={16} />}
+          </TouchableOpacity>
+          {demarcheOpen ? (
+            <View style={[card, { padding: 16 }]}>
+              <MathText text={demarche} style={{ fontSize: 15, lineHeight: 23, color: colors.ink }} />
+            </View>
+          ) : null}
+        </View>
       ) : null}
     </View>
   );

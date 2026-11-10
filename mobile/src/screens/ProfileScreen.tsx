@@ -516,7 +516,7 @@ export default function ProfileScreen() {
                 <Text
                   accessibilityRole="link"
                   onPress={() => navigation.navigate('Ambassador')}
-                  style={[typeScale.meta, { alignSelf: 'flex-start', marginTop: 4, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, backgroundColor: colors.azureSoft, color: colors.azure, fontFamily: fonts.bold, overflow: 'hidden' }]}
+                  style={[typeScale.meta, { alignSelf: 'flex-start', marginTop: 4, color: colors.azure, fontFamily: fonts.bold, overflow: 'hidden' }]}
                 >
                   {isCreole ? AMBASSADOR_LABEL.ht : AMBASSADOR_LABEL.fr}
                 </Text>
@@ -570,7 +570,7 @@ export default function ProfileScreen() {
                 </Text>
               </View>
               {gradeLabel ? (
-                <View style={{ backgroundColor: colors.surfaceAlt, borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 5 }}>
+                <View style={{ }}>
                   <Text style={{ fontFamily: fonts.headingBold, fontSize: 14, lineHeight: 18, color: colors.ink }}>{gradeLabel}</Text>
                 </View>
               ) : null}
@@ -672,7 +672,7 @@ export default function ProfileScreen() {
                   haptic={false}
                   accessibilityRole="button"
                   accessibilityLabel={t(`Série : ${currentStreak} jours`, `Seri : ${currentStreak} jou`)}
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.surfaceAlt, borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 6 }}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
                 >
                   <StreakFlame count={currentStreak} color={colors.coral} size={16} />
                   <Text style={{ fontFamily: fonts.headingBold, fontSize: 14, lineHeight: 18, color: colors.ink }}>

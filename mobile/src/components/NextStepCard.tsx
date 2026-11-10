@@ -348,7 +348,7 @@ export default function NextStepCard({
           accessibilityLabel={`${cta}. ${title}`}
         >
           {durationChip ? (
-            <View style={{ position: 'absolute', top: 12, right: 12, backgroundColor: '#12213A', borderRadius: radius.pill, paddingVertical: 6, paddingHorizontal: 12 }}>
+            <View style={{ position: 'absolute', top: 12, right: 12, backgroundColor: '#12213A', borderRadius: 8, paddingVertical: 6, paddingHorizontal: 12 }}>
               <Text maxFontSizeMultiplier={1.4} style={{ fontFamily: fonts.medium, fontSize: 14, lineHeight: 18, color: '#ffffff' }}>{durationChip}</Text>
             </View>
           ) : null}
@@ -375,7 +375,7 @@ export default function NextStepCard({
             </Text>
           ) : null}
           {tag ? (
-            <View style={{ alignSelf: 'flex-start', marginTop: 10, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt, paddingHorizontal: 12, paddingVertical: 5 }}>
+            <View style={{ alignSelf: 'flex-start', marginTop: 10 }}>
               <Text style={[typeScale.label, { color: colors.ink }]}>{tag}</Text>
             </View>
           ) : null}
