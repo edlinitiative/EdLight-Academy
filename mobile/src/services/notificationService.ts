@@ -91,14 +91,14 @@ async function ensureChannels(): Promise<void> {
         lightColor: '#1B6FE0',
       }),
       Notifications.setNotificationChannelAsync('reminders', {
-        name: "Rappels d'étude",
+        name: t("Rappels d'étude", 'Rapèl pou etidye'),
         importance: Notifications.AndroidImportance.DEFAULT,
-        description: 'Rappels quotidiens pour vos révisions',
+        description: t('Rappels quotidiens pour vos révisions', 'Rapèl chak jou pou revizyon ou'),
       }),
       Notifications.setNotificationChannelAsync('achievements', {
-        name: 'Succès et badges',
+        name: t('Succès et badges', 'Siksè ak badj'),
         importance: Notifications.AndroidImportance.HIGH,
-        description: 'Notifications pour vos accomplissements',
+        description: t('Notifications pour vos accomplissements', 'Notifikasyon pou siksè ou yo'),
       }),
     ]);
   } catch {

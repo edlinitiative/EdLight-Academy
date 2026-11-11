@@ -390,7 +390,7 @@ function RoundPicker({
 /** One answer row: 72h, a letter square, the answer text — and nothing else
  *  (no formula or symbol hints beside an answer: they give it away). */
 function AnswerOption({
-  opt, label, isCorrectOpt, isPicked, confirmed, onPress, reduceMotion,
+  opt, label, isCorrectOpt, isPicked, confirmed, onPress, reduceMotion, isCreole,
 }: {
   opt: string;
   label: string;
@@ -399,7 +399,9 @@ function AnswerOption({
   confirmed: boolean;
   onPress: () => void;
   reduceMotion: boolean;
+  isCreole: boolean;
 }) {
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const scale = useSharedValue(1);
   const shake = useSharedValue(0);
 
@@ -438,7 +440,7 @@ function AnswerOption({
         pressedScale={0.98}
         accessibilityRole="button"
         accessibilityState={{ disabled: confirmed, selected: isPicked }}
-        accessibilityLabel={`${label}. ${opt}${right ? (', bonne réponse') : wrong ? ', ta réponse, incorrecte' : ''}`}
+        accessibilityLabel={`${label}. ${opt}${right ? t(', bonne réponse', ', bon repons') : wrong ? t(', ta réponse, incorrecte', ', repons ou, li pa bon') : ''}`}
         style={{
           flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 72,
           paddingHorizontal: 14, paddingVertical: 12, borderRadius: 18, backgroundColor: bg,
@@ -669,6 +671,7 @@ export function QuizPlayer({
                 confirmed={confirmed}
                 onPress={() => { select(); commit(opt); }}
                 reduceMotion={reduceMotion}
+                isCreole={isCreole}
               />
             </StageEnter>
           ))}
