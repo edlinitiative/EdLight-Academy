@@ -154,6 +154,8 @@ export function InlineFillBlank({ text, value, onChange, header }: {
 }) {
   const colors = useColors();
   const { cardSurface, radius, isDark } = useTheme();
+  const isCreole = useStore((st) => st.language) === 'ht';
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const parts = useMemo(() => balanceMathAcrossBlanks(String(text ?? '').split(BLANK_RE)), [text]);
   const blankCount = parts.length - 1;
   const values = blankCount > 1 ? splitValues(value, blankCount) : [value ?? ''];
@@ -187,7 +189,7 @@ export function InlineFillBlank({ text, value, onChange, header }: {
                   autoCapitalize="none"
                   autoCorrect={false}
                   keyboardAppearance={isDark ? 'dark' : 'light'}
-                  accessibilityLabel={blankCount > 1 ? `Blanc ${i}` : 'Blanc à compléter'}
+                  accessibilityLabel={blankCount > 1 ? t(`Blanc ${i}`, `Espas vid ${i}`) : t('Blanc à compléter', 'Espas pou ranpli')}
                   style={{
                     minWidth: hint ? Math.max(96, hint.length * 10 + 24) : 96, minHeight: 44, marginHorizontal: 2,
                     paddingHorizontal: 12, paddingVertical: 8, textAlign: 'center', fontSize: 16, color: colors.ink,
